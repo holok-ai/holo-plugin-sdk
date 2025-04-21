@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - RABBITMQ_URL=amqp://rabbitmq
+      - PORT=3000
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      - rabbitmq
+    restart: unless-stopped
+    networks:
+      - llm-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "src/worker/llm-worker.js"]
+    environment:
+      - NODE_ENV=production
+      - RABBITMQ_URL=amqp://rabbitmq
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      - rabbitmq
+    restart: unless-stopped
+    deploy:
+      replicas: 3
+    networks:
+      - llm-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   # AMQP protocol port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - llm-network
+
+volumes:
+  rabbitmq_data:
+
+networks:
+  llm-network:
+    driver: bridge
