@@ -187,9 +187,9 @@ class LLMWorker {
    */
   async sendResponseChunk(requestId, data) {
     try {
-      await producer.sendToExchange(
-        config.rabbitMq.exchanges.llmResponses,
-        '',
+      // Send to the centralized response queue
+      await producer.sendToQueue(
+        config.rabbitMq.queues.llmResponses,
         data,
         { correlationId: requestId }
       );

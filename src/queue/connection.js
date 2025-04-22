@@ -99,13 +99,7 @@ class RabbitMQConnection {
    * Set up exchanges and queues
    */
   async _setupExchangesAndQueues() {
-    // Create exchanges
-    await this.channel.assertExchange(
-      config.rabbitMq.exchanges.llmRequests, 
-      'direct', 
-      { durable: true }
-    );
-    
+    // Create exchange for responses
     await this.channel.assertExchange(
       config.rabbitMq.exchanges.llmResponses, 
       'direct', 
@@ -118,23 +112,13 @@ class RabbitMQConnection {
       { durable: true }
     );
     
+    // Create the centralized response queue
     await this.channel.assertQueue(
       config.rabbitMq.queues.llmResponses,
       { durable: true }
     );
     
-    // Bind queues to exchanges
-    await this.channel.bindQueue(
-      config.rabbitMq.queues.llmRequests,
-      config.rabbitMq.exchanges.llmRequests,
-      ''
-    );
-    
-    await this.channel.bindQueue(
-      config.rabbitMq.queues.llmResponses,
-      config.rabbitMq.exchanges.llmResponses,
-      ''
-    );
+    logger.info('RabbitMQ exchanges and queues set up successfully');
   }
 
   /**

@@ -2,7 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const { config } = require('../../config/config');
 const logger = require('../../utils/logger');
 const queueProducer = require('../../queue/producer');
-const { createResponseStream } = require('../../utils/stream');
+const { createResponseStream } = require('../../utils/response-controller');
 const llmFactory = require('../../llm/factory');
 
 /**
@@ -43,23 +43,27 @@ const generateText = async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     
     // Create a response stream
-    const responseStream = createResponseStream(requestId);
+    const responseStream = await createResponseStream(requestId);
     
-    // Pipe the response stream to the client
-    responseStream.pipe(res);
+    // Handle client disconnect
+    req.on('close', () => {
+      logger.info(`Client disconnected from request: ${requestId}`);
+      if (responseStream) responseStream.end();
+    });
     
-    // Send the request to the queue
+    // First send the request to the queue
     await queueProducer.sendToQueue(
       config.rabbitMq.queues.llmRequests,
       request,
       { correlationId: requestId }
     );
     
-    // Handle client disconnect
-    req.on('close', () => {
-      logger.info(`Client disconnected from request: ${requestId}`);
-      responseStream.end();
-    });
+    // Then start the streaming response AFTER the request has been queued
+    // Pipe the response stream to the client
+    responseStream.pipe(res);
+    
+    // Write a comment to keep connection alive
+    //res.write(':keepalive\n\n');
   } catch (error) {
     logger.error(`Error in generateText: ${error.message}`);
     if (!res.headersSent) {
@@ -106,6 +110,8 @@ const chatCompletion = async (req, res) => {
     
     logger.info(`New chat request: ${requestId} for model: ${model}`);
     
+    let responseStream;
+    
     // Set up streaming or regular JSON response
     if (stream) {
       res.setHeader('Content-Type', 'text/event-stream');
@@ -113,24 +119,30 @@ const chatCompletion = async (req, res) => {
       res.setHeader('Connection', 'keep-alive');
       
       // Create a response stream
-      const responseStream = createResponseStream(requestId);
-      
-      // Pipe the response stream to the client
-      responseStream.pipe(res);
+      responseStream = await createResponseStream(requestId);
       
       // Handle client disconnect
       req.on('close', () => {
         logger.info(`Client disconnected from request: ${requestId}`);
-        responseStream.end();
+        if (responseStream) responseStream.end();
       });
     }
     
-    // Send the request to the queue
+    // First send the request to the queue
     await queueProducer.sendToQueue(
       config.rabbitMq.queues.llmRequests,
       request,
       { correlationId: requestId }
     );
+    
+    // Then start the streaming response AFTER the request has been queued
+    if (stream && responseStream) {
+      // Pipe the response stream to the client
+      responseStream.pipe(res);
+      
+      // Write a comment to keep connection alive
+      //res.write(':keepalive\n\n');
+    }
     
     // If not streaming, wait for complete response
     if (!stream) {

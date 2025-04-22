@@ -10,7 +10,6 @@ const config = {
       llmResponses: 'llm_responses'
     },
     exchanges: {
-      llmRequests: 'llm_requests_exchange',
       llmResponses: 'llm_responses_exchange'
     },
   },

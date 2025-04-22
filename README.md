@@ -15,8 +15,17 @@ A scalable, distributed LLM proxy server that provides an Ollama-compatible API 
 - **API Server**: Processes requests and manages client connections
 - **Queue System**: RabbitMQ for reliable message passing
 - **Worker Nodes**: Process LLM requests with configurable LLM providers (Mock, Ollama)
-- **Response Streaming**: Server-Sent Events for streaming tokens back to clients
-- **Pluggable LLM Providers**: Support for different LLM backends
+- **Efficient Response Streaming**: Centralized handling of streaming responses using Server-Sent Events
+- **Pluggable LLM Providers**: Support for different LLM backends (Mock, Ollama)
+
+### Response Handling Architecture
+
+The system uses a centralized response handling approach:
+
+1. All workers send response chunks to a single shared queue
+2. A central response controller consumes from this queue
+3. The controller routes messages to the appropriate response stream based on requestId
+4. This approach reduces connection overhead and improves scalability
 
 ## Getting Started
 

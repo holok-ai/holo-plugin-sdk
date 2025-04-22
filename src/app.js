@@ -4,6 +4,8 @@ const morgan = require('morgan');
 const { config } = require('./config/config');
 const routes = require('./api/routes');
 const logger = require('./utils/logger');
+// Import and initialize response controller
+const { createResponseStream } = require('./utils/response-controller');
 
 // Initialize Express app
 const app = express();
@@ -46,9 +48,26 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = config.port || 3000;
-app.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT}`);
-});
+
+// Initialize app with async components
+async function initApp() {
+  try {
+    // Initialize response controller (this sets up the consumer)
+    await createResponseStream('init');
+    logger.info('Response controller initialized successfully');
+    
+    // Start the HTTP server
+    app.listen(PORT, () => {
+      logger.info(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    logger.error(`Failed to initialize application: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+// Start the application
+initApp();
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
