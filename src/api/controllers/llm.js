@@ -3,6 +3,7 @@ const { config } = require('../../config/config');
 const logger = require('../../utils/logger');
 const queueProducer = require('../../queue/producer');
 const { createResponseStream } = require('../../utils/stream');
+const llmFactory = require('../../llm/factory');
 
 /**
  * Generate text from a prompt (Ollama compatible endpoint)
@@ -77,6 +78,7 @@ const generateText = async (req, res) => {
 const chatCompletion = async (req, res) => {
   try {
     const { model, messages, options, stream = true } = req.body;
+    logger.info("request body: "+JSON.stringify(req.headers));
     
     if (!model || !messages || !Array.isArray(messages)) {
       return res.status(400).json({
@@ -158,22 +160,8 @@ const chatCompletion = async (req, res) => {
  */
 const listModels = async (req, res) => {
   try {
-    // In a real implementation, this would fetch available models
-    // For now, we'll return a mock response
-    const models = [
-      {
-        id: 'mock-llama2-7b',
-        name: 'Llama 2 7B',
-        modified_at: new Date().toISOString(),
-        size: 7000000000
-      },
-      {
-        id: 'mock-mistral-7b',
-        name: 'Mistral 7B',
-        modified_at: new Date().toISOString(),
-        size: 7000000000
-      }
-    ];
+    // Fetch models from the configured provider
+    const models = await llmFactory.getModels();
     
     return res.status(200).json({ models });
   } catch (error) {

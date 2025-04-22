@@ -22,7 +22,29 @@ const config = {
     maxConcurrency: 2,
     prefetch: 1,
   },
-  // Mock LLM settings (for development/testing)
+  // LLM provider settings
+  llm: {
+    // The LLM provider to use (mock, ollama)
+    provider: process.env.LLM_PROVIDER || 'mock',
+    
+    // Provider-specific configurations
+    providers: {
+      // Mock provider for development/testing
+      mock: {
+        responseDelay: 100, // ms between tokens
+      },
+      
+      // Ollama provider
+      ollama: {
+        baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+        timeout: parseInt(process.env.OLLAMA_TIMEOUT || '60000'),
+      }
+      
+      // Add more providers here as needed
+    }
+  },
+  
+  // Legacy mock LLM settings (kept for backward compatibility)
   mockLlm: {
     enabled: process.env.NODE_ENV === 'development',
     responseDelay: 100, // ms between tokens
