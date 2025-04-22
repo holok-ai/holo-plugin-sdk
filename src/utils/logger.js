@@ -1,4 +1,5 @@
 const winston = require('winston');
+// We'll get the config in the format function to avoid circular dependencies
 
 // Define log levels
 const levels = {
@@ -26,7 +27,18 @@ const format = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
   winston.format.colorize({ all: true }),
   winston.format.printf(
-    (info) => `${info.timestamp} ${info.level}: ${info.message}`
+    (info) => {
+      // Get server ID safely for distributed tracing
+      let serverId = 'unknown';
+      try {
+        // Dynamically load config to avoid circular dependencies
+        const { config } = require('../config/config');
+        serverId = config.server?.id || 'unknown';
+      } catch (e) {
+        // Ignore errors, use default serverId
+      }
+      return `${info.timestamp} ${info.level}: [${serverId}] ${info.message}`;
+    }
   )
 );
 

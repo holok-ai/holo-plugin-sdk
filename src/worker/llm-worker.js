@@ -55,8 +55,8 @@ class LLMWorker {
    * @param {object} request - Request data
    */
   async handleGenerateRequest(request) {
-    const { id, payload } = request;
-    logger.info(`Worker ${this.workerId} handling generate request: ${id}`);
+    const { id, sourceId, payload } = request;
+    logger.info(`Worker ${this.workerId} handling generate request: ${id} from server ${sourceId}`);
     
     try {
       // Extract parameters
@@ -74,7 +74,7 @@ class LLMWorker {
             type: 'token',
             token,
             requestId: id
-          });
+          }, sourceId);
         },
         // On complete callback
         (fullResponse, chunk) => {
@@ -82,7 +82,7 @@ class LLMWorker {
           this.sendResponseChunk(id, {
             type: 'done',
             requestId: id
-          });
+          }, sourceId);
         },
         // On error callback
         (error) => {
@@ -92,7 +92,7 @@ class LLMWorker {
               message: error.message
             },
             requestId: id
-          });
+          }, sourceId);
         }
       );
     } catch (error) {
@@ -105,7 +105,7 @@ class LLMWorker {
           message: error.message
         },
         requestId: id
-      });
+      }, sourceId);
     }
   }
 
@@ -114,8 +114,8 @@ class LLMWorker {
    * @param {object} request - Request data
    */
   async handleChatRequest(request) {
-    const { id, payload } = request;
-    logger.info(`Worker ${this.workerId} handling chat request: ${id}`);
+    const { id, sourceId, payload } = request;
+    logger.info(`Worker ${this.workerId} handling chat request: ${id} from server ${sourceId}`);
     
     try {
       // Extract parameters
@@ -143,7 +143,7 @@ class LLMWorker {
               content: token
             },
             model
-          });
+          }, sourceId);
         },
         // On complete callback
         (metadata = {}) => {
@@ -153,7 +153,7 @@ class LLMWorker {
             // OpenAI compatible format
             model,
             finish_reason: metadata.finish_reason || 'stop'
-          });
+          }, sourceId);
         },
         // On error callback
         (error) => {
@@ -163,7 +163,7 @@ class LLMWorker {
               message: error.message
             },
             requestId: id
-          });
+          }, sourceId);
         }
       );
     } catch (error) {
@@ -176,7 +176,7 @@ class LLMWorker {
           message: error.message
         },
         requestId: id
-      });
+      }, sourceId);
     }
   }
 
@@ -185,14 +185,17 @@ class LLMWorker {
    * @param {string} requestId - Request ID
    * @param {object} data - Response data
    */
-  async sendResponseChunk(requestId, data) {
+  async sendResponseChunk(requestId, data, sourceId) {
     try {
-      // Send to the centralized response queue
-      await producer.sendToQueue(
-        config.rabbitMq.queues.llmResponses,
+      // Send to the response exchange with the source server ID as routing key
+      await producer.sendToExchange(
+        config.rabbitMq.exchanges.llmResponses,
+        sourceId, // Use source ID as routing key
         data,
         { correlationId: requestId }
       );
+      
+      logger.debug(`Sent response chunk for ${requestId} to server ${sourceId}`);
     } catch (error) {
       logger.error(`Error sending response chunk for ${requestId}: ${error.message}`);
     }

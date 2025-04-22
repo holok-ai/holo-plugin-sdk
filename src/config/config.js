@@ -7,11 +7,18 @@ const config = {
     url: process.env.RABBITMQ_URL || 'amqp://localhost',
     queues: {
       llmRequests: 'llm_requests',
-      llmResponses: 'llm_responses'
+      // The response queue will be dynamically created with server ID
+      llmResponsesPrefix: 'llm_responses'
     },
     exchanges: {
-      llmResponses: 'llm_responses_exchange'
+      llmResponses: 'llm_responses' // Used for routing responses to server-specific queues
     },
+    // Queue expiration in milliseconds (1 hour)
+    queueExpiration: 3600000
+  },
+  server: {
+    // Generate a unique ID for this server instance
+    id: process.env.SERVER_ID || `server_${Math.random().toString(36).substring(2, 10)}`
   },
   api: {
     requestTimeout: 300000, // 5 minutes

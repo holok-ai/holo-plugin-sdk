@@ -27,6 +27,7 @@ const generateText = async (req, res) => {
     const request = {
       id: requestId,
       type: 'generate',
+      sourceId: config.server.id, // Add server ID for response routing
       payload: {
         model,
         prompt,
@@ -99,6 +100,7 @@ const chatCompletion = async (req, res) => {
     const request = {
       id: requestId,
       type: 'chat',
+      sourceId: config.server.id, // Add server ID for response routing
       payload: {
         model,
         messages,

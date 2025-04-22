@@ -99,26 +99,42 @@ class RabbitMQConnection {
    * Set up exchanges and queues
    */
   async _setupExchangesAndQueues() {
-    // Create exchange for responses
+    // Create request queue
+    await this.channel.assertQueue(
+      config.rabbitMq.queues.llmRequests,
+      { durable: true }
+    );
+    
+    // Create response exchange
     await this.channel.assertExchange(
       config.rabbitMq.exchanges.llmResponses, 
       'direct', 
       { durable: true }
     );
     
-    // Create queues
+    // Create server-specific response queue with expiration
+    const serverId = config.server.id;
+    const responseQueueName = `${config.rabbitMq.queues.llmResponsesPrefix}.${serverId}`;
+    
     await this.channel.assertQueue(
-      config.rabbitMq.queues.llmRequests,
-      { durable: true }
+      responseQueueName,
+      { 
+        durable: true,
+        arguments: {
+          'x-expires': config.rabbitMq.queueExpiration // Queue will be deleted after inactivity
+        }
+      }
     );
     
-    // Create the centralized response queue
-    await this.channel.assertQueue(
-      config.rabbitMq.queues.llmResponses,
-      { durable: true }
+    // Bind the server-specific queue to the exchange with serverId as routing key
+    await this.channel.bindQueue(
+      responseQueueName,
+      config.rabbitMq.exchanges.llmResponses,
+      serverId
     );
     
-    logger.info('RabbitMQ exchanges and queues set up successfully');
+    logger.info(`RabbitMQ exchanges and queues set up successfully for server ${serverId}`);
+    logger.info(`Created response queue: ${responseQueueName}`);
   }
 
   /**

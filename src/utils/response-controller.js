@@ -39,8 +39,9 @@ class ResponseController {
       await consumer.init();
       this.channel = consumer.channel;
       
-      // Set up a single consumer for all responses
-      const queue = config.rabbitMq.queues.llmResponses;
+      // Set up a consumer for this server's response queue
+      const serverId = config.server.id;
+      const queue = `${config.rabbitMq.queues.llmResponsesPrefix}.${serverId}`;
       
       await this.channel.consume(queue, (message) => {
         if (!message) return;
