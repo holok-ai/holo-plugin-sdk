@@ -10,7 +10,7 @@ const llmFactory = require('../../llm/factory');
  */
 const generateText = async (req, res) => {
   try {
-    const { model, prompt, options } = req.body;
+    const { model, prompt, options, stream } = req.body;
     
     if (!model || !prompt) {
       return res.status(400).json({
@@ -22,7 +22,7 @@ const generateText = async (req, res) => {
     
     // Generate a unique ID for this request
     const requestId = uuidv4();
-    
+    logger.info("did i get here?");
     // Format the request for the worker
     const request = {
       id: requestId,
@@ -31,12 +31,13 @@ const generateText = async (req, res) => {
       payload: {
         model,
         prompt,
+        stream,
         options: options || {}
       },
       timestamp: Date.now()
     };
     
-    logger.info(`New generate request: ${requestId} for model: ${model}`);
+    logger.info(`New generate request: ${requestId} for model: ${model} streaming:${stream}`);
     
     // Set up server-sent events for streaming response
     res.setHeader('Content-Type', 'text/event-stream');

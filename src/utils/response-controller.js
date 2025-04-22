@@ -59,13 +59,13 @@ class ResponseController {
             switch (content.type) {
               case 'token':
                 // Send token to the stream
-                stream.push(`data: ${JSON.stringify(content)}\n\n`);
+                stream.push(JSON.stringify(content.token)+'\n');
                 break;
                 
               case 'done':
                 // Send final message and mark as completed
-                stream.push(`data: ${JSON.stringify(content)}\n\n`);
-                stream.push(`data: [DONE]\n\n`);
+                stream.push(JSON.stringify(content.response)+'\n');
+                //stream.push(`data: [DONE]\n\n`);
                 stream.end();
                 this.removeStream(requestId);
                 break;

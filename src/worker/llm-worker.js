@@ -60,14 +60,14 @@ class LLMWorker {
     
     try {
       // Extract parameters
-      const { model, prompt, options } = payload;
+      const { model, prompt, options, stream } = payload;
       
       // Get appropriate LLM provider
       const llmProvider = await this.getLLMProvider(request);
       
       // Process generation using the provider
       await llmProvider.generate(
-        { model, prompt, options },
+        { model, prompt, options, stream },
         // On token callback
         (token) => {
           this.sendResponseChunk(id, {
@@ -81,7 +81,8 @@ class LLMWorker {
           logger.info(`full response: ${fullResponse} final chunk:`+ JSON.stringify(chunk));
           this.sendResponseChunk(id, {
             type: 'done',
-            requestId: id
+            response: chunk,
+            requestId: id, 
           }, sourceId);
         },
         // On error callback

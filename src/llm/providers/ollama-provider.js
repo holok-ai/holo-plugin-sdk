@@ -74,8 +74,8 @@ class OllamaProvider extends LLMProviderInterface {
         await this.init();
       }
       
-      const { model, prompt, options = {} } = params;
-      
+      const { model, prompt, options = {}, stream } = params;
+      let streaming = stream;
       // Map options to Ollama format
       const ollamaOptions = {
         model,
@@ -88,26 +88,30 @@ class OllamaProvider extends LLMProviderInterface {
           stop: options.stop,
           ...options
         },
-        stream: true
+        stream
       };
-      
-      // Use Ollama streaming API
-      const stream = await this.ollama.generate(ollamaOptions);
-      
       let fullResponse = '';
-      
-      for await (const chunk of stream) {
-        if (chunk.done) {
-          onComplete(fullResponse, chunk);
-          break;
-        }
+      const response = await this.ollama.generate(ollamaOptions);
+      if(streaming) {
+        // Use Ollama streaming API
         
-        const token = chunk.response;
-        fullResponse += token;
-        
-        if (token) {
-          onToken(token);
+        for await (const chunk of response) {
+          if (chunk.done) {
+            onComplete(fullResponse, chunk);
+            break;
+          }
+          
+          const token = chunk.response;
+          fullResponse += token;
+          
+          if (token) {
+            onToken(chunk);
+          }
         }
+      }
+      else{
+        logger.info(JSON.stringify(response));
+        onComplete(response.response, response);
       }
       
       logger.info(`Generated response with Ollama model ${model}, length: ${fullResponse.length}`);
