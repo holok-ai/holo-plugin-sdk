@@ -8,10 +8,13 @@ const config = {
     queues: {
       llmRequests: 'llm_requests',
       // The response queue will be dynamically created with server ID
-      llmResponsesPrefix: 'llm_responses'
+      llmResponsesPrefix: 'llm_responses',
+      // Audit queue for request logging
+      llmAudit: 'llm_requests_audit'
     },
     exchanges: {
-      llmResponses: 'llm_responses' // Used for routing responses to server-specific queues
+      llmResponses: 'llm_responses', // Used for routing responses to server-specific queues
+      llmRequests: 'llm_requests_exchange' // Used for fanout to request processors and audit
     },
     // Queue expiration in milliseconds (1 hour)
     queueExpiration: 3600000
@@ -54,6 +57,18 @@ const config = {
   mockLlm: {
     enabled: process.env.NODE_ENV === 'development',
     responseDelay: 100, // ms between tokens
+  },
+  
+  // Audit service configuration
+  audit: {
+    enabled: process.env.AUDIT_ENABLED === 'true' || false,
+    postgres: {
+      host: process.env.AUDIT_PG_HOST || 'localhost',
+      port: parseInt(process.env.AUDIT_PG_PORT || '5432'),
+      database: process.env.AUDIT_PG_DATABASE || 'llm_audit',
+      user: process.env.AUDIT_PG_USER || 'postgres',
+      password: process.env.AUDIT_PG_PASSWORD || 'postgres'
+    }
   }
 };
 

@@ -99,10 +99,38 @@ class RabbitMQConnection {
    * Set up exchanges and queues
    */
   async _setupExchangesAndQueues() {
-    // Create request queue
+    // Create request exchange for fanout to multiple consumers
+    await this.channel.assertExchange(
+      config.rabbitMq.exchanges.llmRequests || 'llm.requests', 
+      'fanout', 
+      { durable: true }
+    );
+    
+    // Create main request queue
     await this.channel.assertQueue(
       config.rabbitMq.queues.llmRequests,
       { durable: true }
+    );
+    
+    // Bind the main request queue to the request exchange
+    await this.channel.bindQueue(
+      config.rabbitMq.queues.llmRequests,
+      config.rabbitMq.exchanges.llmRequests || 'llm.requests',
+      '' // No routing key needed for fanout exchange
+    );
+    
+    // Create audit queue for logging purposes
+    const auditQueueName = config.rabbitMq.queues.llmAudit || 'llm.requests.audit';
+    await this.channel.assertQueue(
+      auditQueueName,
+      { durable: true }
+    );
+    
+    // Bind the audit queue to the request exchange
+    await this.channel.bindQueue(
+      auditQueueName,
+      config.rabbitMq.exchanges.llmRequests || 'llm.requests',
+      '' // No routing key needed for fanout exchange
     );
     
     // Create response exchange
@@ -135,6 +163,7 @@ class RabbitMQConnection {
     
     logger.info(`RabbitMQ exchanges and queues set up successfully for server ${serverId}`);
     logger.info(`Created response queue: ${responseQueueName}`);
+    logger.info(`Created audit queue: ${auditQueueName}`);
   }
 
   /**

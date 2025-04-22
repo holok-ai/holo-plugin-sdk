@@ -1,0 +1,37 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy all package files first
+COPY package*.json ./
+COPY src/audit/package.json ./src/audit/
+
+# Install PostgreSQL client 
+RUN apk --no-cache add postgresql-client
+
+# Install main dependencies
+RUN npm install --production
+
+# Install audit service specific dependencies
+WORKDIR /app/src/audit
+RUN npm install --production
+WORKDIR /app
+
+# Copy necessary files
+COPY src/config ./src/config
+COPY src/utils ./src/utils
+COPY src/queue ./src/queue
+COPY src/audit ./src/audit
+
+# Create logs directory and set permissions
+RUN mkdir -p /app/logs \
+    && chmod 777 /app/logs
+
+# Use non-root user for better security
+USER node
+
+# Set environment variables
+ENV NODE_ENV=production
+
+# Run the audit service
+CMD ["node", "src/audit/audit-server.js"]

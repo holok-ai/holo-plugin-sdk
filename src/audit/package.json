@@ -1,0 +1,19 @@
+{
+  "name": "llm-audit-service",
+  "version": "1.0.0",
+  "description": "Audit service for LLM requests",
+  "main": "audit-server.js",
+  "scripts": {
+    "start": "node audit-server.js",
+    "dev": "nodemon audit-server.js"
+  },
+  "dependencies": {
+    "pg": "^8.11.3",
+    "winston": "^3.8.2",
+    "amqplib": "^0.10.3",
+    "dotenv": "^16.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}

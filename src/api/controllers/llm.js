@@ -52,9 +52,11 @@ const generateText = async (req, res) => {
       if (responseStream) responseStream.end();
     });
     
-    // First send the request to the queue
-    await queueProducer.sendToQueue(
-      config.rabbitMq.queues.llmRequests,
+    // Send the request to the exchange instead of directly to the queue
+    // This allows multiple consumers (main processor and audit logger) to receive the message
+    await queueProducer.sendToExchange(
+      config.rabbitMq.exchanges.llmRequests,
+      '', // Empty routing key for fanout exchange
       request,
       { correlationId: requestId }
     );
@@ -130,9 +132,11 @@ const chatCompletion = async (req, res) => {
       });
     }
     
-    // First send the request to the queue
-    await queueProducer.sendToQueue(
-      config.rabbitMq.queues.llmRequests,
+    // Send the request to the exchange instead of directly to the queue
+    // This allows multiple consumers (main processor and audit logger) to receive the message
+    await queueProducer.sendToExchange(
+      config.rabbitMq.exchanges.llmRequests,
+      '', // Empty routing key for fanout exchange
       request,
       { correlationId: requestId }
     );

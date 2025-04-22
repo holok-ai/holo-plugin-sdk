@@ -1,5 +1,20 @@
 const winston = require('winston');
+const fs = require('fs');
+const path = require('path');
 // We'll get the config in the format function to avoid circular dependencies
+
+// Ensure logs directory exists
+const logDir = process.env.LOG_DIR || 'logs';
+
+// Create logs directory if it doesn't exist
+try {
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+} catch (error) {
+  console.warn(`Warning: Could not create logs directory: ${error.message}`);
+  console.warn('Logging to console only');
+}
 
 // Define log levels
 const levels = {
@@ -45,17 +60,32 @@ const format = winston.format.combine(
 // Define which transports the logger should use
 const transports = [
   // Console transport
-  new winston.transports.Console(),
+  new winston.transports.Console()
+];
+
+// Add file transports only if we can access the logs directory
+try {
+  // Test if we can write to the logs directory
+  fs.accessSync(logDir, fs.constants.W_OK);
   
   // File transport for errors
-  new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error',
-  }),
+  transports.push(
+    new winston.transports.File({
+      filename: path.join(logDir, 'error.log'),
+      level: 'error',
+    })
+  );
   
   // File transport for all logs
-  new winston.transports.File({ filename: 'logs/all.log' }),
-];
+  transports.push(
+    new winston.transports.File({ 
+      filename: path.join(logDir, 'all.log') 
+    })
+  );
+} catch (error) {
+  console.warn(`Warning: Could not access logs directory for writing: ${error.message}`);
+  console.warn('Logging to console only');
+}
 
 // Determine log level based on environment
 const level = () => {
