@@ -11,6 +11,11 @@ services:
       - NODE_ENV=development
       - RABBITMQ_URL=amqp://rabbitmq
       - PORT=3000
+      - AUDIT_PG_HOST=postgres
+      - AUDIT_PG_PORT=5432
+      - AUDIT_PG_DATABASE=llm_audit
+      - AUDIT_PG_USER=postgres
+      - AUDIT_PG_PASSWORD=postgrespassword
     volumes:
       - ./src:/app/src
     depends_on:

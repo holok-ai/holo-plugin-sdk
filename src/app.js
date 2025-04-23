@@ -28,6 +28,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve static files from the public directory
+app.use(express.static('src/public'));
+
 // Mount API routes
 app.use('/api', routes);
 
