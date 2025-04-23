@@ -50,7 +50,7 @@ class ResponseController {
           // Parse message content
           const content = JSON.parse(message.content.toString());
           const { requestId } = content;
-          
+          logger.info("received message: "+JSON.stringify(content));
           // Find the corresponding response stream
           const stream = this.activeStreams.get(requestId);
           

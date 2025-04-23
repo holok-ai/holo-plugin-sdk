@@ -85,9 +85,8 @@ const generateText = async (req, res) => {
  */
 const chatCompletion = async (req, res) => {
   try {
-    const { model, messages, options, stream = true } = req.body;
+    const { model, messages, options, stream } = req.body;
     logger.info("request body: "+JSON.stringify(req.headers));
-    
     if (!model || !messages || !Array.isArray(messages)) {
       return res.status(400).json({
         error: {
@@ -113,26 +112,24 @@ const chatCompletion = async (req, res) => {
       timestamp: Date.now()
     };
     
-    logger.info(`New chat request: ${requestId} for model: ${model}`);
+    logger.info(`New chat request: ${requestId} for model: ${model} streaming:${stream}`);
     
     let responseStream;
     
-    // Set up streaming or regular JSON response
-    if (stream) {
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      
-      // Create a response stream
-      responseStream = await createResponseStream(requestId);
-      
-      // Handle client disconnect
-      req.on('close', () => {
-        logger.info(`Client disconnected from request: ${requestId}`);
-        if (responseStream) responseStream.end();
-      });
-    }
+    // Set up streaming or regular JSON response 
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
     
+    // Create a response stream
+    responseStream = await createResponseStream(requestId);
+    
+    // Handle client disconnect
+    req.on('close', () => {
+      logger.info(`Client disconnected from request: ${requestId}`);
+      if (responseStream) responseStream.end();
+    });
+  
     // Send the request to the exchange instead of directly to the queue
     // This allows multiple consumers (main processor and audit logger) to receive the message
     await queueProducer.sendToExchange(
@@ -143,25 +140,11 @@ const chatCompletion = async (req, res) => {
     );
     
     // Then start the streaming response AFTER the request has been queued
-    if (stream && responseStream) {
-      // Pipe the response stream to the client
-      responseStream.pipe(res);
-      
-      // Write a comment to keep connection alive
-      //res.write(':keepalive\n\n');
-    }
+    // Pipe the response stream to the client
+    responseStream.pipe(res);
     
-    // If not streaming, wait for complete response
-    if (!stream) {
-      // TODO: Implement non-streaming response handling
-      // This would involve waiting for a complete response from a separate queue
-      // For now, return a stubbed response
-      return res.status(501).json({
-        error: {
-          message: 'Non-streaming responses not yet implemented'
-        }
-      });
-    }
+    // Write a comment to keep connection alive
+    //res.write(':keepalive\n\n');
   } catch (error) {
     logger.error(`Error in chatCompletion: ${error.message}`);
     if (!res.headersSent) {

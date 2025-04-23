@@ -122,7 +122,7 @@ class OllamaProvider extends LLMProviderInterface {
   }
 
   /**
-   * Generate chat completion with streaming
+   * Generate chat completion with or without streaming
    * @param {object} params - Generation parameters
    * @param {function} onToken - Callback for each token
    * @param {function} onComplete - Callback when generation is complete
@@ -134,7 +134,8 @@ class OllamaProvider extends LLMProviderInterface {
         await this.init();
       }
       
-      const { model, messages, options = {} } = params;
+      const { model, messages, options = {}, stream } = params;
+      logger.info(`params: `+JSON.stringify(params));
       
       // Map options to Ollama format
       const ollamaOptions = {
@@ -148,39 +149,44 @@ class OllamaProvider extends LLMProviderInterface {
           stop: options.stop,
           ...options
         },
-        stream: true
+        stream
       };
       
-      // Use Ollama chat API
-      const stream = await this.ollama.chat(ollamaOptions);
-      
       let fullResponse = '';
+      logger.info("ollama params: "+JSON.stringify(ollamaOptions));
+      // Use Ollama chat API - will stream or not based on the stream parameter
+      const response = await this.ollama.chat(ollamaOptions);
       
-      for await (const chunk of stream) {
-        if (chunk.done) {
-          onComplete({
-            model,
-            finish_reason: 'stop'
-          });
-          break;
+      if (stream) {
+        // Handle streaming response
+        for await (const chunk of response) {
+          if (chunk.done) {
+            onComplete(chunk);
+            break;
+          }
+          
+          // Get the content from the assistant's message
+          const token = chunk.message?.content || '';          
+          if (token) {
+            // Format in OpenAI compatible delta format
+            onToken(chunk, {
+              delta: {
+                content: token
+              },
+              model
+            });
+          }
         }
         
-        // Get the content from the assistant's message
-        const token = chunk.message?.content || '';
-        fullResponse += token;
+        logger.info(`Generated streaming chat response with Ollama model ${model}, length: ${fullResponse.length}`);
+      } else {
+        // Handle non-streaming response
+        logger.info(`Generated non-streaming chat response with Ollama model ${model}`);
+        logger.debug(JSON.stringify(response));
         
-        if (token) {
-          // Format in OpenAI compatible delta format
-          onToken(token, {
-            delta: {
-              content: token
-            },
-            model
-          });
-        }
+        // Complete response is available in response.message.content
+        onComplete(response);
       }
-      
-      logger.info(`Generated chat response with Ollama model ${model}, length: ${fullResponse.length}`);
     } catch (error) {
       logger.error(`Ollama chat error: ${error.message}`);
       onError(error);

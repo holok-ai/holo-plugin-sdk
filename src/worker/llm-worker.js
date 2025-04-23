@@ -122,17 +122,12 @@ class LLMWorker {
       // Extract parameters
       const { model, messages, options, stream } = payload;
       
-      if (!stream) {
-        // Non-streaming response (not implemented yet)
-        throw new Error('Non-streaming responses not implemented');
-      }
-      
       // Get appropriate LLM provider
       const llmProvider = await this.getLLMProvider(request);
       
-      // Process chat using the provider
+      // Process chat using the provider - passing along stream flag
       await llmProvider.chat(
-        { model, messages, options },
+        { model, messages, options, stream },
         // On token callback
         (token, metadata = {}) => {
           this.sendResponseChunk(id, {
@@ -147,13 +142,13 @@ class LLMWorker {
           }, sourceId);
         },
         // On complete callback
-        (metadata = {}) => {
+        (response) => {
+          // For streaming, response is just metadata
+          // For non-streaming, response includes the complete message
           this.sendResponseChunk(id, {
             type: 'done',
             requestId: id,
-            // OpenAI compatible format
-            model,
-            finish_reason: metadata.finish_reason || 'stop'
+            response: response,
           }, sourceId);
         },
         // On error callback
