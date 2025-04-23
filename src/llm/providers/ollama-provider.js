@@ -94,7 +94,6 @@ class OllamaProvider extends LLMProviderInterface {
       const response = await this.ollama.generate(ollamaOptions);
       if(streaming) {
         // Use Ollama streaming API
-        
         for await (const chunk of response) {
           if (chunk.done) {
             onComplete(fullResponse, chunk);

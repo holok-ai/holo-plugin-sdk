@@ -8,7 +8,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - RABBITMQ_URL=amqp://rabbitmq
       - PORT=3000
     volumes:
@@ -103,11 +103,53 @@ services:
       - postgres
     networks:
       - llm-network
+      
+#  openwebui:
+#    image: ghcr.io/open-webui/open-webui:main
+#    ports:
+#      - "3300:8080"
+#    environment:
+#      - OLLAMA_API_BASE_URL=http://api:3000/api
+#      - WEBUI_AUTH=false                # Disable auth for development
+#      - TZ=UTC
+#    volumes:
+#      - openwebui_data:/app/backend/data  # Persist OpenWebUI's SQLite database
+#    depends_on:
+#      - api
+#    restart: unless-stopped
+#    networks:
+#      - llm-network
+      
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_HOST=localhost
+      - WEBHOOK_URL=http://localhost:5678/
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=postgres
+      - DB_POSTGRESDB_PASSWORD=postgrespassword
+      - TZ=UTC
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - llm-network
 
 volumes:
   rabbitmq_data:
   postgres_data:
   audit_logs:
+  n8n_data:
+#  openwebui_data:
 
 networks:
   llm-network:

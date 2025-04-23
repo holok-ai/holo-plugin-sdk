@@ -82,7 +82,8 @@ class LLMWorker {
           this.sendResponseChunk(id, {
             type: 'done',
             response: chunk,
-            requestId: id, 
+            requestId: id,
+            fullResponse 
           }, sourceId);
         },
         // On error callback
