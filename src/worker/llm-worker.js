@@ -79,11 +79,19 @@ class LLMWorker {
         // On complete callback
         (fullResponse, chunk) => {
           logger.info(`full response: ${fullResponse} final chunk:`+ JSON.stringify(chunk));
+          // Include all metrics for audit purposes
           this.sendResponseChunk(id, {
             type: 'done',
             response: chunk,
             requestId: id,
-            fullResponse 
+            fullResponse,
+            // Extract Ollama metrics and populate them in a standard way
+            ...(chunk && typeof chunk === 'object' ? {
+              total_duration: chunk.total_duration,
+              prompt_eval_count: chunk.prompt_eval_count,
+              eval_count: chunk.eval_count,
+              eval_duration: chunk.eval_duration
+            } : {})
           }, sourceId);
         },
         // On error callback
@@ -146,10 +154,18 @@ class LLMWorker {
         (response) => {
           // For streaming, response is just metadata
           // For non-streaming, response includes the complete message
+          logger.debug(`Chat completion final response: ${JSON.stringify(response)}`);
           this.sendResponseChunk(id, {
             type: 'done',
             requestId: id,
             response: response,
+            // Extract Ollama metrics and populate them in a standard way
+            ...(response && typeof response === 'object' ? {
+              total_duration: response.total_duration,
+              prompt_eval_count: response.prompt_eval_count,
+              eval_count: response.eval_count,
+              eval_duration: response.eval_duration
+            } : {})
           }, sourceId);
         },
         // On error callback
@@ -184,7 +200,8 @@ class LLMWorker {
    */
   async sendResponseChunk(requestId, data, sourceId) {
     try {
-      // Send to the response exchange with the source server ID as routing key
+      // 1. Send to the response exchange with the source server ID as routing key
+      // This goes to the client for streaming display
       await producer.sendToExchange(
         config.rabbitMq.exchanges.llmResponses,
         sourceId, // Use source ID as routing key
@@ -192,7 +209,24 @@ class LLMWorker {
         { correlationId: requestId }
       );
       
-      logger.debug(`Sent response chunk for ${requestId} to server ${sourceId}`);
+      // 2. Also send to the audit queue for logging
+      // Add timestamp and worker info to the audit record
+      const auditData = {
+        ...data,
+        timestamp: Date.now(),
+        workerId: this.workerId,
+        // Add any other metadata needed for auditing
+      };
+      
+      // Send to the response exchange with 'audit' routing key
+      await producer.sendToExchange(
+        config.rabbitMq.exchanges.llmResponses,
+        'audit', // Special routing key for audit service
+        auditData,
+        { correlationId: requestId }
+      );
+      
+      logger.debug(`Sent response chunk for ${requestId} to server ${sourceId} and audit queue`);
     } catch (error) {
       logger.error(`Error sending response chunk for ${requestId}: ${error.message}`);
     }

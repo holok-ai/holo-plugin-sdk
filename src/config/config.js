@@ -9,8 +9,9 @@ const config = {
       llmRequests: 'llm_requests',
       // The response queue will be dynamically created with server ID
       llmResponsesPrefix: 'llm_responses',
-      // Audit queue for request logging
-      llmAudit: 'llm_requests_audit'
+      // Audit queues for logging
+      llmAudit: 'llm_requests_audit',
+      llmResponsesAudit: 'llm_responses_audit'
     },
     exchanges: {
       llmResponses: 'llm_responses', // Used for routing responses to server-specific queues

@@ -161,8 +161,23 @@ class RabbitMQConnection {
       serverId
     );
     
+    // Create audit queue for response logging
+    const responseAuditQueueName = config.rabbitMq.queues.llmResponsesAudit;
+    await this.channel.assertQueue(
+      responseAuditQueueName,
+      { durable: true }
+    );
+    
+    // Bind the response audit queue to the response exchange with 'audit' routing key
+    await this.channel.bindQueue(
+      responseAuditQueueName,
+      config.rabbitMq.exchanges.llmResponses,
+      'audit' // Special routing key for audit
+    );
+    
     logger.info(`RabbitMQ exchanges and queues set up successfully for server ${serverId}`);
     logger.info(`Created response queue: ${responseQueueName}`);
+    logger.info(`Created response audit queue: ${responseAuditQueueName}`);
     logger.info(`Created audit queue: ${auditQueueName}`);
   }
 

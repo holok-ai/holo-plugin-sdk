@@ -33,7 +33,7 @@ services:
       - rabbitmq
     restart: unless-stopped
     deploy:
-      replicas: 3
+      replicas: 0
     networks:
       - llm-network
 
