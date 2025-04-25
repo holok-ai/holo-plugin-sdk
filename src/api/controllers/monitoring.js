@@ -76,7 +76,7 @@ class MonitoringService {
     try {
       // This could use RabbitMQ management API for accurate metrics
       // For now, we'll return a placeholder
-      return 5; // placeholder
+      return 0; // placeholder
     } catch (error) {
       logger.error(`Error fetching queue depth: ${error.message}`);
       return 0;

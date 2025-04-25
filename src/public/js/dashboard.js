@@ -488,19 +488,30 @@ async function viewRequestDetails(requestId) {
 
 // Helper function to get full response text from response chunks
 function getResponseText(responses) {
-  // For now, just show the final response or last token
+  // First check if final response has complete content
   const finalResponse = responses.find(r => r.is_final);
   if (finalResponse) {
+    // Check if token contains the full response
     if (finalResponse.token) {
       return escapeHtml(finalResponse.token);
-    } else if (finalResponse.metadata && finalResponse.metadata.fullResponse) {
-      return escapeHtml(finalResponse.metadata.fullResponse);
+    } 
+    // Check if metadata contains the full response
+    else if (finalResponse.metadata && finalResponse.metadata.fullResponse) {
+      // Check if it's an object containing a response property
+      if (typeof finalResponse.metadata.fullResponse === 'object' && finalResponse.metadata.fullResponse.response) {
+        return escapeHtml(finalResponse.metadata.fullResponse.response);
+      }
+      // Otherwise use the fullResponse directly if it's a string
+      else if (typeof finalResponse.metadata.fullResponse === 'string') {
+        return escapeHtml(finalResponse.metadata.fullResponse);
+      }
     }
   }
   
-  // If no final response, concatenate tokens
+  // If we couldn't find the complete response in the final message,
+  // concatenate all token messages to rebuild the full response
   const tokens = responses
-    .filter(r => r.token)
+    .filter(r => r.token && r.response_type === 'token')
     .map(r => r.token)
     .join('');
   
