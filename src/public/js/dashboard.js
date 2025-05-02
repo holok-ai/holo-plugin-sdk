@@ -390,27 +390,46 @@ async function loadLiveWorkerStatus() {
     }
     
     const data = await response.json();
+    console.log('Worker status response:', data); // Debug log
     
     const tableBody = document.getElementById('live-workers-list');
     
-    if (!data.status || !Array.isArray(data.status)) {
+    // Check for different response formats
+    let workers = [];
+    if (data.status && Array.isArray(data.status)) {
+      workers = data.status;
+    } else if (data.status && !Array.isArray(data.status)) {
+      // Single worker response
+      workers = [data.status];
+    } else if (Array.isArray(data)) {
+      workers = data;
+    } else {
       tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No live worker data available</td></tr>';
+      return;
+    }
+    
+    if (workers.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No active workers found</td></tr>';
       return;
     }
     
     let html = '';
     
-    data.status.forEach(worker => {
+    workers.forEach(worker => {
       // Format uptime
-      const uptime = formatUptime(worker.uptime);
+      const uptime = worker.uptime ? formatUptime(worker.uptime) : 'Unknown';
       
-      // Format memory usage
-      const memoryUsage = `${worker.memory.heapUsed}/${worker.memory.heapTotal} MB`;
+      // Format memory usage (handle potentially missing fields)
+      let memoryUsage = 'Unknown';
+      if (worker.memory && typeof worker.memory === 'object') {
+        memoryUsage = `${worker.memory.heapUsed || 0}/${worker.memory.heapTotal || 0} MB`;
+      }
       
-      // Format active models
-      const activeModels = worker.stats.activeModels.length > 0 
-        ? worker.stats.activeModels.map(m => m.name).join(', ')
-        : 'None';
+      // Format active models (handle potentially missing fields)
+      let activeModels = 'None';
+      if (worker.stats && worker.stats.activeModels && worker.stats.activeModels.length > 0) {
+        activeModels = worker.stats.activeModels.map(m => m.name || m.id || 'Unknown').join(', ');
+      }
       
       html += `
         <tr>
@@ -489,9 +508,35 @@ async function viewWorkerDetails(workerId) {
     }
     
     const data = await response.json();
+    console.log('Worker details response:', data); // Debug log
     
-    // Format worker details
-    const worker = data.status;
+    // Determine actual worker data structure
+    let worker;
+    if (data.status) {
+      worker = data.status;
+    } else if (data.workerId) {
+      worker = data;
+    } else {
+      throw new Error('Unexpected response format');
+    }
+    
+    // Default values for potentially missing data
+    const uptime = worker.uptime ? formatUptime(worker.uptime) : 'Unknown';
+    
+    // Format memory usage (handle potentially missing fields)
+    let memoryUsage = 'Unknown';
+    if (worker.memory && typeof worker.memory === 'object') {
+      memoryUsage = `${worker.memory.heapUsed || 0}/${worker.memory.heapTotal || 0} MB`;
+    }
+    
+    // Handle potentially missing stats
+    const stats = worker.stats || { totalRequests: 0, requestsProcessed: { generate: 0, chat: 0 }, activeModels: [] };
+    const requestsProcessed = stats.requestsProcessed || { generate: 0, chat: 0 };
+    const totalRequests = stats.totalRequests || 0;
+    const activeModels = stats.activeModels || [];
+    
+    // Handle connection count
+    const connectionCount = worker.connections?.active || 'Unknown';
     
     const html = `
       <div class="worker-details-section">
@@ -508,17 +553,17 @@ async function viewWorkerDetails(workerId) {
             </div>
             <div class="metric-item">
               <span class="metric-label">Uptime:</span>
-              <span class="metric-value">${formatUptime(worker.uptime)}</span>
+              <span class="metric-value">${uptime}</span>
             </div>
           </div>
           <div class="col-md-6">
             <div class="metric-item">
               <span class="metric-label">Memory Usage:</span>
-              <span class="metric-value">${worker.memory.heapUsed}/${worker.memory.heapTotal} MB</span>
+              <span class="metric-value">${memoryUsage}</span>
             </div>
             <div class="metric-item">
               <span class="metric-label">Active Connections:</span>
-              <span class="metric-value">${worker.connections.active}</span>
+              <span class="metric-value">${connectionCount}</span>
             </div>
           </div>
         </div>
@@ -530,19 +575,19 @@ async function viewWorkerDetails(workerId) {
           <div class="col-md-4">
             <div class="metric-item">
               <span class="metric-label">Total Requests:</span>
-              <span class="metric-value">${worker.stats.totalRequests}</span>
+              <span class="metric-value">${totalRequests}</span>
             </div>
           </div>
           <div class="col-md-4">
             <div class="metric-item">
               <span class="metric-label">Generate Requests:</span>
-              <span class="metric-value">${worker.stats.requestsProcessed.generate}</span>
+              <span class="metric-value">${requestsProcessed.generate}</span>
             </div>
           </div>
           <div class="col-md-4">
             <div class="metric-item">
               <span class="metric-label">Chat Requests:</span>
-              <span class="metric-value">${worker.stats.requestsProcessed.chat}</span>
+              <span class="metric-value">${requestsProcessed.chat}</span>
             </div>
           </div>
         </div>
@@ -560,11 +605,11 @@ async function viewWorkerDetails(workerId) {
               </tr>
             </thead>
             <tbody>
-              ${worker.stats.activeModels.length > 0 ? 
-                worker.stats.activeModels.map(model => `
+              ${activeModels.length > 0 ? 
+                activeModels.map(model => `
                   <tr>
-                    <td>${model.id}</td>
-                    <td>${model.name}</td>
+                    <td>${model.id || 'Unknown'}</td>
+                    <td>${model.name || model.id || 'Unknown'}</td>
                     <td>${model.loaded ? 
                       '<span class="badge bg-success">Loaded</span>' : 
                       '<span class="badge bg-warning">Unloaded</span>'
