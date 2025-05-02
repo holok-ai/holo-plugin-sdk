@@ -55,6 +55,43 @@ class LLMProviderInterface {
     const models = await this.getModels();
     return models.some(m => m.id === model);
   }
+  
+  /**
+   * Load a model into memory (for local models)
+   * @param {string} modelId - Model identifier
+   * @param {object} options - Model-specific options
+   * @returns {Promise<object>} - Result of the operation
+   */
+  async loadModel(modelId, options = {}) {
+    throw new Error('Method not implemented');
+  }
+
+  /**
+   * Unload a model from memory (for local models)
+   * @param {string} modelId - Model identifier
+   * @returns {Promise<object>} - Result of the operation
+   */
+  async unloadModel(modelId) {
+    throw new Error('Method not implemented');
+  }
+
+  /**
+   * Get status of a specific model
+   * @param {string} modelId - Model identifier
+   * @returns {Promise<object>} - Model status information
+   */
+  async getModelStatus(modelId) {
+    throw new Error('Method not implemented');
+  }
+
+  /**
+   * Get detailed information about a model
+   * @param {string} modelId - Model identifier
+   * @returns {Promise<object>} - Model details
+   */
+  async getModelDetails(modelId) {
+    throw new Error('Method not implemented');
+  }
 }
 
 module.exports = LLMProviderInterface;

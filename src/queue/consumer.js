@@ -33,6 +33,18 @@ class Consumer {
       throw error;
     }
   }
+  
+  /**
+   * Get the RabbitMQ channel
+   * @returns {Promise<Channel>} - RabbitMQ channel
+   */
+  async getChannel() {
+    if (!this.initialized) {
+      await this.init();
+    }
+    
+    return this.channel;
+  }
 
   /**
    * Register a message handler for a specific message type
@@ -125,6 +137,25 @@ class Consumer {
       } catch (error) {
         logger.error(`Error stopping consumer: ${error.message}`);
       }
+    }
+  }
+  
+  /**
+   * Get number of active connections
+   * @returns {Promise<number>} - Number of active connections
+   */
+  async getActiveConnectionCount() {
+    try {
+      if (!this.initialized) {
+        await this.init();
+      }
+      
+      // This is an estimate - in a production environment, you might
+      // want to get this information from the RabbitMQ management API
+      return this.channel ? 1 : 0;
+    } catch (error) {
+      logger.error(`Error getting active connection count: ${error.message}`);
+      return 0;
     }
   }
 }

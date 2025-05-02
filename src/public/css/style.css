@@ -36,16 +36,23 @@ body {
 }
 
 /* Request details */
-.request-details-section {
+.request-details-section,
+.worker-details-section,
+.model-details-section {
   background-color: #f8f9fa;
   border-radius: 0.25rem;
   padding: 1rem;
   margin-bottom: 1rem;
 }
 
-.request-details-section h6 {
+.request-details-section h6,
+.worker-details-section h6,
+.model-details-section h6 {
   color: #495057;
   font-weight: 500;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .response-message {

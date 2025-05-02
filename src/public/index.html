@@ -28,6 +28,9 @@
             <a class="nav-link" href="#workers">Workers</a>
           </li>
           <li class="nav-item">
+            <a class="nav-link" href="#models">Models</a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link" href="/architecture.html">Architecture</a>
           </li>
         </ul>
@@ -161,10 +164,16 @@
     </div>
     
     <div id="workers-section" class="d-none">
-      <h2>Worker Performance</h2>
+      <h2>Worker Management</h2>
       <div class="row mt-4">
         <div class="col-md-12">
-          <div class="card">
+          <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span>Worker Performance Stats</span>
+              <button class="btn btn-sm btn-primary" onclick="refreshWorkerStats()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+              </button>
+            </div>
             <div class="card-body">
               <div class="table-responsive">
                 <table class="table">
@@ -175,11 +184,84 @@
                       <th>Avg Processing Time</th>
                       <th>Avg Tokens</th>
                       <th>Tokens Per Second</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody id="workers-list">
                     <tr>
-                      <td colspan="5" class="text-center">Loading...</td>
+                      <td colspan="6" class="text-center">Loading...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span>Live Worker Status</span>
+              <button class="btn btn-sm btn-primary" onclick="refreshLiveWorkerStatus()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+              </button>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Worker ID</th>
+                      <th>Status</th>
+                      <th>Uptime</th>
+                      <th>Memory Usage</th>
+                      <th>Active Models</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="live-workers-list">
+                    <tr>
+                      <td colspan="6" class="text-center">Loading...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="models-section" class="d-none">
+      <h2>Model Management</h2>
+      <div class="row mt-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span>Available Models</span>
+              <div>
+                <button class="btn btn-sm btn-secondary me-2" onclick="syncModels()">
+                  <i class="bi bi-cloud-download"></i> Sync Models
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="refreshModels()">
+                  <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Model ID</th>
+                      <th>Provider</th>
+                      <th>Name</th>
+                      <th>Description</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="models-list">
+                    <tr>
+                      <td colspan="6" class="text-center">Loading...</td>
                     </tr>
                   </tbody>
                 </table>
@@ -201,6 +283,89 @@
         </div>
         <div class="modal-body">
           <div id="request-details-content">
+            <div class="text-center">
+              <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Worker Details Modal -->
+  <div class="modal fade" id="workerDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Worker Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="worker-details-content">
+            <div class="text-center">
+              <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Worker Command Modal -->
+  <div class="modal fade" id="workerCommandModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Send Worker Command</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="worker-command-form">
+            <input type="hidden" id="command-worker-id">
+            <div class="mb-3">
+              <label for="command-type" class="form-label">Command</label>
+              <select class="form-select" id="command-type" required>
+                <option value="">Select Command</option>
+                <option value="restart">Restart Worker</option>
+                <option value="load_model">Load Model</option>
+                <option value="unload_model">Unload Model</option>
+              </select>
+            </div>
+            
+            <div id="model-param-group" class="mb-3 d-none">
+              <label for="command-model-id" class="form-label">Model ID</label>
+              <select class="form-select" id="command-model-id">
+                <option value="">Select Model</option>
+              </select>
+            </div>
+            
+            <div class="alert alert-warning">
+              Warning: Commands may affect worker operation. Make sure you understand the effects before proceeding.
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="sendWorkerCommand()">Send Command</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Model Details Modal -->
+  <div class="modal fade" id="modelDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Model Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="model-details-content">
             <div class="text-center">
               <div class="spinner-border" role="status">
                 <span class="visually-hidden">Loading...</span>

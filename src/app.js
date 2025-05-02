@@ -4,8 +4,9 @@ const morgan = require('morgan');
 const { config } = require('./config/config');
 const routes = require('./api/routes');
 const logger = require('./utils/logger');
-// Import and initialize response controller
+// Import and initialize response controller and model registry
 const { createResponseStream } = require('./utils/response-controller');
+const modelRegistry = require('./models/model-registry');
 
 // Initialize Express app
 const app = express();
@@ -59,6 +60,10 @@ async function initApp() {
     await createResponseStream('init');
     logger.info('Response controller initialized successfully');
     
+    // Initialize model registry
+    await modelRegistry.initialize();
+    logger.info('Model registry initialized successfully');
+    
     // Start the HTTP server
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
@@ -73,9 +78,11 @@ async function initApp() {
 initApp();
 
 // Handle graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, shutting down gracefully');
   // Close database connections, RabbitMQ connections, etc.
+  await modelRegistry.shutdown();
+  logger.info('Closed model registry connections');
   process.exit(0);
 });
 

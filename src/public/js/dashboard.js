@@ -53,6 +53,7 @@ function setupNavigation() {
       document.getElementById('dashboard-section').classList.add('d-none');
       document.getElementById('requests-section').classList.add('d-none');
       document.getElementById('workers-section').classList.add('d-none');
+      document.getElementById('models-section').classList.add('d-none');
       
       // Show the selected section
       if (sectionId === 'dashboard') {
@@ -64,6 +65,10 @@ function setupNavigation() {
       } else if (sectionId === 'workers') {
         document.getElementById('workers-section').classList.remove('d-none');
         loadWorkerPerformance();
+        loadLiveWorkerStatus();
+      } else if (sectionId === 'models') {
+        document.getElementById('models-section').classList.remove('d-none');
+        loadModels();
       }
     });
   });
@@ -339,7 +344,7 @@ async function loadWorkerPerformance() {
     const tableBody = document.getElementById('workers-list');
     
     if (!data.workers || data.workers.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No worker data found</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No worker data found</td></tr>';
       return;
     }
     
@@ -353,6 +358,11 @@ async function loadWorkerPerformance() {
           <td>${formatTime(worker.avg_processing_time)}</td>
           <td>${Math.round(worker.avg_tokens || 0)}</td>
           <td>${worker.avg_tokens_per_second ? Math.round(worker.avg_tokens_per_second * 10) / 10 : 'N/A'}</td>
+          <td>
+            <button class="btn btn-sm btn-primary" onclick="openWorkerCommandModal('${worker.worker_id}')">
+              <i class="bi bi-terminal"></i> Command
+            </button>
+          </td>
         </tr>
       `;
     });
@@ -362,6 +372,348 @@ async function loadWorkerPerformance() {
   } catch (error) {
     console.error('Error loading worker performance:', error);
     showErrorAlert('Failed to load worker performance data. Please try again later.');
+  }
+}
+
+// Refresh worker stats
+function refreshWorkerStats() {
+  loadWorkerPerformance();
+}
+
+// Load live worker status from admin API
+async function loadLiveWorkerStatus() {
+  try {
+    const response = await fetch('/api/admin/workers');
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch live worker status');
+    }
+    
+    const data = await response.json();
+    
+    const tableBody = document.getElementById('live-workers-list');
+    
+    if (!data.status || !Array.isArray(data.status)) {
+      tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No live worker data available</td></tr>';
+      return;
+    }
+    
+    let html = '';
+    
+    data.status.forEach(worker => {
+      // Format uptime
+      const uptime = formatUptime(worker.uptime);
+      
+      // Format memory usage
+      const memoryUsage = `${worker.memory.heapUsed}/${worker.memory.heapTotal} MB`;
+      
+      // Format active models
+      const activeModels = worker.stats.activeModels.length > 0 
+        ? worker.stats.activeModels.map(m => m.name).join(', ')
+        : 'None';
+      
+      html += `
+        <tr>
+          <td>${worker.workerId}</td>
+          <td><span class="badge bg-success">Active</span></td>
+          <td>${uptime}</td>
+          <td>${memoryUsage}</td>
+          <td class="truncate">${activeModels}</td>
+          <td>
+            <button class="btn btn-sm btn-primary me-1" onclick="viewWorkerDetails('${worker.workerId}')">
+              <i class="bi bi-info-circle"></i> Details
+            </button>
+            <button class="btn btn-sm btn-warning" onclick="openWorkerCommandModal('${worker.workerId}')">
+              <i class="bi bi-terminal"></i> Command
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    tableBody.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error loading live worker status:', error);
+    const tableBody = document.getElementById('live-workers-list');
+    tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load worker status. Workers may not be running or RabbitMQ is not responding.</td></tr>';
+  }
+}
+
+// Refresh live worker status
+function refreshLiveWorkerStatus() {
+  loadLiveWorkerStatus();
+}
+
+// Format uptime in a human-readable format
+function formatUptime(ms) {
+  if (!ms) return 'Unknown';
+  
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  
+  if (days > 0) {
+    return `${days}d ${hours % 24}h`;
+  } else if (hours > 0) {
+    return `${hours}h ${minutes % 60}m`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${seconds % 60}s`;
+  } else {
+    return `${seconds}s`;
+  }
+}
+
+// View worker details
+async function viewWorkerDetails(workerId) {
+  try {
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('workerDetailsModal'));
+    modal.show();
+    
+    // Show loading state
+    document.getElementById('worker-details-content').innerHTML = `
+      <div class="text-center">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    `;
+    
+    // Fetch worker details
+    const response = await fetch(`/api/admin/workers/${workerId}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch worker details');
+    }
+    
+    const data = await response.json();
+    
+    // Format worker details
+    const worker = data.status;
+    
+    const html = `
+      <div class="worker-details-section">
+        <h6>Worker Information</h6>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="metric-item">
+              <span class="metric-label">Worker ID:</span>
+              <span class="metric-value">${worker.workerId}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Status:</span>
+              <span class="metric-value"><span class="badge bg-success">Active</span></span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Uptime:</span>
+              <span class="metric-value">${formatUptime(worker.uptime)}</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="metric-item">
+              <span class="metric-label">Memory Usage:</span>
+              <span class="metric-value">${worker.memory.heapUsed}/${worker.memory.heapTotal} MB</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Active Connections:</span>
+              <span class="metric-value">${worker.connections.active}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="worker-details-section">
+        <h6>Worker Statistics</h6>
+        <div class="row">
+          <div class="col-md-4">
+            <div class="metric-item">
+              <span class="metric-label">Total Requests:</span>
+              <span class="metric-value">${worker.stats.totalRequests}</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="metric-item">
+              <span class="metric-label">Generate Requests:</span>
+              <span class="metric-value">${worker.stats.requestsProcessed.generate}</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="metric-item">
+              <span class="metric-label">Chat Requests:</span>
+              <span class="metric-value">${worker.stats.requestsProcessed.chat}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="worker-details-section">
+        <h6>Active Models</h6>
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Model ID</th>
+                <th>Name</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${worker.stats.activeModels.length > 0 ? 
+                worker.stats.activeModels.map(model => `
+                  <tr>
+                    <td>${model.id}</td>
+                    <td>${model.name}</td>
+                    <td>${model.loaded ? 
+                      '<span class="badge bg-success">Loaded</span>' : 
+                      '<span class="badge bg-warning">Unloaded</span>'
+                    }</td>
+                  </tr>
+                `).join('') : 
+                '<tr><td colspan="3" class="text-center">No active models</td></tr>'
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('worker-details-content').innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error loading worker details:', error);
+    document.getElementById('worker-details-content').innerHTML = `
+      <div class="alert alert-danger">
+        Failed to load worker details. Please try again later.
+      </div>
+    `;
+  }
+}
+
+// Open worker command modal
+function openWorkerCommandModal(workerId) {
+  // Set worker ID in hidden field
+  document.getElementById('command-worker-id').value = workerId;
+  
+  // Reset form
+  document.getElementById('command-type').value = '';
+  document.getElementById('model-param-group').classList.add('d-none');
+  
+  // Load available models for the dropdown
+  loadCommandModelOptions();
+  
+  // Show the modal
+  const modal = new bootstrap.Modal(document.getElementById('workerCommandModal'));
+  modal.show();
+  
+  // Add change event to command type
+  document.getElementById('command-type').addEventListener('change', function() {
+    const commandType = this.value;
+    
+    if (commandType === 'load_model' || commandType === 'unload_model') {
+      document.getElementById('model-param-group').classList.remove('d-none');
+    } else {
+      document.getElementById('model-param-group').classList.add('d-none');
+    }
+  });
+}
+
+// Load models for command dropdown
+async function loadCommandModelOptions() {
+  try {
+    const response = await fetch('/api/admin/models');
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch models');
+    }
+    
+    const data = await response.json();
+    
+    const select = document.getElementById('command-model-id');
+    
+    // Clear existing options except the first one
+    while (select.options.length > 1) {
+      select.remove(1);
+    }
+    
+    // Add models to dropdown
+    if (data.models && data.models.length > 0) {
+      data.models.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = `${model.name} (${model.id})`;
+        select.appendChild(option);
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error loading models for command:', error);
+  }
+}
+
+// Send worker command
+async function sendWorkerCommand() {
+  const workerId = document.getElementById('command-worker-id').value;
+  const commandType = document.getElementById('command-type').value;
+  
+  if (!commandType) {
+    alert('Please select a command');
+    return;
+  }
+  
+  let params = {};
+  
+  if (commandType === 'load_model' || commandType === 'unload_model') {
+    const modelId = document.getElementById('command-model-id').value;
+    if (!modelId) {
+      alert('Please select a model');
+      return;
+    }
+    params.modelId = modelId;
+  }
+  
+  try {
+    // Disable submit button
+    const submitButton = document.querySelector('#workerCommandModal .btn-primary');
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+    
+    // Send command
+    const response = await fetch(`/api/admin/workers/${workerId}/command`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        command: commandType,
+        params
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to send command');
+    }
+    
+    const data = await response.json();
+    
+    // Close modal
+    bootstrap.Modal.getInstance(document.getElementById('workerCommandModal')).hide();
+    
+    // Show success message
+    alert('Command sent successfully');
+    
+    // Refresh worker status
+    loadLiveWorkerStatus();
+    
+  } catch (error) {
+    console.error('Error sending worker command:', error);
+    alert('Failed to send command: ' + error.message);
+  } finally {
+    // Re-enable submit button
+    const submitButton = document.querySelector('#workerCommandModal .btn-primary');
+    submitButton.disabled = false;
+    submitButton.innerHTML = 'Send Command';
   }
 }
 
@@ -561,4 +913,316 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// Load models from API
+async function loadModels() {
+  try {
+    const response = await fetch('/api/admin/models');
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch models');
+    }
+    
+    const data = await response.json();
+    
+    const tableBody = document.getElementById('models-list');
+    
+    if (!data.models || data.models.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No models found. Try syncing models first.</td></tr>';
+      return;
+    }
+    
+    let html = '';
+    
+    data.models.forEach(model => {
+      // Determine status badge
+      let statusBadge = '';
+      if (model.status) {
+        if (model.status.enabled && model.status.available) {
+          statusBadge = '<span class="badge bg-success">Enabled & Available</span>';
+        } else if (model.status.enabled) {
+          statusBadge = '<span class="badge bg-warning">Enabled (Unavailable)</span>';
+        } else if (model.status.available) {
+          statusBadge = '<span class="badge bg-info">Available (Disabled)</span>';
+        } else {
+          statusBadge = '<span class="badge bg-secondary">Disabled</span>';
+        }
+      } else {
+        statusBadge = '<span class="badge bg-secondary">Unknown</span>';
+      }
+      
+      // Format description
+      const description = model.description ? 
+        (model.description.length > 50 ? model.description.substring(0, 50) + '...' : model.description) : 
+        'No description';
+      
+      html += `
+        <tr>
+          <td>${model.id}</td>
+          <td>${model.provider}</td>
+          <td>${model.name}</td>
+          <td class="truncate">${description}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <button class="btn btn-sm btn-primary me-1" onclick="viewModelDetails('${model.id}')">
+              <i class="bi bi-info-circle"></i> Details
+            </button>
+            ${model.status && !model.status.enabled ? 
+              `<button class="btn btn-sm btn-success" onclick="updateModelStatus('${model.id}', true)">
+                <i class="bi bi-play-fill"></i> Enable
+              </button>` : 
+              `<button class="btn btn-sm btn-danger" onclick="updateModelStatus('${model.id}', false)">
+                <i class="bi bi-stop-fill"></i> Disable
+              </button>`
+            }
+          </td>
+        </tr>
+      `;
+    });
+    
+    tableBody.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error loading models:', error);
+    const tableBody = document.getElementById('models-list');
+    tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load models. Database may not be initialized.</td></tr>';
+  }
+}
+
+// Refresh models list
+function refreshModels() {
+  loadModels();
+}
+
+// View model details
+async function viewModelDetails(modelId) {
+  try {
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('modelDetailsModal'));
+    modal.show();
+    
+    // Show loading state
+    document.getElementById('model-details-content').innerHTML = `
+      <div class="text-center">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    `;
+    
+    // Fetch model details
+    const response = await fetch(`/api/admin/models/${modelId}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch model details');
+    }
+    
+    const data = await response.json();
+    
+    // Format model details
+    const model = data.model;
+    
+    const html = `
+      <div class="model-details-section">
+        <h6>Basic Information</h6>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="metric-item">
+              <span class="metric-label">Model ID:</span>
+              <span class="metric-value">${model.id}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Name:</span>
+              <span class="metric-value">${model.name}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Provider:</span>
+              <span class="metric-value">${model.provider}</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="metric-item">
+              <span class="metric-label">Status:</span>
+              <span class="metric-value">
+                ${model.status.enabled ? 
+                  '<span class="badge bg-success">Enabled</span>' : 
+                  '<span class="badge bg-danger">Disabled</span>'
+                }
+                ${model.status.available ? 
+                  '<span class="badge bg-info">Available</span>' : 
+                  '<span class="badge bg-warning">Unavailable</span>'
+                }
+              </span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Last Updated:</span>
+              <span class="metric-value">${formatDate(model.status.lastUpdated)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="model-details-section">
+        <h6>Description</h6>
+        <p>${model.description || 'No description available'}</p>
+      </div>
+      
+      ${model.capabilities && Object.keys(model.capabilities).length > 0 ? `
+        <div class="model-details-section">
+          <h6>Capabilities</h6>
+          <div class="row">
+            ${Object.entries(model.capabilities).map(([key, value]) => `
+              <div class="col-md-4">
+                <div class="metric-item">
+                  <span class="metric-label">${key}:</span>
+                  <span class="metric-value">${value === true ? '✅' : value === false ? '❌' : value}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+      
+      ${model.parameters && Object.keys(model.parameters).length > 0 ? `
+        <div class="model-details-section">
+          <h6>Default Parameters</h6>
+          <div class="row">
+            ${Object.entries(model.parameters).map(([key, value]) => `
+              <div class="col-md-4">
+                <div class="metric-item">
+                  <span class="metric-label">${key}:</span>
+                  <span class="metric-value">${typeof value === 'object' ? JSON.stringify(value) : value}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+      
+      ${model.metadata && Object.keys(model.metadata).length > 0 ? `
+        <div class="model-details-section">
+          <h6>Metadata</h6>
+          <div class="row">
+            ${Object.entries(model.metadata).map(([key, value]) => `
+              <div class="col-md-4">
+                <div class="metric-item">
+                  <span class="metric-label">${key}:</span>
+                  <span class="metric-value">${typeof value === 'object' ? JSON.stringify(value) : value}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+      
+      <div class="d-flex justify-content-end mt-3">
+        ${model.status && !model.status.enabled ? 
+          `<button class="btn btn-success me-2" onclick="updateModelStatus('${model.id}', true)">
+            <i class="bi bi-play-fill"></i> Enable Model
+          </button>` : 
+          `<button class="btn btn-danger me-2" onclick="updateModelStatus('${model.id}', false)">
+            <i class="bi bi-stop-fill"></i> Disable Model
+          </button>`
+        }
+      </div>
+    `;
+    
+    document.getElementById('model-details-content').innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error loading model details:', error);
+    document.getElementById('model-details-content').innerHTML = `
+      <div class="alert alert-danger">
+        Failed to load model details. Please try again later.
+      </div>
+    `;
+  }
+}
+
+// Update model status (enable/disable)
+async function updateModelStatus(modelId, enable) {
+  try {
+    // Confirm with user
+    if (!confirm(`Are you sure you want to ${enable ? 'enable' : 'disable'} this model?`)) {
+      return;
+    }
+    
+    // Send update
+    const response = await fetch(`/api/admin/models/${modelId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        status: {
+          enabled: enable
+        }
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update model status');
+    }
+    
+    const data = await response.json();
+    
+    // Show success message
+    alert(`Model ${enable ? 'enabled' : 'disabled'} successfully`);
+    
+    // Refresh models list
+    loadModels();
+    
+    // If modal is open, close it
+    const modalElement = document.getElementById('modelDetailsModal');
+    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+    if (modalInstance) {
+      modalInstance.hide();
+    }
+    
+  } catch (error) {
+    console.error('Error updating model status:', error);
+    alert('Failed to update model status: ' + error.message);
+  }
+}
+
+// Sync models with provider(s)
+async function syncModels() {
+  try {
+    // Confirm with user
+    if (!confirm('This will sync models from all providers. Continue?')) {
+      return;
+    }
+    
+    // Change button to loading state
+    const syncButton = document.querySelector('#models-section .btn-secondary');
+    syncButton.disabled = true;
+    syncButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Syncing...';
+    
+    // Send sync request
+    const response = await fetch('/api/admin/models/sync', {
+      method: 'POST'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to sync models');
+    }
+    
+    const data = await response.json();
+    
+    // Show success message
+    alert('Models synced successfully');
+    
+    // Refresh models list
+    loadModels();
+    
+  } catch (error) {
+    console.error('Error syncing models:', error);
+    alert('Failed to sync models: ' + error.message);
+  } finally {
+    // Reset button
+    const syncButton = document.querySelector('#models-section .btn-secondary');
+    syncButton.disabled = false;
+    syncButton.innerHTML = '<i class="bi bi-cloud-download"></i> Sync Models';
+  }
 }

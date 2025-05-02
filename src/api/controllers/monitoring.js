@@ -3,6 +3,8 @@ const { config } = require('../../config/config');
 const logger = require('../../utils/logger');
 const consumer = require('../../queue/consumer');
 const producer = require('../../queue/producer');
+const modelRegistry = require('../../models/model-registry');
+const workerManager = require('../../worker/worker-manager');
 
 /**
  * Class for monitoring and dashboard metrics
