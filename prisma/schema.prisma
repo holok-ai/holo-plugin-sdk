@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model llm_request_audit {
+  id           Int      @id @default(autoincrement())
+  request_id   String   @db.VarChar(36)
+  request_type String   @db.VarChar(50)
+  model        String   @db.VarChar(100)
+  prompt       String?
+  options      Json?
+  source_id    String?  @db.VarChar(100)
+  user_id      String?  @db.VarChar(100)
+  timestamp    DateTime @default(now()) @db.Timestamp(6)
+  metadata     Json?
+}
+
+model llm_response_audit {
+  id                Int      @id @default(autoincrement())
+  request_id        String   @db.VarChar(36)
+  response_type     String   @db.VarChar(50)
+  token             String?
+  model             String?  @db.VarChar(100)
+  worker_id         String?  @db.VarChar(100)
+  timestamp         DateTime @default(now()) @db.Timestamp(6)
+  is_final          Boolean? @default(false)
+  total_tokens      Int?
+  processing_time   Int?
+  tokens_per_second Float?
+  metadata          Json?
+
+  @@index([request_id], map: "idx_response_request_id")
+}
+
+model models {
+  id           String   @id @db.VarChar(255)
+  provider     String   @db.VarChar(100)
+  name         String   @db.VarChar(255)
+  description  String?
+  capabilities Json     @default("{}")
+  parameters   Json     @default("{}")
+  metadata     Json     @default("{}")
+  status       Json     @default("{\"enabled\": false, \"available\": false}")
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  updated_at   DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([provider], map: "idx_models_provider")
+}
+
+model Prompt {
+  id              String    @id @default(uuid())
+  name            String    // Friendly name for the prompt
+  description     String?   // Optional description
+  provider        String    // "ollama", "claude", "openai", "gemini", or "grok"
+  promptType      String    @map("prompt_type")  // "chat", "completion", "image", etc.
+  systemPrompt    String?   @map("system_prompt") // System prompt (used by some providers)
+  userPrompt      String    @map("user_prompt")  // The main prompt content
+  
+  // Provider-specific parameters stored as JSON
+  parameters      Json      @default("{}")
+
+  // Common parameters across most providers
+  temperature     Float?
+  topP            Float?    @map("top_p")
+  topK            Int?      @map("top_k")
+  maxTokens       Int?      @map("max_tokens")
+  presencePenalty Float?    @map("presence_penalty")
+  frequencyPenalty Float?   @map("frequency_penalty")
+  
+  // Ollama-specific fields
+  stopSequences   String[]  @map("stop_sequences") @default([])
+  
+  // OpenAI-specific fields
+  model           String?   // e.g., "gpt-4", "gpt-3.5-turbo"
+  
+  // Claude-specific fields
+  anthropicVersion String?  @map("anthropic_version")
+  
+  // Gemini-specific fields
+  safetySettings  Json?     @map("safety_settings")
+  
+  // Grok-specific fields
+  grokSettings    Json?     @map("grok_settings")
+  
+  // Metadata and tracking
+  tags            String[]  @default([])
+  version         String    @default("1.0")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdBy       String?   @map("created_by")
+  updatedBy       String?   @map("updated_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([provider, promptType])
+  @@index([name])
+  @@index([tags])
+  @@map("prompt")
+}
