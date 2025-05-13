@@ -10,6 +10,7 @@ A scalable, distributed LLM proxy server that provides an Ollama-compatible API 
 - Docker Compose deployment
 - Horizontal scaling
 - Request auditing with PostgreSQL
+- Database migration management with Prisma
 
 ## Architecture
 
@@ -44,6 +45,7 @@ The audit system uses a fan-out pattern to capture all LLM requests:
 
 - Docker and Docker Compose
 - Node.js 18 or higher (for local development)
+- PostgreSQL (for database storage)
 
 ### Running with Docker Compose
 
@@ -64,6 +66,16 @@ docker-compose up -d --scale worker=5
 # Install dependencies
 npm install
 
+# Set up environment variables
+cp .env.example .env
+# Edit .env to configure your database connection
+
+# Run Prisma migrations
+npx prisma migrate deploy
+
+# Generate Prisma client
+npx prisma generate
+
 # Start the API server
 npm run dev
 
@@ -74,6 +86,60 @@ npm run worker
 cd src/audit
 node audit-server.js
 ```
+
+## Database Migration Management
+
+The project uses Prisma for database schema management and migrations.
+
+### Initial Setup
+
+```bash
+# Initialize Prisma (already done)
+npx prisma init
+
+# Set up your database connection in .env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/llm_platform?schema=public"
+```
+
+### Running Migrations
+
+```bash
+# Apply all pending migrations (production)
+npx prisma migrate deploy
+
+# Create a new migration (development)
+npx prisma migrate dev --name your_migration_name
+
+# View migration status
+npx prisma migrate status
+
+# Reset database (development only - deletes all data!)
+npx prisma migrate reset
+```
+
+### Generate Prisma Client
+
+After changing the schema or running migrations:
+
+```bash
+npx prisma generate
+```
+
+### Prisma Studio
+
+View and edit your database data using Prisma Studio:
+
+```bash
+npx prisma studio
+```
+
+### Database Schema
+
+The current schema includes:
+- `models` - LLM model configurations
+- `requests` - Request tracking and metadata
+- `response_audit` - Audit logs for responses
+- `prompts` - Unified prompt storage across providers
 
 ## API Endpoints
 
@@ -115,6 +181,9 @@ LLM_PROVIDER=ollama  # Supported values: mock, ollama
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_TIMEOUT=60000
 
+# Database settings (for Prisma)
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/llm_platform?schema=public
+
 # Audit settings
 AUDIT_ENABLED=false
 AUDIT_PG_HOST=localhost
@@ -143,6 +212,18 @@ To add a new LLM provider:
 2. Implement the interface from `src/llm/provider-interface.js`
 3. Register the provider in `src/llm/factory.js`
 4. Add configuration options in `src/config/config.js`
+
+## Docker Integration
+
+The application automatically runs migrations when starting with Docker:
+
+```bash
+# The Docker container will run migrations on startup
+docker-compose up
+
+# Or manually run migrations in the container
+docker-compose exec api npx prisma migrate deploy
+```
 
 ## Audit System
 
