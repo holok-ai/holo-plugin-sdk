@@ -9,7 +9,8 @@ const llmFactory = require('../llm/factory');
  */
 class LLMWorker {
   constructor() {
-    this.workerId = `worker-${Math.random().toString(36).substr(2, 9)}`;
+    // Use environment variable WORKER_ID if available, otherwise generate random ID
+    this.workerId = process.env.LLM_WORKER_ID || `worker-${Math.random().toString(36).substr(2, 9)}`;
     
     // Worker stats
     this.stats = {
