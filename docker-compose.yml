@@ -32,13 +32,17 @@ services:
     environment:
       - NODE_ENV=production
       - RABBITMQ_URL=amqp://rabbitmq
+      - LLM_PROVIDER=ollama  
+      - OLLAMA_BASE_URL=host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./src:/app/src
     depends_on:
       - rabbitmq
     restart: unless-stopped
     deploy:
-      replicas: 0
+      replicas: 1
     networks:
       - llm-network
 
