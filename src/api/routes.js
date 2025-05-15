@@ -10,12 +10,20 @@ const router = express.Router();
 // Apply authentication middleware to all routes
 router.use(authMiddleware);
 
-// Ollama-compatible API endpoints
+// LLM API endpoints - Generic
 router.post('/generate', llmController.generateText);
 router.post('/chat', llmController.chatCompletion);
-router.post('/chat/completions', llmController.chatCompletion); // OpenAI compatibility
 router.get('/models', llmController.listModels);
+router.get('/providers', llmController.listProviders);
 router.get('/status', llmController.getStatus);
+
+// OpenAI-compatible endpoints
+router.post('/openai/v1/chat/completions', llmController.openAIChatCompletion);
+router.get('/openai/v1/models', llmController.listOpenAIModels);
+
+// Claude-compatible endpoints
+router.post('/claude/v1/messages', llmController.claudeMessages);
+router.get('/claude/v1/models', llmController.listClaudeModels);
 
 // Queue management endpoints (for internal use)
 router.get('/queue/status', llmController.getQueueStatus);

@@ -6,11 +6,11 @@ const { createResponseStream } = require('../../utils/response-controller');
 const llmFactory = require('../../llm/factory');
 
 /**
- * Generate text from a prompt (Ollama compatible endpoint)
+ * Generate text from a prompt (compatible with multiple providers)
  */
 const generateText = async (req, res) => {
   try {
-    const { model, prompt, options, stream } = req.body;
+    const { model, prompt, options, stream, provider } = req.body;
     
     if (!model || !prompt) {
       return res.status(400).json({
@@ -22,7 +22,7 @@ const generateText = async (req, res) => {
     
     // Generate a unique ID for this request
     const requestId = uuidv4();
-    logger.info("did i get here?");
+    
     // Format the request for the worker
     const request = {
       id: requestId,
@@ -32,6 +32,7 @@ const generateText = async (req, res) => {
         model,
         prompt,
         stream,
+        provider, // Pass provider if specified
         options: options || {}
       },
       timestamp: Date.now()
@@ -81,12 +82,12 @@ const generateText = async (req, res) => {
 };
 
 /**
- * Chat completion (OpenAI/Ollama compatible endpoint)
+ * Chat completion (compatible with multiple providers)
  */
 const chatCompletion = async (req, res) => {
   try {
-    const { model, messages, options, stream } = req.body;
-    logger.info("request body: "+JSON.stringify(req.headers));
+    const { model, messages, options, stream, provider } = req.body;
+    
     if (!model || !messages || !Array.isArray(messages)) {
       return res.status(400).json({
         error: {
@@ -106,6 +107,7 @@ const chatCompletion = async (req, res) => {
       payload: {
         model,
         messages,
+        provider, // Pass provider if specified
         options: options || {},
         stream
       },
@@ -162,8 +164,10 @@ const chatCompletion = async (req, res) => {
  */
 const listModels = async (req, res) => {
   try {
-    // Fetch models from the configured provider
-    const models = await llmFactory.getModels();
+    const { provider } = req.query;
+    
+    // Fetch models from the specified provider or default
+    const models = await llmFactory.getModels(provider);
     
     return res.status(200).json({ models });
   } catch (error) {
@@ -171,6 +175,77 @@ const listModels = async (req, res) => {
     return res.status(500).json({
       error: {
         message: 'Failed to list models'
+      }
+    });
+  }
+};
+
+/**
+ * List OpenAI models - OpenAI compatible format
+ */
+const listOpenAIModels = async (req, res) => {
+  try {
+    // Fetch models from OpenAI provider
+    const models = await llmFactory.getModels('openai');
+    
+    // Format in OpenAI style
+    const formattedModels = {
+      object: 'list',
+      data: models.map(model => ({
+        id: model.id,
+        object: 'model',
+        created: new Date(model.modified_at).getTime() / 1000,
+        owned_by: 'organization-owner'
+      }))
+    };
+    
+    return res.status(200).json(formattedModels);
+  } catch (error) {
+    logger.error(`Error in listOpenAIModels: ${error.message}`);
+    return res.status(500).json({
+      error: {
+        message: 'Failed to list models',
+        type: 'server_error'
+      }
+    });
+  }
+};
+
+/**
+ * List Claude models - Anthropic compatible format
+ */
+const listClaudeModels = async (req, res) => {
+  try {
+    // Fetch models from Claude provider
+    const models = await llmFactory.getModels('claude');
+    
+    // Return in Anthropic style
+    return res.status(200).json({ models });
+  } catch (error) {
+    logger.error(`Error in listClaudeModels: ${error.message}`);
+    return res.status(500).json({
+      error: {
+        message: 'Failed to list models',
+        type: 'server_error'
+      }
+    });
+  }
+};
+
+/**
+ * List available providers
+ */
+const listProviders = async (req, res) => {
+  try {
+    // Get list of available providers
+    const providers = llmFactory.getAvailableProviders();
+    
+    return res.status(200).json({ providers });
+  } catch (error) {
+    logger.error(`Error in listProviders: ${error.message}`);
+    return res.status(500).json({
+      error: {
+        message: 'Failed to list providers'
       }
     });
   }
@@ -226,10 +301,71 @@ const getQueueStatus = async (req, res) => {
   }
 };
 
+/**
+ * OpenAI-compatible chat completions endpoint
+ */
+const openAIChatCompletion = async (req, res) => {
+  try {
+    // Get the body and add provider parameter
+    const requestBody = {
+      ...req.body,
+      provider: 'openai'
+    };
+    
+    // Set the request with the provider
+    req.body = requestBody;
+    
+    // Call the standard chat completion with the provider set
+    return chatCompletion(req, res);
+  } catch (error) {
+    logger.error(`Error in openAIChatCompletion: ${error.message}`);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: {
+          message: 'Failed to process OpenAI request'
+        }
+      });
+    }
+  }
+};
+
+/**
+ * Claude-compatible messages endpoint
+ */
+const claudeMessages = async (req, res) => {
+  try {
+    // Get the body and add provider parameter
+    const requestBody = {
+      ...req.body,
+      provider: 'claude'
+    };
+    
+    // Set the request with the provider
+    req.body = requestBody;
+    
+    // Call the standard chat completion with the provider set
+    return chatCompletion(req, res);
+  } catch (error) {
+    logger.error(`Error in claudeMessages: ${error.message}`);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: {
+          message: 'Failed to process Claude request'
+        }
+      });
+    }
+  }
+};
+
 module.exports = {
   generateText,
   chatCompletion,
+  openAIChatCompletion,
+  claudeMessages,
   listModels,
+  listOpenAIModels,
+  listClaudeModels,
+  listProviders,
   getStatus,
   getQueueStatus
 };

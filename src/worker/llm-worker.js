@@ -162,11 +162,13 @@ class LLMWorker {
   }
 
   /**
-   * Get the configured LLM provider
+   * Get the appropriate LLM provider
+   * @param {string} providerName - Optional provider name to override default
    * @returns {Promise<LLMProviderInterface>} - LLM provider instance
    */
-  async getLLMProvider() {
-    return llmFactory.getProvider();
+  async getLLMProvider(providerName = null) {
+    // Use the factory's new capability to get a specific provider
+    return llmFactory.getProvider(providerName);
   }
 
   /**
@@ -182,39 +184,66 @@ class LLMWorker {
     
     try {
       // Extract parameters
-      const { model, prompt, options, stream } = payload;
+      const { model, prompt, options, stream, provider } = payload;
       
-      // Get appropriate LLM provider
-      const llmProvider = await this.getLLMProvider();
+      // Get appropriate LLM provider based on specified provider or default
+      const llmProvider = await this.getLLMProvider(provider);
+      
+      // Determine the provider name for special handling
+      const providerName = provider || llmFactory.defaultProviderName;
       
       // Process generation using the provider
       await llmProvider.generate(
         { model, prompt, options, stream },
         // On token callback
-        (token) => {
-          this.sendResponseChunk(id, {
-            type: 'token',
-            token,
-            requestId: id
-          }, sourceId);
+        (token, metadata = {}) => {
+          // For OpenAI and Claude, token will be in their specific format
+          if (providerName === 'openai' || providerName === 'claude') {
+            // Pass through the raw token/chunk
+            this.sendResponseChunk(id, {
+              type: 'token',
+              requestId: id,
+              provider: providerName,
+              data: token
+            }, sourceId);
+          } else {
+            // Use standardized format for other providers
+            this.sendResponseChunk(id, {
+              type: 'token',
+              token: typeof token === 'string' ? token : JSON.stringify(token),
+              requestId: id
+            }, sourceId);
+          }
         },
         // On complete callback
         (fullResponse, chunk) => {
-          logger.info(`full response: ${fullResponse} final chunk:`+ JSON.stringify(chunk));
-          // Include all metrics for audit purposes
-          this.sendResponseChunk(id, {
-            type: 'done',
-            response: chunk,
-            requestId: id,
-            fullResponse,
-            // Extract Ollama metrics and populate them in a standard way
-            ...(chunk && typeof chunk === 'object' ? {
-              total_duration: chunk.total_duration,
-              prompt_eval_count: chunk.prompt_eval_count,
-              eval_count: chunk.eval_count,
-              eval_duration: chunk.eval_duration
-            } : {})
-          }, sourceId);
+          logger.info(`Generation complete. Provider: ${providerName}`);
+          
+          // Handle provider-specific responses
+          if (providerName === 'openai' || providerName === 'claude') {
+            // Pass through the raw response
+            this.sendResponseChunk(id, {
+              type: 'done',
+              requestId: id,
+              provider: providerName,
+              data: chunk || fullResponse
+            }, sourceId);
+          } else {
+            // Include all metrics for audit purposes
+            this.sendResponseChunk(id, {
+              type: 'done',
+              response: chunk,
+              requestId: id,
+              fullResponse,
+              // Extract Ollama metrics and populate them in a standard way
+              ...(chunk && typeof chunk === 'object' ? {
+                total_duration: chunk.total_duration,
+                prompt_eval_count: chunk.prompt_eval_count,
+                eval_count: chunk.eval_count,
+                eval_duration: chunk.eval_duration
+              } : {})
+            }, sourceId);
+          }
           
           // Update stats
           const endTime = Date.now();
@@ -266,44 +295,73 @@ class LLMWorker {
     
     try {
       // Extract parameters
-      const { model, messages, options, stream } = payload;
+      const { model, messages, options, stream, provider } = payload;
       
-      // Get appropriate LLM provider
-      const llmProvider = await this.getLLMProvider();
+      // Get appropriate LLM provider based on specified provider or default
+      const llmProvider = await this.getLLMProvider(provider);
+      
+      // Determine the provider name for special handling
+      const providerName = provider || llmFactory.defaultProviderName;
       
       // Process chat using the provider - passing along stream flag
       await llmProvider.chat(
         { model, messages, options, stream },
-        // On token callback
+        // On token callback - handle provider-specific formats
         (token, metadata = {}) => {
-          this.sendResponseChunk(id, {
-            type: 'token',
-            token,
-            requestId: id,
-            // OpenAI compatible format
-            delta: metadata.delta || {
-              content: token
-            },
-            model
-          }, sourceId);
+          // For OpenAI, token will already be in the correct format
+          // For Claude, we need to pass through the raw response
+          // For other providers, use a common format
+          if (providerName === 'openai' || providerName === 'claude') {
+            // Pass through the raw token/chunk
+            this.sendResponseChunk(id, {
+              type: 'token',
+              requestId: id,
+              provider: providerName,
+              data: token
+            }, sourceId);
+          } else {
+            // Use a standardized format for other providers
+            this.sendResponseChunk(id, {
+              type: 'token',
+              token: token,
+              requestId: id,
+              delta: metadata.delta || {
+                content: typeof token === 'string' ? token : JSON.stringify(token)
+              },
+              model
+            }, sourceId);
+          }
         },
         // On complete callback
         (response) => {
           // For streaming, response is just metadata
           // For non-streaming, response includes the complete message
           logger.debug(`Chat completion final response: ${JSON.stringify(response)}`);
-          this.sendResponseChunk(id, {
-            type: 'done',
-            requestId: id,
-            response: response,
-            // Extract Ollama metrics and populate them in a standard way
-            ...(response && typeof response === 'object' ? {
-              total_duration: response.total_duration,
-              prompt_eval_count: response.prompt_eval_count,
-              eval_count: response.eval_count,
-              eval_duration: response.eval_duration
-            } : {})
-          }, sourceId);
+          
+          // Handle different provider responses
+          if (providerName === 'openai' || providerName === 'claude') {
+            // Pass through the raw response
+            this.sendResponseChunk(id, {
+              type: 'done',
+              requestId: id,
+              provider: providerName,
+              data: response
+            }, sourceId);
+          } else {
+            // Use standardized format for other providers
+            this.sendResponseChunk(id, {
+              type: 'done',
+              requestId: id,
+              response: response,
+              // Extract Ollama metrics if available
+              ...(response && typeof response === 'object' ? {
+                total_duration: response.total_duration,
+                prompt_eval_count: response.prompt_eval_count,
+                eval_count: response.eval_count,
+                eval_duration: response.eval_duration
+              } : {})
+            }, sourceId);
+          }
           
           // Update stats
           const endTime = Date.now();
