@@ -1,0 +1,74 @@
+# pipeline for building and deploying llm-proxy to test environment
+
+trigger:
+- none
+
+resources:
+  repositories:
+  - repository: nova
+    name: Project NOVA/nova
+    type: git
+    trigger:
+        branches:
+          include:
+            - main
+  - repository: dynamo-app-ops
+    name: dynamo-ops/dynamo-app-ops
+    type: git
+    
+stages:
+- stage: Build
+  displayName: Build llm-proxy images
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      name: Default
+
+    steps:
+    - checkout: nova
+    - checkout: dynamo-app-ops
+    
+    - task: InstallSSHKey@0
+      inputs:
+        knownHostsEntry: '10.0.1.173 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBL3pztDIF8SEr6sQAeMaCPRjXRRMLCa4kPq65erou0sPs8rKwyUqX48142SPKCdUxf7jKnGk/8zodDPv4LCLsZk='
+        sshKeySecureFile: dynamo-nova.key
+
+    - task: Docker@2
+      inputs:
+        command: 'build'
+        Dockerfile: 'nova/Dockerfile'
+        repository: 'llm-proxy-api'
+        tags: 'latest'
+        buildContext: '$(Pipeline.Workspace)/s'
+
+    - task: Docker@2
+      inputs:
+        command: 'build'
+        Dockerfile: 'nova/Dockerfile.audit'
+        repository: 'llm-proxy-audit-service'
+        tags: 'latest'
+        buildContext: '$(Pipeline.Workspace)/s'
+
+# - stage: Deploy
+#   displayName: Deploy docker compose
+#   jobs:
+#   - job: Deploy
+#     pool:
+#       name: Default
+    
+#     steps:
+#     - checkout: dynamo-app-ops
+
+#     - task: InstallSSHKey@0
+#       inputs:
+#         knownHostsEntry: '10.0.1.173 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBL3pztDIF8SEr6sQAeMaCPRjXRRMLCa4kPq65erou0sPs8rKwyUqX48142SPKCdUxf7jKnGk/8zodDPv4LCLsZk='
+#         sshKeySecureFile: dynamo-nova.key
+
+#     - task: ShellScript@2
+#       displayName: run ansible script to deploy nova apps
+#       inputs:
+#         scriptPath: dynamo-app-ops/ansible/runscripts/nova_test.sh
+#         cwd: ansible
+#       continueOnError: true
+
