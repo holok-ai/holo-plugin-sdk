@@ -47,7 +47,7 @@ stages:
         Dockerfile: 'llm-proxy/Dockerfile.audit'
         repository: 'llm-proxy-audit-service'
         tags: 'latest'
-        buildContext: '$(Pipeline.Workspace)/s'
+        buildContext: '$(Pipeline.Workspace)/s/llm-proxy'
 
 # - stage: Deploy
 #   displayName: Deploy docker compose
