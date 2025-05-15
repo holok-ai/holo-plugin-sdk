@@ -5,8 +5,8 @@ trigger:
 
 resources:
   repositories:
-  - repository: nova
-    name: Project NOVA/nova
+  - repository: llm-proxy
+    name: Project NOVA/llm-proxy
     type: git
     trigger:
         branches:
@@ -28,7 +28,7 @@ stages:
       name: nova-gpu-3
 
     steps:
-    - checkout: nova
+    - checkout: llm-proxy
     - checkout: dynamo-app-ops
     
     - task: InstallSSHKey@0
@@ -39,7 +39,7 @@ stages:
     - task: Docker@2
       inputs:
         command: 'build'
-        Dockerfile: 'nova/Dockerfile'
+        Dockerfile: 'llm-proxy/Dockerfile'
         repository: 'llm-proxy-api'
         tags: 'latest'
         buildContext: '$(Pipeline.Workspace)/s'
@@ -47,7 +47,7 @@ stages:
     - task: Docker@2
       inputs:
         command: 'build'
-        Dockerfile: 'nova/Dockerfile.audit'
+        Dockerfile: 'llm-proxy/Dockerfile.audit'
         repository: 'llm-proxy-audit-service'
         tags: 'latest'
         buildContext: '$(Pipeline.Workspace)/s'
