@@ -39,7 +39,7 @@ stages:
         Dockerfile: 'llm-proxy/Dockerfile'
         repository: 'llm-proxy-api'
         tags: 'latest'
-        buildContext: '$(Pipeline.Workspace)/s'
+        buildContext: '$(Pipeline.Workspace)/s/llm-proxy'
 
     - task: Docker@2
       inputs:
