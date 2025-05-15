@@ -1,8 +1,5 @@
 # pipeline for building and deploying llm-proxy to test environment
 
-trigger:
-- none
-
 resources:
   repositories:
   - repository: llm-proxy
