@@ -25,7 +25,7 @@ stages:
   - job: Build
     displayName: Build
     pool:
-      name: Default
+      name: nova-gpu-3
 
     steps:
     - checkout: nova
@@ -57,7 +57,7 @@ stages:
 #   jobs:
 #   - job: Deploy
 #     pool:
-#       name: Default
+#       name: nova-gpu-3
     
 #     steps:
 #     - checkout: dynamo-app-ops
