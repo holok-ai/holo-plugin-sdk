@@ -204,13 +204,13 @@ class LLMWorker {
               type: 'token',
               requestId: id,
               provider: providerName,
-              data: token
+              token
             }, sourceId);
           } else {
             // Use standardized format for other providers
             this.sendResponseChunk(id, {
               type: 'token',
-              token: typeof token === 'string' ? token : JSON.stringify(token),
+              token,
               requestId: id
             }, sourceId);
           }
@@ -226,7 +226,7 @@ class LLMWorker {
               type: 'done',
               requestId: id,
               provider: providerName,
-              data: chunk || fullResponse
+              token: chunk || fullResponse
             }, sourceId);
           } else {
             // Include all metrics for audit purposes
@@ -314,10 +314,10 @@ class LLMWorker {
           if (providerName === 'openai' || providerName === 'claude') {
             // Pass through the raw token/chunk
             this.sendResponseChunk(id, {
-              type: 'token',
+              type: 'sse',
               requestId: id,
               provider: providerName,
-              data: token
+              token
             }, sourceId);
           } else {
             // Use a standardized format for other providers

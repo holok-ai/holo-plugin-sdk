@@ -165,6 +165,7 @@ class ClaudeProvider extends LLMProviderInterface {
         
         for await (const chunk of messageStream) {
           // Pass the raw chunk directly to the onToken callback
+          logger.info(JSON.stringify(chunk));
           onToken(chunk);
         }
         
