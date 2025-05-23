@@ -57,7 +57,12 @@ class ResponseController {
           if (stream) {
             // Process message based on type
             switch (content.type) {
-              case 'token':
+              case 'sse':
+                stream.push(`event: ${content.token.type}\n`)
+                stream.push("data: "+JSON.stringify(content.token)+'\n\n');
+                break;
+                
+                case 'token':
                 // Send token to the stream
                 stream.push(JSON.stringify(content.token)+'\n');
                 break;
