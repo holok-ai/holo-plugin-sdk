@@ -22,7 +22,7 @@ stages:
   - job: Build
     displayName: Build
     pool:
-      name: nova-gpu-3
+      name: nova-dev-2
 
     steps:
     - checkout: llm-proxy
@@ -30,7 +30,12 @@ stages:
     
     - task: InstallSSHKey@0
       inputs:
-        knownHostsEntry: '10.0.1.173 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBL3pztDIF8SEr6sQAeMaCPRjXRRMLCa4kPq65erou0sPs8rKwyUqX48142SPKCdUxf7jKnGk/8zodDPv4LCLsZk='
+        knownHostsEntry: 'nova-dev-2,100.97.194.71 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCA5pS7aqg6Az6u73bPD82Z0iOsNDB0ruvpPgYdWKksw7yfYQ8DpopD4HJyxuqidJuotgQW2UTsbZy7rB1lm1Cw='
+        sshKeySecureFile: dynamo-nova.key
+
+    - task: InstallSSHKey@0
+      inputs:
+        knownHostsEntry: '10.0.1.67 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCA5pS7aqg6Az6u73bPD82Z0iOsNDB0ruvpPgYdWKksw7yfYQ8DpopD4HJyxuqidJuotgQW2UTsbZy7rB1lm1Cw='
         sshKeySecureFile: dynamo-nova.key
 
     - task: Docker@2
@@ -54,7 +59,7 @@ stages:
 #   jobs:
 #   - job: Deploy
 #     pool:
-#       name: nova-gpu-3
+#       name: nova-dev-2
     
 #     steps:
 #     - checkout: dynamo-app-ops
