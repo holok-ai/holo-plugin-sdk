@@ -28,10 +28,10 @@ stages:
     - checkout: llm-proxy
     - checkout: dynamo-app-ops
     
-    - task: InstallSSHKey@0
-      inputs:
-        knownHostsEntry: 'nova-dev-2,100.97.194.71 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCA5pS7aqg6Az6u73bPD82Z0iOsNDB0ruvpPgYdWKksw7yfYQ8DpopD4HJyxuqidJuotgQW2UTsbZy7rB1lm1Cw='
-        sshKeySecureFile: dynamo-nova.key
+    # - task: InstallSSHKey@0
+    #   inputs:
+    #     knownHostsEntry: 'nova-dev-2,100.97.194.71 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCA5pS7aqg6Az6u73bPD82Z0iOsNDB0ruvpPgYdWKksw7yfYQ8DpopD4HJyxuqidJuotgQW2UTsbZy7rB1lm1Cw='
+    #     sshKeySecureFile: dynamo-nova.key
 
     - task: InstallSSHKey@0
       inputs:
