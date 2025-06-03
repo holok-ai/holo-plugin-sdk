@@ -54,25 +54,23 @@ stages:
         tags: 'latest'
         buildContext: '$(Pipeline.Workspace)/s/llm-proxy'
 
-# - stage: Deploy
-#   displayName: Deploy docker compose
-#   jobs:
-#   - job: Deploy
-#     pool:
-#       name: nova-dev-2
+- stage: Deploy
+  displayName: Deploy docker compose
+  jobs:
+  - job: Deploy
+    pool:
+      name: nova-dev-2
     
-#     steps:
-#     - checkout: dynamo-app-ops
+    steps:
+    - checkout: dynamo-app-ops
 
-#     - task: InstallSSHKey@0
-#       inputs:
-#         knownHostsEntry: '10.0.1.173 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBL3pztDIF8SEr6sQAeMaCPRjXRRMLCa4kPq65erou0sPs8rKwyUqX48142SPKCdUxf7jKnGk/8zodDPv4LCLsZk='
-#         sshKeySecureFile: dynamo-nova.key
+    - task: InstallSSHKey@0
+      inputs:
+        knownHostsEntry: '10.0.1.67 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCA5pS7aqg6Az6u73bPD82Z0iOsNDB0ruvpPgYdWKksw7yfYQ8DpopD4HJyxuqidJuotgQW2UTsbZy7rB1lm1Cw='
+        sshKeySecureFile: dynamo-nova.key
 
-#     - task: ShellScript@2
-#       displayName: run ansible script to deploy nova apps
-#       inputs:
-#         scriptPath: dynamo-app-ops/ansible/runscripts/nova_test.sh
-#         cwd: ansible
-#       continueOnError: true
-
+    - task: ShellScript@2
+      displayName: run ansible script to deploy nova apps
+      inputs:
+        scriptPath: dynamo-app-ops/ansible/runscripts/nova_llmproxy.sh
+        cwd: ansible
