@@ -12,9 +12,9 @@ class OpenAIProvider extends LLMProviderInterface {
       apiKey: process.env.OPENAI_API_KEY || config.apiKey,
       ...config
     };
-    
+
     this.client = null;
-    
+
     // Available models (these are just for reference, actual models come from the API)
     this.models = {
       'gpt-4o': {
@@ -44,12 +44,12 @@ class OpenAIProvider extends LLMProviderInterface {
       if (!this.config.apiKey) {
         throw new Error('OpenAI API key is required');
       }
-      
+
       // Initialize the client
       this.client = new OpenAI({
         apiKey: this.config.apiKey
       });
-      
+
       logger.info('OpenAI provider initialized');
       return true;
     } catch (error) {
@@ -66,11 +66,16 @@ class OpenAIProvider extends LLMProviderInterface {
       if (!this.client) {
         await this.init();
       }
-      
+
       // For a production system, we would call the OpenAI API to get current models
       // const response = await this.client.models.list();
       // return response.data.map(model => ({ id: model.id, name: model.id }));
-      
+
+      const response = await this.client.models.list();
+      this.models = response.data.map(model => ({id: model.id, name: model.id, modified_at: new Date(model.created * 1000).toISOString()}));
+
+      return this.models;
+
       // For now, return pre-defined models
       return Object.values(this.models).map(model => ({
         id: model.id,
@@ -93,12 +98,12 @@ class OpenAIProvider extends LLMProviderInterface {
   async generate(params, onToken, onComplete, onError) {
     try {
       const { model, prompt, options = {}, stream = true } = params;
-      
+
       // Check if model exists
       if (!this.models[model]) {
         throw new Error(`Model ${model} not found`);
       }
-      
+
       // Convert text generation to chat format for OpenAI API
       const messages = [
         {
@@ -106,7 +111,7 @@ class OpenAIProvider extends LLMProviderInterface {
           content: prompt
         }
       ];
-      
+
       // Delegate to chat implementation
       await this.chat(
         { model, messages, options, stream },
@@ -132,14 +137,14 @@ class OpenAIProvider extends LLMProviderInterface {
       if (!this.client) {
         await this.init();
       }
-      
+
       const { model, messages, options = {}, stream = true } = params;
-      
+
       // Check if model exists
       if (!this.models[model]) {
         throw new Error(`Model ${model} not found`);
       }
-      
+
       // Prepare request parameters
       const requestParams = {
         model,
@@ -152,19 +157,19 @@ class OpenAIProvider extends LLMProviderInterface {
         stop: options.stop,
         ...options
       };
-      
+
       // Handle streaming response
       if (stream) {
         const stream = await this.client.chat.completions.create({
           ...requestParams,
           stream: true
         });
-        
+
         for await (const chunk of stream) {
           // Pass the raw chunk directly to the onToken callback
           onToken(chunk);
         }
-        
+
         // Call onComplete
         onComplete({
           type: 'chat.completion',
@@ -177,7 +182,7 @@ class OpenAIProvider extends LLMProviderInterface {
           ...requestParams,
           stream: false
         });
-        
+
         // Call onComplete with the full response
         onComplete(response);
       }
@@ -191,7 +196,7 @@ class OpenAIProvider extends LLMProviderInterface {
    * The following methods are not typically supported by cloud API providers
    * but are included to satisfy the interface.
    */
-  
+
   async loadModel() {
     logger.info('Model loading is not supported for OpenAI API');
     return { status: 'not_supported' };

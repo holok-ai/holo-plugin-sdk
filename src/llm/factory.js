@@ -20,47 +20,47 @@ class LLMProviderFactory {
   /**
    * Get a specific LLM provider instance
    * @param {string} providerName - The name of the provider to get (uses default if not specified)
-   * @returns {Promise<LLMProviderInterface>} Provider instance
+   * @returns {Promise<LLMProviderInterface>} AiProvider instance
    */
   async getProvider(providerName = null) {
     // Use the specified provider name or fall back to default
     const name = providerName || this.defaultProviderName;
-    
+
     // Return cached provider if available
     if (this.providers[name]) {
       return this.providers[name];
     }
-    
+
     try {
       // Get provider configuration
       const providerSettings = config.llm?.providers?.[name] || {};
-      
+
       // Check if the provider is supported
       if (!this.availableProviders[name]) {
         throw new Error(`Unknown LLM provider: ${name}`);
       }
-      
+
       // Dynamically require the provider module
       const ProviderModule = this.availableProviders[name]();
       const provider = new ProviderModule(providerSettings);
-      
+
       // Initialize the provider
       await provider.init();
-      
+
       // Cache the provider instance
       this.providers[name] = provider;
-      
+
       logger.info(`LLM provider '${name}' initialized`);
       return provider;
     } catch (error) {
       logger.error(`Failed to initialize LLM provider '${name}': ${error.message}`);
-      
+
       // Fall back to mock provider if the requested one fails and it's not already mock
       if (name !== 'mock') {
         logger.info('Falling back to mock provider');
         return this.getProvider('mock');
       }
-      
+
       // If even the mock provider fails, create a basic instance
       const mockProvider = new MockProvider();
       this.providers['mock'] = mockProvider;
