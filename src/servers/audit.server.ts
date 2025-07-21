@@ -48,11 +48,11 @@ export class AuditServer extends withQueue(withDB(BaseServer)) {
     async onInit(): Promise<void> {
         await super.onInit();
         await this.queueService.consume(this.config.requestQueue, async (_id, content) => {
-            await this.auditService!.logRequest(content);
+            await this.auditService.logRequest(content);
         });
 
         await this.queueService.consume(this.config.responseQueue, async (_id, content) => {
-            await this.auditService!.logResponse(content);
+            await this.auditService.logResponse(content);
         })
     }
 

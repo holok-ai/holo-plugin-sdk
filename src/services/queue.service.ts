@@ -92,7 +92,7 @@ export class QueueService {
         logger.info('Disconnected from RabbitMQ');
     }
 
-    public async consume(queueName: string, callback: (id: string, content: any, message?: ConsumeMessage) => void): Promise<void> {
+    public async consume(queueName: string, callback: (requestId: string, content: any, message?: ConsumeMessage) => void): Promise<void> {
         if (!this.isConnected) {
             await this.connect();
         }
@@ -107,10 +107,10 @@ export class QueueService {
                 try {
                     const content = JSON.parse(message.content.toString());
                     const {id} = content;
-                    logger.debug(`Received message from queue: ${queueName} (${id})`);
+                    logger.debug(`Received message from queue: ${queueName} with requestId: (${id})`);
                     callback(id, content, message);
                     this.channel!.ack(message);
-                    logger.debug(`Successfully processed message from queue: ${queueName} (${id})`);
+                    logger.debug(`Successfully processed message from queue: ${queueName} with requestId (${id})`);
 
                 } catch (error) {
                     logger.error(`Error processing message from queue: ${queueName}: ${(error as Error).message}`);

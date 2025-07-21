@@ -1,40 +1,30 @@
-import {AIProvider} from './ai.provider';
-import logger from '../utils/logger';
-import OpenAI from 'openai';
-import {ModelInfo} from './types';
-import {
-    ChatCompletionChunk,
-    ChatCompletionCreateParams,
-    ChatCompletionCreateParamsStreaming
-} from "openai/resources/chat/completions/completions";
-import {Stream} from "openai/streaming";
+import AIProvider from "./ai.provider";
+import {ModelInfo} from "./types";
+import logger from "../utils/logger";
+import {Anthropic} from "@anthropic-ai/sdk/client";
+import {Stream} from "@anthropic-ai/sdk/streaming";
+import {MessageCreateParams, MessageCreateParamsStreaming, RawMessageStreamEvent} from "@anthropic-ai/sdk/resources";
 
-/**
- * OpenAI provider for connecting to OpenAI API
- */
-export class OpenAIProvider extends AIProvider {
-    private client: OpenAI = new OpenAI({});
-    name: string = 'openai';
+export class ClaudeProvider extends AIProvider {
+    name: string = 'claude';
+    client: Anthropic = new Anthropic();
 
-    /**
-     * Initialize the provider
-     */
     async init(): Promise<void> {
         if (!this.config.apiKey) {
-            throw new Error('OpenAI API key is required');
+            throw new Error('Claude API key is required');
         }
 
         try {
             // Initialize the client
-            this.client = new OpenAI({
+            this.client = new Anthropic({
                 apiKey: this.config.apiKey
             });
 
             await this.getModels();
 
-            logger.info('OpenAI provider initialized');
+            logger.info('Claude provider initialized');
         } catch (error) {
-            logger.error(`Failed to initialize OpenAI provider: ${(error as Error).message}`);
+            logger.error(`Failed to initialize Claude provider: ${(error as Error).message}`);
             throw error;
         }
     }
@@ -48,11 +38,11 @@ export class OpenAIProvider extends AIProvider {
                 await this.init();
             }
 
-            const response = await this.client.models.list();
+            const response = await this.client!.models.list();
             const modelList = response.data.map(model => ({
                 id: model.id,
-                name: model.id,
-                modified_at: new Date(model.created * 1000).toISOString()
+                name: model.display_name,
+                modified_at: model.created_at
             }));
 
             // Update internal models cache
@@ -61,10 +51,10 @@ export class OpenAIProvider extends AIProvider {
                 return acc;
             }, {} as Record<string, ModelInfo>);
 
-            logger.debug(`OpenAI models: ${JSON.stringify(Object.keys(this.models))}`);
+            logger.debug(`Claude models: ${JSON.stringify(Object.keys(this.models))}`);
             return modelList;
         } catch (error) {
-            logger.error(`Error fetching OpenAI models: ${(error as Error).message}`);
+            logger.error(`Error fetching Claude models: ${(error as Error).message}`);
             throw error;
         }
     }
@@ -81,7 +71,7 @@ export class OpenAIProvider extends AIProvider {
         stream: boolean
     ): Promise<void> {
         try {
-            // Convert text generation to chat format for OpenAI API
+            // Convert text generation to chat format for Claude API
             const messages = [
                 {
                     role: 'user' as const,
@@ -89,7 +79,7 @@ export class OpenAIProvider extends AIProvider {
                 }
             ];
 
-            await this.callOpenAI(
+            await this.callClaude(
                 requestId,
                 sourceId,
                 model,
@@ -100,7 +90,7 @@ export class OpenAIProvider extends AIProvider {
                 this.onGenerateComplete.bind(this)
             );
         } catch (error) {
-            logger.error(`OpenAI generate error: ${(error as Error).message}`);
+            logger.error(`Claude generate error: ${(error as Error).message}`);
             await this.onError(requestId, sourceId, error as Error);
         }
     }
@@ -117,7 +107,7 @@ export class OpenAIProvider extends AIProvider {
         stream: boolean
     ): Promise<void> {
         try {
-            await this.callOpenAI(
+            await this.callClaude(
                 requestId,
                 sourceId,
                 model,
@@ -127,20 +117,19 @@ export class OpenAIProvider extends AIProvider {
                 this.onChat.bind(this),
                 this.onChatComplete.bind(this));
         } catch (error) {
-            logger.error(`OpenAI chat error: ${(error as Error).message}`);
+            logger.error(`Claude chat error: ${(error as Error).message}`);
             await this.onError(requestId, sourceId, error as Error);
         }
     }
 
-    async callOpenAI(
-        requestId: string,
-        sourceId: string,
-        model: string,
-        messages: any[],
-        options: {},
-        stream: boolean,
-        onToken: (requestId: string, sourceId: string, token: object) => Promise<void>,
-        onComplete: (requestId: string, sourceId: string, token: object) => Promise<void>
+    async callClaude(requestId: string,
+                     sourceId: string,
+                     model: string,
+                     messages: any[],
+                     options: {},
+                     stream: boolean,
+                     onToken: (requestId: string, sourceId: string, token: object) => Promise<void>,
+                     onComplete: (requestId: string, sourceId: string, token: object) => Promise<void>
     ): Promise<void> {
         if (!this.models![model]) {
             throw new Error(`Model ${model} not found`);
@@ -149,31 +138,32 @@ export class OpenAIProvider extends AIProvider {
         if (!this.client) {
             await this.init();
         }
-        const requestOptions: ChatCompletionCreateParamsStreaming | ChatCompletionCreateParams = {
+        const requestOptions: MessageCreateParamsStreaming | MessageCreateParams = {
             model,
             messages,
+            max_tokens: 4096,
             ...options,
             stream
         };
 
-        const response = await this.client.chat.completions.create(requestOptions);
+        const response = await this.client!.messages.create(requestOptions);
         // Handle streaming response
         if (stream) {
-            logger.debug(`OpenAI streaming: ${JSON.stringify(response)}`);
+            logger.debug(`Claude streaming: ${JSON.stringify(response)}`);
 
-            for await (const chunk of (response as Stream<ChatCompletionChunk>)) {
+            for await (const chunk of (response as unknown as Stream<RawMessageStreamEvent>)) {
                 // Pass the raw chunk directly to the onToken callback
                 await onToken(requestId, sourceId, chunk);
             }
 
             // Call onComplete
             await onComplete(requestId, sourceId, {
-                type: 'chat.completion',
+                type: 'message',
                 model,
                 status: 'complete'
             });
         } else {
-            logger.debug(`OpenAI response: ${JSON.stringify(response)}`);
+            logger.debug(`Claude response: ${JSON.stringify(response)}`);
             // Call onComplete with the full response
             await onComplete(requestId, sourceId, response);
         }

@@ -1,5 +1,15 @@
 import {ChatCompletion, ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 
+export interface AIProviderConfig {
+    apiKey?: string
+    auditEnabled: boolean
+}
+
+export interface OllamaProviderConfig extends AIProviderConfig {
+    host: string,
+    timeout: number
+}
+
 /**
  * Model information interface
  */

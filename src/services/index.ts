@@ -1,6 +1,6 @@
 export {DatabaseService, db} from './database.service';
 export {AuditService, auditService} from './audit.service';
-export {ProviderService, providerService} from './provider.service';
+export {ProviderService} from './provider.service';
 
 export type {
     Provider,
@@ -16,4 +16,3 @@ export type {
  * Service exports
  */
 export {QueueService} from './queue.service';
-export {MetricsService} from './metrics.service';

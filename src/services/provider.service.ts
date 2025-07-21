@@ -3,19 +3,26 @@ import {Model, Provider} from '../types';
 import AIProvider from "../providers/ai.provider";
 import {OpenAIProvider} from "../providers/openai.provider";
 import logger from "../utils/logger";
+import {QueueService} from "./queue.service";
 
 export class ProviderService {
 
     private db: DatabaseService;
+    private queueService: QueueService;
     private aiProviders: Map<string, AIProvider> = new Map();
 
-    constructor(databaseService: DatabaseService = db) {
+    constructor(databaseService: DatabaseService = db, queueService: QueueService) {
         this.db = databaseService;
+        this.queueService = queueService;
     }
 
     async init(): Promise<void> {
         if (!this.db.isConnected()) {
             await this.db.connect();
+        }
+
+        if (!this.queueService.isConnected) {
+            await this.queueService.connect();
         }
 
         await this.refreshAvailableProviders();
@@ -32,15 +39,17 @@ export class ProviderService {
         return this.db.query<Provider>(query);
     }
 
-    async refreshAvailableProviders() {
+    async refreshAvailableProviders(serverId?: string) {
         const providers = await this.getProviders();
         if (providers.length === 0) return;
         for (const provider of providers) {
             if (provider.name === 'openai') {
-                logger.debug('yo')
-                this.aiProviders.set('openai', new OpenAIProvider(provider.config as any));
+                const aiProvider = new OpenAIProvider(provider.config as any, this.queueService, serverId);
+                await aiProvider.init();
+                this.aiProviders.set('openai', aiProvider);
             }
         }
+        logger.debug(`Available providers: ${Array.from(this.aiProviders.keys())}`);
     }
 
     async matchProvider(key: string): Promise<AIProvider | undefined> {
@@ -96,5 +105,3 @@ export class ProviderService {
         return this.db.query(query);
     }
 }
-
-export const providerService = new ProviderService();

@@ -37,7 +37,7 @@ export class WorkerServer extends withQueue(withDB(BaseServer)) {
     constructor(config: any) {
         super(config);
         this.config = config;
-        this.providerService = new ProviderService(this.db);
+        this.providerService = new ProviderService(this.db, this.queueService);
     }
 
     async onError(): Promise<void> {
@@ -45,6 +45,10 @@ export class WorkerServer extends withQueue(withDB(BaseServer)) {
 
     async onInit(): Promise<void> {
         await super.onInit();
+        await this.providerService.init();
+
+        // const ai = await this.providerService.matchProvider('openai');
+        // ai?.generate('server-1', '1', 'gpt-4', 'Hello world!', {}, false);
 
         await this.queueService.consume(this.config.queueName, async (id, content) => {
             const {sourceId, payload, type} = content;
@@ -57,7 +61,7 @@ export class WorkerServer extends withQueue(withDB(BaseServer)) {
 
                 switch (type) {
                     case 'generate':
-                        await ai!.generate(model, prompt, options, stream);
+                        await ai!.generate(sourceId, id, model, prompt, options, stream);
                         break;
                     case 'chat':
                         break;
