@@ -2,8 +2,7 @@ import 'reflect-metadata';
 import {ProxyRequest, ProxyResponse} from '../types';
 import {LlmRequest, LlmResponse} from "../db/types";
 import {injectable} from "tsyringe";
-import {ResponseDB} from "../db/response.db";
-import {RequestDB} from "../db/request.db";
+import {RequestDB, ResponseDB} from "../db";
 
 @injectable()
 export class AuditService {

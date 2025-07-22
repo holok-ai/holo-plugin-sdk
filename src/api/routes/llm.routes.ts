@@ -3,10 +3,11 @@ import express from "express";
 import {container} from "tsyringe";
 import {LLMController} from "../controllers/llm.controller";
 
-const apiRouter = express.Router();
-const llmController: LLMController = container.resolve('LLMController');
+export function createApiRoutes(): express.Router {
+    const apiRouter = express.Router();
+    const llmController: LLMController = container.resolve('LLMController');
 
-apiRouter.post('/generate', llmController.generate);
-apiRouter.post('/chat', llmController.chat);
-
-export {apiRouter};
+    apiRouter.post('/generate', llmController.generate);
+    apiRouter.post('/chat', llmController.chat);
+    return apiRouter;
+}

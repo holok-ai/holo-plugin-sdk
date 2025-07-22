@@ -8,15 +8,12 @@ import logger from "../utils/logger";
  */
 export abstract class AIProvider {
     abstract name: string;
-    queueService: QueueService;
-    workerId: string;
-    protected config: AIProviderConfig;
     protected models: Record<string, ModelInfo> | null = null;
 
-    constructor(config: AIProviderConfig, queueService: QueueService, workerId: string = 'unknown') {
-        this.config = config;
-        this.queueService = queueService;
-        this.workerId = workerId;
+    constructor(
+        protected config: AIProviderConfig,
+        protected queueService: QueueService,
+        protected workerId: string = 'unknown') {
     }
 
     /**

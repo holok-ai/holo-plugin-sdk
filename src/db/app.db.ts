@@ -19,8 +19,8 @@ export class AppDB {
     async connect(): Promise<void> {
         try {
             // Test connection
-            await this.pool.query('SELECT NOW()');
-            logger.info('Connected to PostgreSQL');
+            const now = await this.pool.query('SELECT NOW()');
+            logger.info(`Successfully connected to PostgreSQL: ${now.rows[0].now}`);
         } catch (error) {
             logger.error(`Failed to connect to PostgreSQL: ${(error as Error).message}`);
             throw error;

@@ -1,10 +1,8 @@
+import 'reflect-metadata';
 import {QueueService} from "../../services";
 import {Constructor} from "../../types";
 import logger from "../../utils/logger";
-
-export interface WithQueueMixin {
-    queueService: QueueService;
-}
+import {container, injectable} from "tsyringe";
 
 /**
  * Mixin to add queue functionality to a class
@@ -14,20 +12,30 @@ export function withQueue<TBase extends Constructor<{
     onInit(): Promise<void>;
     onShutdown(): Promise<void>;
 }>>(Base: TBase) {
-    abstract class WithQueueClass extends Base implements WithQueueMixin {
-        public queueService: QueueService;
+    @injectable()
+    class WithQueueClass extends Base {
+        queueService: QueueService;
 
         constructor(...args: any[]) {
             super(...args);
 
-            // Extract queueConfig from the first argument (config object)
-            const config = args[0];
-            if (!config?.queueConfig) {
-                throw new Error('Queue configuration is required when using withQueue mixin');
+            this.queueService = container.resolve(QueueService);
+
+            if (!this.queueService) {
+                // Extract queueConfig from the first argument (config object)
+                const config = args[0];
+                if (!config?.queueConfig) {
+                    throw new Error('Queue configuration is required when using withQueue mixin');
+                }
+
+                this.queueService = new QueueService(config.queueConfig);
             }
 
-            this.queueService = new QueueService(config.queueConfig);
+            if (!this.queueService) {
+                throw new Error('Queue service is required when using withQueue mixin');
+            }
         }
+
 
         async onError(): Promise<void> {
             logger.debug('Error occurred, disconnecting from queue...');

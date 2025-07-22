@@ -1,6 +1,6 @@
 import logger from '../utils/logger';
 
-export abstract class BaseServer {
+export class BaseServer {
     protected readonly id: string;
     protected initialized = false;
 

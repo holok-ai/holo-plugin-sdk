@@ -25,13 +25,6 @@ export interface ModelInfo {
     [key: string]: any; // Allow additional properties
 }
 
-/**
- * Chat message interface
- */
-export interface ChatMessage {
-    role: 'system' | 'user' | 'assistant';
-    content: string;
-}
 
 /**
  * Generation parameters for text generation

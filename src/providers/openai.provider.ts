@@ -1,35 +1,42 @@
 import {AIProvider} from './ai.provider';
 import logger from '../utils/logger';
 import OpenAI from 'openai';
-import {ModelInfo} from './types';
+import {AIProviderConfig, ModelInfo} from './types';
 import {
     ChatCompletionChunk,
     ChatCompletionCreateParams,
     ChatCompletionCreateParamsStreaming
 } from "openai/resources/chat/completions/completions";
 import {Stream} from "openai/streaming";
+import {QueueService} from "../services";
 
 /**
  * OpenAI provider for connecting to OpenAI API
  */
 export class OpenAIProvider extends AIProvider {
-    private client: OpenAI = new OpenAI({});
+    private readonly client: OpenAI;
     name: string = 'openai';
+
+    constructor(
+        protected config: AIProviderConfig,
+        protected queueService: QueueService,
+        protected workerId: string = 'unknown') {
+        super(config, queueService, workerId);
+        if (!this.config.apiKey) {
+            throw new Error('OpenAI API key is required');
+        }
+
+        this.client = new OpenAI({
+            apiKey: this.config.apiKey
+        });
+    }
 
     /**
      * Initialize the provider
      */
     async init(): Promise<void> {
-        if (!this.config.apiKey) {
-            throw new Error('OpenAI API key is required');
-        }
-
         try {
             // Initialize the client
-            this.client = new OpenAI({
-                apiKey: this.config.apiKey
-            });
-
             await this.getModels();
 
             logger.info('OpenAI provider initialized');
@@ -61,7 +68,7 @@ export class OpenAIProvider extends AIProvider {
                 return acc;
             }, {} as Record<string, ModelInfo>);
 
-            logger.debug(`OpenAI models: ${JSON.stringify(Object.keys(this.models))}`);
+            logger.debug(`OpenAI models: ${Object.keys(this.models)}`);
             return modelList;
         } catch (error) {
             logger.error(`Error fetching OpenAI models: ${(error as Error).message}`);

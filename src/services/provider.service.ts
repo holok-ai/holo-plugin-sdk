@@ -1,14 +1,19 @@
+import 'reflect-metadata';
 import AIProvider from "../providers/ai.provider";
 import {OpenAIProvider} from "../providers/openai.provider";
 import logger from "../utils/logger";
 import {QueueService} from "./queue.service";
 import {Provider} from "../db/types";
-import {ProviderDB} from "../db/provider.db";
+import {ProviderDB} from "../db";
+import {injectable} from "tsyringe";
 
+@injectable()
 export class ProviderService {
     private aiProviders: Map<string, AIProvider> = new Map();
 
-    constructor(private providerDB: ProviderDB, private queueService: QueueService) {
+    constructor(
+        private providerDB: ProviderDB,
+        private queueService: QueueService) {
 
     }
 

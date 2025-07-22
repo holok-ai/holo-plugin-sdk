@@ -1,9 +1,13 @@
+import 'reflect-metadata';
 import {withDB, withQueue} from "./mixins";
 import {BaseServer} from "./base.server";
 import logger from "../utils/logger";
 import {ProviderService} from "../services";
 import {DatabaseConfig, RabbitConfig} from "../types";
 import {parseBoolean, parseNumber} from "../utils";
+import {container, inject, injectable} from "tsyringe";
+import {CONTAINER_TOKENS} from "../config";
+import {auditConfig} from "./audit.server";
 
 export interface WorkerServerConfig {
     dbConfig: DatabaseConfig;
@@ -30,17 +34,16 @@ export const workerConfig: WorkerServerConfig = {
     queueName: 'llm_requests'
 }
 
+container.register('WORKER_SERVER_CONFIG', {useValue: workerConfig});
+container.register(CONTAINER_TOKENS.DB_CONFIG, {useValue: auditConfig.dbConfig});
+container.register(CONTAINER_TOKENS.QUEUE_CONFIG, {useValue: auditConfig.queueConfig});
+
+@injectable()
 export class WorkerServer extends withQueue(withDB(BaseServer)) {
-    private providerService: ProviderService;
-    private readonly config: WorkerServerConfig;
-
-    constructor(config: any) {
+    constructor(
+        @inject('WORKER_SERVER_CONFIG') private readonly config: WorkerServerConfig,
+        private providerService: ProviderService) {
         super(config);
-        this.config = config;
-        this.providerService = new ProviderService(this.db, this.queueService);
-    }
-
-    async onError(): Promise<void> {
     }
 
     async onInit(): Promise<void> {
@@ -80,7 +83,11 @@ export class WorkerServer extends withQueue(withDB(BaseServer)) {
     async onShutdown(): Promise<void> {
         await super.onShutdown();
     }
+
+    async onError(): Promise<void> {
+        await super.onError();
+    }
 }
 
-const worker = new WorkerServer(workerConfig);
+const worker = container.resolve(WorkerServer);
 worker.start();

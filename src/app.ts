@@ -7,11 +7,9 @@ import logger from './utils/logger';
 import {errorMiddleware, nocorsMiddleware} from "./api/middleware";
 import {parseBoolean, parseNumber} from "./utils";
 import {AppConfig} from "./types";
-import {InitService, QueueService, ResponseService} from "./services";
+import {InitService} from "./services";
 import {CONTAINER_TOKENS} from "./config";
-import {LLMController} from "./api/controllers/llm.controller";
-import routes from "./api/routes";
-import {AppDB} from "./db/app.db";
+import {createRoutes} from "./api/routes";
 
 export const appConfig: AppConfig = {
     serverId: process.env.SERVER_ID || `server_${Math.random().toString(36).substring(2, 10)}`,
@@ -43,11 +41,6 @@ container.register(CONTAINER_TOKENS.SERVER_ID, {useValue: appConfig.serverId});
 container.register(CONTAINER_TOKENS.DB_CONFIG, {useValue: appConfig.dbConfig});
 container.register(CONTAINER_TOKENS.QUEUE_CONFIG, {useValue: appConfig.queueConfig});
 container.register(CONTAINER_TOKENS.REQUEST_QUEUE, {useValue: appConfig.requestQueue});
-container.register('QueueService', QueueService);
-container.register('InitService', InitService);
-container.register('AppDB', AppDB);
-container.register('ResponseService', ResponseService);
-container.register('LLMController', LLMController);
 
 
 // Initialize Express app
@@ -63,7 +56,7 @@ app.use(errorMiddleware);
 // Serve static files from the public directory
 app.use(express.static('src/public'));
 
-app.use('/api', routes);
+app.use('/api', createRoutes());
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response): void => {
