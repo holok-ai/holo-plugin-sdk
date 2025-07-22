@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
+    "api:dev": "nodemon --watch src --exec ts-node src/app.ts",
     "worker:dev": "nodemon --watch src --exec ts-node src/servers/worker.server.ts",
     "audit:dev": "nodemon --watch src --exec ts-node src/servers/audit.server.ts",
     "test": "jest",
@@ -22,6 +23,8 @@
     "ollama": "^0.5.15",
     "openai": "^4.98.0",
     "pg": "^8.11.3",
+    "reflect-metadata": "^0.2.2",
+    "tsyringe": "^4.10.0",
     "uuid": "^9.0.1",
     "winston": "^3.11.0"
   },

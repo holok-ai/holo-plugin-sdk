@@ -1,18 +1,21 @@
+import "reflect-metadata";
 import {Channel, ChannelModel, connect, ConsumeMessage} from 'amqplib';
 import logger from '../utils/logger';
 import {RabbitConfig} from "../types";
+import {inject, injectable} from "tsyringe";
+import {CONTAINER_TOKENS} from "../config";
 
 /**
  * RabbitMQ queue management service
  */
+@injectable()
 export class QueueService {
-    private config: RabbitConfig;
     private connection: ChannelModel | null = null;
     private channel: Channel | null = null;
     public isConnected: boolean = false;
     public reconnectAttempts = 0;
 
-    constructor(config: RabbitConfig) {
+    constructor(@inject(CONTAINER_TOKENS.QUEUE_CONFIG) private config: RabbitConfig) {
         this.config = config;
     }
 
@@ -92,7 +95,7 @@ export class QueueService {
         logger.info('Disconnected from RabbitMQ');
     }
 
-    public async consume(queueName: string, callback: (requestId: string, content: any, message?: ConsumeMessage) => void): Promise<void> {
+    public async consume(queueName: string, callback: (requestId: string, content: any, message: ConsumeMessage) => void, ignoreErrors: boolean = false): Promise<void> {
         if (!this.isConnected) {
             await this.connect();
         }
@@ -115,12 +118,16 @@ export class QueueService {
                 } catch (error) {
                     logger.error(`Error processing message from queue: ${queueName}: ${(error as Error).message}`);
 
-                    if (message.fields.redelivered) {
-                        this.channel!.nack(message, false, false);
-                        logger.warn('Rejected problematic message after redelivery');
+                    if (ignoreErrors) {
+                        this.channel!.ack(message);
                     } else {
-                        this.channel!.nack(message, false, true);
-                        logger.info('Message requeued for retry');
+                        if (message.fields.redelivered) {
+                            this.channel!.nack(message, false, false);
+                            logger.warn('Rejected problematic message after redelivery');
+                        } else {
+                            this.channel!.nack(message, false, true);
+                            logger.info('Message requeued for retry');
+                        }
                     }
                 }
 
@@ -137,7 +144,7 @@ export class QueueService {
      * @param {object} message - Message to send
      * @param {object} options - Message options
      */
-    async sendToQueue(queue: string, message: {id: string}, options: object = {}): Promise<boolean> {
+    async sendToQueue(queue: string, message: { id: string }, options: object = {}): Promise<boolean> {
         if (!this.isConnected) {
             await this.connect();
         }
@@ -226,6 +233,28 @@ export class QueueService {
             } catch (error) {
                 logger.error(`Error stopping consumer: ${(error as Error).message}`);
             }
+        }
+    }
+
+    async assertExchange(exchange: string, type: string, options: object = {durable: true}) {
+        if (!this.isConnected) {
+            await this.connect();
+        }
+
+        logger.debug(`Asserting exchange ${exchange} with type ${type}`);
+        await this.channel!.assertExchange(exchange, type, options);
+    }
+
+    async assertQueue(queue: string, options: object = {durable: true}, exchange?: string, pattern?: string) {
+        if (!this.isConnected) {
+            await this.connect();
+        }
+        logger.debug(`Asserting queue ${queue}`);
+        await this.channel!.assertQueue(queue, options);
+
+        if (exchange) {
+            logger.debug(`Binding queue ${queue} to exchange ${exchange} with pattern ${pattern}`);
+            await this.channel!.bindQueue(queue, exchange, pattern || '');
         }
     }
 }

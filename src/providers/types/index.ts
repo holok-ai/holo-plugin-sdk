@@ -1,5 +1,3 @@
-import {ChatCompletion, ChatCompletionChunk} from "openai/resources/chat/completions/completions";
-
 export interface AIProviderConfig {
     apiKey?: string
     auditEnabled: boolean
@@ -60,13 +58,6 @@ export interface GenerateParams extends LlmOptions {
 
 }
 
-/**
- * Generation parameters for chat completion
- */
-export interface ChatParams extends LlmOptions {
-    model: string;
-    messages: ChatMessage[];
-}
 
 /**
  * Model status interface
@@ -101,18 +92,4 @@ export interface ModelOperationResult {
     [key: string]: any;
 }
 
-/**
- * Token callback function type
- */
-export type TokenCallback = (token: ChatCompletion | ChatCompletionChunk) => void;
-
-/**
- * Completion callback function type
- */
-export type CompletionCallback = (result: any) => void;
-
-/**
- * Error callback function type
- */
-export type ErrorCallback = (error: Error) => void;
 

@@ -1,17 +1,15 @@
-import {DatabaseService, db} from './database.service';
-import {LlmRequest, LlmResponse, ProxyRequest, ProxyResponse} from '../types';
+import 'reflect-metadata';
+import {ProxyRequest, ProxyResponse} from '../types';
+import {LlmRequest, LlmResponse} from "../db/types";
+import {injectable} from "tsyringe";
+import {ResponseDB} from "../db/response.db";
+import {RequestDB} from "../db/request.db";
 
+@injectable()
 export class AuditService {
-    private db: DatabaseService;
 
-    constructor(databaseService: DatabaseService = db) {
-        this.db = databaseService;
-    }
+    constructor(private requestDB: RequestDB, private responseDB: ResponseDB) {
 
-    async init(): Promise<void> {
-        if (!this.db.isConnected()) {
-            await this.db.connect();
-        }
     }
 
     // Method overloads
@@ -59,35 +57,7 @@ export class AuditService {
     }
 
     private async insertRequest(content: Omit<LlmRequest, 'id'>): Promise<void> {
-        const {
-            request_id,
-            request_type,
-            model,
-            prompt,
-            options,
-            source_id,
-            user_id,
-            timestamp,
-            metadata
-        } = content;
-
-        const query = `
-            INSERT INTO llm_requests
-            (request_id, request_type, model, prompt, options, source_id, user_id, timestamp, metadata)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        `;
-
-        await this.db.query(query, [
-            request_id,
-            request_type,
-            model,
-            prompt,
-            JSON.stringify(options),
-            source_id,
-            user_id,
-            timestamp,
-            JSON.stringify(metadata)
-        ]);
+        return this.requestDB.insert(content);
     }
 
     // Response method overloads
@@ -166,96 +136,7 @@ export class AuditService {
         };
     }
 
-    private async insertResponse(content: Omit<LlmResponse, 'id'>): Promise<void> {
-        const {
-            request_id,
-            response_type,
-            token,
-            model,
-            worker_id,
-            timestamp,
-            is_final,
-            total_tokens,
-            processing_time,
-            tokens_per_second,
-            metadata
-        } = content;
-
-        const query = `
-            INSERT INTO llm_responses
-            (request_id, response_type, token, model, worker_id, timestamp, is_final,
-             total_tokens, processing_time, tokens_per_second, metadata)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        `;
-
-        await this.db.query(query, [
-            request_id,
-            response_type,
-            token,
-            model,
-            worker_id,
-            timestamp,
-            is_final,
-            total_tokens,
-            processing_time,
-            tokens_per_second,
-            JSON.stringify(metadata)
-        ]);
-    }
-
-
-    async batchLogResponses(audits: Array<Omit<LlmResponse, 'id'>>): Promise<void> {
-        if (audits.length === 0) return;
-
-        await this.db.transaction(async (client) => {
-            const query = `
-                INSERT INTO llm_responses
-                (request_id, response_type, token, model, worker_id, timestamp, is_final,
-                 total_tokens, processing_time, tokens_per_second, metadata)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            `;
-
-            for (const audit of audits) {
-                await client.query(query, [
-                    audit.request_id,
-                    audit.response_type,
-                    audit.token,
-                    audit.model,
-                    audit.worker_id,
-                    audit.timestamp,
-                    audit.is_final,
-                    audit.total_tokens,
-                    audit.processing_time,
-                    audit.tokens_per_second,
-                    JSON.stringify(audit.metadata)
-                ]);
-            }
-        });
-    }
-
-    async getRequests(requestId: string): Promise<LlmResponse | null> {
-        const query = `
-            SELECT *
-            FROM llm_requests
-            WHERE request_id = $1
-            ORDER BY timestamp DESC
-            LIMIT 1
-        `;
-
-        const rows = await this.db.query(query, [requestId]);
-        return rows[0] || null;
-    }
-
-    async getResponses(requestId: string): Promise<LlmResponse[]> {
-        const query = `
-            SELECT *
-            FROM llm_responses
-            WHERE request_id = $1
-            ORDER BY timestamp ASC
-        `;
-
-        return this.db.query(query, [requestId]);
+    private async insertResponse(content: Omit<LlmResponse, 'id'>) {
+        return this.responseDB.insert(content);
     }
 }
-
-export const auditService = new AuditService(db);

@@ -1,29 +1,23 @@
-import {Pool, PoolConfig, QueryResult, QueryResultRow} from 'pg';
+import 'reflect-metadata';
+import {Pool, QueryResult, QueryResultRow} from 'pg';
 import {DatabaseConfig} from '../types';
 import logger from '../utils/logger';
-import {auditConfig} from '../config/config';
+import {inject, injectable} from 'tsyringe';
+import {CONTAINER_TOKENS} from "../config";
 
 /**
  * Database connection and management service
  */
-export class DatabaseService {
-    private pool: Pool | null = null;
-    private readonly config: DatabaseConfig;
+@injectable()
+export class AppDB {
+    private readonly pool: Pool;
 
-    constructor(config: DatabaseConfig) {
-        this.config = config;
+    constructor(@inject(CONTAINER_TOKENS.DB_CONFIG) private readonly config: DatabaseConfig) {
+        this.pool = new Pool(this.config);
     }
 
     async connect(): Promise<void> {
         try {
-            const poolConfig: PoolConfig = {
-                ...this.config,
-                max: 20,
-                idleTimeoutMillis: 30000
-            };
-
-            this.pool = new Pool(poolConfig);
-
             // Test connection
             await this.pool.query('SELECT NOW()');
             logger.info('Connected to PostgreSQL');
@@ -36,7 +30,6 @@ export class DatabaseService {
     async disconnect(): Promise<void> {
         if (this.pool) {
             await this.pool.end();
-            this.pool = null;
             logger.info('Disconnected from PostgreSQL');
         }
     }
@@ -130,5 +123,3 @@ export class DatabaseService {
         return this.pool !== null;
     }
 }
-
-export const db = new DatabaseService(auditConfig.postgres);

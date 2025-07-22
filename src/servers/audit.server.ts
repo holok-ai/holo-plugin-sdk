@@ -1,8 +1,11 @@
+import 'reflect-metadata';
 import {BaseServer} from "./base.server";
 import {AuditService} from "../services";
 import {DatabaseConfig, RabbitConfig} from "../types";
 import {parseBoolean, parseNumber} from "../utils";
 import {withDB, withQueue} from "./mixins";
+import {container, injectable} from "tsyringe";
+import {CONTAINER_TOKENS} from "../config";
 
 export interface AuditServerConfig {
     dbConfig: DatabaseConfig;
@@ -31,15 +34,15 @@ export const auditConfig: AuditServerConfig = {
     responseQueue: process.env.RABBITMQ_QUEUE_LLM_RESPONSES_AUDIT || 'llm_responses_audit',
 }
 
+container.register(CONTAINER_TOKENS.DB_CONFIG, {useValue: auditConfig.dbConfig});
+container.register(CONTAINER_TOKENS.QUEUE_CONFIG, {useValue: auditConfig.queueConfig});
+container.register('AuditService', AuditService);
+
+@injectable()
 export class AuditServer extends withQueue(withDB(BaseServer)) {
 
-    private config: AuditServerConfig;
-    private auditService: AuditService;
-
-    constructor(config: AuditServerConfig) {
+    constructor(private config: AuditServerConfig, private auditService: AuditService) {
         super(config);
-        this.config = config;
-        this.auditService = new AuditService(this.db);
     }
 
     async onError(): Promise<void> {
@@ -60,5 +63,5 @@ export class AuditServer extends withQueue(withDB(BaseServer)) {
     }
 }
 
-const auditServer = new AuditServer(auditConfig);
+const auditServer = container.resolve(AuditServer);
 auditServer.start();

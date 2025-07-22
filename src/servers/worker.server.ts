@@ -64,6 +64,7 @@ export class WorkerServer extends withQueue(withDB(BaseServer)) {
                         await ai!.generate(sourceId, id, model, prompt, options, stream);
                         break;
                     case 'chat':
+                        await ai!.chat(sourceId, id, model, prompt, options, stream);
                         break;
                     default:
                         logger.warn(`No handler registered for message type ${type} - ignoring message...`);
