@@ -2,11 +2,11 @@ import 'reflect-metadata';
 import {QueueService} from "./queue.service";
 import logger from "../utils/logger";
 import {Transform, TransformCallback} from "node:stream";
-import {inject, injectable} from "tsyringe";
-import {CONTAINER_TOKENS} from "../config";
+import {injectable} from "tsyringe";
 import {v4 as uuidv4} from "uuid";
 import {ApiRequest} from "../api/types";
 import {Response} from "express";
+import {env} from "../env";
 
 /**
  * Response stream for transforming LLM tokens into SSE
@@ -27,18 +27,19 @@ class ResponseStream extends Transform {
 @injectable()
 export class ResponseService {
     private streams: Map<string, ResponseStream> = new Map();
+    private readonly responseQueue = env.queue.responseQueue;
+    private readonly requestQueue = env.queue.requestQueue;
 
     constructor(
-        @inject(CONTAINER_TOKENS.SERVER_ID) private readonly sourceId: string,
-        @inject(CONTAINER_TOKENS.RESPONSE_QUEUE) private readonly responseQueue: string,
-        @inject(CONTAINER_TOKENS.REQUEST_QUEUE) private readonly requestQueue: string,
+        private readonly serverId: string = env.worker.serverId,
         private queueService: QueueService) {
-        this.responseQueue = responseQueue;
-        this.queueService = queueService;
+
     }
 
     async init() {
-        await this.queueService.consume(this.responseQueue, (_id, content) => {
+        const queueName = `${this.responseQueue}.${this.serverId}`;
+
+        await this.queueService.consume(queueName, (_id, content) => {
             const {requestId} = content;
             const stream = this.streams.get(requestId);
 
@@ -84,7 +85,7 @@ export class ResponseService {
      * @param {string} requestId - Request ID
      * @returns {Transform} - Response stream
      */
-    async createResponseStream(requestId: string) {
+    async createResponseStream(requestId: string): Promise<Transform> {
         const responseStream = new ResponseStream(requestId);
 
         // Store the stream in the map
@@ -125,7 +126,7 @@ export class ResponseService {
         const request = {
             id: requestId,
             type: 'generate',
-            sourceId: this.sourceId, // Add server ID for response routing
+            sourceId: this.serverId, // Add server ID for response routing
             payload: {
                 model,
                 prompt,
@@ -149,7 +150,7 @@ export class ResponseService {
         const request = {
             id: requestId,
             type: 'chat',
-            sourceId: this.sourceId, // Add server ID for response routing
+            sourceId: this.serverId, // Add server ID for response routing
             payload: {
                 model,
                 messages,

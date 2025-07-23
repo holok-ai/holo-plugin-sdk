@@ -17,6 +17,8 @@ export interface RabbitConfig {
 
 export interface AppConfig {
     serverId: string;
+    workerId?: string;
+    auditId?: string;
     port: number;
     host?: string;
     cors?: {
@@ -31,7 +33,16 @@ export interface AppConfig {
     requestQueue: string;
     responseExchange: string;
     responseQueue: string;
-    requestAuditQueue?: string;
-    responseAuditQueue?: string;
+
+    adminExchange: string;
+    adminResponseExchange: string;
+    adminCommandQueue: string;
+    adminResponseQueue: string;
+
+    auditRequestExchange: string;
+    auditResponseExchange: string;
+    auditRequestQueue: string;
+    auditResponseQueue: string;
+
     queueExpiration: number;
 }

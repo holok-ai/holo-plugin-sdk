@@ -1,13 +1,21 @@
+import 'reflect-metadata';
 import logger from '../utils/logger';
+import {env} from '../env';
 
-export class BaseServer {
-    protected readonly id: string;
+export interface IAppServer {
+    onError(): Promise<void>;
+
+    onInit(): Promise<void>;
+
+    onShutdown(): Promise<void>;
+}
+
+export class BaseServer implements IAppServer {
+
     protected initialized = false;
 
-    constructor(_config: any) {
-        logger.debug(`Config: ${JSON.stringify(_config, null, 2)}`)
-        this.id = `worker-${Math.random().toString(36).substr(2, 9)}`;
-        // Base Constructor - mixins will handle their own initialization
+    constructor(readonly id: string) {
+        logger.debug(`Server (${this.id}) Config: ${JSON.stringify(env, null, 2)}`)
     }
 
     private async init() {
@@ -45,7 +53,6 @@ export class BaseServer {
             await this.handleError(error);
         }
     }
-
 
     //required to resolve so that mixins can all call super.x
     onInit(): Promise<void> {

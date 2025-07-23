@@ -1,30 +1,28 @@
 import 'reflect-metadata';
 import {QueueService} from "../../services";
-import {Constructor} from "../../types";
+import {AppConfig, Constructor} from "../../types";
 import logger from "../../utils/logger";
 import {container, injectable} from "tsyringe";
+import {IAppServer} from "../base.server";
 
 /**
  * Mixin to add queue functionality to a class
  */
-export function withQueue<TBase extends Constructor<{
-    onError(): Promise<void>;
-    onInit(): Promise<void>;
-    onShutdown(): Promise<void>;
-}>>(Base: TBase) {
+export function withQueue<TBase extends Constructor<IAppServer>>(Base: TBase) {
     @injectable()
-    class WithQueueClass extends Base {
-        queueService: QueueService;
+    class WithQueueClass extends Base implements IAppServer {
+
+        readonly queueService: QueueService;
 
         constructor(...args: any[]) {
             super(...args);
 
-            this.queueService = container.resolve(QueueService);
+            let config: AppConfig = args[0];
+            this.queueService = container.resolve(QueueService) || new QueueService(config.queueConfig);
 
             if (!this.queueService) {
                 // Extract queueConfig from the first argument (config object)
-                const config = args[0];
-                if (!config?.queueConfig) {
+                if (!config.queueConfig) {
                     throw new Error('Queue configuration is required when using withQueue mixin');
                 }
 

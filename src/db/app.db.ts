@@ -2,17 +2,15 @@ import 'reflect-metadata';
 import {Pool, QueryResult, QueryResultRow} from 'pg';
 import {DatabaseConfig} from '../types';
 import logger from '../utils/logger';
-import {inject, injectable} from 'tsyringe';
-import {CONTAINER_TOKENS} from "../config";
+import {env} from "../env";
 
 /**
  * Database connection and management service
  */
-@injectable()
 export class AppDB {
     private readonly pool: Pool;
 
-    constructor(@inject(CONTAINER_TOKENS.DB_CONFIG) private readonly config: DatabaseConfig) {
+    constructor(private readonly config: DatabaseConfig = env.appDb.config) {
         this.pool = new Pool(this.config);
     }
 

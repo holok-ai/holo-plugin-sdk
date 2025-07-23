@@ -13,46 +13,6 @@ export interface ApiResponse<T = any> extends Response {
     json: (body: T) => this;
 }
 
-// Request/Response types for LLM endpoints
-export interface GenerateTextRequest {
-    model: string;
-    prompt: string;
-    options?: Record<string, any>;
-    stream?: boolean;
-}
-
-export interface ChatCompletionRequest {
-    model: string;
-    messages: Array<{
-        role: 'system' | 'user' | 'assistant';
-        content: string;
-    }>;
-    options?: Record<string, any>;
-    stream?: boolean;
-}
-
-export interface OpenAIChatCompletionRequest {
-    model: string;
-    messages: Array<{
-        role: 'system' | 'user' | 'assistant';
-        content: string;
-    }>;
-    temperature?: number;
-    max_tokens?: number;
-    stream?: boolean;
-}
-
-export interface ClaudeMessagesRequest {
-    model: string;
-    messages: Array<{
-        role: 'user' | 'assistant';
-        content: string;
-    }>;
-    max_tokens?: number;
-    temperature?: number;
-    system?: string;
-}
-
 // Response types
 export interface ApiSuccessResponse<T = any> {
     success: true;

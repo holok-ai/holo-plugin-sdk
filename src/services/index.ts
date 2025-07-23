@@ -1,11 +1,6 @@
 export {AuditService} from './audit.service';
 export {ProviderService} from './provider.service';
 
-export type {
-    ProxyRequest,
-    ProxyResponse,
-} from '../types';
-
 /**
  * Service exports
  */

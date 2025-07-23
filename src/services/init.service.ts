@@ -1,33 +1,44 @@
 import "reflect-metadata";
 import {QueueService} from "./queue.service";
-import {AppConfig} from "../types";
-import {inject, injectable} from "tsyringe";
-import {CONTAINER_TOKENS} from "../config";
+import {injectable} from "tsyringe";
+import {env} from "../env";
 
 @injectable()
 export class InitService {
-    constructor(@inject(CONTAINER_TOKENS.APP_CONFIG) private readonly config: AppConfig, private queueService: QueueService) {
-        this.config = config;
-        this.queueService = queueService;
+
+    constructor(
+        private readonly serverId: string = env.worker.serverId,
+        private queueService: QueueService) {
+
     }
 
     async setupQueues() {
         await this._setupRequestQueues();
-        await this._setupResponseExchangeAndQueues();
+        await this._setupResponseQueues();
+        await this._setupAdminQueues();
     }
 
     async _setupRequestQueues() {
-        const {requestExchange, requestQueue, requestAuditQueue} = this.config;
+        const {requestExchange, requestQueue, auditRequestQueue, auditRequestExchange} = env.queue;
+
         await this.queueService.assertExchange(requestExchange, 'fanout');
         await this.queueService.assertQueue(requestQueue, {durable: true}, requestExchange);
-        await this.queueService.assertQueue(requestAuditQueue || requestQueue + '_audit', {durable: true}, requestExchange);
+
+        await this.queueService.assertExchange(auditRequestExchange, 'direct');
+        await this.queueService.assertQueue(auditRequestQueue, {durable: true}, auditRequestExchange);
     }
 
-    async _setupResponseExchangeAndQueues() {
-        const {serverId, responseExchange, responseQueue, responseAuditQueue, queueExpiration = 3600000} = this.config;
+    async _setupResponseQueues() {
+        const {
+            responseExchange,
+            responseQueue,
+            auditResponseQueue,
+            auditResponseExchange,
+            queueExpiration = 3600000
+        } = env.queue;
         await this.queueService.assertExchange(responseExchange, 'direct');
 
-        const responseQueueName = `${responseQueue}.${serverId}`;
+        const responseQueueName = `${responseQueue}.${this.serverId}`;
         await this.queueService.assertQueue(
             responseQueueName,
             {
@@ -37,7 +48,16 @@ export class InitService {
                 }
             },
             responseExchange,
-            serverId);
-        await this.queueService.assertQueue(responseAuditQueue || responseQueue + '_audit', {durable: true}, responseExchange);
+            this.serverId);
+
+        await this.queueService.assertExchange(auditResponseExchange, 'direct');
+        await this.queueService.assertQueue(auditResponseQueue, {durable: true}, auditResponseExchange);
+    }
+
+    async _setupAdminQueues() {
+        const {adminExchange, adminResponseExchange} = env.queue;
+
+        await this.queueService.assertExchange(adminExchange, 'topic');
+        await this.queueService.assertExchange(adminResponseExchange, 'direct');
     }
 }

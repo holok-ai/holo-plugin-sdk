@@ -3,17 +3,15 @@ import {Constructor, DatabaseConfig} from "../../types";
 import logger from "../../utils/logger";
 import {AppDB} from "../../db/app.db";
 import {container, injectable} from "tsyringe";
+import {IAppServer} from "../base.server";
+import {env} from "../../env";
 
 /**
  * Mixin to add database functionality to a class
  */
-export function withDB<TBase extends Constructor<{
-    onError(): Promise<void>;
-    onInit(): Promise<void>;
-    onShutdown(): Promise<void>;
-}>>(Base: TBase) {
+export function withDB<TBase extends Constructor<IAppServer>>(Base: TBase) {
     @injectable()
-    class WithDBClass extends Base {
+    class WithDBClass extends Base implements IAppServer {
         db: AppDB;
 
         constructor(...args: any[]) {
@@ -21,18 +19,17 @@ export function withDB<TBase extends Constructor<{
 
             this.db = container.resolve(AppDB);
 
-            if(!this.db) {
+            if (!this.db) {
                 logger.debug('No Database found in container, initializing from config file.');
                 // Extract dbConfig from the first argument (config object)
-                const config = args[0];
-                if (!config?.dbConfig) {
+                if (env.appDb) {
                     throw new Error('Database configuration is required when using withDB mixin');
                 }
 
-                this.db = new AppDB(config.dbConfig as DatabaseConfig);
+                this.db = new AppDB(env.appDb as DatabaseConfig);
             }
 
-            if(!this.db) {
+            if (!this.db) {
                 throw new Error('Database is required when using withDB mixin');
             }
         }

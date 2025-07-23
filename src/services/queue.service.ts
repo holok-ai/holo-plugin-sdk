@@ -2,20 +2,18 @@ import "reflect-metadata";
 import {Channel, ChannelModel, connect, ConsumeMessage} from 'amqplib';
 import logger from '../utils/logger';
 import {RabbitConfig} from "../types";
-import {inject, injectable} from "tsyringe";
-import {CONTAINER_TOKENS} from "../config";
+import {env} from "../env";
 
 /**
  * RabbitMQ queue management service
  */
-@injectable()
 export class QueueService {
     private connection: ChannelModel | null = null;
     private channel: Channel | null = null;
     public isConnected: boolean = false;
     public reconnectAttempts = 0;
 
-    constructor(@inject(CONTAINER_TOKENS.QUEUE_CONFIG) private config: RabbitConfig) {
+    constructor(private readonly config: RabbitConfig = env.queue.config) {
         this.config = config;
     }
 
