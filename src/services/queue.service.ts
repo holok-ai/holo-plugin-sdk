@@ -251,8 +251,15 @@ export class QueueService {
         await this.channel!.assertQueue(queue, options);
 
         if (exchange) {
-            logger.debug(`Binding queue ${queue} to exchange ${exchange} with pattern ${pattern}`);
-            await this.channel!.bindQueue(queue, exchange, pattern || '');
+            await this.bindQueue(queue, exchange, pattern || '');
         }
+    }
+
+    async bindQueue(queue: string, exchange: string, pattern: string) {
+        if (!this.isConnected) {
+            await this.connect();
+        }
+        logger.debug(`Binding queue ${queue} to exchange ${exchange} with pattern ${pattern}`);
+        await this.channel!.bindQueue(queue, exchange, pattern);
     }
 }

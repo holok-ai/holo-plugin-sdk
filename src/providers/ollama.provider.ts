@@ -1,24 +1,24 @@
 import AIProvider from "./ai.provider";
 import {ChatResponse, GenerateResponse, Ollama, Options} from "ollama";
 import {ModelInfo, OllamaProviderConfig} from "./types";
-import {QueueService} from "../services";
 import logger from "../utils/logger";
+import {WorkerService} from "../services/worker.service";
 
 
 export class OllamaProvider extends AIProvider {
-    name = 'ollama';
-    readonly config: OllamaProviderConfig;
-    private client: Ollama = new Ollama();
+    readonly name = 'ollama';
+    private readonly client: Ollama = new Ollama();
 
-    constructor(config: OllamaProviderConfig, queueService: QueueService, workerId: string = 'unknown') {
-        super(config, queueService, workerId);
-        this.config = config;
+    constructor(protected config: OllamaProviderConfig,
+                protected workerService: WorkerService,
+                protected workerId: string) {
+        super(config, workerService, workerId);
+
+        this.client = new Ollama(this.config);
     }
 
     async init(): Promise<void> {
         try {
-            this.client = new Ollama(this.config);
-
             await this.getModels();
 
             logger.info('Ollama provider initialized');

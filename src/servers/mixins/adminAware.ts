@@ -25,8 +25,18 @@ export function adminAware<TBase extends Constructor<IAppServer>>(Base: TBase) {
         async onInit(): Promise<void> {
             await super.onInit(); // This calls withQueue's onInit, which calls Base's onInit
 
-            logger.debug(`Server ${this.id} is Admin Aware initialized`);
+            logger.debug(`${this.id} is Admin Aware`);
+            let commandQueue = env.queue.adminCommandQueue;
+            let exchange = env.queue.adminExchange;
+            await this.queueService.assertQueue(commandQueue, {
+                exclusive: false,
+                durable: true,
+                autoDelete: true
+            }, exchange, 'model.#');
 
+            await this.queueService.bindQueue(commandQueue, exchange, 'worker.#');
+
+            // await this.queueService.consume(commandQueue, )
 
         }
 

@@ -16,7 +16,7 @@ export class WorkerServer extends adminAware((withDB(BaseServer))) {
 
     async onInit(): Promise<void> {
         await super.onInit();
-        await this.providerService.init();
+        await this.providerService.init(this.id);
 
 
         // const ai = await this.providerService.matchProvider('openai');
@@ -45,6 +45,7 @@ export class WorkerServer extends adminAware((withDB(BaseServer))) {
 
                 }
             } catch (error) {
+                logger.error(`Error handling request (${id}): ${(error as Error).message}`);
 
             }
         });
@@ -60,5 +61,4 @@ export class WorkerServer extends adminAware((withDB(BaseServer))) {
 }
 
 const worker = container.resolve(WorkerServer);
-logger.debug(worker.id);
 worker.start();

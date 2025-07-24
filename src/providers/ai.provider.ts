@@ -1,6 +1,5 @@
 import {AIProviderConfig, ModelInfo} from "./types";
-import {QueueService} from "../services";
-import logger from "../utils/logger";
+import {WorkerService} from "../services/worker.service";
 
 /**
  * Base interface for LLM providers
@@ -12,8 +11,8 @@ export abstract class AIProvider {
 
     constructor(
         protected config: AIProviderConfig,
-        protected queueService: QueueService,
-        protected workerId: string = 'unknown') {
+        protected workerService: WorkerService,
+        protected workerId: string) {
     }
 
     /**
@@ -100,27 +99,7 @@ export abstract class AIProvider {
     }
 
     async sendResponseChunk(routingKey: string, correlationId: string, data: object, auditEnabled: boolean = this.config.auditEnabled) {
-        logger.debug(`Sending response chunk: ${routingKey}, ${correlationId}, ${JSON.stringify(data)}`);
-
-        await this.queueService.sendToExchange(
-            'llm_responses',
-            routingKey,
-            data,
-            {correlationId}
-        );
-
-        if (auditEnabled) {
-            await this.queueService.sendToExchange(
-                'llm_responses',
-                'audit',
-                {
-                    timestamp: Date.now(),
-                    workerId: this.workerId,
-                    ...data
-                },
-                {correlationId}
-            )
-        }
+        await this.workerService.sendResponseChunk(this.workerId, routingKey, correlationId, data, auditEnabled);
     }
 
     //routingKey = sourceId, correlationId = requestId / id of message

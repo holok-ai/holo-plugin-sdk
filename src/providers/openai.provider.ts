@@ -1,27 +1,27 @@
 import {AIProvider} from './ai.provider';
 import logger from '../utils/logger';
 import OpenAI from 'openai';
-import {AIProviderConfig, ModelInfo} from './types';
+import {AIProviderConfig, IProvider, ModelInfo} from './types';
 import {
     ChatCompletionChunk,
     ChatCompletionCreateParams,
     ChatCompletionCreateParamsStreaming
 } from "openai/resources/chat/completions/completions";
 import {Stream} from "openai/streaming";
-import {QueueService} from "../services";
+import {WorkerService} from "../services/worker.service";
 
 /**
  * OpenAI provider for connecting to OpenAI API
  */
-export class OpenAIProvider extends AIProvider {
+export class OpenAIProvider extends AIProvider implements IProvider {
     private readonly client: OpenAI;
     name: string = 'openai';
 
     constructor(
         protected config: AIProviderConfig,
-        protected queueService: QueueService,
-        protected workerId: string = 'unknown') {
-        super(config, queueService, workerId);
+        protected workerService: WorkerService,
+        protected workerId: string) {
+        super(config, workerService, workerId);
         if (!this.config.apiKey) {
             throw new Error('OpenAI API key is required');
         }

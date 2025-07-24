@@ -1,13 +1,29 @@
 import AIProvider from "./ai.provider";
-import {ModelInfo} from "./types";
+import {AIProviderConfig, IProvider, ModelInfo} from "./types";
 import logger from "../utils/logger";
 import {Anthropic} from "@anthropic-ai/sdk/client";
 import {Stream} from "@anthropic-ai/sdk/streaming";
 import {MessageCreateParams, MessageCreateParamsStreaming, RawMessageStreamEvent} from "@anthropic-ai/sdk/resources";
+import {WorkerService} from "../services/worker.service";
 
-export class ClaudeProvider extends AIProvider {
-    name: string = 'claude';
-    client: Anthropic = new Anthropic();
+export class ClaudeProvider extends AIProvider implements IProvider {
+    readonly name: string = 'claude';
+    private readonly client: Anthropic;
+
+    constructor(
+        protected config: AIProviderConfig,
+        protected workerService: WorkerService,
+        protected workerId: string) {
+        super(config, workerService, workerId);
+
+        if (!this.config.apiKey) {
+            throw new Error('OpenAI API key is required');
+        }
+
+        this.client = new Anthropic({
+            apiKey: this.config.apiKey
+        });
+    }
 
     async init(): Promise<void> {
         if (!this.config.apiKey) {
@@ -15,11 +31,6 @@ export class ClaudeProvider extends AIProvider {
         }
 
         try {
-            // Initialize the client
-            this.client = new Anthropic({
-                apiKey: this.config.apiKey
-            });
-
             await this.getModels();
 
             logger.info('Claude provider initialized');

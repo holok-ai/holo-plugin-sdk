@@ -13,16 +13,6 @@ export namespace env {
         export const port = parseNumber(process.env.PORT, 3000);
     }
 
-    export namespace worker {
-        export const serverId = process.env.WORKER_ID ||
-            `worker_${id}`;
-    }
-
-    export namespace audit {
-        export const serverId = process.env.AUDIT_ID ||
-            `audit_${id}`;
-    }
-
     // Database config
     export namespace appDb {
         export const host = process.env.APP_PG_HOST || process.env.AUDIT_PG_HOST || 'localhost';
@@ -97,5 +87,16 @@ export namespace env {
             reconnectAttempts,
             reconnectDelayMs
         };
+    }
+
+    export namespace worker {
+        export const serverId = process.env.WORKER_ID ||
+            `worker_${id}`;
+        export const adminCommandQueue = `${queue.adminCommandQueue}_${worker.serverId}`;
+    }
+
+    export namespace audit {
+        export const serverId = process.env.AUDIT_ID ||
+            `audit_${id}`;
     }
 }
