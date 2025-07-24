@@ -1,9 +1,10 @@
-const winston = require('winston');
-const fs = require('fs');
-const path = require('path');
+import winston from 'winston';
+import fs from 'fs';
+import path from 'path';
+import {env} from "../env";
 
 // Ensure logs directory exists
-const logDir = process.env.LOG_DIR || 'logs';
+const logDir = env.logDir;
 
 // Create logs directory if it doesn't exist
 try {
@@ -36,28 +37,20 @@ const colors = {
 // Add colors to winston
 winston.addColors(colors);
 
-// Create custom format
-const format = winston.format.combine(
-    winston.format.timestamp({format: 'YYYY-MM-DD HH:mm:ss:ms'}),
-    winston.format.colorize({all: true}),
-    winston.format.printf(
-        (info: any) => {
-            // Get server ID safely for distributed tracing
-            let serverId = 'unknown';
-            try {
-                // Dynamically load config to avoid circular dependencies
-                const {config} = require('../config/config');
-                serverId = config.server?.id || 'unknown';
-            } catch (e) {
-                // Ignore errors, use default serverId
+export function createLoggerFormat(serverId: string) {
+    return winston.format.combine(
+        winston.format.timestamp({format: 'YYYY-MM-DD HH:mm:ss:ms'}),
+        winston.format.colorize({all: true}),
+        winston.format.printf(
+            (info: winston.Logform.TransformableInfo) => {
+                return `${info.timestamp} ${info.level}: [${serverId}] ${info.message}`;
             }
-            return `${info.timestamp} ${info.level}: [${serverId}] ${info.message}`;
-        }
-    )
-);
+        )
+    );
+}
 
 // Define which transports the logger should use
-const transports = [
+const transports: any[] = [
     // Console transport
     new winston.transports.Console()
 ];
@@ -88,16 +81,21 @@ try {
 
 // Determine log level based on environment
 const level = (): string => {
-    const env = process.env.NODE_ENV || 'development';
-    return env === 'development' ? 'debug' : 'info';
+    return env.NODE_ENV === 'development' ? 'debug' : 'info';
 };
 
+export function createLoggerOptions(serverId: string) {
+    return {
+        level: level(),
+        levels,
+        format: createLoggerFormat(serverId),
+        transports,
+    }
+}
+
 // Create the logger
-const logger = winston.createLogger({
-    level: level(),
-    levels,
-    format,
-    transports,
-});
+const logger = winston.createLogger(
+    createLoggerOptions(env.id)
+);
 
 export default logger;

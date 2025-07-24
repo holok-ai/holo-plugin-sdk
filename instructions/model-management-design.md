@@ -126,7 +126,7 @@ class WorkerManager {
 ```javascript
 {
   id: "ollama:llama2",              // Unique identifier
-  provider: "ollama",               // Provider name
+  provider: "ollama",               // AiProvider name
   name: "Llama 2",                  // Display name
   description: "Open source LLM",   // Description
   capabilities: {                   // Supported operations
@@ -170,7 +170,7 @@ POST /api/workers/:id/command - Send command to worker
 New exchanges and queues for administration:
 
 ```javascript
-// Add to config.js
+// Add to config.ts
 module.exports = {
   // ... existing config
   rabbitmq: {

@@ -1,22 +1,26 @@
 import {parseBoolean, parseNumber} from "./utils";
 
 export namespace env {
+    export const NODE_ENV = process.env.NODE_ENV || 'development';
+    export const id = Math.random().toString(36).substring(2, 10);
+    export const logDir = process.env.LOG_DIR || 'logs';
+
     // API config
     export namespace api {
         export const serverId = process.env.SERVER_ID ||
-            `server_${Math.random().toString(36).substring(2, 10)}`;
+            `server_${id}`;
 
         export const port = parseNumber(process.env.PORT, 3000);
     }
 
     export namespace worker {
         export const serverId = process.env.WORKER_ID ||
-            `worker_${Math.random().toString(36).substring(2, 9)}`;
+            `worker_${id}`;
     }
 
     export namespace audit {
         export const serverId = process.env.AUDIT_ID ||
-            `audit_${Math.random().toString(36).substring(2, 9)}`;
+            `audit_${id}`;
     }
 
     // Database config

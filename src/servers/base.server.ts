@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import logger from '../utils/logger';
-import {env} from '../env';
 
 export interface IAppServer {
     onError(): Promise<void>;
@@ -15,7 +14,7 @@ export class BaseServer implements IAppServer {
     protected initialized = false;
 
     constructor(readonly id: string) {
-        logger.debug(`Server (${this.id}) Config: ${JSON.stringify(env, null, 2)}`)
+        // logger.debug(`Server (${this.id}) Config: ${JSON.stringify(env, null, 2)}`)
     }
 
     private async init() {

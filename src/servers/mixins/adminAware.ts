@@ -25,8 +25,7 @@ export function adminAware<TBase extends Constructor<IAppServer>>(Base: TBase) {
         async onInit(): Promise<void> {
             await super.onInit(); // This calls withQueue's onInit, which calls Base's onInit
 
-
-            logger.debug('Admin Aware server initalized');
+            logger.debug(`Server ${this.id} is Admin Aware initialized`);
 
 
         }
