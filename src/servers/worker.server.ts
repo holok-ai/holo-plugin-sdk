@@ -19,7 +19,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
     async onInit(): Promise<void> {
         await super.onInit();
         await this.providerService.init(this.id);
-
+        this.adminHandlers.set('worker.restart', this.adminService.restartWorker)
 
         // const ai = await this.providerService.matchProvider('openai');
         // ai?.generate('server-1', '1', 'gpt-4', 'Hello world!', {}, false);

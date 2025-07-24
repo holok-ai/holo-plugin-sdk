@@ -12,7 +12,7 @@ export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
     @injectable()
     class WithAdminServer extends withQueue(Base) implements IAppServer {
         id!: string;
-        adminHandlers: Map<string, (payload: object) => Promise<object>> = new Map<string, (payload: object) => Promise<object>>();
+        adminHandlers = new Map<string, (workerId: string, payload: object) => Promise<object>>();
         adminCommandQueue: string;
         adminExchange: string;
         readonly adminService: AdminService;
@@ -50,7 +50,7 @@ export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
                     response = {success: false, message: `No handler registered for admin command: ${action}`};
                 } else {
                     try {
-                        response = await handler(payload);
+                        response = await handler(this.id, payload);
                     } catch (error) {
                         logger.error(`Error handling admin command: ${action} - ${(error as Error).message}`);
                         response = {success: false, message: (error as Error).message};
