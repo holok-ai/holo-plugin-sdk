@@ -26,17 +26,17 @@ class ResponseStream extends Transform {
 
 @injectable()
 export class ResponseService {
-    private readonly serverId: string
+    private serverId: string = env.api.serverId;
     private streams: Map<string, ResponseStream> = new Map();
     private readonly responseQueue = env.queue.responseQueue;
     private readonly requestQueue = env.queue.requestQueue;
 
     constructor(
         private queueService: QueueService) {
-        this.serverId = env.worker.serverId;
     }
 
-    async init() {
+    async setupResponseStream(serverId?: string) {
+        this.serverId = serverId || this.serverId;
         const queueName = `${this.responseQueue}.${this.serverId}`;
 
         await this.queueService.consume(queueName, (_id, content) => {
@@ -139,7 +139,7 @@ export class ResponseService {
 
         logger.info(`New generate request: ${requestId} for model: ${model} streaming:${stream}`);
         // Set up server-sent events for streaming response
-        this.setupResponse(req, res, request, requestId);
+        await this.setupResponse(req, res, request, requestId);
     }
 
     async chatCompletionResponse(req: ApiRequest, res: Response) {

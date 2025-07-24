@@ -5,14 +5,15 @@ import {env} from "../env";
 
 @injectable()
 export class InitService {
+    private serverId: string = env.worker.serverId;
 
     constructor(
-        private readonly serverId: string = env.worker.serverId,
         private queueService: QueueService) {
 
     }
 
-    async setupQueues() {
+    async setupQueues(serverId?: string) {
+        this.serverId = serverId || this.serverId;
         await this._setupRequestQueues();
         await this._setupResponseQueues();
         await this._setupAdminQueues();

@@ -45,8 +45,8 @@ async function initApp(): Promise<void> {
         const initService = container.resolve(InitService);
         const responseService: ResponseService = container.resolve(ResponseService);
 
-        await initService.setupQueues();
-        await responseService.init();
+        await initService.setupQueues(env.api.serverId);
+        await responseService.setupResponseStream();
 
         // Start the HTTP server
         const server = app.listen(PORT, (): void => {
