@@ -11,7 +11,7 @@ import {env} from "../../env";
  */
 export function withDB<TBase extends Constructor<IAppServer>>(Base: TBase) {
     @injectable()
-    class WithDBClass extends Base implements IAppServer {
+    class WithDBServer extends Base implements IAppServer {
         db: AppDB;
 
         constructor(...args: any[]) {
@@ -34,9 +34,9 @@ export function withDB<TBase extends Constructor<IAppServer>>(Base: TBase) {
             }
         }
 
-        async onError(): Promise<void> {
+        async onError(error: Error): Promise<void> {
             logger.debug('Error occurred, disconnecting from database...');
-            await super.onError();
+            await super.onError(error);
             await this.db.disconnect();
         }
 
@@ -55,5 +55,5 @@ export function withDB<TBase extends Constructor<IAppServer>>(Base: TBase) {
         }
     }
 
-    return WithDBClass;
+    return WithDBServer;
 }

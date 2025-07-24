@@ -32,7 +32,7 @@ export interface IProvider {
         prompt: string,
         options: {},
         stream: boolean
-    ): Promise<void>;
+    ): Promise<AIRequestStat>;
 
     /**
      * Generate chat completion with streaming.
@@ -50,28 +50,8 @@ export interface IProvider {
         messages: any[],
         options: {},
         stream: boolean
-    ): Promise<void>;
+    ): Promise<AIRequestStat>;
 
-    /**
-     * Validate if a model exists.
-     * @param model - Model name
-     * @returns Whether model exists
-     */
-    validateModel(model: string): Promise<boolean>;
-
-    /**
-     * Get status of a specific model.
-     * @param modelId - Model identifier
-     * @returns Model status information
-     */
-    getModelStatus(modelId: string): Promise<any>;
-
-    /**
-     * Get detailed information about a model.
-     * @param modelId - Model identifier
-     * @returns Model details
-     */
-    getModelDetails(modelId: string): Promise<ModelInfo>;
 }
 
 export interface AIProviderConfig {
@@ -100,33 +80,6 @@ export interface ModelInfo {
 
     [key: string]: any; // Allow additional properties
 }
-
-
-/**
- * Generation parameters for text generation
- */
-
-/**
- * Generation options interface
- */
-export interface LlmOptions {
-    temperature?: number;
-    top_p?: number;
-    top_k?: number;
-    max_tokens?: number;
-    stop?: string | string[];
-    stream?: boolean;
-    user?: string;
-
-    [key: string]: any; // Allow additional provider-specific options
-}
-
-export interface GenerateParams extends LlmOptions {
-    model: string;
-    prompt: string;
-
-}
-
 
 /**
  * Model status interface
@@ -161,4 +114,11 @@ export interface ModelOperationResult {
     [key: string]: any;
 }
 
-
+export interface AIRequestStat {
+    type: 'generate' | 'chat';
+    startTime: number;
+    endTime: number;
+    duration: number;
+    success: number;
+    error: number;
+}

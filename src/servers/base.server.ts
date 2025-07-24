@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import logger from '../utils/logger';
 
 export interface IAppServer {
-    onError(): Promise<void>;
+    onError(error: Error): Promise<void>;
 
     onInit(): Promise<void>;
 
@@ -29,9 +29,9 @@ export class BaseServer implements IAppServer {
         process.exit(0);
     }
 
-    private async handleError(error: any) {
+    private async handleError(error: Error) {
         logger.error(`Server error: ${(error as Error).message}`);
-        await this.onError();
+        await this.onError(error);
         process.exit(1);
     }
 
@@ -49,7 +49,7 @@ export class BaseServer implements IAppServer {
             logger.info('Server is running...');
 
         } catch (error) {
-            await this.handleError(error);
+            await this.handleError(error as Error);
         }
     }
 
@@ -62,7 +62,7 @@ export class BaseServer implements IAppServer {
         return Promise.resolve();
     }
 
-    onError(): Promise<void> {
+    onError(_error: Error): Promise<void> {
         return Promise.resolve();
     }
 }

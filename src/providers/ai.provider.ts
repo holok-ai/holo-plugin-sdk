@@ -1,5 +1,6 @@
-import {AIProviderConfig, ModelInfo} from "./types";
+import {AIProviderConfig, AIRequestStat, ModelInfo} from "./types";
 import {ResponseService} from "../services";
+import logger from "../utils/logger";
 
 /**
  * Base interface for LLM providers
@@ -36,7 +37,7 @@ export abstract class AIProvider {
      * @param options
      * @param stream
      */
-    abstract generate(
+    abstract _generate(
         requestId: string,
         sourceId: string,
         model: string,
@@ -54,7 +55,7 @@ export abstract class AIProvider {
      * @param options
      * @param stream
      */
-    abstract chat(
+    abstract _chat(
         requestId: string,
         sourceId: string,
         model: string,
@@ -64,40 +65,73 @@ export abstract class AIProvider {
     ): Promise<void>;
 
     /**
-     * Validate if model exists
-     * @param model - Model name
-     * @returns Whether model exists
+     * General stats/try-catch wrapper for chat/generate
      */
-    async validateModel(model: string): Promise<boolean> {
-        const models = await this.getModels();
-        return models.some(m => m.id === model);
+    protected async wrapWithStats(
+        type: 'chat' | 'generate',
+        action: () => Promise<void>,
+        onError: (e: Error) => Promise<void>
+    ): Promise<AIRequestStat> {
+        const startTime = Date.now();
+        let success = 0;
+        let error = 0;
+        try {
+            await action();
+            success++;
+        } catch (e) {
+            logger.error(`${type.charAt(0).toUpperCase() + type.slice(1)} error: ${(e as Error).message}`);
+            await onError(e as Error);
+            error++;
+        }
+        const endTime = Date.now();
+        return {
+            type,
+            startTime,
+            endTime,
+            duration: endTime - startTime,
+            success,
+            error
+        };
     }
 
-    /**
-     * Get status of a specific model
-     * @param modelId - Model identifier
-     * @returns Model status information
-     */
-    async getModelStatus(modelId: string): Promise<any> {
-        const modelInfo = this.models![modelId];
-        if (!modelInfo) {
-            return {status: 'not_found'};
-        }
-        return {status: 'available', info: modelInfo};
+    async generate(
+        requestId: string,
+        sourceId: string,
+        model: string,
+        prompt: string,
+        options: {},
+        stream: boolean
+    ): Promise<AIRequestStat> {
+        return this.wrapWithStats(
+            'generate',
+            async () => {
+                await this._generate(requestId, sourceId, model, prompt, options, stream);
+            },
+            async (e) => {
+                await this.onError(requestId, sourceId, e);
+            }
+        );
     }
 
-    /**
-     * Get detailed information about a model
-     * @param modelId - Model identifier
-     * @returns Model details
-     */
-    async getModelDetails(modelId: string): Promise<ModelInfo> {
-        const modelInfo = this.models![modelId];
-        if (!modelInfo) {
-            throw new Error(`Model ${modelId} not found`);
-        }
-        return modelInfo;
+    async chat(
+        requestId: string,
+        sourceId: string,
+        model: string,
+        messages: any[],
+        options: {},
+        stream: boolean
+    ): Promise<AIRequestStat> {
+        return this.wrapWithStats(
+            'chat',
+            async () => {
+                await this._chat(requestId, sourceId, model, messages, options, stream);
+            },
+            async (e) => {
+                await this.onError(requestId, sourceId, e);
+            }
+        );
     }
+
 
     async sendResponseChunk(routingKey: string, correlationId: string, data: object, auditEnabled: boolean = this.config.auditEnabled) {
         await this.responseService.sendResponseChunk(this.workerId, routingKey, correlationId, data, auditEnabled);

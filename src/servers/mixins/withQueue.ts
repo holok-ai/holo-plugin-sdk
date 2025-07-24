@@ -10,7 +10,7 @@ import {IAppServer} from "../base.server";
  */
 export function withQueue<TBase extends Constructor<IAppServer>>(Base: TBase) {
     @injectable()
-    class WithQueueClass extends Base implements IAppServer {
+    class WithQueueServer extends Base implements IAppServer {
 
         readonly queueService: QueueService;
 
@@ -35,9 +35,9 @@ export function withQueue<TBase extends Constructor<IAppServer>>(Base: TBase) {
         }
 
 
-        async onError(): Promise<void> {
+        async onError(error: Error): Promise<void> {
             logger.debug('Error occurred, disconnecting from queue...');
-            await super.onError();
+            await super.onError(error);
             await this.queueService.disconnect();
         }
 
@@ -54,5 +54,5 @@ export function withQueue<TBase extends Constructor<IAppServer>>(Base: TBase) {
         }
     }
 
-    return WithQueueClass;
+    return WithQueueServer;
 }

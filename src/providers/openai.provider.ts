@@ -79,7 +79,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
     /**
      * Generate text from a prompt with streaming
      */
-    async generate(
+    async _generate(
         requestId: string,
         sourceId: string,
         model: string,
@@ -87,35 +87,30 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         options: {},
         stream: boolean
     ): Promise<void> {
-        try {
-            // Convert text generation to chat format for OpenAI API
-            const messages = [
-                {
-                    role: 'user' as const,
-                    content: prompt
-                }
-            ];
+        // Convert text generation to chat format for OpenAI API
+        const messages = [
+            {
+                role: 'user' as const,
+                content: prompt
+            }
+        ];
 
-            await this.callOpenAI(
-                requestId,
-                sourceId,
-                model,
-                messages,
-                options,
-                stream,
-                this.onGenerate.bind(this),
-                this.onGenerateComplete.bind(this)
-            );
-        } catch (error) {
-            logger.error(`OpenAI generate error: ${(error as Error).message}`);
-            await this.onError(requestId, sourceId, error as Error);
-        }
+        await this.callOpenAI(
+            requestId,
+            sourceId,
+            model,
+            messages,
+            options,
+            stream,
+            this.onGenerate.bind(this),
+            this.onGenerateComplete.bind(this)
+        );
     }
 
     /**
      * Generate chat completion with streaming
      */
-    async chat(
+    async _chat(
         requestId: string,
         sourceId: string,
         model: string,
@@ -123,20 +118,16 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         options: {},
         stream: boolean
     ): Promise<void> {
-        try {
-            await this.callOpenAI(
-                requestId,
-                sourceId,
-                model,
-                messages,
-                options,
-                stream,
-                this.onChat.bind(this),
-                this.onChatComplete.bind(this));
-        } catch (error) {
-            logger.error(`OpenAI chat error: ${(error as Error).message}`);
-            await this.onError(requestId, sourceId, error as Error);
-        }
+        await this.callOpenAI(
+            requestId,
+            sourceId,
+            model,
+            messages,
+            options,
+            stream,
+            this.onChat.bind(this),
+            this.onChatComplete.bind(this));
+
     }
 
     async callOpenAI(

@@ -62,7 +62,7 @@ export class OllamaProvider extends AIProvider {
     /**
      * Generate text from a prompt with streaming
      */
-    async generate(
+    async _generate(
         requestId: string,
         sourceId: string,
         model: string,
@@ -73,52 +73,45 @@ export class OllamaProvider extends AIProvider {
         if (!this.models![model]) {
             throw new Error(`Model ${model} not found`);
         }
-        try {
-            if (!this.client) {
-                await this.init();
-            }
-
-            const ollamaOptions = {
-                model,
-                prompt,
-                options: {
-                    num_predict: options.max_tokens,
-                    ...options
-                } as Partial<Options>,
-                stream
-            }
-            let fullResponse = '';
-            // @ts-ignore
-            const response = await this.client.generate(ollamaOptions);
-            if (stream) {
-
-
-                // Use Ollama streaming API
-                for await (const chunk of response) {
-                    if (chunk.done) {
-                        await this.onGenerateComplete(requestId, sourceId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
-                        break;
-                    }
-
-                    const token = chunk.response;
-                    fullResponse += token;
-
-                    if (token) {
-                        await this.onGenerate(requestId, sourceId, chunk);
-                    }
-                }
-            } else {
-                fullResponse = response.response;
-                await this.onGenerateComplete(requestId, sourceId, response, 'done', this.generateOptionalData(fullResponse, response));
-            }
-
-            logger.info(`Generated response with Ollama model ${model}, length: ${fullResponse.length}`);
-
-
-        } catch (error) {
-            logger.error(`Claude generate error: ${(error as Error).message}`);
-            await this.onError(requestId, sourceId, error as Error);
+        if (!this.client) {
+            await this.init();
         }
+
+        const ollamaOptions = {
+            model,
+            prompt,
+            options: {
+                num_predict: options.max_tokens,
+                ...options
+            } as Partial<Options>,
+            stream
+        }
+        let fullResponse = '';
+        // @ts-ignore
+        const response = await this.client.generate(ollamaOptions);
+        if (stream) {
+
+
+            // Use Ollama streaming API
+            for await (const chunk of response) {
+                if (chunk.done) {
+                    await this.onGenerateComplete(requestId, sourceId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
+                    break;
+                }
+
+                const token = chunk.response;
+                fullResponse += token;
+
+                if (token) {
+                    await this.onGenerate(requestId, sourceId, chunk);
+                }
+            }
+        } else {
+            fullResponse = response.response;
+            await this.onGenerateComplete(requestId, sourceId, response, 'done', this.generateOptionalData(fullResponse, response));
+        }
+
+        logger.info(`Generated response with Ollama model ${model}, length: ${fullResponse.length}`);
     }
 
     generateOptionalData(fullResponse: string, chunk: GenerateResponse | ChatResponse) {
@@ -134,7 +127,7 @@ export class OllamaProvider extends AIProvider {
     /**
      * Generate chat completion with streaming
      */
-    async chat(
+    async _chat(
         requestId: string,
         sourceId: string,
         model: string,
@@ -145,51 +138,44 @@ export class OllamaProvider extends AIProvider {
         if (!this.models![model]) {
             throw new Error(`Model ${model} not found`);
         }
-        try {
-            if (!this.client) {
-                await this.init();
-            }
+        if (!this.client) {
+            await this.init();
+        }
 
-            const ollamaOptions = {
-                model,
-                messages,
-                options: {
-                    num_predict: options.max_tokens,
-                    ...options
-                } as Partial<Options>,
-                stream
-            }
+        const ollamaOptions = {
+            model,
+            messages,
+            options: {
+                num_predict: options.max_tokens,
+                ...options
+            } as Partial<Options>,
+            stream
+        }
 
-            let fullResponse = '';
-            // @ts-ignore
-            const response = await this.client.chat(ollamaOptions);
-            if (stream) {
-                // Use Ollama streaming API
-                for await (const chunk of response) {
-                    if (chunk.done) {
-                        await this.onChatComplete(requestId, sourceId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
-                        break;
-                    }
-
-                    const token = chunk.message?.content || '';
-                    fullResponse += token;
-
-                    if (token) {
-                        await this.onChat(requestId, sourceId, chunk, 'token', {
-                            delta: {content: token},
-                            model
-                        });
-                    }
+        let fullResponse = '';
+        // @ts-ignore
+        const response = await this.client.chat(ollamaOptions);
+        if (stream) {
+            // Use Ollama streaming API
+            for await (const chunk of response) {
+                if (chunk.done) {
+                    await this.onChatComplete(requestId, sourceId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
+                    break;
                 }
-            } else {
-                fullResponse = response.message?.content || '';
-                await this.onGenerateComplete(requestId, sourceId, response, 'done', this.generateOptionalData(fullResponse, response));
+
+                const token = chunk.message?.content || '';
+                fullResponse += token;
+
+                if (token) {
+                    await this.onChat(requestId, sourceId, chunk, 'token', {
+                        delta: {content: token},
+                        model
+                    });
+                }
             }
-
-
-        } catch (error) {
-            logger.error(`Claude chat error: ${(error as Error).message}`);
-            await this.onError(requestId, sourceId, error as Error);
+        } else {
+            fullResponse = response.message?.content || '';
+            await this.onGenerateComplete(requestId, sourceId, response, 'done', this.generateOptionalData(fullResponse, response));
         }
     }
 }

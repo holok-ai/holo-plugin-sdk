@@ -7,10 +7,10 @@ import {Constructor} from '../../types';
 import {env} from "../../env";
 import {AdminService} from '../../services';
 
-export function adminAware<TBase extends Constructor<IAppServer>>(Base: TBase) {
+export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
 
     @injectable()
-    class AdminAwareClass extends withQueue(Base) implements IAppServer {
+    class WithAdminServer extends withQueue(Base) implements IAppServer {
         id!: string;
         adminHandlers: Map<string, (payload: object) => Promise<object>> = new Map<string, (payload: object) => Promise<object>>();
         adminCommandQueue: string;
@@ -28,7 +28,7 @@ export function adminAware<TBase extends Constructor<IAppServer>>(Base: TBase) {
             await super.onInit(); // This calls withQueue's onInit, which calls Base's onInit
 
             logger.debug(`${this.id} is Admin Aware`);
-            let commandQueue = env.queue.adminCommandQueue;
+            let commandQueue = env.worker.adminCommandQueue;
             let exchange = env.queue.adminExchange;
             await this.queueService.assertQueue(commandQueue, {
                 exclusive: false,
@@ -66,11 +66,11 @@ export function adminAware<TBase extends Constructor<IAppServer>>(Base: TBase) {
             await super.onShutdown(); // This calls withQueue's onShutdown
         }
 
-        async onError(): Promise<void> {
+        async onError(error: Error): Promise<void> {
             logger.debug('Error occurred, handling anything Admin related...');
-            await super.onError(); // This calls withQueue's onError
+            await super.onError(error); // This calls withQueue's onError
         }
     }
 
-    return AdminAwareClass;
+    return WithAdminServer;
 }

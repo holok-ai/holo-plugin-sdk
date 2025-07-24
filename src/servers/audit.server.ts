@@ -29,8 +29,8 @@ export class AuditServer extends withQueue(withDB(BaseServer)) {
         await super.onShutdown();
     }
 
-    async onError(): Promise<void> {
-        await super.onError();
+    async onError(error: Error): Promise<void> {
+        await super.onError(error);
     }
 }
 
