@@ -1,17 +1,6 @@
+export {AdminService} from './admin.service'
 export {AuditService} from './audit.service';
-export {ProviderService} from './provider.service';
-
-/**
- * Service exports
- */
-export {QueueService} from './queue.service';
 export {InitService} from './init.service';
+export {ProviderService} from './provider.service';
+export {QueueService} from './queue.service';
 export {ResponseService} from './response.service';
-
-export const SERVICE_NAMES = {
-    AUDIT: 'AuditService',
-    PROVIDER: 'Provider Service',
-    QUEUE: 'QueueService',
-    INIT: 'InitService',
-    RESPONSE: 'ResponseService'
-}

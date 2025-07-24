@@ -4,10 +4,10 @@ import logger from "../utils/logger";
 import {Provider} from "../db/types";
 import {ProviderDB} from "../db";
 import {injectable} from "tsyringe";
-import {WorkerService} from "./worker.service";
 import {ClaudeProvider} from "../providers/claude.provider";
 import {IProvider} from "../providers/types";
 import {OllamaProvider} from "../providers/ollama.provider";
+import {ResponseService} from "./response.service";
 
 @injectable()
 export class ProviderService {
@@ -15,7 +15,7 @@ export class ProviderService {
 
     constructor(
         private providerDB: ProviderDB,
-        private workerService: WorkerService) {
+        private responseService: ResponseService) {
 
     }
 
@@ -34,13 +34,13 @@ export class ProviderService {
         for (const provider of providers) {
             switch (provider.name) {
                 case 'openai':
-                    aiProvider = new OpenAIProvider(provider.config as any, this.workerService, serverId);
+                    aiProvider = new OpenAIProvider(provider.config as any, this.responseService, serverId);
                     break;
                 case 'claude':
-                    aiProvider = new ClaudeProvider(provider.config as any, this.workerService, serverId);
+                    aiProvider = new ClaudeProvider(provider.config as any, this.responseService, serverId);
                     break;
                 case 'ollama':
-                    aiProvider = new OllamaProvider(provider.config as any, this.workerService, serverId);
+                    aiProvider = new OllamaProvider(provider.config as any, this.responseService, serverId);
                     break;
                 default:
                     break;

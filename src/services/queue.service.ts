@@ -93,7 +93,7 @@ export class QueueService {
         logger.info('Disconnected from RabbitMQ');
     }
 
-    public async consume(queueName: string, callback: (requestId: string, content: any, message: ConsumeMessage) => void, ignoreErrors: boolean = false): Promise<void> {
+    public async consume(queueName: string, callback: (messageId: string, content: any, message: ConsumeMessage) => void, ignoreErrors: boolean = false, options = {noAck: false}): Promise<void> {
         if (!this.isConnected) {
             await this.connect();
         }
@@ -124,12 +124,12 @@ export class QueueService {
                             logger.warn('Rejected problematic message after redelivery');
                         } else {
                             this.channel!.nack(message, false, true);
-                            logger.info('Message requeued for retry');
+                            logger.info('Message re-queued for retry');
                         }
                     }
                 }
 
-            }, {noAck: false});
+            }, options);
         } catch (error) {
             logger.error(`Error setting up consumer for queue ${queueName}: ${(error as Error).message}`);
             throw error;

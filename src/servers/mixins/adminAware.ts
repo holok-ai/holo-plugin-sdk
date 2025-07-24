@@ -1,25 +1,27 @@
 import 'reflect-metadata';
-import {injectable} from "tsyringe";
+import {container, injectable} from "tsyringe";
 import logger from "../../utils/logger";
 import {IAppServer} from "../base.server";
 import {withQueue} from "./withQueue";
 import {Constructor} from '../../types';
 import {env} from "../../env";
+import {AdminService} from '../../services';
 
 export function adminAware<TBase extends Constructor<IAppServer>>(Base: TBase) {
 
     @injectable()
     class AdminAwareClass extends withQueue(Base) implements IAppServer {
         id!: string;
-        adminHandlers: Map<string, (payload: object) => Promise<void>>;
+        adminHandlers: Map<string, (payload: object) => Promise<object>> = new Map<string, (payload: object) => Promise<object>>();
         adminCommandQueue: string;
         adminExchange: string;
+        readonly adminService: AdminService;
 
         constructor(...args: any[]) {
             super(...args);
             this.adminCommandQueue = env.queue.adminCommandQueue;
             this.adminExchange = env.queue.adminExchange;
-            this.adminHandlers = new Map<string, (payload: object) => Promise<void>>();
+            this.adminService = container.resolve(AdminService);
         }
 
         async onInit(): Promise<void> {
@@ -36,22 +38,37 @@ export function adminAware<TBase extends Constructor<IAppServer>>(Base: TBase) {
 
             await this.queueService.bindQueue(commandQueue, exchange, 'worker.#');
 
-            // await this.queueService.consume(commandQueue, )
+            await this.queueService.consume(commandQueue, async (messageId, content, _message) => {
+                const {action, serverId, timestamp, ...payload} = content;
+                logger.info(`Worker (${this.id}) received admin command: ${action}, messageId: ${messageId}`);
+
+
+                let handler = this.adminHandlers.get(action);
+                let response = {};
+                if (!handler) {
+                    logger.warn(`No handler registered for admin command: ${action}`);
+                    response = {success: false, message: `No handler registered for admin command: ${action}`};
+                } else {
+                    try {
+                        response = await handler(payload);
+                    } catch (error) {
+                        logger.error(`Error handling admin command: ${action} - ${(error as Error).message}`);
+                        response = {success: false, message: (error as Error).message};
+                    }
+                }
+                await this.adminService.sendAdminResponse(this.id, serverId, messageId, response);
+            });
 
         }
 
         async onShutdown(): Promise<void> {
-            logger.debug('Shutting down audit service...');// Cleanup audit if it has shutdown method
+            logger.debug('Cleaning up anything Admin related...');// Cleanup audit if it has shutdown method
             await super.onShutdown(); // This calls withQueue's onShutdown
         }
 
         async onError(): Promise<void> {
-            logger.debug('Error occurred, handling audit cleanup...');
+            logger.debug('Error occurred, handling anything Admin related...');
             await super.onError(); // This calls withQueue's onError
-        }
-
-        registerHandler(id: string, handler: (payload: object) => Promise<void>) {
-            this.adminHandlers.set(id, handler);
         }
     }
 

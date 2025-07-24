@@ -1,5 +1,5 @@
 import {AIProviderConfig, ModelInfo} from "./types";
-import {WorkerService} from "../services/worker.service";
+import {ResponseService} from "../services";
 
 /**
  * Base interface for LLM providers
@@ -9,9 +9,10 @@ export abstract class AIProvider {
     abstract name: string;
     protected models: Record<string, ModelInfo> | null = null;
 
+    //workerId is passed in via provider service
     constructor(
         protected config: AIProviderConfig,
-        protected workerService: WorkerService,
+        protected responseService: ResponseService,
         protected workerId: string) {
     }
 
@@ -99,7 +100,7 @@ export abstract class AIProvider {
     }
 
     async sendResponseChunk(routingKey: string, correlationId: string, data: object, auditEnabled: boolean = this.config.auditEnabled) {
-        await this.workerService.sendResponseChunk(this.workerId, routingKey, correlationId, data, auditEnabled);
+        await this.responseService.sendResponseChunk(this.workerId, routingKey, correlationId, data, auditEnabled);
     }
 
     //routingKey = sourceId, correlationId = requestId / id of message

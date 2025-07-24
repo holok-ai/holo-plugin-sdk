@@ -32,6 +32,7 @@ export class WorkerServer extends adminAware((withDB(BaseServer))) {
                 const {model, prompt, options, stream, provider} = payload;
                 const ai = await this.providerService.matchProvider(provider);
 
+                // explicitly define outcomes
                 switch (type) {
                     case 'generate':
                         await ai!.generate(sourceId, id, model, prompt, options, stream);

@@ -8,7 +8,7 @@ import {
     ChatCompletionCreateParamsStreaming
 } from "openai/resources/chat/completions/completions";
 import {Stream} from "openai/streaming";
-import {WorkerService} from "../services/worker.service";
+import {ResponseService} from "../services";
 
 /**
  * OpenAI provider for connecting to OpenAI API
@@ -19,9 +19,9 @@ export class OpenAIProvider extends AIProvider implements IProvider {
 
     constructor(
         protected config: AIProviderConfig,
-        protected workerService: WorkerService,
+        protected responseService: ResponseService,
         protected workerId: string) {
-        super(config, workerService, workerId);
+        super(config, responseService, workerId);
         if (!this.config.apiKey) {
             throw new Error('OpenAI API key is required');
         }

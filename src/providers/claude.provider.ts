@@ -4,7 +4,7 @@ import logger from "../utils/logger";
 import {Anthropic} from "@anthropic-ai/sdk/client";
 import {Stream} from "@anthropic-ai/sdk/streaming";
 import {MessageCreateParams, MessageCreateParamsStreaming, RawMessageStreamEvent} from "@anthropic-ai/sdk/resources";
-import {WorkerService} from "../services/worker.service";
+import {ResponseService} from "../services";
 
 export class ClaudeProvider extends AIProvider implements IProvider {
     readonly name: string = 'claude';
@@ -12,9 +12,9 @@ export class ClaudeProvider extends AIProvider implements IProvider {
 
     constructor(
         protected config: AIProviderConfig,
-        protected workerService: WorkerService,
+        protected responseService: ResponseService,
         protected workerId: string) {
-        super(config, workerService, workerId);
+        super(config, responseService, workerId);
 
         if (!this.config.apiKey) {
             throw new Error('OpenAI API key is required');

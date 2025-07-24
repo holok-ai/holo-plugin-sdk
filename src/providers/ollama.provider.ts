@@ -2,7 +2,7 @@ import AIProvider from "./ai.provider";
 import {ChatResponse, GenerateResponse, Ollama, Options} from "ollama";
 import {ModelInfo, OllamaProviderConfig} from "./types";
 import logger from "../utils/logger";
-import {WorkerService} from "../services/worker.service";
+import {ResponseService} from "../services";
 
 
 export class OllamaProvider extends AIProvider {
@@ -10,9 +10,9 @@ export class OllamaProvider extends AIProvider {
     private readonly client: Ollama = new Ollama();
 
     constructor(protected config: OllamaProviderConfig,
-                protected workerService: WorkerService,
+                protected responseService: ResponseService,
                 protected workerId: string) {
-        super(config, workerService, workerId);
+        super(config, responseService, workerId);
 
         this.client = new Ollama(this.config);
     }

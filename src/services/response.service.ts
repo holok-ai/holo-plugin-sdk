@@ -26,14 +26,14 @@ class ResponseStream extends Transform {
 
 @injectable()
 export class ResponseService {
+    private readonly serverId: string
     private streams: Map<string, ResponseStream> = new Map();
     private readonly responseQueue = env.queue.responseQueue;
     private readonly requestQueue = env.queue.requestQueue;
 
     constructor(
-        private readonly serverId: string = env.worker.serverId,
         private queueService: QueueService) {
-
+        this.serverId = env.worker.serverId;
     }
 
     async init() {
@@ -192,5 +192,29 @@ export class ResponseService {
         // Then start the streaming response AFTER the request has been queued
         // Pipe the response stream to the client
         responseStream.pipe(res);
+    }
+
+    async sendResponseChunk(workerId: string, routingKey: string, correlationId: string, data: object, auditEnabled: boolean) {
+        logger.debug(`Sending response chunk: ${routingKey}, ${correlationId}, ${JSON.stringify(data)}`);
+
+        await this.queueService.sendToExchange(
+            'llm_responses',
+            routingKey,
+            data,
+            {correlationId}
+        );
+
+        if (auditEnabled) {
+            await this.queueService.sendToExchange(
+                'llm_responses',
+                'audit',
+                {
+                    timestamp: Date.now(),
+                    workerId,
+                    ...data
+                },
+                {correlationId}
+            )
+        }
     }
 }
