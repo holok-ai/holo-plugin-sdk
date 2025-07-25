@@ -63,8 +63,8 @@ export class OllamaProvider extends AIProvider {
      * Generate text from a prompt with streaming
      */
     async _generate(
-        requestId: string,
         sourceId: string,
+        requestId: string,
         model: string,
         prompt: string,
         options: any,
@@ -95,7 +95,7 @@ export class OllamaProvider extends AIProvider {
             // Use Ollama streaming API
             for await (const chunk of response) {
                 if (chunk.done) {
-                    await this.onGenerateComplete(requestId, sourceId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
+                    await this.onGenerateComplete(sourceId, requestId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
                     break;
                 }
 
@@ -103,12 +103,12 @@ export class OllamaProvider extends AIProvider {
                 fullResponse += token;
 
                 if (token) {
-                    await this.onGenerate(requestId, sourceId, chunk);
+                    await this.onGenerate(sourceId, requestId, chunk, 'token');
                 }
             }
         } else {
             fullResponse = response.response;
-            await this.onGenerateComplete(requestId, sourceId, response, 'done', this.generateOptionalData(fullResponse, response));
+            await this.onGenerateComplete(sourceId, requestId, response, 'done', this.generateOptionalData(fullResponse, response));
         }
 
         logger.info(`Generated response with Ollama model ${model}, length: ${fullResponse.length}`);
@@ -128,8 +128,8 @@ export class OllamaProvider extends AIProvider {
      * Generate chat completion with streaming
      */
     async _chat(
-        requestId: string,
         sourceId: string,
+        requestId: string,
         model: string,
         messages: any[],
         options: any,
@@ -159,7 +159,7 @@ export class OllamaProvider extends AIProvider {
             // Use Ollama streaming API
             for await (const chunk of response) {
                 if (chunk.done) {
-                    await this.onChatComplete(requestId, sourceId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
+                    await this.onChatComplete(sourceId, requestId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
                     break;
                 }
 
@@ -167,7 +167,7 @@ export class OllamaProvider extends AIProvider {
                 fullResponse += token;
 
                 if (token) {
-                    await this.onChat(requestId, sourceId, chunk, 'token', {
+                    await this.onChat(sourceId, requestId, chunk, 'token', {
                         delta: {content: token},
                         model
                     });
@@ -175,7 +175,7 @@ export class OllamaProvider extends AIProvider {
             }
         } else {
             fullResponse = response.message?.content || '';
-            await this.onGenerateComplete(requestId, sourceId, response, 'done', this.generateOptionalData(fullResponse, response));
+            await this.onGenerateComplete(sourceId, requestId, response, 'done', this.generateOptionalData(fullResponse, response));
         }
     }
 }

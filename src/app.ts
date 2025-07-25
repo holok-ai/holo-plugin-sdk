@@ -8,6 +8,8 @@ import {errorMiddleware, nocorsMiddleware} from "./api/middleware";
 import {InitService, ResponseService} from "./services";
 import {createRoutes} from "./api/routes";
 import {env} from "./env";
+import listEndpoints from "express-list-endpoints";
+import {AppDB} from "./db/app.db";
 
 // Initialize Express app
 const app: Application = express();
@@ -22,7 +24,6 @@ app.use(errorMiddleware);
 // Serve static files from the public directory
 app.use(express.static('src/public'));
 
-app.use('/api', createRoutes());
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response): void => {
@@ -37,6 +38,8 @@ app.get('/health', (_req: Request, res: Response): void => {
 
 // Start server
 const PORT: number = env.api.port || 3000;
+container.registerSingleton(ResponseService)
+container.registerSingleton(AppDB);
 
 // Initialize app with async components
 async function initApp(): Promise<void> {
@@ -47,11 +50,14 @@ async function initApp(): Promise<void> {
 
         await initService.setupQueues(env.api.serverId);
         await responseService.setupResponseStream();
-
+        app.use('/api', createRoutes());
         // Start the HTTP server
         const server = app.listen(PORT, (): void => {
             logger.info(`Server running on port ${PORT}`);
             logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+            const endpoints = listEndpoints(app);
+            console.log('\n📍 Registered routes:');
+            console.table(endpoints);
         });
 
         // Handle server errors

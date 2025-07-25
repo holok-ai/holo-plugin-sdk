@@ -38,7 +38,7 @@ export interface AdminResponse {
 }
 
 export interface ProxyRequest {
-    id: string; // UUIDv4
+    requestId: string; // UUIDv4
     type: 'generate' | 'chat';
     sourceId: string; // Server ID for response routing
     payload: {

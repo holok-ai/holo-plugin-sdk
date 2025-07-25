@@ -42,7 +42,7 @@ export interface LlmRequest {
     options?: Record<string, any> | undefined;
     source_id?: string | undefined;
     user_id?: string | undefined;
-    timestamp: Date;
+    timestamp: string;
     metadata?: Record<string, any> | undefined;
 }
 
@@ -53,7 +53,7 @@ export interface LlmResponse {
     token?: string | undefined;
     model?: string | undefined;
     worker_id?: string | undefined;
-    timestamp: Date;
+    timestamp: any;
     is_final?: boolean | undefined;
     total_tokens?: number | undefined;
     processing_time?: number | undefined;

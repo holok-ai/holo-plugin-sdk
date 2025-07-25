@@ -1,5 +1,5 @@
 import AIProvider from "./ai.provider";
-import {AIProviderConfig, IProvider, ModelInfo} from "./types";
+import {AIProviderConfig, CompleteHandler, IProvider, ModelInfo, TokenHandler} from "./types";
 import logger from "../utils/logger";
 import {Anthropic} from "@anthropic-ai/sdk/client";
 import {Stream} from "@anthropic-ai/sdk/streaming";
@@ -74,8 +74,8 @@ export class ClaudeProvider extends AIProvider implements IProvider {
      * Generate text from a prompt with streaming
      */
     async _generate(
-        requestId: string,
         sourceId: string,
+        requestId: string,
         model: string,
         prompt: string,
         options: {},
@@ -90,12 +90,13 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         ];
 
         await this.callClaude(
-            requestId,
             sourceId,
+            requestId,
             model,
             messages,
             options,
             stream,
+            'token',
             this.onGenerate.bind(this),
             this.onGenerateComplete.bind(this)
         );
@@ -105,8 +106,8 @@ export class ClaudeProvider extends AIProvider implements IProvider {
      * Generate chat completion with streaming
      */
     async _chat(
-        requestId: string,
         sourceId: string,
+        requestId: string,
         model: string,
         messages: any[],
         options: {},
@@ -114,25 +115,27 @@ export class ClaudeProvider extends AIProvider implements IProvider {
     ): Promise<void> {
 
         await this.callClaude(
-            requestId,
             sourceId,
+            requestId,
             model,
             messages,
             options,
             stream,
+            'sse',
             this.onChat.bind(this),
             this.onChatComplete.bind(this));
 
     }
 
-    async callClaude(requestId: string,
-                     sourceId: string,
+    async callClaude(sourceId: string,
+                     requestId: string,
                      model: string,
                      messages: any[],
                      options: {},
                      stream: boolean,
-                     onToken: (requestId: string, sourceId: string, token: object) => Promise<void>,
-                     onComplete: (requestId: string, sourceId: string, token: object) => Promise<void>
+                     tokenType: string,
+                     onToken: TokenHandler,
+                     onComplete: CompleteHandler
     ): Promise<void> {
         if (!this.models![model]) {
             throw new Error(`Model ${model} not found`);
@@ -156,11 +159,11 @@ export class ClaudeProvider extends AIProvider implements IProvider {
 
             for await (const chunk of (response as unknown as Stream<RawMessageStreamEvent>)) {
                 // Pass the raw chunk directly to the onToken callback
-                await onToken(requestId, sourceId, chunk);
+                await onToken(sourceId, requestId, chunk, tokenType);
             }
 
             // Call onComplete
-            await onComplete(requestId, sourceId, {
+            await onComplete(sourceId, requestId, {
                 type: 'message',
                 model,
                 status: 'complete'
@@ -168,7 +171,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         } else {
             logger.debug(`Claude response: ${JSON.stringify(response)}`);
             // Call onComplete with the full response
-            await onComplete(requestId, sourceId, response);
+            await onComplete(sourceId, requestId, response);
         }
     }
 }

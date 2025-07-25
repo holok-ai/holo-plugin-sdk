@@ -1,12 +1,10 @@
 import 'reflect-metadata';
-import {OpenAIProvider} from "../providers/openai.provider";
+import {ClaudeProvider, OllamaProvider, OpenAIProvider} from "../providers";
 import logger from "../utils/logger";
 import {Provider} from "../db/types";
 import {ProviderDB} from "../db";
 import {injectable} from "tsyringe";
-import {ClaudeProvider} from "../providers/claude.provider";
 import {IProvider} from "../providers/types";
-import {OllamaProvider} from "../providers/ollama.provider";
 import {ResponseService} from "./response.service";
 
 @injectable()

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {QueueService} from "../../services";
-import {AppConfig, Constructor} from "../../types";
+import {Constructor} from "../../types";
 import logger from "../../utils/logger";
 import {container, injectable} from "tsyringe";
 import {IAppServer} from "../base.server";
@@ -16,19 +16,7 @@ export function withQueue<TBase extends Constructor<IAppServer>>(Base: TBase) {
 
         constructor(...args: any[]) {
             super(...args);
-
-            let config: AppConfig = args[0];
-            this.queueService = container.resolve(QueueService) || new QueueService(config.queueConfig);
-
-            if (!this.queueService) {
-                // Extract queueConfig from the first argument (config object)
-                if (!config.queueConfig) {
-                    throw new Error('Queue configuration is required when using withQueue mixin');
-                }
-
-                this.queueService = new QueueService(config.queueConfig);
-            }
-
+            this.queueService = container.resolve(QueueService);
             if (!this.queueService) {
                 throw new Error('Queue service is required when using withQueue mixin');
             }

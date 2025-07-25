@@ -122,3 +122,7 @@ export interface AIRequestStat {
     success: number;
     error: number;
 }
+
+
+export type TokenHandler = (sourceId: string, requestId: string, token: object, type: string, customFields?: object) => Promise<void>;
+export type CompleteHandler = (sourceId: string, requestId: string, token: object, type?: string, customFields?: object) => Promise<void>;

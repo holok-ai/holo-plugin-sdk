@@ -25,10 +25,10 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
         // ai?.generate('server-1', '1', 'gpt-4', 'Hello world!', {}, false);
 
         let requestQueue = env.queue.requestQueue;
-        await this.queueService.consume(requestQueue, async (id, content) => {
+        await this.queueService.consume(requestQueue, async (requestId, content) => {
             this.stats.totalRequests++;
             const {sourceId, payload, type} = content;
-            logger.info(`Worker ${this.id} handling generate request: ${id} from server ${sourceId} and queue ${requestQueue}...`);
+            logger.info(`Worker ${this.id} handling generate request: ${requestId} from server ${sourceId} and queue ${requestQueue}...`);
             try {
                 // Extract parameters
                 const {model, prompt, options, stream, provider} = payload;
@@ -38,11 +38,11 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                 switch (type) {
                     case 'generate':
                         this.stats.generateRequests++;
-                        requestStats = await ai!.generate(sourceId, id, model, prompt, options, stream);
+                        requestStats = await ai!.generate(sourceId, requestId, model, prompt, options, stream);
                         break;
                     case 'chat':
                         this.stats.chatRequests++;
-                        requestStats = await ai!.chat(sourceId, id, model, prompt, options, stream);
+                        requestStats = await ai!.chat(sourceId, requestId, model, prompt, options, stream);
                         break;
                     default:
                         logger.warn(`No handler registered for message type ${type} - ignoring message...`);
@@ -50,7 +50,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                 }
                 if (requestStats) await this.mergeStats(requestStats!);
             } catch (error) {
-                logger.error(`Error handling request (${id}): ${(error as Error).message}`);
+                logger.error(`Error handling request (${requestId}): ${(error as Error).message}`);
                 await this.onError(error as Error);
             }
         });

@@ -14,7 +14,7 @@ export class LLMController extends BaseController {
     public generate = async (req: ApiRequest, res: Response): Promise<void> => {
         try {
             // Validation
-            if (!this.hasRequiredFields(req.body, ['model', 'prompt'], res)) return;
+            // if (!this.hasRequiredFields(req.body, ['model', 'prompt'], res)) return;
             await this.responseService.generateResponse(req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to generate text');

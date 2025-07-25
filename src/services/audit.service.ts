@@ -1,8 +1,9 @@
 import 'reflect-metadata';
 import {ProxyRequest, ProxyResponse} from '../types';
 import {LlmRequest, LlmResponse} from "../db/types";
-import {injectable} from "tsyringe";
+import {container, injectable} from "tsyringe";
 import {RequestDB, ResponseDB} from "../db";
+import {AppDB} from "../db/app.db";
 
 @injectable()
 export class AuditService {
@@ -29,7 +30,7 @@ export class AuditService {
     }
 
     private mapProxyRequestToLlmRequest(proxyRequest: ProxyRequest): Omit<LlmRequest, 'id'> {
-        const {id, type, sourceId, payload, timestamp} = proxyRequest;
+        const {requestId, type, sourceId, payload, timestamp} = proxyRequest;
         const {model, prompt, messages, options} = payload;
 
         // For 'chat' type requests, use the last message as the prompt
@@ -41,14 +42,14 @@ export class AuditService {
         const userId = (options && options.user) || undefined;
 
         return {
-            request_id: id,
+            request_id: requestId,
             request_type: type,
             model,
             prompt: promptText,
             options,
             source_id: sourceId,
             user_id: userId,
-            timestamp: new Date(timestamp),
+            timestamp: new Date(timestamp).toISOString(),
             metadata: {
                 fullRequest: proxyRequest
             }
@@ -124,7 +125,7 @@ export class AuditService {
             token: type === 'token' ? token : undefined,
             model,
             worker_id: workerId,
-            timestamp: new Date(timestamp),
+            timestamp: new Date(timestamp).toISOString(),
             is_final: isFinalResponse,
             total_tokens: totalTokens,
             processing_time: processingTime,
@@ -139,3 +140,5 @@ export class AuditService {
         return this.responseDB.insert(content);
     }
 }
+
+container.registerSingleton(AppDB);

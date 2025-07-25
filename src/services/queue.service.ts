@@ -3,18 +3,21 @@ import {Channel, ChannelModel, connect, ConsumeMessage} from 'amqplib';
 import logger from '../utils/logger';
 import {RabbitConfig} from "../types";
 import {env} from "../env";
+import {injectable} from "tsyringe";
 
 /**
  * RabbitMQ queue management service
  */
+@injectable()
 export class QueueService {
+    private readonly config: RabbitConfig = env.queue.config
     private connection: ChannelModel | null = null;
     private channel: Channel | null = null;
     public isConnected: boolean = false;
     public reconnectAttempts = 0;
 
-    constructor(private readonly config: RabbitConfig = env.queue.config) {
-        this.config = config;
+    constructor() {
+
     }
 
     public async connect(): Promise<void> {
@@ -107,11 +110,12 @@ export class QueueService {
                 }
                 try {
                     const content = JSON.parse(message.content.toString());
-                    const {id} = content;
-                    logger.debug(`Received message from queue: ${queueName} with requestId: (${id})`);
-                    callback(id, content, message);
+                    logger.debug(`Received message from queue: ${queueName} with ${message.content.toString()})`);
+                    const {requestId} = content;
+                    logger.debug(`Received message from queue: ${queueName} with requestId: (${requestId})`);
+                    callback(requestId, content, message);
                     this.channel!.ack(message);
-                    logger.debug(`Successfully processed message from queue: ${queueName} with requestId (${id})`);
+                    logger.debug(`Successfully processed message from queue: ${queueName} with requestId (${requestId})`);
 
                 } catch (error) {
                     logger.error(`Error processing message from queue: ${queueName}: ${(error as Error).message}`);

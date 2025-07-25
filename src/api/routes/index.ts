@@ -4,8 +4,8 @@ import {createApiRoutes} from "./llm.routes";
 
 export function createRoutes(): express.Router {
     const router = express.Router();
-    router.use('/api', createApiRoutes);
-    router.use('/api/openai/v1', createOpenAIRoutes);
-    router.use('/api/claude/v1', createOpenAIRoutes);
+    router.use('/', createApiRoutes());
+    router.use('/openai/v1', createOpenAIRoutes());
+    router.use('/claude/v1', createOpenAIRoutes());
     return router;
 }

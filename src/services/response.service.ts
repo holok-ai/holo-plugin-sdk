@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import {QueueService} from "./queue.service";
 import logger from "../utils/logger";
 import {Transform, TransformCallback} from "node:stream";
-import {injectable} from "tsyringe";
+import {container, injectable} from "tsyringe";
 import {v4 as uuidv4} from "uuid";
 import {ApiRequest} from "../api/types";
 import {Response} from "express";
@@ -27,57 +27,68 @@ class ResponseStream extends Transform {
 @injectable()
 export class ResponseService {
     private serverId: string = env.api.serverId;
-    private streams: Map<string, ResponseStream> = new Map();
+    private streams: Map<string, ResponseStream>;
     private readonly responseQueue = env.queue.responseQueue;
     private readonly requestQueue = env.queue.requestQueue;
 
     constructor(
         private queueService: QueueService) {
+        this.streams = new Map<string, ResponseStream>();
     }
 
     async setupResponseStream(serverId?: string) {
         this.serverId = serverId || this.serverId;
+
         const queueName = `${this.responseQueue}.${this.serverId}`;
+        const handler = async (id: string, content: any) => {
+            return this.handleResponseQueue(id, content);
+        };
 
-        await this.queueService.consume(queueName, (_id, content) => {
-            const {requestId} = content;
-            const stream = this.streams.get(requestId);
+        await this.queueService.consume(queueName, handler, true);
+    }
 
-            if (stream) {
-                switch (content.type) {
-                    case 'sse':
-                        stream.push(`event: ${content.token.type}\n`)
-                        stream.push("data: " + JSON.stringify(content.token) + '\n\n');
-                        break;
+    async handleResponseQueue(_id: string, content: any) {
+        logger.debug(`Received response: ${content}`);
+        const {requestId} = content;
+        logger.debug('Request ID: ' + requestId);
+        const stream = this.streams.get(requestId);
 
-                    case 'token':
-                        // Send token to the stream
-                        stream.push(JSON.stringify(content.token) + '\n');
-                        break;
+        if (stream) {
+            switch (content.type) {
+                case 'sse':
+                    stream.push(`event: ${content.token.type}\n`)
+                    stream.push("data: " + JSON.stringify(content.token) + '\n\n');
+                    break;
 
-                    case 'done':
-                        // Send final message and mark as completed
-                        stream.push(JSON.stringify(content.response) + '\n');
-                        //stream.push(`data: [DONE]\n\n`);
-                        stream.end();
-                        this.removeStream(requestId);
-                        break;
+                case 'token':
+                    logger.debug(`Received token: ${JSON.stringify(content.token)}`);
+                    // Send token to the stream
+                    stream.push(JSON.stringify(content.token) + '\n');
+                    break;
 
-                    case 'error':
-                        // Send error and end stream
-                        stream.push(`data: ${JSON.stringify(content)}\n\n`);
-                        stream.push(`data: [DONE]\n\n`);
-                        stream.end();
-                        this.removeStream(requestId);
-                        break;
-                    default:
-                        logger.warn(`Unknown message type: ${content.type}`);
-                }
-            } else {
-                logger.warn(`Received response for unknown request: ${requestId}`);
+                case 'done':
+                    // Send final message and mark as completed
+                    stream.push(JSON.stringify(content.response) + '\n');
+                    //stream.push(`data: [DONE]\n\n`);
+                    stream.end();
+                    this.removeStream(requestId);
+                    break;
+
+                case 'error':
+                    // Send error and end stream
+                    stream.push(`data: ${JSON.stringify(content)}\n\n`);
+                    stream.push(`data: [DONE]\n\n`);
+                    stream.end();
+                    this.removeStream(requestId);
+                    break;
+                default:
+                    logger.warn(`Unknown message type: ${content.type}`);
             }
+        } else {
+            logger.warn(`Received response for unknown request: ${requestId}`);
+            logger.warn(this.streams);
+        }
 
-        }, true);
     }
 
     /**
@@ -90,10 +101,15 @@ export class ResponseService {
 
         // Store the stream in the map
         this.streams.set(requestId, responseStream);
-
         // Set up auto-cleanup on stream end or error
-        responseStream.on('end', () => this.removeStream(requestId));
-        responseStream.on('error', () => this.removeStream(requestId));
+        responseStream.on('end', () => {
+            logger.debug(`Stream ended for request ${requestId}`);
+            this.removeStream(requestId)
+        });
+        responseStream.on('error', () => {
+            logger.error(`Stream error for request ${requestId}`);
+            this.removeStream(requestId)
+        });
 
         logger.info(`Created response stream for request ${requestId}, active streams: ${this.activeStreamCount}`);
         return responseStream;
@@ -120,11 +136,11 @@ export class ResponseService {
 
     async generateResponse(req: ApiRequest, res: Response) {
         const requestId = uuidv4();
-        const {model, prompt, options, stream, provider} = req.body;
+        const {model, prompt, options, stream = true, provider} = req.body;
 
         // Format the request for the worker
         const request = {
-            id: requestId,
+            requestId,
             type: 'generate',
             sourceId: this.serverId, // Add server ID for response routing
             payload: {
@@ -137,7 +153,7 @@ export class ResponseService {
             timestamp: Date.now()
         };
 
-        logger.info(`New generate request: ${requestId} for model: ${model} streaming:${stream}`);
+        logger.debug(`New generate request: ${requestId} for model: ${model} streaming:${stream}`);
         // Set up server-sent events for streaming response
         await this.setupResponse(req, res, request, requestId);
     }
@@ -148,7 +164,7 @@ export class ResponseService {
 
         // Format the request for the worker
         const request = {
-            id: requestId,
+            requestId,
             type: 'chat',
             sourceId: this.serverId, // Add server ID for response routing
             payload: {
@@ -166,6 +182,7 @@ export class ResponseService {
     }
 
     async setupResponse(req: ApiRequest, res: Response, request: Object, requestId: string) {
+
         // Set up a streaming or regular JSON response
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
@@ -173,6 +190,7 @@ export class ResponseService {
 
         // Create a response stream
         let responseStream = await this.createResponseStream(requestId);
+
 
         // Handle client disconnect
         req.on('close', () => {
@@ -188,33 +206,35 @@ export class ResponseService {
             request,
             {correlationId: requestId}
         )
-
         // Then start the streaming response AFTER the request has been queued
         // Pipe the response stream to the client
         responseStream.pipe(res);
     }
 
-    async sendResponseChunk(workerId: string, routingKey: string, correlationId: string, data: object, auditEnabled: boolean) {
-        logger.debug(`Sending response chunk: ${routingKey}, ${correlationId}, ${JSON.stringify(data)}`);
+    //routingKey = sourceId, correlationId = requestId / id of message
+    async sendResponseChunk(workerId: string, sourceId: string, requestId: string, data: object, auditEnabled: boolean) {
+        logger.debug(`Sending response chunk: ${sourceId}, ${requestId}, ${JSON.stringify(data)}`);
 
         await this.queueService.sendToExchange(
-            'llm_responses',
-            routingKey,
+            env.queue.responseExchange,
+            sourceId,
             data,
-            {correlationId}
+            {correlationId: requestId}
         );
 
         if (auditEnabled) {
             await this.queueService.sendToExchange(
-                'llm_responses',
+                env.queue.responseExchange,
                 'audit',
                 {
                     timestamp: Date.now(),
                     workerId,
                     ...data
                 },
-                {correlationId}
+                {correlationId: requestId}
             )
         }
     }
 }
+
+container.registerSingleton(ResponseService)

@@ -28,36 +28,18 @@ export abstract class AIProvider {
      */
     abstract getModels(): Promise<ModelInfo[]>;
 
-    /**
-     * Generate text from a prompt with streaming
-     * @param requestId
-     * @param sourceId
-     * @param model
-     * @param prompt
-     * @param options
-     * @param stream
-     */
     abstract _generate(
-        requestId: string,
         sourceId: string,
+        requestId: string,
         model: string,
         prompt: string,
         options: {},
         stream: boolean
     ): Promise<void>;
 
-    /**
-     * Generate chat completion with streaming
-     * @param requestId
-     * @param sourceId
-     * @param model
-     * @param messages
-     * @param options
-     * @param stream
-     */
     abstract _chat(
-        requestId: string,
         sourceId: string,
+        requestId: string,
         model: string,
         messages: any[],
         options: {},
@@ -67,20 +49,25 @@ export abstract class AIProvider {
     /**
      * General stats/try-catch wrapper for chat/generate
      */
-    protected async wrapWithStats(
+    protected async wrapWithStats<T extends [sourceId: string, requestId: string, ...any[]]>(
         type: 'chat' | 'generate',
-        action: () => Promise<void>,
-        onError: (e: Error) => Promise<void>
+        method: (...args: T) => Promise<void>,
+        ...args: T
     ): Promise<AIRequestStat> {
         const startTime = Date.now();
         let success = 0;
         let error = 0;
+
+        // Extract sourceId and requestId from the first two arguments
+        const [sourceId, requestId] = args as [string, string, ...any[]];
+
+        logger.debug(`${type.charAt(0).toUpperCase() + type.slice(1)} request: ${requestId}`);
         try {
-            await action();
+            await method(...args);
             success++;
         } catch (e) {
             logger.error(`${type.charAt(0).toUpperCase() + type.slice(1)} error: ${(e as Error).message}`);
-            await onError(e as Error);
+            await this.onError(sourceId, requestId, e as Error);
             error++;
         }
         const endTime = Date.now();
@@ -94,9 +81,10 @@ export abstract class AIProvider {
         };
     }
 
+
     async generate(
-        requestId: string,
         sourceId: string,
+        requestId: string,
         model: string,
         prompt: string,
         options: {},
@@ -104,18 +92,19 @@ export abstract class AIProvider {
     ): Promise<AIRequestStat> {
         return this.wrapWithStats(
             'generate',
-            async () => {
-                await this._generate(requestId, sourceId, model, prompt, options, stream);
-            },
-            async (e) => {
-                await this.onError(requestId, sourceId, e);
-            }
+            this._generate.bind(this),
+            sourceId,
+            requestId,
+            model,
+            prompt,
+            options,
+            stream
         );
     }
 
     async chat(
-        requestId: string,
         sourceId: string,
+        requestId: string,
         model: string,
         messages: any[],
         options: {},
@@ -123,26 +112,26 @@ export abstract class AIProvider {
     ): Promise<AIRequestStat> {
         return this.wrapWithStats(
             'chat',
-            async () => {
-                await this._chat(requestId, sourceId, model, messages, options, stream);
-            },
-            async (e) => {
-                await this.onError(requestId, sourceId, e);
-            }
+            this._chat.bind(this),
+            sourceId,
+            requestId,
+            model,
+            messages,
+            options,
+            stream
         );
     }
 
 
-    async sendResponseChunk(routingKey: string, correlationId: string, data: object, auditEnabled: boolean = this.config.auditEnabled) {
-        await this.responseService.sendResponseChunk(this.workerId, routingKey, correlationId, data, auditEnabled);
+    async sendResponseChunk(sourceId: string, requestId: string, data: object, auditEnabled: boolean = this.config.auditEnabled) {
+        await this.responseService.sendResponseChunk(this.workerId, sourceId, requestId, data, auditEnabled);
     }
 
-    //routingKey = sourceId, correlationId = requestId / id of message
-    async onGenerate(routingKey: string, correlationId: string, token: object, type: string = 'token', customFields?: object) {
+    async onGenerate(sourceId: string, requestId: string, token: object, type: string, customFields?: object) {
         await this.sendResponseChunk(
-            routingKey,
-            correlationId,
-            this.formatToken(correlationId, token, type, customFields));
+            sourceId,
+            requestId,
+            this.formatToken(requestId, token, type, customFields));
     }
 
     formatToken(requestId: string, token: object, type: string, customFields?: object) {
@@ -155,37 +144,37 @@ export abstract class AIProvider {
         };
     }
 
-    async onGenerateComplete(routingKey: string, correlationId: string, token: object, type: string = 'done', customFields?: object) {
+    async onGenerateComplete(sourceId: string, requestId: string, token: object, type: string = 'done', customFields?: object) {
         await this.sendResponseChunk(
-            routingKey,
-            correlationId,
-            this.formatToken(correlationId, token, type, customFields)
+            sourceId,
+            requestId,
+            this.formatToken(requestId, token, type, customFields)
         );
     }
 
-    async onChat(routingKey: string, correlationId: string, token: object, type: string = 'sse', customFields?: object) {
+    async onChat(sourceId: string, requestId: string, token: object, type: string, customFields?: object) {
         await this.sendResponseChunk(
-            routingKey,
-            correlationId,
-            this.formatToken(correlationId, token, type, customFields)
+            sourceId,
+            requestId,
+            this.formatToken(requestId, token, type, customFields)
         );
     }
 
-    async onChatComplete(routingKey: string, correlationId: string, token: object, type: string = 'done', customFields?: object) {
+    async onChatComplete(sourceId: string, requestId: string, token: object, type: string = 'done', customFields?: object) {
         await this.sendResponseChunk(
-            routingKey,
-            correlationId,
-            this.formatToken(correlationId, token, type, customFields)
+            sourceId,
+            requestId,
+            this.formatToken(requestId, token, type, customFields)
         );
     }
 
-    async onError(routingKey: string, correlationId: string, error: Error) {
-        await this.sendResponseChunk(routingKey, correlationId, {
+    async onError(sourceId: string, requestId: string, error: Error) {
+        await this.sendResponseChunk(sourceId, requestId, {
             type: 'error',
             error: {
                 message: error.message
             },
-            requestId: routingKey
+            requestId
         });
     }
 }
