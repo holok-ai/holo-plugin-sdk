@@ -37,9 +37,7 @@ export class OllamaProvider extends AIProvider {
                 await this.init();
             }
 
-            logger.debug('Getting ollama models...');
             const response = await this.client.list();
-            logger.debug(`Ollama models: ${JSON.stringify(response.models)}`);
             const modelList = response.models.map(model => ({
                 id: model.name,
                 name: model.name,
