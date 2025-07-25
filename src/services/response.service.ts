@@ -48,7 +48,7 @@ export class ResponseService {
     }
 
     async handleResponseQueue(_id: string, content: any) {
-        logger.debug(`Received response: ${content}`);
+        logger.debug(`Received response: ${JSON.stringify(content)}`);
         const {requestId} = content;
         logger.debug('Request ID: ' + requestId);
         const stream = this.streams.get(requestId);
@@ -68,6 +68,7 @@ export class ResponseService {
 
                 case 'done':
                     // Send final message and mark as completed
+                    logger.debug(`Received done message: ${JSON.stringify(content.response)}`);
                     stream.push(JSON.stringify(content.response) + '\n');
                     //stream.push(`data: [DONE]\n\n`);
                     stream.end();
