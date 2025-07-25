@@ -31,18 +31,18 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
             logger.info(`Worker ${this.id} handling generate request: ${requestId} from server ${sourceId} and queue ${requestQueue}...`);
             try {
                 // Extract parameters
-                const {model, prompt, options, stream, provider} = payload;
+                const {model, options, stream, provider} = payload;
                 const ai = await this.providerService.matchProvider(provider);
                 let requestStats: AIRequestStat | null = null;
                 // explicitly define outcomes
                 switch (type) {
                     case 'generate':
                         this.stats.generateRequests++;
-                        requestStats = await ai!.generate(sourceId, requestId, model, prompt, options, stream);
+                        requestStats = await ai!.generate(sourceId, requestId, model, payload.prompt, options, stream);
                         break;
                     case 'chat':
                         this.stats.chatRequests++;
-                        requestStats = await ai!.chat(sourceId, requestId, model, prompt, options, stream);
+                        requestStats = await ai!.chat(sourceId, requestId, model, payload.messages, options, stream);
                         break;
                     default:
                         logger.warn(`No handler registered for message type ${type} - ignoring message...`);

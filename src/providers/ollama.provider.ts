@@ -37,7 +37,9 @@ export class OllamaProvider extends AIProvider {
                 await this.init();
             }
 
+            logger.debug('Getting ollama models...');
             const response = await this.client.list();
+            logger.debug(`Ollama models: ${JSON.stringify(response.models)}`);
             const modelList = response.models.map(model => ({
                 id: model.name,
                 name: model.name,
@@ -54,7 +56,7 @@ export class OllamaProvider extends AIProvider {
             logger.debug(`Ollama models: ${JSON.stringify(Object.keys(this.models))}`);
             return modelList;
         } catch (error) {
-            logger.error(`Error fetching Ollama models: ${(error as Error).message}`);
+            logger.error(`Error fetching Ollama models: ${(error as Error).stack}`);
             throw error;
         }
     }

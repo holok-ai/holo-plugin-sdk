@@ -102,7 +102,6 @@ export class OpenAIProvider extends AIProvider implements IProvider {
             messages,
             options,
             stream,
-            'token',
             this.onGenerate.bind(this),
             this.onGenerateComplete.bind(this)
         );
@@ -126,7 +125,6 @@ export class OpenAIProvider extends AIProvider implements IProvider {
             messages,
             options,
             stream,
-            'sse',
             this.onChat.bind(this),
             this.onChatComplete.bind(this));
 
@@ -139,7 +137,6 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         messages: any[],
         options: {},
         stream: boolean,
-        tokenType: string,
         onToken: TokenHandler,
         onComplete: CompleteHandler
     ): Promise<void> {
@@ -150,6 +147,8 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         if (!this.client) {
             await this.init();
         }
+
+        logger.debug(`OpenAI request: ${JSON.stringify(messages)}`);
         const requestOptions: ChatCompletionCreateParamsStreaming | ChatCompletionCreateParams = {
             model,
             messages,
@@ -164,7 +163,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
 
             for await (const chunk of (response as Stream<ChatCompletionChunk>)) {
                 // Pass the raw chunk directly to the onToken callback
-                await onToken(sourceId, requestId, chunk, tokenType);
+                await onToken(sourceId, requestId, chunk, 'sse');
             }
 
             // Call onComplete

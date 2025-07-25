@@ -11,7 +11,7 @@ export class ClaudeController extends BaseController {
         super();
     }
 
-    public async messages(req: ApiRequest, res: ApiResponse): Promise<void> {
+    public messages = async (req: ApiRequest, res: ApiResponse): Promise<void> => {
         try {
             if (!this.hasRequiredFields(req.body, ['model', 'messages'], res)) return;
             req.body.provider = 'claude';
@@ -21,7 +21,7 @@ export class ClaudeController extends BaseController {
         }
     }
 
-    public async models(_req: ApiRequest, res: ApiResponse): Promise<void> {
+    public models = async (_req: ApiRequest, res: ApiResponse): Promise<void> => {
 
         res.status(200).json({});
     }

@@ -35,9 +35,7 @@ export function withDB<TBase extends Constructor<IAppServer>>(Base: TBase) {
         }
 
         async onError(error: Error): Promise<void> {
-            logger.debug('Error occurred, disconnecting from database...');
             await super.onError(error);
-            await this.db.disconnect();
         }
 
         async onInit(): Promise<void> {

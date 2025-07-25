@@ -62,6 +62,7 @@ async function initApp(): Promise<void> {
 
         // Handle server errors
         server.on('error', (error: NodeJS.ErrnoException): void => {
+            logger.error(`Server error: ${error.message}`);
             if (error.syscall !== 'listen') {
                 throw error;
             }

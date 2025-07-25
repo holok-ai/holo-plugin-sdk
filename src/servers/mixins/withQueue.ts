@@ -24,9 +24,7 @@ export function withQueue<TBase extends Constructor<IAppServer>>(Base: TBase) {
 
 
         async onError(error: Error): Promise<void> {
-            logger.debug('Error occurred, disconnecting from queue...');
             await super.onError(error);
-            await this.queueService.disconnect();
         }
 
         async onInit(): Promise<void> {

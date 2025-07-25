@@ -67,7 +67,6 @@ export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
         }
 
         async onError(error: Error): Promise<void> {
-            logger.debug('Error occurred, handling anything Admin related...');
             await super.onError(error); // This calls withQueue's onError
         }
     }

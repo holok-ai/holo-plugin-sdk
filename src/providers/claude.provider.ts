@@ -96,7 +96,6 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             messages,
             options,
             stream,
-            'token',
             this.onGenerate.bind(this),
             this.onGenerateComplete.bind(this)
         );
@@ -121,7 +120,6 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             messages,
             options,
             stream,
-            'sse',
             this.onChat.bind(this),
             this.onChatComplete.bind(this));
 
@@ -133,7 +131,6 @@ export class ClaudeProvider extends AIProvider implements IProvider {
                      messages: any[],
                      options: {},
                      stream: boolean,
-                     tokenType: string,
                      onToken: TokenHandler,
                      onComplete: CompleteHandler
     ): Promise<void> {
@@ -159,7 +156,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
 
             for await (const chunk of (response as unknown as Stream<RawMessageStreamEvent>)) {
                 // Pass the raw chunk directly to the onToken callback
-                await onToken(sourceId, requestId, chunk, tokenType);
+                await onToken(sourceId, requestId, chunk, 'sse');
             }
 
             // Call onComplete

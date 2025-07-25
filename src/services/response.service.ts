@@ -61,15 +61,14 @@ export class ResponseService {
                     break;
 
                 case 'token':
-                    logger.debug(`Received token: ${JSON.stringify(content.token)}`);
-                    // Send token to the stream
-                    stream.push(JSON.stringify(content.token) + '\n');
+                    // Send token to stream
+                    stream.push(`data: ${JSON.stringify(content)}\n\n`);
                     break;
 
                 case 'done':
                     // Send final message and mark as completed
-                    logger.debug(`Received done message: ${JSON.stringify(content.response)}`);
-                    stream.push(JSON.stringify(content.response) + '\n');
+                    logger.debug(`event: ${content.token.type}\n`);
+                    stream.push(`data: ${JSON.stringify(content)}\n\n`);
                     //stream.push(`data: [DONE]\n\n`);
                     stream.end();
                     this.removeStream(requestId);
@@ -161,8 +160,10 @@ export class ResponseService {
 
     async chatCompletionResponse(req: ApiRequest, res: Response) {
         const requestId = uuidv4();
-        const {model, messages, options, stream, provider} = req.body;
 
+        const {model, messages, options = {}, stream = true, provider} = req.body;
+
+        logger.debug(`New chat request: ${requestId} for model: ${model} streaming:${stream}`);
         // Format the request for the worker
         const request = {
             requestId,
