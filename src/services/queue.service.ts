@@ -26,7 +26,7 @@ export class QueueService {
                 this.isConnected = true;
                 return;
             }
-
+            logger.info(`Connecting to RabbitMQ on: ${this.config.url}`);
             this.connection = await connect(this.config.url);
             logger.info('Successfully connected to RabbitMQ');
 

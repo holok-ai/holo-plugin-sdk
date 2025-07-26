@@ -50,7 +50,8 @@ export class ResponseService {
     async handleResponseQueue(_id: string, content: any) {
         logger.debug(`Received response: ${JSON.stringify(content)}`);
         const {requestId} = content;
-        logger.debug('Request ID: ' + requestId);
+        const {provider} = content;
+        logger.debug(`RequestId : ${requestId} provider: ${provider}`);
         const stream = this.streams.get(requestId);
 
         if (stream) {

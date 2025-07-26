@@ -33,6 +33,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                 // Extract parameters
                 const {model, options, stream, provider} = payload;
                 const ai = await this.providerService.matchProvider(provider);
+                logger.info(`resolved ai provider: ${ai?.name}`);
                 let requestStats: AIRequestStat | null = null;
                 // explicitly define outcomes
                 switch (type) {
