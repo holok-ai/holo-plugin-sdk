@@ -83,19 +83,19 @@
             ServerQueues[(Server-Specific Queues)]
             AuditRequestQueue[(Request Audit Queue)]
             AuditResponseQueue[(Response Audit Queue)]
-            
+
             RequestExchange --> RequestQueue
             RequestExchange --> AuditRequestQueue
             ResponseExchange --> ServerQueues
             ResponseExchange --> AuditResponseQueue
           end
-          
+
           subgraph WorkerContainer["Worker Containers (Scalable)"]
             Worker1[LLM Worker 1]
             Worker2[LLM Worker 2]
             Worker3[LLM Worker 3]
           end
-          
+
           subgraph AuditContainer["Audit Service Container"]
             AuditService[Audit Service]
             AuditConsumer[Consumer]
@@ -104,13 +104,13 @@
 
           subgraph LLMProviders["LLM Providers"]
             Ollama[Ollama API]
-            Mock[Mock Provider]
+            Mock[Mock AiProvider]
           end
 
           subgraph Storage["Storage"]
             PostgreSQL[(PostgreSQL Database)]
           end
-          
+
           Producer1 --> RequestExchange
           RequestQueue --> WorkerContainer
           Worker1 & Worker2 & Worker3 --> ResponseExchange
@@ -125,7 +125,7 @@
           classDef service fill:#d5e8d4,stroke:#333
           classDef database fill:#f8cecc,stroke:#333
           classDef client fill:#dae8fc,stroke:#333
-          
+
           class APIServer,WorkerContainer,AuditContainer container
           class RequestExchange,ResponseExchange,RequestQueue,ServerQueues,AuditRequestQueue,AuditResponseQueue queue
           class API,Worker1,Worker2,Worker3,AuditService,Ollama,Mock service
@@ -154,10 +154,10 @@
           participant API as API Server
           participant RQ as Request Queue
           participant Worker as LLM Worker
-          participant LLM as LLM Provider
+          participant LLM as LLM AiProvider
           participant RespQ as Response Queue
           participant AuditQ as Audit Queue
-          
+
           Client->>API: POST /api/chat
           Note over API: Create requestId
           API-->>Client: Start SSE stream
@@ -165,7 +165,7 @@
           Note over RQ: Fanout exchange
           RQ->>Worker: Consume request
           Worker->>LLM: Process with provider
-          
+
           loop For each token
             LLM-->>Worker: Token generation
             Worker->>RespQ: Send token chunk
@@ -173,7 +173,7 @@
             RespQ-->>API: Stream to client
             API-->>Client: SSE event
           end
-          
+
           LLM-->>Worker: Complete response
           Worker->>RespQ: Send final response
           Worker->>AuditQ: Send metrics
@@ -200,7 +200,7 @@
     </div>
 
     <div class="diagram-container">
-      <h2>Provider Interface Pattern</h2>
+      <h2>AiProvider Interface Pattern</h2>
       <div class="mermaid">
         classDiagram
           class LLMProviderInterface {
@@ -209,7 +209,7 @@
             +generate(params, onToken, onComplete, onError)
             +chat(params, onToken, onComplete, onError)
           }
-          
+
           class OllamaProvider {
             -config
             -ollama
@@ -218,7 +218,7 @@
             +generate()
             +chat()
           }
-          
+
           class MockProvider {
             -config
             +init()
@@ -226,12 +226,12 @@
             +generate()
             +chat()
           }
-          
+
           class ProviderFactory {
             +getProvider(type)
             +getModels()
           }
-          
+
           LLMProviderInterface <|-- OllamaProvider
           LLMProviderInterface <|-- MockProvider
           ProviderFactory --> LLMProviderInterface
@@ -256,7 +256,7 @@
           AuditSvc --> DB[(PostgreSQL)]
           DB --> MonitorSvc[Monitoring Service]
           MonitorSvc --> Dashboard[Dashboard UI]
-          
+
           subgraph "Audit Data Flow"
             direction TB
             ReqAudit[Request Audit]
@@ -264,17 +264,17 @@
             Metrics[Performance Metrics]
             ModelStats[Model Statistics]
             WorkerStats[Worker Statistics]
-            
+
             ReqAudit --> Metrics
             RespAudit --> Metrics
             Metrics --> ModelStats
             Metrics --> WorkerStats
           end
-          
+
           AuditSvc --> ReqAudit
           AuditSvc --> RespAudit
           MonitorSvc --> Metrics
-          
+
           style AuditQ fill:#ffe6cc,stroke:#333
           style AuditSvc fill:#fff2cc,stroke:#333
           style DB fill:#f8cecc,stroke:#333
@@ -306,7 +306,7 @@
       startOnLoad: true,
       theme: 'default',
       securityLevel: 'loose',
-      flowchart: { 
+      flowchart: {
         useMaxWidth: true,
         htmlLabels: true,
         curve: 'basis'
