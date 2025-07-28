@@ -1,3 +1,5 @@
+import type { LLMWorkerRequest, LLMWorkerResponse } from '../../types';
+
 /**
  * Interface for LLM providers
  * All LLM provider implementations must conform to this interface
@@ -52,6 +54,15 @@ export interface IProvider {
         stream: boolean
     ): Promise<AIRequestStat>;
 
+    /**
+     * Handle LLMWorkerRequest - unified interface for all providers
+     */
+    handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat>;
+
+    /**
+     * Handle response chunk data with ResponseStream
+     */
+    onResponseChunk(responseChunk: LLMWorkerResponse): Promise<void>;
 }
 
 export interface AIProviderConfig {

@@ -7,6 +7,7 @@ import {container, injectable} from "tsyringe";
 import {env} from "../env";
 import {withStats} from "./mixins/withStats";
 import {AIRequestStat} from "../providers/types";
+import { LLMWorkerRequest } from '../types';
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -20,33 +21,28 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
         await super.onInit();
         await this.providerService.init(this.id);
         this.adminHandlers.set('worker.restart', this.adminService.restartWorker)
-
-        // const ai = await this.providerService.matchProvider('openai');
-        // ai?.generate('server-1', '1', 'gpt-4', 'Hello world!', {}, false);
-
         let requestQueue = env.queue.requestQueue;
-        await this.queueService.consume(requestQueue, async (requestId, content) => {
+
+        await this.queueService.consume(requestQueue, async (requestId, llmRequest: LLMWorkerRequest) => {
             this.stats.totalRequests++;
-            const {sourceId, payload, type} = content;
-            logger.info(`Worker ${this.id} handling generate request: ${requestId} from server ${sourceId} and queue ${requestQueue}...`);
+            logger.info(`Worker ${this.id} handling generate request: ${requestId} provider: ${llmRequest.provider} from server ${llmRequest.sourceId} and queue ${requestQueue}...`);
             try {
-                // Extract parameters
-                const {model, options, stream, provider} = payload;
-                const ai = await this.providerService.matchProvider(provider);
+                const ai = await this.providerService.matchProvider(llmRequest.provider);
+                
                 logger.info(`resolved ai provider: ${ai?.name}`);
                 let requestStats: AIRequestStat | null = null;
                 // explicitly define outcomes
-                switch (type) {
+                switch (llmRequest.type) {
                     case 'generate':
                         this.stats.generateRequests++;
-                        requestStats = await ai!.generate(sourceId, requestId, model, payload.prompt, options, stream);
+                        requestStats = await ai!.handleLLMRequest(llmRequest);
                         break;
                     case 'chat':
                         this.stats.chatRequests++;
-                        requestStats = await ai!.chat(sourceId, requestId, model, payload.messages, options, stream);
+                        requestStats = await ai!.handleLLMRequest(llmRequest);
                         break;
                     default:
-                        logger.warn(`No handler registered for message type ${type} - ignoring message...`);
+                        logger.warn(`No handler registered for message type ${llmRequest.type} - ignoring message...`);
                         break;
                 }
                 if (requestStats) await this.mergeStats(requestStats!);

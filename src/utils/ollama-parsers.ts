@@ -1,6 +1,5 @@
 import { Request } from 'express';
-import { v4 as uuidv4 } from 'uuid';
-import { OllamaGenerateQueueRequest, OllamaChatQueueRequest, OllamaQueueRequest, Provider } from '../types';
+import { OllamaGenerateQueueRequest, OllamaChatQueueRequest, LLMPayloadTypes } from '../types';
 
 /**
  * Parse Express request body into Ollama Generate request
@@ -17,10 +16,6 @@ export const parseOllamaGenerateRequest = (req: Request): OllamaGenerateQueueReq
     }
 
     return {
-        provider: Provider.OLLAMA,
-        sourceId: req.body.sourceId || req.headers['x-source-id'] as string || 'api',
-        requestId: req.body.requestId || uuidv4(),
-        type: 'generate',
         model,
         prompt,
         system,
@@ -50,10 +45,6 @@ export const parseOllamaChatRequest = (req: Request): OllamaChatQueueRequest => 
     }
 
     return {
-        provider: Provider.OLLAMA,
-        sourceId: req.body.sourceId || req.headers['x-source-id'] as string || 'api',
-        requestId: req.body.requestId || uuidv4(),
-        type: 'chat',
         model,
         messages,
         stream: stream ?? false,
@@ -67,7 +58,7 @@ export const parseOllamaChatRequest = (req: Request): OllamaChatQueueRequest => 
 /**
  * Parse Express request into appropriate Ollama queue request based on endpoint
  */
-export const parseOllamaRequest = (req: Request, type: 'generate' | 'chat'): OllamaQueueRequest => {
+export const parseOllamaRequest = (req: Request, type: 'generate' | 'chat'): LLMPayloadTypes => {
     if (type === 'generate') {
         return parseOllamaGenerateRequest(req);
     } else {

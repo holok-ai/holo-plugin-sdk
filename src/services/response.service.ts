@@ -7,11 +7,16 @@ import {v4 as uuidv4} from "uuid";
 import {ApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
+import { parseLLMRequest } from '../utils';
+import { LLMWorkerRequest, Provider } from '../types';
+import { StreamFormatter } from './streamFormatter.service';
+
+
 
 /**
  * Response stream for transforming LLM tokens into SSE
  */
-class ResponseStream extends Transform {
+export class ResponseStream extends Transform {
     requestId: string;
 
     constructor(requestId: string) {
@@ -30,9 +35,8 @@ export class ResponseService {
     private streams: Map<string, ResponseStream>;
     private readonly responseQueue = env.queue.responseQueue;
     private readonly requestQueue = env.queue.requestQueue;
-
     constructor(
-        private queueService: QueueService) {
+        private queueService: QueueService, private streamFormatter: StreamFormatter) {
         this.streams = new Map<string, ResponseStream>();
     }
 
@@ -52,39 +56,10 @@ export class ResponseService {
         const {requestId} = content;
         const {provider} = content;
         logger.debug(`RequestId : ${requestId} provider: ${provider}`);
-        const stream = this.streams.get(requestId);
+        const openResponseStream = this.streams.get(requestId);
 
-        if (stream) {
-            switch (content.type) {
-                case 'sse':
-                    stream.push(`event: ${content.token.type}\n`)
-                    stream.push("data: " + JSON.stringify(content.token) + '\n\n');
-                    break;
-
-                case 'token':
-                    // Send token to stream
-                    stream.push(`data: ${JSON.stringify(content)}\n\n`);
-                    break;
-
-                case 'done':
-                    // Send final message and mark as completed
-                    logger.debug(`event: ${content.token.type}\n`);
-                    stream.push(`data: ${JSON.stringify(content)}\n\n`);
-                    //stream.push(`data: [DONE]\n\n`);
-                    stream.end();
-                    this.removeStream(requestId);
-                    break;
-
-                case 'error':
-                    // Send error and end stream
-                    stream.push(`data: ${JSON.stringify(content)}\n\n`);
-                    stream.push(`data: [DONE]\n\n`);
-                    stream.end();
-                    this.removeStream(requestId);
-                    break;
-                default:
-                    logger.warn(`Unknown message type: ${content.type}`);
-            }
+        if (openResponseStream) {
+           this.streamFormatter.formatAndSend(content, openResponseStream);
         } else {
             logger.warn(`Received response for unknown request: ${requestId}`);
             logger.warn(this.streams);
@@ -135,6 +110,24 @@ export class ResponseService {
         return this.streams.size;
     }
 
+    async handleRequest(provider: Provider, type: 'generate' | 'chat', req: ApiRequest, res: Response){
+        const payload = parseLLMRequest(req, provider, type);
+        const requestId = uuidv4();
+
+        const workerRequest: LLMWorkerRequest = {
+            provider: provider,
+            sourceId: this.serverId,
+            requestId: requestId,
+            type: type,
+            payload,
+            timestamp: Date.now()
+        };
+
+        logger.debug(`LLMWorkerRequest: ${JSON.stringify(workerRequest)}`);
+
+        await this.setupResponse(req, res, workerRequest, requestId);
+    }
+    
     async generateResponse(req: ApiRequest, res: Response) {
         const requestId = uuidv4();
         const {model, prompt, options, stream = true, provider} = req.body;

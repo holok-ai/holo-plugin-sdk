@@ -10,7 +10,8 @@ The parsing system consists of three main components:
 
 1. **Type Definitions** (`/src/types/provider-request.types.ts`)
 2. **Provider-Specific Parsers** (`/src/utils/ollama-parsers.ts`, etc.)
-3. **Unified Export** (`/src/utils/index.ts`)
+3. **Unified Request Parser** (`/src/utils/llm-request-parser.ts`)
+4. **Unified Export** (`/src/utils/index.ts`)
 
 ## Current Implementation
 
@@ -24,6 +25,15 @@ export enum Provider {
     OLLAMA = 'ollama',
     CLAUDE = 'claude',
     OPENAI = 'openai'
+}
+
+// Generic worker request interface
+export interface LLMWorkerRequest {
+    provider: Provider;
+    sourceId: string;
+    requestId: string;
+    type: string;
+    payload: LLMPayloadTypes;
 }
 
 // Extended Ollama request types with additional queue metadata
@@ -41,15 +51,16 @@ export interface OllamaChatQueueRequest extends ChatRequest {
     type: 'chat';
 }
 
-// Union type for all Ollama queue requests
-export type OllamaQueueRequest = OllamaGenerateQueueRequest | OllamaChatQueueRequest;
+// Union type for all LLM Specific Requests
+export type LLMPayloadTypes = OllamaGenerateQueueRequest | OllamaChatQueueRequest;
 ```
 
 **Design Principles:**
-- Extends native ollama-js interfaces (`GenerateRequest`, `ChatRequest`)
-- Adds queue metadata (`provider`, `sourceId`, `requestId`, `type`)
-- Uses enum for type-safe provider identification
-- Maintains type safety throughout the request pipeline
+- **Generic Worker Interface**: `LLMWorkerRequest` provides a common structure for all provider requests
+- **Provider-Specific Payloads**: Each provider extends native library interfaces (e.g., ollama-js `GenerateRequest`, `ChatRequest`)
+- **Type-Safe Provider Identification**: Uses `Provider` enum for compile-time safety
+- **Unified Payload Union**: `LLMPayloadTypes` allows type-safe handling of all provider request types
+- **Queue Metadata**: Adds `provider`, `sourceId`, `requestId`, `type` for routing and tracking
 
 ### Ollama Parser Implementation
 
@@ -58,22 +69,38 @@ Located in `/src/utils/ollama-parsers.ts`:
 **Functions:**
 - `parseOllamaGenerateRequest(req: Request): OllamaGenerateQueueRequest`
 - `parseOllamaChatRequest(req: Request): OllamaChatQueueRequest`
-- `parseOllamaRequest(req: Request, type: 'generate' | 'chat'): OllamaQueueRequest`
+- `parseOllamaRequest(req: Request, type: 'generate' | 'chat'): LLMPayloadTypes`
 
 **Key Features:**
 - **Validation**: Ensures required fields (`model`, `prompt`/`messages`) are present
-- **Fallback Handling**: Sources `sourceId` from body → header → default 'api'
-- **UUID Generation**: Auto-generates `requestId` if not provided
 - **Type Safety**: Returns strongly-typed objects compatible with ollama-js
+- **Simplified Interface**: Removed duplicative metadata fields
+
+### Unified Request Parser
+
+Located in `/src/utils/llm-request-parser.ts`:
+
+**Function:**
+- `parseLLMRequest(req: Request, provider: Provider, type: 'generate' | 'chat'): LLMPayloadTypes`
+
+**Key Features:**
+- **Provider Routing**: Automatically routes to the correct provider-specific parser based on enum
+- **Type Safety**: Returns strongly-typed `LLMPayloadTypes` union
+- **Extensible**: Easy to add new providers by extending the switch statement
+- **Error Handling**: Throws descriptive errors for unsupported providers
 
 ## Request Flow
 
 ```
 Express HTTP Request
     ↓
-Parser Function (validate + transform)
+parseLLMRequest (routes by provider)
     ↓
-Typed Queue Request Object
+Provider-Specific Parser (validate + transform)
+    ↓
+Typed LLMPayloadTypes Object
+    ↓
+Wrapped in LLMWorkerRequest (by caller)
     ↓
 RabbitMQ Serialization
     ↓
@@ -91,26 +118,38 @@ src/
 │   └── index.ts                     # Export types
 ├── utils/
 │   ├── ollama-parsers.ts       # Ollama-specific parsers
+│   ├── llm-request-parser.ts   # Unified request parser
 │   ├── parsers.ts              # General parsing utilities
 │   └── index.ts                # Export all parsers
 ```
 
 ## Usage Examples
 
-### Generate Request
+### Using the Unified Parser (Recommended)
+```typescript
+import { parseLLMRequest, Provider } from '../utils';
+
+// For any provider - routes automatically
+const payload = parseLLMRequest(req, Provider.OLLAMA, 'generate');
+// Result: LLMPayloadTypes (strongly typed based on provider)
+
+// Can be used in response.service.ts:
+const workerRequest: LLMWorkerRequest = {
+    provider: Provider.OLLAMA,
+    sourceId: 'api-server-1',
+    requestId: uuidv4(),
+    type: 'generate',
+    payload,
+    timestamp: Date.now()
+};
+```
+
+### Direct Provider-Specific Parsing
 ```typescript
 import { parseOllamaGenerateRequest } from '../utils';
 
 const queueRequest = parseOllamaGenerateRequest(req);
-// Result: OllamaGenerateQueueRequest with sourceId, requestId, type + all ollama fields
-```
-
-### Chat Request
-```typescript
-import { parseOllamaChatRequest } from '../utils';
-
-const queueRequest = parseOllamaChatRequest(req);
-// Result: OllamaChatQueueRequest with sourceId, requestId, type + all ollama fields
+// Result: OllamaGenerateQueueRequest with all ollama fields
 ```
 
 ## Future Enhancements
@@ -121,11 +160,29 @@ const queueRequest = parseOllamaChatRequest(req);
 
 ### Type System Extensions
 ```typescript
-// Future unified type system
-export type LLMQueueRequest = 
-    | OllamaQueueRequest 
-    | OpenAIQueueRequest 
-    | ClaudeQueueRequest;
+// Future provider-specific request types
+export interface OpenAIGenerateQueueRequest extends OpenAIGenerateRequest {
+    provider: Provider.OPENAI;
+    sourceId: string;
+    requestId: string;
+    type: 'generate';
+}
+
+export interface ClaudeChatQueueRequest extends ClaudeChatRequest {
+    provider: Provider.CLAUDE;
+    sourceId: string;
+    requestId: string;
+    type: 'chat';
+}
+
+// Updated union type will include all providers
+export type LLMPayloadTypes = 
+    | OllamaGenerateQueueRequest 
+    | OllamaChatQueueRequest
+    | OpenAIGenerateQueueRequest
+    | OpenAIChatQueueRequest
+    | ClaudeGenerateQueueRequest
+    | ClaudeChatQueueRequest;
 ```
 
 ### Parser Factory Pattern

@@ -2,6 +2,7 @@ import {AIProvider} from './ai.provider';
 import logger from '../utils/logger';
 import OpenAI from 'openai';
 import {AIProviderConfig, CompleteHandler, IProvider, ModelInfo, TokenHandler} from './types';
+import {LLMWorkerRequest} from '../types';
 import {
     ChatCompletionChunk,
     ChatCompletionCreateParams,
@@ -177,5 +178,13 @@ export class OpenAIProvider extends AIProvider implements IProvider {
             // Call onComplete with the full response
             await onComplete(sourceId, requestId, response);
         }
+    }
+
+    /**
+     * Handle LLMWorkerRequest - unified interface
+     * TODO: Implement OpenAI-specific request handling
+     */
+    async handleLLMRequest(_request: LLMWorkerRequest): Promise<any> {
+        throw new Error('OpenAI handleLLMRequest not yet implemented');
     }
 }

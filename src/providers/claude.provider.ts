@@ -1,10 +1,12 @@
 import AIProvider from "./ai.provider";
 import {AIProviderConfig, CompleteHandler, IProvider, ModelInfo, TokenHandler} from "./types";
+import {LLMWorkerRequest, ClaudeWorkerRequest, Provider, LLMWorkerResponse} from "../types";
 import logger from "../utils/logger";
 import {Anthropic} from "@anthropic-ai/sdk/client";
 import {Stream} from "@anthropic-ai/sdk/streaming";
 import {MessageCreateParams, MessageCreateParamsStreaming, RawMessageStreamEvent} from "@anthropic-ai/sdk/resources";
 import {ResponseService} from "../services";
+import { Message, MessageStreamEvent } from "@anthropic-ai/sdk/resources/messages";
 
 export class ClaudeProvider extends AIProvider implements IProvider {
     readonly name: string = 'claude';
@@ -149,6 +151,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             stream
         };
 
+
         const response = await this.client!.messages.create(requestOptions);
         // Handle streaming response
         if (stream) {
@@ -171,4 +174,74 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             await onComplete(sourceId, requestId, response);
         }
     }
+
+    /**
+     * Handle LLMWorkerRequest - unified interface
+     */
+    async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
+        // Validate this is for Claude
+        if (request.provider !== Provider.CLAUDE) {
+            throw new Error(`Invalid provider for ClaudeProvider: ${request.provider}`);
+        }
+
+        const { sourceId, requestId, payload } = request;
+        const claudePayload = payload as ClaudeWorkerRequest;
+
+        // Claude uses a unified messages API, so both generate and chat go through the same method
+        return await this._messageFromRequest(sourceId, requestId, claudePayload);
+    }
+
+    /**
+     * Claude messages completion using ClaudeWorkerRequest object
+     */
+    async _messageFromRequest(
+        sourceId: string,
+        requestId: string,
+        messageRequest: ClaudeWorkerRequest
+    ): Promise<void> {
+        if (!this.models![messageRequest.model]) {
+            throw new Error(`Model ${messageRequest.model} not found`);
+        }
+        if (!this.client) {
+            await this.init();
+        }
+
+        let fullResponse = '';
+        // Pass the request directly to the client since it extends MessageCreateParamsBase
+        // @ts-ignore
+       
+        
+        if (messageRequest.stream) {
+            this.client.messages
+            .stream(messageRequest)
+            .on('streamEvent', (event: MessageStreamEvent, snapshot: Message) => {
+                logger.info(`Claude Event: ${JSON.stringify(event)}`);
+                const responseChunk: LLMWorkerResponse = {
+                    sourceId: sourceId,
+                    requestId: requestId,
+                    provider: Provider.CLAUDE,
+                    payload: event,
+                }
+                snapshot.id;
+                this.onResponseChunk(responseChunk);
+            });
+        } else {
+            // For non-streaming, extract the text content
+            const response = await this.client.messages.create(messageRequest);
+            const message = response as any;
+            if (message.content && message.content.length > 0) {
+                fullResponse = message.content[0].text || '';
+            }
+            
+            const responseChunk: LLMWorkerResponse = {
+                sourceId: sourceId,
+                requestId: requestId,
+                provider: Provider.CLAUDE,
+                payload: response,
+                fullResponse: fullResponse
+            }
+            await this.onResponseChunk(responseChunk);
+        }
+    }
+
 }

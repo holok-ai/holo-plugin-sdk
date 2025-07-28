@@ -1,5 +1,6 @@
 import {AIProviderConfig, AIRequestStat, ModelInfo} from "./types";
 import {ResponseService} from "../services";
+import {LLMWorkerRequest, LLMWorkerResponse} from "../types";
 import logger from "../utils/logger";
 
 /**
@@ -45,6 +46,11 @@ export abstract class AIProvider {
         options: {},
         stream: boolean
     ): Promise<void>;
+
+    /**
+     * Handle LLMWorkerRequest - unified interface for all providers
+     */
+    abstract handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat>;
 
     /**
      * General stats/try-catch wrapper for chat/generate
@@ -176,6 +182,11 @@ export abstract class AIProvider {
             },
             requestId
         });
+    }
+
+    async onResponseChunk(responseChunk: LLMWorkerResponse){
+        logger.info(`new ResponseChunk method: ${JSON.stringify(responseChunk)}`);
+        await this.responseService.sendResponseChunk(this.workerId, responseChunk.sourceId, responseChunk.requestId, responseChunk, true);
     }
 }
 
