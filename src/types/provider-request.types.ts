@@ -1,5 +1,6 @@
 import { MessageCreateParamsBase } from '@anthropic-ai/sdk/resources/messages';
 import { GenerateRequest, ChatRequest } from 'ollama';
+import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions/completions';
 
 // Provider enum
 export enum Provider {
@@ -32,5 +33,7 @@ export interface OllamaChatQueueRequest extends ChatRequest {}
 
 export interface ClaudeWorkerRequest extends MessageCreateParamsBase {}
 
+export interface OpenAIWorkerRequest extends ChatCompletionCreateParamsBase {}
+
 // Union type for all LLM Specific Requests
-export type LLMPayloadTypes = OllamaGenerateQueueRequest | OllamaChatQueueRequest | ClaudeWorkerRequest;
+export type LLMPayloadTypes = OllamaGenerateQueueRequest | OllamaChatQueueRequest | ClaudeWorkerRequest | OpenAIWorkerRequest;

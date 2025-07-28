@@ -2,7 +2,7 @@ import {AIProvider} from './ai.provider';
 import logger from '../utils/logger';
 import OpenAI from 'openai';
 import {AIProviderConfig, CompleteHandler, IProvider, ModelInfo, TokenHandler} from './types';
-import {LLMWorkerRequest} from '../types';
+import {LLMWorkerRequest, OpenAIWorkerRequest, Provider, LLMWorkerResponse} from '../types';
 import {
     ChatCompletionChunk,
     ChatCompletionCreateParams,
@@ -182,9 +182,83 @@ export class OpenAIProvider extends AIProvider implements IProvider {
 
     /**
      * Handle LLMWorkerRequest - unified interface
-     * TODO: Implement OpenAI-specific request handling
      */
-    async handleLLMRequest(_request: LLMWorkerRequest): Promise<any> {
-        throw new Error('OpenAI handleLLMRequest not yet implemented');
+    async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
+        // Validate this is for OpenAI
+        if (request.provider !== Provider.OPENAI) {
+            throw new Error(`Invalid provider for OpenAIProvider: ${request.provider}`);
+        }
+
+        const { sourceId, requestId, payload } = request;
+        const openaiPayload = payload as OpenAIWorkerRequest;
+
+        // OpenAI uses a unified chat completions API, so both generate and chat go through the same method
+        return await this._chatFromRequest(sourceId, requestId, openaiPayload);
+    }
+
+    /**
+     * OpenAI chat completion using OpenAIWorkerRequest object
+     */
+    async _chatFromRequest(
+        sourceId: string,
+        requestId: string,
+        chatRequest: OpenAIWorkerRequest
+    ): Promise<void> {
+        if (!this.models![chatRequest.model]) {
+            throw new Error(`Model ${chatRequest.model} not found`);
+        }
+        if (!this.client) {
+            await this.init();
+        }
+
+        let fullResponse = '';
+        // Pass the request directly to the client since it extends ChatCompletionCreateParams
+        const response = await this.client.chat.completions.create(chatRequest);
+        
+        if (chatRequest.stream) {
+            for await (const chunk of (response as Stream<ChatCompletionChunk>)) {
+                const choice = chunk.choices?.[0];
+                
+                if (choice?.finish_reason) {
+                    const responseChunk: LLMWorkerResponse = {
+                        sourceId: sourceId,
+                        requestId: requestId,
+                        provider: Provider.OPENAI,
+                        payload: chunk,
+                        fullResponse: fullResponse
+                    }
+                    await this.onResponseChunk(responseChunk);
+                    break;
+                }
+
+                if (choice?.delta?.content) {
+                    const token = choice.delta.content;
+                    fullResponse += token;
+
+                    const responseChunk: LLMWorkerResponse = {
+                        sourceId: sourceId,
+                        requestId: requestId,
+                        provider: Provider.OPENAI,
+                        payload: chunk
+                    }
+                    await this.onResponseChunk(responseChunk);
+                }
+            }
+        } else {
+            // For non-streaming, extract the text content
+            const message = response as any;
+            if (message.choices && message.choices.length > 0) {
+                fullResponse = message.choices[0].message?.content || '';
+            }
+            
+            const responseChunk: LLMWorkerResponse = {
+                sourceId: sourceId,
+                requestId: requestId,
+                provider: Provider.OPENAI,
+                payload: response,
+                fullResponse: fullResponse
+            }
+            await this.onResponseChunk(responseChunk);
+        }
     }
 }

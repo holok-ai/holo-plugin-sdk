@@ -2,6 +2,7 @@ import { Request } from 'express';
 import { Provider, LLMPayloadTypes } from '../types';
 import { parseOllamaRequest } from './ollama-parsers';
 import { parseClaudeMessageRequest } from './claude-parsers';
+import { parseOpenAIMessageRequest } from './openai-parsers';
 
 /**
  * Unified LLM request parser that routes requests to the appropriate provider-specific parser
@@ -18,7 +19,7 @@ export const parseLLMRequest = (
         case Provider.CLAUDE:
             return parseClaudeMessageRequest(req, type);
         case Provider.OPENAI:
-            throw new Error('OpenAI parser not yet implemented');
+            return parseOpenAIMessageRequest(req, type);
         default:
             throw new Error(`Unsupported provider: ${provider}`);
     }

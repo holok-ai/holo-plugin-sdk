@@ -27,3 +27,6 @@ rabbitmq_data/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Testing Files
+curl.json
