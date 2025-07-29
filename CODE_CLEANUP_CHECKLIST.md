@@ -5,26 +5,31 @@ This checklist outlines the recommended code modifications for cleaning up dead 
 ## 🔴 **Critical Priority (Immediate Action Required)**
 
 ### 1. Fix Critical Bugs
-- [ ] **`claude.provider.ts:22`** - Fix error message: "Claude API key is required" (currently says "OpenAI API key is required")
-- [ ] **`streamFormatter.service.ts:33`** - Fix typo: `responseChunnk` → `responseChunk`
+- [x] **`claude.provider.ts:22`** - Fix error message: "Claude API key is required" (currently says "OpenAI API key is required")
+- [x] **`streamFormatter.service.ts:33`** - Fix typo: `responseChunnk` → `responseChunk`
 
 ### 2. Remove Dead Code
-- [ ] **Ollama Provider**: Remove legacy methods
-  - [ ] Remove old `_generate()` method (lines 65-113)
-  - [ ] Remove old `_chat()` method (lines 128-178)
-  - [ ] Remove `generateOptionalData()` if only used in legacy paths
-- [ ] **Claude Provider**: Remove legacy methods
-  - [ ] Remove old `_generate()` method (lines 78-104)
-  - [ ] Remove old `_chat()` method (lines 109-127)
-  - [ ] Remove `callClaude()` method
-- [ ] **OpenAI Provider**: Remove legacy methods
-  - [ ] Remove old `_generate()` method (lines 83-109)
-  - [ ] Remove old `_chat()` method (lines 114-132)
-  - [ ] Remove `callOpenAI()` method
-- [ ] **Base AIProvider**: Evaluate and remove legacy wrapper methods
-  - [ ] Remove `generate()` method if only `handleLLMRequest` is used by workers
-  - [ ] Remove `chat()` method if only `handleLLMRequest` is used by workers
-  - [ ] Remove `wrapWithStats()` method if no longer needed
+- [x] **Ollama Provider**: Remove legacy methods
+  - [x] Remove old `_generate()` method (lines 65-113)
+  - [x] Remove old `_chat()` method (lines 128-178)
+  - [x] Keep `generateOptionalData()` as it's still used in new methods
+- [x] **Claude Provider**: Remove legacy methods
+  - [x] Remove old `_generate()` method (lines 78-104)
+  - [x] Remove old `_chat()` method (lines 109-127)
+  - [x] Remove `callClaude()` method
+- [x] **OpenAI Provider**: Remove legacy methods
+  - [x] Remove old `_generate()` method (lines 83-109)
+  - [x] Remove old `_chat()` method (lines 114-132)
+  - [x] Remove `callOpenAI()` method
+- [x] **Base AIProvider**: Evaluate and remove legacy wrapper methods
+  - [x] Remove `generate()` method wrapper
+  - [x] Remove `chat()` method wrapper
+  - [x] Remove abstract `_generate()` and `_chat()` method signatures
+  - [x] Keep `wrapWithStats()` method for future error handling implementation
+- [x] **IProvider Interface**: Remove legacy method signatures
+  - [x] Remove `generate()` method from interface
+  - [x] Remove `chat()` method from interface
+- [x] **Cleanup unused imports**: Remove unused type imports from all providers
 
 ### 3. Add Missing Error Handling
 - [ ] **Ollama Provider**: Add error handling to new methods

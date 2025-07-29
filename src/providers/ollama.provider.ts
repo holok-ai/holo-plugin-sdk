@@ -1,5 +1,5 @@
 import AIProvider from "./ai.provider";
-import {ChatResponse, GenerateResponse, Ollama, Options} from "ollama";
+import {ChatResponse, GenerateResponse, Ollama} from "ollama";
 import {IProvider, ModelInfo, OllamaProviderConfig} from "./types";
 import {LLMWorkerRequest, OllamaGenerateQueueRequest, OllamaChatQueueRequest, Provider, LLMWorkerResponse} from "../types";
 import logger from "../utils/logger";
@@ -59,58 +59,6 @@ export class OllamaProvider extends AIProvider implements IProvider {
         }
     }
 
-    /**
-     * Generate text from a prompt with streaming
-     */
-    async _generate(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        prompt: string,
-        options: any,
-        stream: boolean
-    ): Promise<void> {
-        if (!this.models![model]) {
-            throw new Error(`Model ${model} not found`);
-        }
-        if (!this.client) {
-            await this.init();
-        }
-
-        const ollamaOptions = {
-            model,
-            prompt,
-            options: {
-                num_predict: options.max_tokens,
-                ...options
-            } as Partial<Options>,
-            stream
-        }
-        let fullResponse = '';
-        // @ts-ignore
-        const response = await this.client.generate(ollamaOptions);
-        if (stream) {
-            // Use Ollama streaming API
-            for await (const chunk of response) {
-                if (chunk.done) {
-                    await this.onGenerateComplete(sourceId, requestId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
-                    break;
-                }
-
-                const token = chunk.response;
-                fullResponse += token;
-
-                if (token) {
-                    await this.onGenerate(sourceId, requestId, chunk, 'token');
-                }
-            }
-        } else {
-            fullResponse = response.response;
-            await this.onGenerateComplete(sourceId, requestId, response, 'done', this.generateOptionalData(fullResponse, response));
-        }
-
-        logger.info(`Generated response with Ollama model ${model}, length: ${fullResponse.length}`);
-    }
 
     generateOptionalData(fullResponse: string, chunk: GenerateResponse | ChatResponse) {
         return {
@@ -122,60 +70,6 @@ export class OllamaProvider extends AIProvider implements IProvider {
         }
     }
 
-    /**
-     * Generate chat completion with streaming
-     */
-    async _chat(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        messages: any[],
-        options: any,
-        stream: boolean
-    ): Promise<void> {
-        if (!this.models![model]) {
-            throw new Error(`Model ${model} not found`);
-        }
-        if (!this.client) {
-            await this.init();
-        }
-
-        const ollamaOptions = {
-            model,
-            messages,
-            options: {
-                num_predict: options.max_tokens,
-                ...options
-            } as Partial<Options>,
-            stream
-        }
-
-        let fullResponse = '';
-        // @ts-ignore
-        const response = await this.client.chat(ollamaOptions);
-        if (stream) {
-            // Use Ollama streaming API
-            for await (const chunk of response) {
-                if (chunk.done) {
-                    await this.onChatComplete(sourceId, requestId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
-                    break;
-                }
-
-                const token = chunk.message?.content || '';
-                fullResponse += token;
-
-                if (token) {
-                    await this.onChat(sourceId, requestId, chunk, 'token', {
-                        delta: {content: token},
-                        model
-                    });
-                }
-            }
-        } else {
-            fullResponse = response.message?.content || '';
-            await this.onGenerateComplete(sourceId, requestId, response, 'done', this.generateOptionalData(fullResponse, response));
-        }
-    }
 
     /**
      * DKs new method.

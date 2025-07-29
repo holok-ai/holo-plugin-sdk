@@ -29,23 +29,6 @@ export abstract class AIProvider {
      */
     abstract getModels(): Promise<ModelInfo[]>;
 
-    abstract _generate(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        prompt: string,
-        options: {},
-        stream: boolean
-    ): Promise<void>;
-
-    abstract _chat(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        messages: any[],
-        options: {},
-        stream: boolean
-    ): Promise<void>;
 
     /**
      * Handle LLMWorkerRequest - unified interface for all providers
@@ -88,45 +71,6 @@ export abstract class AIProvider {
     }
 
 
-    async generate(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        prompt: string,
-        options: {},
-        stream: boolean
-    ): Promise<AIRequestStat> {
-        return this.wrapWithStats(
-            'generate',
-            this._generate.bind(this),
-            sourceId,
-            requestId,
-            model,
-            prompt,
-            options,
-            stream
-        );
-    }
-
-    async chat(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        messages: any[],
-        options: {},
-        stream: boolean
-    ): Promise<AIRequestStat> {
-        return this.wrapWithStats(
-            'chat',
-            this._chat.bind(this),
-            sourceId,
-            requestId,
-            model,
-            messages,
-            options,
-            stream
-        );
-    }
 
 
     async sendResponseChunk(sourceId: string, requestId: string, data: object, auditEnabled: boolean = this.config.auditEnabled) {

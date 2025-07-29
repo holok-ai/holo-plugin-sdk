@@ -30,8 +30,8 @@ export class StreamFormatter {
         res.push(JSON.stringify(responseChunk.payload) + '\n'); 
     }
 
-    streamClaude(responseChunnk: LLMWorkerResponse, res: ResponseStream){
-        const chunk = responseChunnk.payload as MessageStreamEvent;
+    streamClaude(responseChunk: LLMWorkerResponse, res: ResponseStream){
+        const chunk = responseChunk.payload as MessageStreamEvent;
         res.push(`event: ${chunk.type}\n`);
         res.push(`data: ${JSON.stringify(chunk)} \n\n`);
         if(chunk.type === 'message_stop'){
