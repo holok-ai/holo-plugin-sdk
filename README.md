@@ -185,19 +185,23 @@ Response:
 
 ### Environment Variables
 
+**Important**: Environment variables must be loaded before application startup. The application uses dotenv to load variables from a `.env` file in the project root. This is automatically configured in the main server files (`src/app.ts`, `src/servers/worker.server.ts`, `src/servers/audit.server.ts`).
+
 #### API Server Configuration
 ```bash
 # Server settings
 PORT=3000
 NODE_ENV=production
-SERVER_ID=api_server_001
+API_SERVER_ID=api_server_001    # Used to identify the API server instance
 
 # Worker settings
-WORKER_ID=worker_001
+WORKER_ID=worker_001            # Used to identify the worker instance
 
 # Audit settings
-AUDIT_ID=audit_001
+AUDIT_ID=audit_001              # Used to identify the audit server instance
 ```
+
+**Note**: The API server ID was previously configured as `SERVER_ID` but has been renamed to `API_SERVER_ID` for clarity.
 
 #### Database Configuration
 ```bash

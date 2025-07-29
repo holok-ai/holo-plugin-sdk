@@ -1,3 +1,12 @@
+/**
+ * Environment Configuration Module
+ * 
+ * IMPORTANT: This module executes immediately when imported and reads from process.env.
+ * Ensure dotenv.config() is called BEFORE importing this module in your main server files.
+ * 
+ * The application entry points (app.ts, worker.server.ts, audit.server.ts) have been
+ * configured to load dotenv before any other imports.
+ */
 import {parseBoolean, parseNumber} from "./utils";
 
 export namespace env {
@@ -7,9 +16,11 @@ export namespace env {
 
     // API config
     export namespace api {
-        export const serverId = process.env.SERVER_ID ||
-            `server_${id}`;
-
+        /** 
+         * API server identifier used for queue naming and server identification
+         * Uses API_SERVER_ID environment variable (formerly SERVER_ID)
+         */
+        export const apiServerId = process.env.API_SERVER_ID || `server_${id}`;
         export const port = parseNumber(process.env.PORT, 3000);
     }
 
@@ -66,21 +77,22 @@ export namespace env {
         export const reconnectDelayMs = parseNumber(process.env.RABBITMQ_RECONNECT_DELAY_MS, 5000);
 
         export const requestQueue = process.env.RABBITMQ_REQUEST_QUEUE || 'llm_requests';
-        export const requestExchange = process.env.RABBITMQ_REQUEST_EXCHANGE || 'llm_requests';
+        export const requestExchange = process.env.RABBITMQ_REQUEST_EXCHANGE || 'llm_requests_exchange';
         export const responseQueue = process.env.RABBITMQ_RESPONSE_QUEUE || 'llm_responses';
-        export const responseExchange = process.env.RABBITMQ_RESPONSE_EXCHANGE || 'llm_responses';
+        export const responseExchange = process.env.RABBITMQ_RESPONSE_EXCHANGE || 'llm_responses_exchange';
 
         export const adminExchange = process.env.RABBITMQ_ADMIN_EXCHANGE || 'llm_admin';
         export const adminCommandQueue = process.env.RABBITMQ_ADMIN_COMMAND_QUEUE || 'llm_admin_commands';
         export const adminResponseExchange = process.env.RABBITMQ_ADMIN_RESPONSE_EXCHANGE || 'llm_admin_responses';
         export const adminResponseQueue = process.env.RABBITMQ_ADMIN_RESPONSE_QUEUE || 'llm_admin_responses';
 
-        export const auditRequestExchange = process.env.RABBITMQ_AUDIT_REQUEST_EXCHANGE || 'llm_requests_audit';
-        export const auditResponseExchange = process.env.RABBITMQ_AUDIT_RESPONSE_EXCHANGE || 'llm_responses_audit';
+        // export const auditRequestExchange = process.env.RABBITMQ_AUDIT_REQUEST_EXCHANGE || 'llm_requests_audit';
+        // export const auditResponseExchange = process.env.RABBITMQ_AUDIT_RESPONSE_EXCHANGE || 'llm_responses_audit';
         export const auditRequestQueue = process.env.RABBITMQ_AUDIT_REQUEST_QUEUE || 'llm_requests_audit';
         export const auditResponseQueue = process.env.RABBITMQ_AUDIT_RESPONSE_QUEUE || 'llm_responses_audit';
+        export const auditRoutingKey = process.env.AUDIT_ROUTING_KEY || "audit";
 
-        export const queueExpiration = 3600000;
+        export const queueExpiration = process.env.QUEUE_EXPIRATION || 3600000;
 
         export const config = {
             url,

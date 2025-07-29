@@ -122,7 +122,8 @@ export class OllamaProvider extends AIProvider implements IProvider {
             
             try {
                 for await (const chunk of response) {
-                    //TODO simplify this logic
+                    // TODO: Simplify stream completion logic - consider extracting to a shared method
+                    // The chunk.done pattern is repeated across generate and chat methods
                     if (chunk.done) {
                         logger.debug('Ollama chat stream completed', { requestId, fullResponseLength: fullResponse.length });
                         const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk, fullResponse);

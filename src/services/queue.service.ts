@@ -112,8 +112,7 @@ export class QueueService {
                     const content = JSON.parse(message.content.toString());
                     logger.debug(`Received message from queue: ${queueName} with ${message.content.toString()})`);
                     const {requestId} = content;
-                    logger.debug(`Received message from queue: ${queueName} with requestId: (${requestId})`);
-                    callback(requestId, content, message);
+                    await callback(requestId, content, message);
                     this.channel!.ack(message);
                     logger.debug(`Successfully processed message from queue: ${queueName} with requestId (${requestId})`);
 
@@ -263,7 +262,12 @@ export class QueueService {
         if (!this.isConnected) {
             await this.connect();
         }
-        logger.debug(`Binding queue ${queue} to exchange ${exchange} with pattern ${pattern}`);
+        if(pattern){
+            logger.debug(`Binding queue ${queue} to exchange ${exchange} with pattern ${pattern}`);
+        }else{
+            logger.debug(`Binding queue ${queue} to exchange ${exchange} directly`);
+
+        }
         await this.channel!.bindQueue(queue, exchange, pattern);
     }
 }

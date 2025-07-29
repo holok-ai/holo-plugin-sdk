@@ -31,10 +31,12 @@ export class ResponseStream extends Transform {
 
 @injectable()
 export class ResponseService {
-    private serverId: string = env.api.serverId;
+    private serverId: string = env.api.apiServerId;
     private streams: Map<string, ResponseStream>;
     private readonly responseQueue = env.queue.responseQueue;
-    private readonly requestQueue = env.queue.requestQueue;
+    // private readonly requestQueue = env.queue.requestQueue;
+    private readonly requestExchange = env.queue.requestExchange;
+    //private readonly responseExchange = env.queue.responseExchange;
     constructor(
         private queueService: QueueService, private streamFormatter: StreamFormatter) {
         this.streams = new Map<string, ResponseStream>();
@@ -197,7 +199,7 @@ export class ResponseService {
         // Send the request to the exchange instead of directly to the queue
         // This allows multiple consumers (main processor and audit logger) to receive the message
         await this.queueService.sendToExchange(
-            this.requestQueue,
+            this.requestExchange,
             '',
             request,
             {correlationId: requestId}
