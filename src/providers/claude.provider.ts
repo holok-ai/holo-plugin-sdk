@@ -84,7 +84,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         const claudePayload = payload as ClaudeWorkerRequest;
 
         // Claude uses a unified messages API, so both generate and chat go through the same method
-        return await this.wrapWithStats(type as 'generate' | 'chat', this._claudeMessages, sourceId, requestId, claudePayload);
+        return await this.wrapWithStats(type, this._claudeMessages.bind(this), sourceId, requestId, claudePayload);
     }
 
     /**
@@ -101,7 +101,6 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         if (!this.client) {
             await this.init();
         }
-
         let fullResponse = '';
         // Pass the request directly to the client since it extends MessageCreateParamsBase
         // @ts-ignore

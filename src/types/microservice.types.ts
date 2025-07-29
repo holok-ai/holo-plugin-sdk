@@ -1,3 +1,5 @@
+import { RequestType } from './provider-request.types';
+
 export interface AdminHandler {
     (payload: any): Promise<any>;
 }
@@ -39,7 +41,7 @@ export interface AdminResponse {
 
 export interface ProxyRequest {
     requestId: string; // UUIDv4
-    type: 'generate' | 'chat';
+    type: RequestType;
     sourceId: string; // Server ID for response routing
     payload: {
         model: string;

@@ -9,11 +9,17 @@ export enum Provider {
     OPENAI = 'openai'
 }
 
+// Request type enum
+export enum RequestType {
+    GENERATE = 'generate',
+    CHAT = 'chat'
+}
+
 export interface LLMWorkerRequest {
     provider: Provider;
     sourceId: string;
     requestId: string;
-    type: string;
+    type: RequestType;
     payload: LLMPayloadTypes;
     timestamp: number;
 }

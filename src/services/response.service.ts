@@ -8,7 +8,7 @@ import {ApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
 import { parseLLMRequest } from '../utils';
-import { LLMWorkerRequest, Provider } from '../types';
+import { LLMWorkerRequest, Provider, RequestType } from '../types';
 import { StreamFormatter } from './streamFormatter.service';
 
 
@@ -110,7 +110,7 @@ export class ResponseService {
         return this.streams.size;
     }
 
-    async handleRequest(provider: Provider, type: 'generate' | 'chat', req: ApiRequest, res: Response){
+    async handleRequest(provider: Provider, type: RequestType, req: ApiRequest, res: Response){
         const payload = parseLLMRequest(req, provider, type);
         const requestId = uuidv4();
 
@@ -135,7 +135,7 @@ export class ResponseService {
         // Format the request for the worker
         const request = {
             requestId,
-            type: 'generate',
+            type: RequestType.GENERATE,
             sourceId: this.serverId, // Add server ID for response routing
             payload: {
                 model,
@@ -161,7 +161,7 @@ export class ResponseService {
         // Format the request for the worker
         const request = {
             requestId,
-            type: 'chat',
+            type: RequestType.CHAT,
             sourceId: this.serverId, // Add server ID for response routing
             payload: {
                 model,

@@ -1,4 +1,4 @@
-import type { LLMWorkerRequest, LLMWorkerResponse } from '../../types';
+import type { LLMWorkerRequest, LLMWorkerResponse, RequestType } from '../../types';
 
 /**
  * Interface for LLM providers
@@ -91,7 +91,7 @@ export interface ModelOperationResult {
 }
 
 export interface AIRequestStat {
-    type: 'generate' | 'chat';
+    type: RequestType;
     startTime: number;
     endTime: number;
     duration: number;

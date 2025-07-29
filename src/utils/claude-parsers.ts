@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { ClaudeWorkerRequest, LLMPayloadTypes } from '../types';
+import { ClaudeWorkerRequest, LLMPayloadTypes, RequestType } from '../types';
 
 /**
  * Parse Express request body into Claude request
@@ -59,8 +59,8 @@ export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
  * Parse Express request into Claude queue request
  * Claude only supports chat-style interactions
  */
-export const parseClaudeMessageRequest = (req: Request, type: 'generate' | 'chat'): LLMPayloadTypes => {
-    if (type === 'generate') {
+export const parseClaudeMessageRequest = (req: Request, type: RequestType): LLMPayloadTypes => {
+    if (type === RequestType.GENERATE) {
         // For generate requests, convert to Claude's messages format
         const { model, prompt, system, max_tokens, temperature, top_p, top_k, stop_sequences, stream } = req.body;
         

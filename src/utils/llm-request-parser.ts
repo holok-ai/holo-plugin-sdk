@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { Provider, LLMPayloadTypes } from '../types';
+import { Provider, LLMPayloadTypes, RequestType } from '../types';
 import { parseOllamaRequest } from './ollama-parsers';
 import { parseClaudeMessageRequest } from './claude-parsers';
 import { parseOpenAIMessageRequest } from './openai-parsers';
@@ -10,7 +10,7 @@ import { parseOpenAIMessageRequest } from './openai-parsers';
 export const parseLLMRequest = (
     req: Request, 
     provider: Provider, 
-    type: 'generate' | 'chat'
+    type: RequestType
 ): LLMPayloadTypes => {
     // Route to appropriate provider parser
     switch (provider) {

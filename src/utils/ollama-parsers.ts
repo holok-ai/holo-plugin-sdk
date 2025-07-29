@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { OllamaGenerateQueueRequest, OllamaChatQueueRequest, LLMPayloadTypes } from '../types';
+import { OllamaGenerateQueueRequest, OllamaChatQueueRequest, LLMPayloadTypes, RequestType } from '../types';
 
 /**
  * Parse Express request body into Ollama Generate request
@@ -58,8 +58,8 @@ export const parseOllamaChatRequest = (req: Request): OllamaChatQueueRequest => 
 /**
  * Parse Express request into appropriate Ollama queue request based on endpoint
  */
-export const parseOllamaRequest = (req: Request, type: 'generate' | 'chat'): LLMPayloadTypes => {
-    if (type === 'generate') {
+export const parseOllamaRequest = (req: Request, type: RequestType): LLMPayloadTypes => {
+    if (type === RequestType.GENERATE) {
         return parseOllamaGenerateRequest(req);
     } else {
         return parseOllamaChatRequest(req);

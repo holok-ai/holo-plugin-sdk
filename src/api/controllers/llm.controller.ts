@@ -4,7 +4,7 @@ import {BaseController} from './base.controller';
 import {ApiRequest} from '../types';
 import {injectable} from 'tsyringe';
 import {ResponseService} from "../../services";
-import { Provider } from '../../types';
+import { Provider, RequestType } from '../../types';
 
 @injectable()
 export default class LLMController extends BaseController {
@@ -14,7 +14,7 @@ export default class LLMController extends BaseController {
 
     public generate = async (req: ApiRequest, res: Response): Promise<void> => {
         try {
-            await this.responseService.handleRequest(Provider.OLLAMA, "generate", req, res);
+            await this.responseService.handleRequest(Provider.OLLAMA, RequestType.GENERATE, req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to generate text');
         }
@@ -23,7 +23,7 @@ export default class LLMController extends BaseController {
     public chat = async (req: ApiRequest, res: Response): Promise<void> => {
         try {
             if (!this.hasRequiredFields(req.body, ['model', 'messages'], res)) return;
-            await this.responseService.handleRequest(Provider.OLLAMA, "chat", req, res);
+            await this.responseService.handleRequest(Provider.OLLAMA, RequestType.CHAT, req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to complete chat');
         }

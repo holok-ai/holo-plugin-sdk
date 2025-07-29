@@ -3,7 +3,7 @@ import {BaseController} from "./base.controller";
 import {injectable} from "tsyringe";
 import {ResponseService} from "../../services";
 import {ApiRequest, ApiResponse} from "../types";
-import { Provider } from '../../types';
+import { Provider, RequestType } from '../../types';
 
 @injectable()
 export class ClaudeController extends BaseController {
@@ -14,7 +14,7 @@ export class ClaudeController extends BaseController {
 
     public messages = async (req: ApiRequest, res: ApiResponse): Promise<void> => {
         try {
-           await this.responseService.handleRequest(Provider.CLAUDE, "chat", req, res);
+           await this.responseService.handleRequest(Provider.CLAUDE, RequestType.CHAT, req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to complete chat');
         }

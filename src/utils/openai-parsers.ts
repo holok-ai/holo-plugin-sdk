@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { OpenAIWorkerRequest, LLMPayloadTypes } from '../types';
+import { OpenAIWorkerRequest, LLMPayloadTypes, RequestType } from '../types';
 
 /**
  * Parse Express request body into OpenAI request
@@ -71,8 +71,8 @@ export const parseOpenAIRequest = (req: Request): OpenAIWorkerRequest => {
  * Parse Express request into OpenAI queue request
  * OpenAI only supports chat-style interactions
  */
-export const parseOpenAIMessageRequest = (req: Request, type: 'generate' | 'chat'): LLMPayloadTypes => {
-    if (type === 'generate') {
+export const parseOpenAIMessageRequest = (req: Request, type: RequestType): LLMPayloadTypes => {
+    if (type === RequestType.GENERATE) {
         // For generate requests, convert to OpenAI's messages format
         const { model, prompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, stop, stream } = req.body;
         

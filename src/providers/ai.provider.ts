@@ -1,6 +1,6 @@
 import {AIProviderConfig, AIRequestStat, ModelInfo} from "./types";
 import {ResponseService} from "../services";
-import {LLMWorkerRequest, LLMWorkerResponse} from "../types";
+import {LLMWorkerRequest, LLMWorkerResponse, RequestType} from "../types";
 import logger from "../utils/logger";
 
 /**
@@ -39,7 +39,7 @@ export abstract class AIProvider {
      * General stats/try-catch wrapper for chat/generate
      */
     protected async wrapWithStats<T extends [sourceId: string, requestId: string, ...any[]]>(
-        type: 'chat' | 'generate',
+        type: RequestType,
         method: (...args: T) => Promise<void>,
         ...args: T
     ): Promise<AIRequestStat> {

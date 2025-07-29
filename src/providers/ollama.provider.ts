@@ -1,7 +1,7 @@
 import AIProvider from "./ai.provider";
 import {ChatResponse, GenerateResponse, Ollama} from "ollama";
 import {IProvider, ModelInfo, OllamaProviderConfig} from "./types";
-import {LLMWorkerRequest, OllamaGenerateQueueRequest, OllamaChatQueueRequest, Provider, LLMWorkerResponse} from "../types";
+import {LLMWorkerRequest, OllamaGenerateQueueRequest, OllamaChatQueueRequest, Provider, LLMWorkerResponse, RequestType} from "../types";
 import logger from "../utils/logger";
 import {ResponseService} from "../services";
 
@@ -82,12 +82,12 @@ export class OllamaProvider extends AIProvider implements IProvider {
 
         const { sourceId, requestId, payload, type } = request;
         
-        if (type === 'generate') {
+        if (type === RequestType.GENERATE) {
             const generatePayload = payload as OllamaGenerateQueueRequest;
-            return await this.wrapWithStats('generate', this._ollamaGenerate, sourceId, requestId, generatePayload);
-        } else if (type === 'chat') {
+            return await this.wrapWithStats(RequestType.GENERATE, this._ollamaGenerate.bind(this), sourceId, requestId, generatePayload);
+        } else if (type === RequestType.CHAT) {
             const chatPayload = payload as OllamaChatQueueRequest;
-            return await this.wrapWithStats('chat', this._ollamaChat, sourceId, requestId, chatPayload);
+            return await this.wrapWithStats(RequestType.CHAT, this._ollamaChat.bind(this), sourceId, requestId, chatPayload);
         } else {
             throw new Error(`Unsupported request type: ${type}`);
         }

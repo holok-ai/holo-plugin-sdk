@@ -4,7 +4,7 @@ import {injectable} from "tsyringe";
 import {ResponseService} from "../../services";
 import {ApiRequest, ApiResponse} from "../types";
 import logger from "../../utils/logger";
-import { Provider } from '../../types';
+import { Provider, RequestType } from '../../types';
 
 @injectable()
 export class OpenAIController extends BaseController {
@@ -15,7 +15,7 @@ export class OpenAIController extends BaseController {
 
     public chatCompletions = async (req: ApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            await this.responseService.handleRequest(Provider.OPENAI, "chat", req, res);
+            await this.responseService.handleRequest(Provider.OPENAI, RequestType.CHAT, req, res);
         } catch (error) {
             logger.error('Error: ' + (error as Error).stack);
             this.handleError(res, error as Error, 'Failed to complete chat');

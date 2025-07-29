@@ -7,7 +7,7 @@ import {container, injectable} from "tsyringe";
 import {env} from "../env";
 import {withStats} from "./mixins/withStats";
 import {AIRequestStat} from "../providers/types";
-import { LLMWorkerRequest } from '../types';
+import { LLMWorkerRequest, RequestType } from '../types';
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -33,11 +33,11 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                 let requestStats: AIRequestStat | null = null;
                 // explicitly define outcomes
                 switch (llmRequest.type) {
-                    case 'generate':
+                    case RequestType.GENERATE:
                         this.stats.generateRequests++;
                         requestStats = await ai!.handleLLMRequest(llmRequest);
                         break;
-                    case 'chat':
+                    case RequestType.CHAT:
                         this.stats.chatRequests++;
                         requestStats = await ai!.handleLLMRequest(llmRequest);
                         break;

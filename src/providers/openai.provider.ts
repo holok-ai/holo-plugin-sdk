@@ -87,7 +87,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         const openaiPayload = payload as OpenAIWorkerRequest;
 
         // OpenAI uses a unified chat completions API, so both generate and chat go through the same method
-        return await this.wrapWithStats(type as 'generate' | 'chat', this._openaiChatCompletions, sourceId, requestId, openaiPayload);
+        return await this.wrapWithStats(type, this._openaiChatCompletions.bind(this), sourceId, requestId, openaiPayload);
     }
 
     /**
