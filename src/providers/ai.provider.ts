@@ -128,7 +128,7 @@ export abstract class AIProvider {
     }
 
     async onResponseChunk(responseChunk: LLMWorkerResponse){
-        logger.info(`new ResponseChunk method: ${JSON.stringify(responseChunk)}`);
+        logger.info(`onResponseChunk: ${JSON.stringify(responseChunk)}`);
         await this.responseService.sendResponseChunk(this.workerId, responseChunk.sourceId, responseChunk.requestId, responseChunk, true);
     }
 }
