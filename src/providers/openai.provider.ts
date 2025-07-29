@@ -83,17 +83,17 @@ export class OpenAIProvider extends AIProvider implements IProvider {
             throw new Error(`Invalid provider for OpenAIProvider: ${request.provider}`);
         }
 
-        const { sourceId, requestId, payload } = request;
+        const { sourceId, requestId, payload, type } = request;
         const openaiPayload = payload as OpenAIWorkerRequest;
 
         // OpenAI uses a unified chat completions API, so both generate and chat go through the same method
-        return await this._chatFromRequest(sourceId, requestId, openaiPayload);
+        return await this.wrapWithStats(type as 'generate' | 'chat', this._openaiChatCompletions, sourceId, requestId, openaiPayload);
     }
 
     /**
-     * OpenAI chat completion using OpenAIWorkerRequest object
+     * OpenAI chat completions using OpenAIWorkerRequest object
      */
-    async _chatFromRequest(
+    async _openaiChatCompletions(
         sourceId: string,
         requestId: string,
         chatRequest: OpenAIWorkerRequest

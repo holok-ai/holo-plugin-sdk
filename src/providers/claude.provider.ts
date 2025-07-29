@@ -80,17 +80,17 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             throw new Error(`Invalid provider for ClaudeProvider: ${request.provider}`);
         }
 
-        const { sourceId, requestId, payload } = request;
+        const { sourceId, requestId, payload, type } = request;
         const claudePayload = payload as ClaudeWorkerRequest;
 
         // Claude uses a unified messages API, so both generate and chat go through the same method
-        return await this._messageFromRequest(sourceId, requestId, claudePayload);
+        return await this.wrapWithStats(type as 'generate' | 'chat', this._claudeMessages, sourceId, requestId, claudePayload);
     }
 
     /**
      * Claude messages completion using ClaudeWorkerRequest object
      */
-    async _messageFromRequest(
+    async _claudeMessages(
         sourceId: string,
         requestId: string,
         messageRequest: ClaudeWorkerRequest

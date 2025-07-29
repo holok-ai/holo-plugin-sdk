@@ -73,59 +73,21 @@ export abstract class AIProvider {
 
 
 
-    async sendResponseChunk(sourceId: string, requestId: string, data: object, auditEnabled: boolean = this.config.auditEnabled) {
-        await this.responseService.sendResponseChunk(this.workerId, sourceId, requestId, data, auditEnabled);
-    }
-
-    async onGenerate(sourceId: string, requestId: string, token: object, type: string, customFields?: object) {
-        await this.sendResponseChunk(
-            sourceId,
-            requestId,
-            this.formatToken(requestId, token, type, customFields));
-    }
-
-    formatToken(requestId: string, token: object, type: string, customFields?: object) {
-        return {
-            type,
-            provider: this.name,
-            requestId,
-            token,
-            ...customFields
-        };
-    }
-
-    async onGenerateComplete(sourceId: string, requestId: string, token: object, type: string = 'done', customFields?: object) {
-        await this.sendResponseChunk(
-            sourceId,
-            requestId,
-            this.formatToken(requestId, token, type, customFields)
-        );
-    }
-
-    async onChat(sourceId: string, requestId: string, token: object, type: string, customFields?: object) {
-        await this.sendResponseChunk(
-            sourceId,
-            requestId,
-            this.formatToken(requestId, token, type, customFields)
-        );
-    }
-
-    async onChatComplete(sourceId: string, requestId: string, token: object, type: string = 'done', customFields?: object) {
-        await this.sendResponseChunk(
-            sourceId,
-            requestId,
-            this.formatToken(requestId, token, type, customFields)
-        );
-    }
 
     async onError(sourceId: string, requestId: string, error: Error) {
-        await this.sendResponseChunk(sourceId, requestId, {
-            type: 'error',
-            error: {
-                message: error.message
-            },
-            requestId
-        });
+        const errorResponse: LLMWorkerResponse = {
+            sourceId: sourceId,
+            requestId: requestId,
+            provider: this.name as any, // Provider will be set by concrete implementation
+            payload: {
+                type: 'error',
+                error: {
+                    message: error.message
+                },
+                requestId
+            }
+        };
+        await this.onResponseChunk(errorResponse);
     }
 
     async onResponseChunk(responseChunk: LLMWorkerResponse){

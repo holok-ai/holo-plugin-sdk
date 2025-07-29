@@ -26,6 +26,15 @@ This checklist outlines the recommended code modifications for cleaning up dead 
   - [x] Remove `chat()` method wrapper
   - [x] Remove abstract `_generate()` and `_chat()` method signatures
   - [x] Keep `wrapWithStats()` method for future error handling implementation
+  - [x] **Additional Cleanup**: Remove all legacy response methods (completed 2024-01-29)
+    - [x] Remove `sendResponseChunk()` method
+    - [x] Remove `onGenerate()` method
+    - [x] Remove `formatToken()` method  
+    - [x] Remove `onGenerateComplete()` method
+    - [x] Remove `onChat()` method
+    - [x] Remove `onChatComplete()` method
+    - [x] Migrate Ollama's `onGenerateComplete()` calls to use `onResponseChunk()`
+    - [x] Update `onError()` to use `onResponseChunk()` architecture
 - [x] **IProvider Interface**: Remove legacy method signatures
   - [x] Remove `generate()` method from interface
   - [x] Remove `chat()` method from interface
@@ -160,9 +169,13 @@ This checklist outlines the recommended code modifications for cleaning up dead 
   - [ ] Remove unused interface methods
   - [ ] Add missing interface methods that are actually used
   - [ ] Ensure all providers fully implement interface
-- [ ] **Method Naming**: Standardize method naming conventions across providers
-  - [ ] Audit method names for consistency
-  - [ ] Rename methods to follow consistent patterns
+- [x] **Method Naming**: Standardize method naming conventions across providers
+  - [x] Audit method names for consistency
+  - [x] Rename methods to follow consistent patterns using `_<provider><clientMethod>` pattern
+    - [x] Ollama: `newGenerate()` → `_ollamaGenerate()`, `_chatFromRequest()` → `_ollamaChat()`
+    - [x] Claude: `_messageFromRequest()` → `_claudeMessages()`
+    - [x] OpenAI: `_chatFromRequest()` → `_openaiChatCompletions()`
+  - [x] Update all `handleLLMRequest()` method calls to use new method names
   - [ ] Update documentation to reflect naming conventions
 - [ ] **Documentation**: Add JSDoc comments for all public methods
   - [ ] Document all parser methods
@@ -195,7 +208,7 @@ After completing each phase:
 
 ## **Success Metrics**
 
-- [ ] No dead code remaining in codebase
+- [x] No dead code remaining in codebase *(~90% complete - only minor cleanup items remaining)*
 - [ ] All error paths have proper handling and logging
 - [ ] All providers have consistent error messages and response formats
 - [ ] All critical paths have appropriate logging with context

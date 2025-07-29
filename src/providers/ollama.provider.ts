@@ -59,7 +59,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
         }
     }
 
-
+    //TODO: check if this method is still required
     generateOptionalData(fullResponse: string, chunk: GenerateResponse | ChatResponse) {
         return {
             fullResponse,
@@ -72,7 +72,6 @@ export class OllamaProvider extends AIProvider implements IProvider {
 
 
     /**
-     * DKs new method.
      * Handle LLMWorkerRequest - unified interface
      */
     async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
@@ -80,22 +79,24 @@ export class OllamaProvider extends AIProvider implements IProvider {
         if (request.provider !== Provider.OLLAMA) {
             throw new Error(`Invalid provider for OllamaProvider: ${request.provider}`);
         }
-        if (request.type === 'generate') {
-            const generatePayload = request.payload as OllamaGenerateQueueRequest;
-            return await this.newGenerate(request.sourceId, request.requestId, generatePayload);
-        } else if (request.type === 'chat') {
-            const chatPayload = request.payload as OllamaChatQueueRequest;
-            return await this._chatFromRequest(request.sourceId, request.requestId, chatPayload);
+
+        const { sourceId, requestId, payload, type } = request;
+        
+        if (type === 'generate') {
+            const generatePayload = payload as OllamaGenerateQueueRequest;
+            return await this.wrapWithStats('generate', this._ollamaGenerate, sourceId, requestId, generatePayload);
+        } else if (type === 'chat') {
+            const chatPayload = payload as OllamaChatQueueRequest;
+            return await this.wrapWithStats('chat', this._ollamaChat, sourceId, requestId, chatPayload);
         } else {
-            throw new Error(`Unsupported request type: ${request.type}`);
+            throw new Error(`Unsupported request type: ${type}`);
         }
     }
 
     /**
-     * DKS new method
-     * Chat completion using OllamaChatQueueRequest object
+     * Ollama chat completion using OllamaChatQueueRequest object
      */
-    async _chatFromRequest(
+    async _ollamaChat(
         sourceId: string,
         requestId: string,
         chatRequest: OllamaChatQueueRequest
@@ -142,11 +143,21 @@ export class OllamaProvider extends AIProvider implements IProvider {
             }
         } else {
             fullResponse = response.message?.content || '';
-            await this.onGenerateComplete(sourceId, requestId, response, 'done', this.generateOptionalData(fullResponse, response));
+            const responseChunk: LLMWorkerResponse = {
+                sourceId: sourceId,
+                requestId: requestId,
+                provider: Provider.OLLAMA,
+                payload: response,
+                fullResponse: fullResponse
+            }
+            await this.onResponseChunk(responseChunk);
         }
     }
 
-    async newGenerate(sourceId: string, requestId: string, generateRequest: OllamaGenerateQueueRequest){
+    /**
+     * Ollama generate completion using OllamaGenerateQueueRequest object
+     */
+    async _ollamaGenerate(sourceId: string, requestId: string, generateRequest: OllamaGenerateQueueRequest): Promise<void> {
         if (!this.models![generateRequest.model]) {
                     throw new Error(`Model ${generateRequest.model} not found`);
                 }
@@ -187,7 +198,14 @@ export class OllamaProvider extends AIProvider implements IProvider {
                     }
                 } else {
                     fullResponse = response.response;
-                    await this.onGenerateComplete(sourceId, requestId, response, 'done', this.generateOptionalData(fullResponse, response));
+                    const responseChunk: LLMWorkerResponse = {
+                        sourceId: sourceId,
+                        requestId: requestId,
+                        provider: Provider.OLLAMA,
+                        payload: response,
+                        fullResponse: fullResponse
+                    }
+                    await this.onResponseChunk(responseChunk);
                 }
 
                 logger.info(`Generated response with Ollama model ${generateRequest.model}, length: ${fullResponse.length}`);

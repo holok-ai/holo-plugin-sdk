@@ -27,6 +27,7 @@ export class StreamFormatter {
     }
 
     streamOllama(responseChunk: LLMWorkerResponse, res:ResponseStream){
+        //TODO: Make sure responseStream is closed correctly
         res.push(JSON.stringify(responseChunk.payload) + '\n'); 
     }
 
