@@ -1,10 +1,10 @@
 import {NextFunction, Response} from 'express';
-import {ApiRequest} from '../types';
+import {HttpApiRequest} from '../types';
 import logger from '../../utils/logger';
 
 
 export const authMiddleware = async (
-    req: ApiRequest,
+    req: HttpApiRequest,
     res: Response,
     next: NextFunction
 ): Promise<void> => {

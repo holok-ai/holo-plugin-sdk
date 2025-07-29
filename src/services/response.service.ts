@@ -4,7 +4,7 @@ import logger from "../utils/logger";
 import {Transform, TransformCallback} from "node:stream";
 import {container, injectable} from "tsyringe";
 import {v4 as uuidv4} from "uuid";
-import {ApiRequest} from "../api/types";
+import {HttpApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
 import { parseLLMRequest } from '../utils';
@@ -42,18 +42,29 @@ export class ResponseService {
         this.streams = new Map<string, ResponseStream>();
     }
 
-    async setupResponseStream(serverId?: string) {
+    /**
+     * Start consuming LLM response messages from the queue
+     * Sets up a queue consumer that listens for LLM responses and routes them to active streams
+     * @param {string} [serverId] - Optional server ID override, defaults to env.api.apiServerId
+     */
+    async startLLMResponseConsumer(serverId?: string) {
         this.serverId = serverId || this.serverId;
 
         const queueName = `${this.responseQueue}.${this.serverId}`;
         const handler = async (id: string, content: any) => {
-            return this.handleResponseQueue(id, content);
+            return this.handleLLMResponseMessage(id, content);
         };
 
         await this.queueService.consume(queueName, handler, true);
     }
 
-    async handleResponseQueue(_id: string, content: any) {
+    /**
+     * Handle incoming response messages from the queue
+     * Routes response chunks to the appropriate active response stream
+     * @param {string} _id - Message ID (unused)
+     * @param {any} content - Response content containing requestId, provider, and token data
+     */
+    async handleLLMResponseMessage(_id: string, content: any) {
         logger.debug(`Received response: ${JSON.stringify(content)}`);
         const {requestId} = content;
         const {provider} = content;
@@ -112,7 +123,15 @@ export class ResponseService {
         return this.streams.size;
     }
 
-    async handleRequest(provider: Provider, type: RequestType, req: ApiRequest, res: Response){
+    /**
+     * Parse HTTP request into LLM worker request and initiate streaming response
+     * Handles the complete request lifecycle: parsing, validation, queue submission, and stream setup
+     * @param {Provider} provider - LLM provider (ollama, claude, openai)
+     * @param {RequestType} type - Request type (generate or chat)
+     * @param {HttpApiRequest} req - HTTP request object
+     * @param {Response} res - HTTP response object
+     */
+    async parseAndSendLLMRequest(provider: Provider, type: RequestType, req: HttpApiRequest, res: Response){
         const payload = parseLLMRequest(req, provider, type);
         const requestId = uuidv4();
 
@@ -127,59 +146,19 @@ export class ResponseService {
 
         logger.debug(`LLMWorkerRequest: ${JSON.stringify(workerRequest)}`);
 
-        await this.setupResponse(req, res, workerRequest, requestId);
+        await this._openResponseStream(req, res, workerRequest, requestId);
     }
     
-    async generateResponse(req: ApiRequest, res: Response) {
-        const requestId = uuidv4();
-        const {model, prompt, options, stream = true, provider} = req.body;
-
-        // Format the request for the worker
-        const request = {
-            requestId,
-            type: RequestType.GENERATE,
-            sourceId: this.serverId, // Add server ID for response routing
-            payload: {
-                model,
-                prompt,
-                stream,
-                provider, // Pass provider if specified
-                options: options || {}
-            },
-            timestamp: Date.now()
-        };
-
-        logger.debug(`New generate request: ${requestId} for model: ${model} streaming:${stream}`);
-        // Set up server-sent events for streaming response
-        await this.setupResponse(req, res, request, requestId);
-    }
-
-    async chatCompletionResponse(req: ApiRequest, res: Response) {
-        const requestId = uuidv4();
-
-        const {model, messages, options = {}, stream = true, provider} = req.body;
-
-        logger.debug(`New chat request: ${requestId} for model: ${model} streaming:${stream}`);
-        // Format the request for the worker
-        const request = {
-            requestId,
-            type: RequestType.CHAT,
-            sourceId: this.serverId, // Add server ID for response routing
-            payload: {
-                model,
-                messages,
-                provider, // Pass provider if specified
-                options: options || {},
-                stream
-            },
-            timestamp: Date.now()
-        };
-
-        logger.info(`New chat request: ${requestId} for model: ${model} streaming:${stream}`);
-        await this.setupResponse(req, res, request, requestId);
-    }
-
-    async setupResponse(req: ApiRequest, res: Response, request: Object, requestId: string) {
+    /**
+     * Set up Server-Sent Events streaming response and submit request to queue
+     * Configures SSE headers, creates response stream, handles client disconnect, and pipes response
+     * @param {HttpApiRequest} req - HTTP request object
+     * @param {Response} res - HTTP response object  
+     * @param {Object} request - LLM worker request object to send to queue
+     * @param {string} requestId - Unique request identifier
+     * @private
+     */
+    async _openResponseStream(req: HttpApiRequest, res: Response, request: Object, requestId: string) {
 
         // Set up a streaming or regular JSON response
         res.setHeader('Content-Type', 'text/event-stream');
@@ -209,7 +188,15 @@ export class ResponseService {
         responseStream.pipe(res);
     }
 
-    //routingKey = sourceId, correlationId = requestId / id of message
+    /**
+     * Send response chunk to client via queue exchange
+     * Routes response data to the appropriate server and optionally to audit logging
+     * @param {string} workerId - ID of the worker sending the response
+     * @param {string} sourceId - Server ID to route response to (used as routing key)
+     * @param {string} requestId - Request correlation ID
+     * @param {object} data - Response data/chunk to send
+     * @param {boolean} auditEnabled - Whether to send copy to audit logging
+     */
     async sendResponseChunk(workerId: string, sourceId: string, requestId: string, data: object, auditEnabled: boolean) {
         logger.debug(`Sending response chunk: ${sourceId}, ${requestId}, ${JSON.stringify(data)}`);
 

@@ -54,7 +54,7 @@ async function initApp(): Promise<void> {
         const responseService: ResponseService = container.resolve(ResponseService);
         logger.debug(`Creating API Server with id ${env.api.apiServerId}`);
         await initService.setupQueues(env.api.apiServerId);
-        await responseService.setupResponseStream();
+        await responseService.startLLMResponseConsumer();
         app.use('/api', createRoutes());
         // Start the HTTP server
         const server = app.listen(PORT, (): void => {
