@@ -1,6 +1,7 @@
 import { Request } from 'express';
 import { ClaudeWorkerRequest, LLMPayloadTypes, RequestType } from '../types';
 import { ErrorMessages } from './error-messages';
+import logger from './logger';
 
 /**
  * Parse Express request body into Claude request
@@ -22,11 +23,22 @@ export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
         tool_choice
     } = req.body;
     
+    logger.debug('Parsing Claude request', {
+        model,
+        messageCount: Array.isArray(messages) ? messages.length : 0,
+        stream: stream ?? false,
+        maxTokens: max_tokens || 4096,
+        hasSystem: !!system,
+        hasTools: !!tools
+    });
+    
     if (!model) {
+        logger.error('Claude request validation failed: missing model');
         throw new Error(ErrorMessages.MODEL_REQUIRED);
     }
     
     if (!messages || !Array.isArray(messages)) {
+        logger.error('Claude request validation failed: missing or invalid messages array');
         throw new Error(ErrorMessages.MESSAGES_REQUIRED);
     }
 
@@ -40,7 +52,7 @@ export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
         }
     }
 
-    return {
+    const parsedRequest = {
         model,
         messages,
         max_tokens: max_tokens || 4096,
@@ -54,6 +66,15 @@ export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
         tools,
         tool_choice
     };
+    
+    logger.debug('Successfully parsed Claude request', {
+        model,
+        messageCount: messages.length,
+        stream: parsedRequest.stream,
+        maxTokens: parsedRequest.max_tokens
+    });
+    
+    return parsedRequest;
 };
 
 /**
@@ -61,15 +82,26 @@ export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
  * Claude only supports chat-style interactions
  */
 export const parseClaudeMessageRequest = (req: Request, type: RequestType): LLMPayloadTypes => {
+    logger.debug('Routing Claude request', { type });
+    
     if (type === RequestType.GENERATE) {
         // For generate requests, convert to Claude's messages format
         const { model, prompt, system, max_tokens, temperature, top_p, top_k, stop_sequences, stream } = req.body;
         
+        logger.debug('Parsing Claude generate request (converting to messages format)', {
+            model,
+            promptLength: prompt?.length,
+            stream: stream ?? false,
+            hasSystem: !!system
+        });
+        
         if (!model) {
+            logger.error('Claude generate request validation failed: missing model');
             throw new Error(ErrorMessages.MODEL_REQUIRED);
         }
         
         if (!prompt) {
+            logger.error('Claude generate request validation failed: missing prompt');
             throw new Error(ErrorMessages.PROMPT_REQUIRED);
         }
 

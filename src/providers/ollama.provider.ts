@@ -66,10 +66,27 @@ export class OllamaProvider extends AIProvider implements IProvider {
      * Handle LLMWorkerRequest - unified interface
      */
     async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
+        logger.debug('Ollama provider handling LLM request', {
+            requestId: request.requestId,
+            sourceId: request.sourceId,
+            type: request.type,
+            provider: request.provider
+        });
+
         // Validate this is for Ollama
         if (request.provider !== Provider.OLLAMA) {
+            logger.error('Provider validation failed for Ollama', {
+                expected: Provider.OLLAMA,
+                received: request.provider,
+                requestId: request.requestId
+            });
             throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.OLLAMA));
         }
+
+        logger.debug('Provider validation successful for Ollama', {
+            requestId: request.requestId,
+            type: request.type
+        });
 
         const { sourceId, requestId, payload, type } = request;
         
@@ -101,21 +118,33 @@ export class OllamaProvider extends AIProvider implements IProvider {
         const response = await this.client.chat(chatRequest);
         
         if (chatRequest.stream) {
-            for await (const chunk of response) {
-                //TODO simplify this logic
-                if (chunk.done) {
-                     const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk, fullResponse);
-                    await this.onResponseChunk(responseChunk);
-                    break;
-                }
+            logger.debug('Starting Ollama chat stream', { requestId, model: chatRequest.model });
+            
+            try {
+                for await (const chunk of response) {
+                    //TODO simplify this logic
+                    if (chunk.done) {
+                        logger.debug('Ollama chat stream completed', { requestId, fullResponseLength: fullResponse.length });
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk, fullResponse);
+                        await this.onResponseChunk(responseChunk);
+                        break;
+                    }
 
-                const token = chunk.message?.content || '';
-                fullResponse += token;
+                    const token = chunk.message?.content || '';
+                    fullResponse += token;
 
-                if (token) {
-                     const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk);
-                    await this.onResponseChunk(responseChunk);
+                    if (token) {
+                         const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk);
+                        await this.onResponseChunk(responseChunk);
+                    }
                 }
+            } catch (error) {
+                logger.error('Ollama chat stream error', { 
+                    requestId, 
+                    error: (error as Error).message,
+                    partialResponseLength: fullResponse.length 
+                });
+                throw error;
             }
         } else {
             fullResponse = response.message?.content || '';
@@ -135,21 +164,33 @@ export class OllamaProvider extends AIProvider implements IProvider {
                 // @ts-ignore
                 const response = await this.client.generate(generateRequest);
                 if (generateRequest.stream) {
-                    // Use Ollama streaming API
-                    for await (const chunk of response) {
-                        if (chunk.done) {
-                             const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk, fullResponse);
-                            await this.onResponseChunk(responseChunk);
-                            break;
-                        }
+                    logger.debug('Starting Ollama generate stream', { requestId, model: generateRequest.model });
+                    
+                    try {
+                        // Use Ollama streaming API
+                        for await (const chunk of response) {
+                            if (chunk.done) {
+                                logger.debug('Ollama generate stream completed', { requestId, fullResponseLength: fullResponse.length });
+                                const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk, fullResponse);
+                                await this.onResponseChunk(responseChunk);
+                                break;
+                            }
 
-                        const token = chunk.response;
-                        fullResponse += token;
+                            const token = chunk.response;
+                            fullResponse += token;
 
-                        if (token) {
-                            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk);
-                            await this.onResponseChunk(responseChunk);
+                            if (token) {
+                                const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk);
+                                await this.onResponseChunk(responseChunk);
+                            }
                         }
+                    } catch (error) {
+                        logger.error('Ollama generate stream error', { 
+                            requestId, 
+                            error: (error as Error).message,
+                            partialResponseLength: fullResponse.length 
+                        });
+                        throw error;
                     }
                 } else {
                     fullResponse = response.response;

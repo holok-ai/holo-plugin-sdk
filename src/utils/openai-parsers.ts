@@ -1,6 +1,7 @@
 import { Request } from 'express';
 import { OpenAIWorkerRequest, LLMPayloadTypes, RequestType } from '../types';
 import { ErrorMessages } from './error-messages';
+import logger from './logger';
 
 /**
  * Parse Express request body into OpenAI request
@@ -28,11 +29,22 @@ export const parseOpenAIRequest = (req: Request): OpenAIWorkerRequest => {
         seed
     } = req.body;
     
+    logger.debug('Parsing OpenAI request', {
+        model,
+        messageCount: Array.isArray(messages) ? messages.length : 0,
+        stream: stream ?? false,
+        maxTokens: max_tokens || 'unspecified',
+        hasTools: !!tools,
+        hasUser: !!user
+    });
+    
     if (!model) {
+        logger.error('OpenAI request validation failed: missing model');
         throw new Error(ErrorMessages.MODEL_REQUIRED);
     }
     
     if (!messages || !Array.isArray(messages)) {
+        logger.error('OpenAI request validation failed: missing or invalid messages array');
         throw new Error(ErrorMessages.MESSAGES_REQUIRED);
     }
 
@@ -46,7 +58,7 @@ export const parseOpenAIRequest = (req: Request): OpenAIWorkerRequest => {
         }
     }
 
-    return {
+    const parsedRequest = {
         model,
         messages,
         max_tokens,
@@ -66,6 +78,15 @@ export const parseOpenAIRequest = (req: Request): OpenAIWorkerRequest => {
         response_format,
         seed
     };
+    
+    logger.debug('Successfully parsed OpenAI request', {
+        model,
+        messageCount: messages.length,
+        stream: parsedRequest.stream,
+        maxTokens: parsedRequest.max_tokens
+    });
+    
+    return parsedRequest;
 };
 
 /**
@@ -73,15 +94,26 @@ export const parseOpenAIRequest = (req: Request): OpenAIWorkerRequest => {
  * OpenAI only supports chat-style interactions
  */
 export const parseOpenAIMessageRequest = (req: Request, type: RequestType): LLMPayloadTypes => {
+    logger.debug('Routing OpenAI request', { type });
+    
     if (type === RequestType.GENERATE) {
         // For generate requests, convert to OpenAI's messages format
         const { model, prompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, stop, stream } = req.body;
         
+        logger.debug('Parsing OpenAI generate request (converting to messages format)', {
+            model,
+            promptLength: prompt?.length,
+            stream: stream ?? false,
+            maxTokens: max_tokens || 'unspecified'
+        });
+        
         if (!model) {
+            logger.error('OpenAI generate request validation failed: missing model');
             throw new Error(ErrorMessages.MODEL_REQUIRED);
         }
         
         if (!prompt) {
+            logger.error('OpenAI generate request validation failed: missing prompt');
             throw new Error(ErrorMessages.PROMPT_REQUIRED);
         }
 

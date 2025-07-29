@@ -79,10 +79,27 @@ export class OpenAIProvider extends AIProvider implements IProvider {
      * Handle LLMWorkerRequest - unified interface
      */
     async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
+        logger.debug('OpenAI provider handling LLM request', {
+            requestId: request.requestId,
+            sourceId: request.sourceId,
+            type: request.type,
+            provider: request.provider
+        });
+
         // Validate this is for OpenAI
         if (request.provider !== Provider.OPENAI) {
+            logger.error('Provider validation failed for OpenAI', {
+                expected: Provider.OPENAI,
+                received: request.provider,
+                requestId: request.requestId
+            });
             throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.OPENAI));
         }
+
+        logger.debug('Provider validation successful for OpenAI', {
+            requestId: request.requestId,
+            type: request.type
+        });
 
         const { sourceId, requestId, payload, type } = request;
         const openaiPayload = payload as OpenAIWorkerRequest;
@@ -107,22 +124,38 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         const response = await this.client.chat.completions.create(chatRequest);
         
         if (chatRequest.stream) {
-            for await (const chunk of (response as Stream<ChatCompletionChunk>)) {
-                const choice = chunk.choices?.[0];
-                
-                if (choice?.finish_reason) {
-                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk, fullResponse);
-                    await this.onResponseChunk(responseChunk);
-                    break;
-                }
+            logger.debug('Starting OpenAI chat completions stream', { requestId, model: chatRequest.model });
+            
+            try {
+                for await (const chunk of (response as Stream<ChatCompletionChunk>)) {
+                    const choice = chunk.choices?.[0];
+                    
+                    if (choice?.finish_reason) {
+                        logger.debug('OpenAI chat completions stream completed', { 
+                            requestId, 
+                            finishReason: choice.finish_reason,
+                            fullResponseLength: fullResponse.length 
+                        });
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk, fullResponse);
+                        await this.onResponseChunk(responseChunk);
+                        break;
+                    }
 
-                if (choice?.delta?.content) {
-                    const token = choice.delta.content;
-                    fullResponse += token;
+                    if (choice?.delta?.content) {
+                        const token = choice.delta.content;
+                        fullResponse += token;
 
-                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk);
-                    await this.onResponseChunk(responseChunk);
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk);
+                        await this.onResponseChunk(responseChunk);
+                    }
                 }
+            } catch (error) {
+                logger.error('OpenAI chat completions stream error', { 
+                    requestId, 
+                    error: (error as Error).message,
+                    partialResponseLength: fullResponse.length 
+                });
+                throw error;
             }
         } else {
             // For non-streaming, extract the text content

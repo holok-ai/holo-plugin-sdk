@@ -76,10 +76,27 @@ export class ClaudeProvider extends AIProvider implements IProvider {
      * Handle LLMWorkerRequest - unified interface
      */
     async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
+        logger.debug('Claude provider handling LLM request', {
+            requestId: request.requestId,
+            sourceId: request.sourceId,
+            type: request.type,
+            provider: request.provider
+        });
+
         // Validate this is for Claude
         if (request.provider !== Provider.CLAUDE) {
+            logger.error('Provider validation failed for Claude', {
+                expected: Provider.CLAUDE,
+                received: request.provider,
+                requestId: request.requestId
+            });
             throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.CLAUDE));
         }
+
+        logger.debug('Provider validation successful for Claude', {
+            requestId: request.requestId,
+            type: request.type
+        });
 
         const { sourceId, requestId, payload, type } = request;
         const claudePayload = payload as ClaudeWorkerRequest;
@@ -104,14 +121,36 @@ export class ClaudeProvider extends AIProvider implements IProvider {
        
         
         if (messageRequest.stream) {
-            this.client.messages
-            .stream(messageRequest)
-            .on('streamEvent', (event: MessageStreamEvent, snapshot: Message) => {
-                logger.info(`Claude Event: ${JSON.stringify(event)}`);
-                const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, event);
-                snapshot.id;
-                this.onResponseChunk(responseChunk);
-            });
+            logger.debug('Starting Claude messages stream', { requestId, model: messageRequest.model });
+            
+            try {
+                this.client.messages
+                .stream(messageRequest)
+                .on('streamEvent', (event: MessageStreamEvent, snapshot: Message) => {
+                    logger.info(`Claude Event: ${JSON.stringify(event)}`);
+                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, event);
+                    snapshot.id;
+                    this.onResponseChunk(responseChunk);
+                    
+                    // Log completion when stream ends
+                    if (event.type === 'message_stop') {
+                        logger.debug('Claude messages stream completed', { requestId, messageId: snapshot.id });
+                    }
+                })
+                .on('error', (error) => {
+                    logger.error('Claude messages stream error', { 
+                        requestId, 
+                        error: error.message 
+                    });
+                    throw error;
+                });
+            } catch (error) {
+                logger.error('Claude messages stream initialization error', { 
+                    requestId, 
+                    error: (error as Error).message 
+                });
+                throw error;
+            }
         } else {
             // For non-streaming, extract the text content
             const response = await this.client.messages.create(messageRequest);

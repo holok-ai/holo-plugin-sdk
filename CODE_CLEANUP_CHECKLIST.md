@@ -96,21 +96,21 @@ This checklist outlines the recommended code modifications for cleaning up dead 
   - [x] Reduce TODO count from 3 to 1 (only low-priority style improvement remains)
 
 ### 6. Add Critical Logging
-- [ ] **Parser Methods**: Add request validation logging with context
-  - [ ] Add logging to `parseOllamaGenerateRequest()`
-  - [ ] Add logging to `parseOllamaChatRequest()`
-  - [ ] Add logging to `parseClaudeRequest()`
-  - [ ] Add logging to `parseClaudeMessageRequest()`
-  - [ ] Add logging to `parseOpenAIRequest()`
-  - [ ] Add logging to `parseOpenAIMessageRequest()`
-  - [ ] Add logging to `parseLLMRequest()` unified parser
-- [ ] **Provider Switching**: Log when using legacy vs new request processing paths
-  - [ ] Add debug logs in `handleLLMRequest()` methods
-  - [ ] Log provider validation success/failure
-- [ ] **Stream Lifecycle**: Log stream start/complete/error events with requestId
-  - [ ] Add stream start logging in all providers
-  - [ ] Add stream completion logging
-  - [ ] Add stream error logging
+- [x] **Parser Methods**: Add request validation logging with context (completed 2024-01-29)
+  - [x] Add logging to `parseOllamaGenerateRequest()` with model, prompt length, stream status
+  - [x] Add logging to `parseOllamaChatRequest()` with model, message count, stream status
+  - [x] Add logging to `parseClaudeRequest()` with model, message count, stream status, system/tools flags
+  - [x] Add logging to `parseClaudeMessageRequest()` with request type routing and validation
+  - [x] Add logging to `parseOpenAIRequest()` with model, message count, stream status, tools/user flags
+  - [x] Add logging to `parseOpenAIMessageRequest()` with request type routing and validation
+  - [x] Add logging to `parseLLMRequest()` unified parser with provider/type routing
+- [x] **Provider Switching**: Log when using legacy vs new request processing paths (completed 2024-01-29)
+  - [x] Add debug logs in `handleLLMRequest()` methods with request context (requestId, sourceId, type, provider)
+  - [x] Log provider validation success/failure with expected vs received provider details
+- [x] **Stream Lifecycle**: Log stream start/complete/error events with requestId (completed 2024-01-29)
+  - [x] Add stream start logging in all providers (Ollama generate/chat, Claude messages, OpenAI completions)
+  - [x] Add stream completion logging with response length and finish reasons
+  - [x] Add comprehensive stream error logging with partial response context
 
 ## 🟢 **Medium Priority (Improvement)**
 
@@ -227,7 +227,7 @@ After completing each phase:
 - [x] No dead code remaining in codebase *(~99% complete - eliminated ~200+ lines of legacy code + TODO cleanup)*
 - [x] All error paths have proper handling and logging *(✅ Complete via wrapWithStats + StreamFormatter)*
 - [x] All providers have consistent error messages and response formats *(✅ Complete via ErrorMessages system)*
-- [x] All critical paths have appropriate logging with context *(✅ Complete with structured logging)*
+- [x] All critical paths have appropriate logging with context *(✅ Complete - comprehensive logging across parsers, providers, and streams)*
 - [x] TypeScript compilation with no `any` types in core logic *(✅ Complete - enum refactoring eliminated magic strings)*
 - [x] All streams properly clean up resources on completion/error *(✅ Complete via StreamFormatter error handling)*
 - [x] Eliminated massive code duplication *(✅ Complete - removed ~24 duplicate code blocks)*
