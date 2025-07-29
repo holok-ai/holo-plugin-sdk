@@ -7,6 +7,9 @@ import logger from './logger';
  * Parses an Express request body into a Claude request format.
  * Claude uses a unified messages API (no separate generate endpoint), so this handles
  * all Claude requests with proper message format validation and parameter extraction.
+ * Supports all Anthropic API fields including: model, messages, max_tokens, temperature,
+ * top_p, top_k, stop_sequences, stream, system, metadata, tools, tool_choice, container,
+ * mcp_servers, service_tier, thinking, and betas.
  * 
  * @param req - Express request object containing the request body
  * @returns Parsed ClaudeWorkerRequest with validated messages and Claude-specific parameters
@@ -25,7 +28,13 @@ export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
         system,
         metadata,
         tools,
-        tool_choice
+        tool_choice,
+        // New fields from updated Anthropic client
+        container,
+        mcp_servers,
+        service_tier,
+        thinking,
+        betas
     } = req.body;
     
     logger.debug('Parsing Claude request', {
@@ -34,7 +43,12 @@ export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
         stream: stream ?? false,
         maxTokens: max_tokens || 4096,
         hasSystem: !!system,
-        hasTools: !!tools
+        hasTools: !!tools,
+        hasContainer: !!container,
+        hasMcpServers: !!mcp_servers && Array.isArray(mcp_servers) && mcp_servers.length > 0,
+        serviceTier: service_tier,
+        hasThinking: !!thinking,
+        hasBetas: !!betas && Array.isArray(betas) && betas.length > 0
     });
     
     if (!model) {
@@ -57,6 +71,18 @@ export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
         }
     }
 
+    // Validate service_tier if provided
+    if (service_tier && !['auto', 'standard_only'].includes(service_tier)) {
+        logger.error('Claude request validation failed: invalid service_tier', { service_tier });
+        throw new Error(`Invalid service_tier: ${service_tier}. Must be 'auto' or 'standard_only'`);
+    }
+
+    // Validate mcp_servers format if provided
+    if (mcp_servers && (!Array.isArray(mcp_servers) || mcp_servers.some(server => !server || typeof server !== 'object'))) {
+        logger.error('Claude request validation failed: invalid mcp_servers format');
+        throw new Error('mcp_servers must be an array of server definition objects');
+    }
+
     const parsedRequest = {
         model,
         messages,
@@ -69,7 +95,13 @@ export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
         system,
         metadata,
         tools,
-        tool_choice
+        tool_choice,
+        // New fields from updated Anthropic client
+        container,
+        mcp_servers,
+        service_tier,
+        thinking,
+        betas
     };
     
     logger.debug('Successfully parsed Claude request', {
@@ -97,13 +129,37 @@ export const parseClaudeMessageRequest = (req: Request, type: RequestType): LLMP
     
     if (type === RequestType.GENERATE) {
         // For generate requests, convert to Claude's messages format
-        const { model, prompt, system, max_tokens, temperature, top_p, top_k, stop_sequences, stream } = req.body;
+        const { 
+            model, 
+            prompt, 
+            system, 
+            max_tokens, 
+            temperature, 
+            top_p, 
+            top_k, 
+            stop_sequences, 
+            stream,
+            // New fields from updated Anthropic client
+            container,
+            mcp_servers,
+            service_tier,
+            thinking,
+            betas,
+            metadata,
+            tools,
+            tool_choice
+        } = req.body;
         
         logger.debug('Parsing Claude generate request (converting to messages format)', {
             model,
             promptLength: prompt?.length,
             stream: stream ?? false,
-            hasSystem: !!system
+            hasSystem: !!system,
+            hasContainer: !!container,
+            hasMcpServers: !!mcp_servers && Array.isArray(mcp_servers) && mcp_servers.length > 0,
+            serviceTier: service_tier,
+            hasThinking: !!thinking,
+            hasBetas: !!betas && Array.isArray(betas) && betas.length > 0
         });
         
         if (!model) {
@@ -117,7 +173,7 @@ export const parseClaudeMessageRequest = (req: Request, type: RequestType): LLMP
         }
 
         // Convert generate request to messages format
-        const messages = [{ role: 'user', content: prompt }];
+        const messages = [{ role: 'user' as const, content: prompt }];
 
         return {
             model,
@@ -128,8 +184,17 @@ export const parseClaudeMessageRequest = (req: Request, type: RequestType): LLMP
             top_k,
             stop_sequences,
             stream: stream ?? false,
-            system
-        };
+            system,
+            // New fields from updated Anthropic client
+            container,
+            mcp_servers,
+            service_tier,
+            thinking,
+            betas,
+            metadata,
+            tools,
+            tool_choice
+        } as ClaudeWorkerRequest;
     } else {
         // For chat requests, use the standard parser
         return parseClaudeRequest(req);

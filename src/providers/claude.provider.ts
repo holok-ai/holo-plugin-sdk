@@ -117,9 +117,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         this.validateModel(messageRequest.model);
         let fullResponse = '';
         // Pass the request directly to the client since it extends MessageCreateParamsBase
-        // @ts-ignore
-       
-        
+        // @ts-ignore 
         if (messageRequest.stream) {
             logger.debug('Starting Claude messages stream', { requestId, model: messageRequest.model });
             
@@ -143,7 +141,11 @@ export class ClaudeProvider extends AIProvider implements IProvider {
                         error: error.message 
                     });
                     throw error;
-                });
+                })
+                .on('finalMessage', (message: Message) => {
+                    logger.info(`claude final message: ${JSON.stringify(message)}`);
+                })
+;
             } catch (error) {
                 logger.error('Claude messages stream initialization error', { 
                     requestId, 

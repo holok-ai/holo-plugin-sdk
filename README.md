@@ -131,16 +131,38 @@ POST /api/claude/v1/messages
 Content-Type: application/json
 
 {
-  "model": "claude-3-sonnet-20240229",
+  "model": "claude-3-5-sonnet-20241022",
   "messages": [
     {
       "role": "user",
       "content": "Explain machine learning"
     }
   ],
-  "max_tokens": 1000
+  "max_tokens": 1000,
+  "temperature": 0.7,
+  "stream": true,
+  "system": "You are a helpful AI assistant",
+  "tools": [...],               // Optional: Tool definitions
+  "tool_choice": "auto",        // Optional: Tool usage preference
+  "container": "my-session",    // Optional: Session container
+  "service_tier": "auto",       // Optional: 'auto' or 'standard_only'
+  "thinking": {                 // Optional: Extended thinking configuration
+    "enabled": true
+  },
+  "mcp_servers": [...],         // Optional: MCP server configurations
+  "stop_sequences": ["END"],    // Optional: Custom stop sequences
+  "metadata": {                 // Optional: Request metadata
+    "user_id": "user123"
+  }
 }
 ```
+
+**Supported Claude API Fields:**
+- `model`, `messages`, `max_tokens` (required)
+- `temperature`, `top_p`, `top_k`, `stream`, `system` (optional)
+- `tools`, `tool_choice`, `metadata`, `stop_sequences` (optional)
+- `container`, `mcp_servers`, `service_tier` (optional, new)
+- `thinking`, `betas` (optional, advanced features)
 
 ### Health & Status
 
