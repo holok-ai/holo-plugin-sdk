@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { ClaudeWorkerRequest, LLMPayloadTypes, RequestType } from '../types';
+import { ErrorMessages } from './error-messages';
 
 /**
  * Parse Express request body into Claude request
@@ -22,20 +23,20 @@ export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
     } = req.body;
     
     if (!model) {
-        throw new Error('Model is required');
+        throw new Error(ErrorMessages.MODEL_REQUIRED);
     }
     
     if (!messages || !Array.isArray(messages)) {
-        throw new Error('Messages array is required');
+        throw new Error(ErrorMessages.MESSAGES_REQUIRED);
     }
 
     // Validate messages format (Claude expects role/content structure)
     for (const message of messages) {
         if (!message.role || !message.content) {
-            throw new Error('Each message must have role and content');
+            throw new Error(ErrorMessages.MESSAGE_ROLE_CONTENT_REQUIRED);
         }
         if (!['user', 'assistant'].includes(message.role)) {
-            throw new Error('Message role must be either "user" or "assistant"');
+            throw new Error(ErrorMessages.invalidMessageRole(['user', 'assistant']));
         }
     }
 
@@ -65,11 +66,11 @@ export const parseClaudeMessageRequest = (req: Request, type: RequestType): LLMP
         const { model, prompt, system, max_tokens, temperature, top_p, top_k, stop_sequences, stream } = req.body;
         
         if (!model) {
-            throw new Error('Model is required');
+            throw new Error(ErrorMessages.MODEL_REQUIRED);
         }
         
         if (!prompt) {
-            throw new Error('Prompt is required');
+            throw new Error(ErrorMessages.PROMPT_REQUIRED);
         }
 
         // Convert generate request to messages format

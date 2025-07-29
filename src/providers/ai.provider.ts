@@ -1,6 +1,7 @@
 import {AIProviderConfig, AIRequestStat, ModelInfo} from "./types";
 import {ResponseService} from "../services";
 import {LLMWorkerRequest, LLMWorkerResponse, RequestType} from "../types";
+import {ErrorMessages} from "../utils/error-messages";
 import logger from "../utils/logger";
 
 /**
@@ -94,7 +95,7 @@ export abstract class AIProvider {
      */
     protected validateModel(model: string): void {
         if (!this.models || !this.models[model]) {
-            throw new Error(`Model ${model} not found`);
+            throw new Error(ErrorMessages.modelNotFound(model));
         }
     }
 

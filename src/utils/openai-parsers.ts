@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { OpenAIWorkerRequest, LLMPayloadTypes, RequestType } from '../types';
+import { ErrorMessages } from './error-messages';
 
 /**
  * Parse Express request body into OpenAI request
@@ -28,20 +29,20 @@ export const parseOpenAIRequest = (req: Request): OpenAIWorkerRequest => {
     } = req.body;
     
     if (!model) {
-        throw new Error('Model is required');
+        throw new Error(ErrorMessages.MODEL_REQUIRED);
     }
     
     if (!messages || !Array.isArray(messages)) {
-        throw new Error('Messages array is required');
+        throw new Error(ErrorMessages.MESSAGES_REQUIRED);
     }
 
     // Validate messages format (OpenAI expects role/content structure)
     for (const message of messages) {
         if (!message.role || !message.content) {
-            throw new Error('Each message must have role and content');
+            throw new Error(ErrorMessages.MESSAGE_ROLE_CONTENT_REQUIRED);
         }
         if (!['system', 'user', 'assistant', 'tool'].includes(message.role)) {
-            throw new Error('Message role must be "system", "user", "assistant", or "tool"');
+            throw new Error(ErrorMessages.invalidMessageRole(['system', 'user', 'assistant', 'tool']));
         }
     }
 
@@ -77,11 +78,11 @@ export const parseOpenAIMessageRequest = (req: Request, type: RequestType): LLMP
         const { model, prompt, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, stop, stream } = req.body;
         
         if (!model) {
-            throw new Error('Model is required');
+            throw new Error(ErrorMessages.MODEL_REQUIRED);
         }
         
         if (!prompt) {
-            throw new Error('Prompt is required');
+            throw new Error(ErrorMessages.PROMPT_REQUIRED);
         }
 
         // Convert generate request to messages format

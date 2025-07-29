@@ -1,6 +1,7 @@
 import { injectable } from "tsyringe";
 import { ResponseStream } from "./response.service";
 import { LLMWorkerResponse, Provider } from "../types";
+import { ErrorMessages } from "../utils/error-messages";
 import { MessageStreamEvent } from "@anthropic-ai/sdk/resources/messages";
 import { ChatCompletionChunk } from "openai/resources/chat/completions/completions";
 
@@ -24,7 +25,7 @@ export class StreamFormatter {
                     break;
                 default:
                     logger.error(`No stream formatter for provider: ${responseChunk.provider}`);
-                    throw new Error(`Unsupported provider: ${responseChunk.provider}`);
+                    throw new Error(ErrorMessages.unsupportedProvider(responseChunk.provider));
             }
         } catch (error) {
             logger.error(`StreamFormatter error: ${(error as Error).message}`, {
@@ -51,8 +52,14 @@ export class StreamFormatter {
 
     streamOllama(responseChunk: LLMWorkerResponse, res:ResponseStream){
         try {
-            //TODO: Make sure responseStream is closed correctly
-            res.push(JSON.stringify(responseChunk.payload) + '\n');
+            const chunk = responseChunk.payload as any;
+            res.push(JSON.stringify(chunk) + '\n');
+            
+            // Close stream when Ollama indicates completion (chunk.done is true)
+            if (chunk.done) {
+                logger.debug('Ollama streaming complete: closing response stream');
+                res.end();
+            }
         } catch (error) {
             logger.error(`Ollama streaming error: ${(error as Error).message}`, {
                 requestId: responseChunk.requestId

@@ -1,6 +1,7 @@
 import AIProvider from "./ai.provider";
 import {AIProviderConfig, IProvider, ModelInfo} from "./types";
 import {LLMWorkerRequest, ClaudeWorkerRequest, Provider} from "../types";
+import {ErrorMessages} from "../utils/error-messages";
 import logger from "../utils/logger";
 import {Anthropic} from "@anthropic-ai/sdk/client";
 import {ResponseService} from "../services";
@@ -17,7 +18,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         super(config, responseService, workerId);
 
         if (!this.config.apiKey) {
-            throw new Error('Claude API key is required');
+            throw new Error(ErrorMessages.apiKeyRequired('Claude'));
         }
 
         this.client = new Anthropic({
@@ -27,7 +28,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
 
     async init(): Promise<void> {
         if (!this.config.apiKey) {
-            throw new Error('Claude API key is required');
+            throw new Error(ErrorMessages.apiKeyRequired('Claude'));
         }
 
         try {
@@ -77,7 +78,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
     async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
         // Validate this is for Claude
         if (request.provider !== Provider.CLAUDE) {
-            throw new Error(`Invalid provider for ClaudeProvider: ${request.provider}`);
+            throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.CLAUDE));
         }
 
         const { sourceId, requestId, payload, type } = request;

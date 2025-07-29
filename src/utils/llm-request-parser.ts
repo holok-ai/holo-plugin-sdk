@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { Provider, LLMPayloadTypes, RequestType } from '../types';
+import { ErrorMessages } from './error-messages';
 import { parseOllamaRequest } from './ollama-parsers';
 import { parseClaudeMessageRequest } from './claude-parsers';
 import { parseOpenAIMessageRequest } from './openai-parsers';
@@ -21,6 +22,6 @@ export const parseLLMRequest = (
         case Provider.OPENAI:
             return parseOpenAIMessageRequest(req, type);
         default:
-            throw new Error(`Unsupported provider: ${provider}`);
+            throw new Error(ErrorMessages.unsupportedProvider(provider));
     }
 };

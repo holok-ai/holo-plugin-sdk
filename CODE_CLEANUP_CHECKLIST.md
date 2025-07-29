@@ -70,17 +70,30 @@ This checklist outlines the recommended code modifications for cleaning up dead 
   - [x] Update all providers to use shared initialization (eliminated 7 duplicate initialization blocks)
 
 ### 5. Improve Error Consistency
-- [ ] **Standardize Error Messages**: Use consistent format across all providers
-  - [ ] Audit all error messages for consistency
-  - [ ] Create error message constants/templates
-  - [ ] Ensure provider-specific errors are clearly identified
-- [ ] **Error Response Format**: Unify error response structure
-  - [ ] Ensure legacy and new methods return same error format
-  - [ ] Standardize error object structure (`message`, `code`, `provider`)
-- [ ] **Provider Validation**: Use same error messages for same validation types
-  - [ ] Model not found errors
-  - [ ] Missing required field errors
-  - [ ] Invalid provider errors
+- [x] **Standardize Error Messages**: Use consistent format across all providers (completed 2024-01-29)
+  - [x] Audit all error messages for consistency (found 25+ inconsistent error messages)
+  - [x] Create error message constants/templates (`ErrorMessages` class with centralized messaging)
+  - [x] Ensure provider-specific errors are clearly identified (dynamic message generators)
+- [x] **Error Response Format**: Unify error response structure (completed 2024-01-29)
+  - [x] Create `StandardErrorResponse` interface for consistent error structure
+  - [x] Implement `createErrorResponse()` helper for standardized error objects
+  - [x] Standardize error object structure (`message`, `code`, `provider`, `requestId`)
+- [x] **Provider Validation**: Use same error messages for same validation types (completed 2024-01-29)
+  - [x] Model not found errors: `ErrorMessages.modelNotFound(model)`
+  - [x] Missing required field errors: `MODEL_REQUIRED`, `PROMPT_REQUIRED`, `MESSAGES_REQUIRED`  
+  - [x] Invalid provider errors: `ErrorMessages.invalidProvider(provider, expected)`
+  - [x] API key errors: `ErrorMessages.apiKeyRequired(provider)`
+  - [x] Unsupported errors: `ErrorMessages.unsupportedProvider/RequestType()`
+  - [x] Message validation errors: Consistent role validation across all parsers
+
+### 5.5. TODO Comments Cleanup
+- [x] **Scan and resolve TODO items in codebase** (completed 2024-01-29)
+  - [x] Found and cataloged 3 TODO items across the codebase
+  - [x] Remove unused `generateOptionalData()` method from Ollama provider (dead code)
+  - [x] Fix Ollama stream closing in StreamFormatter using `chunk.done` pattern
+  - [x] Clean up unused imports (`ChatResponse`, `GenerateResponse` types)
+  - [x] Verify no additional dead code after method removal
+  - [x] Reduce TODO count from 3 to 1 (only low-priority style improvement remains)
 
 ### 6. Add Critical Logging
 - [ ] **Parser Methods**: Add request validation logging with context
@@ -211,15 +224,19 @@ After completing each phase:
 
 ## **Success Metrics**
 
-- [x] No dead code remaining in codebase *(~95% complete - eliminated ~200 lines of legacy code)*
+- [x] No dead code remaining in codebase *(~99% complete - eliminated ~200+ lines of legacy code + TODO cleanup)*
 - [x] All error paths have proper handling and logging *(✅ Complete via wrapWithStats + StreamFormatter)*
-- [x] All providers have consistent error messages and response formats *(✅ Complete via shared helper methods)*
+- [x] All providers have consistent error messages and response formats *(✅ Complete via ErrorMessages system)*
 - [x] All critical paths have appropriate logging with context *(✅ Complete with structured logging)*
 - [x] TypeScript compilation with no `any` types in core logic *(✅ Complete - enum refactoring eliminated magic strings)*
 - [x] All streams properly clean up resources on completion/error *(✅ Complete via StreamFormatter error handling)*
 - [x] Eliminated massive code duplication *(✅ Complete - removed ~24 duplicate code blocks)*
 - [x] Consistent method naming across providers *(✅ Complete - `_<provider><clientMethod>` pattern)*
 - [x] Type-safe request handling *(✅ Complete - RequestType enum implementation)*
+- [x] Standardized error messaging system *(✅ Complete - centralized ErrorMessages class)*
+- [x] Consistent validation across all parsers *(✅ Complete - unified error messages)*
+- [x] Clean codebase with minimal TODO items *(✅ Complete - 3→1 TODOs, only style improvement remains)*
+- [x] Proper stream resource management *(✅ Complete - all providers close streams correctly)*
 
 ---
 

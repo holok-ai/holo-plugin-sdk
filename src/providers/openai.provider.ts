@@ -3,6 +3,7 @@ import logger from '../utils/logger';
 import OpenAI from 'openai';
 import {AIProviderConfig, IProvider, ModelInfo} from './types';
 import {LLMWorkerRequest, OpenAIWorkerRequest, Provider} from '../types';
+import {ErrorMessages} from '../utils/error-messages';
 import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 import {Stream} from "openai/streaming";
 import {ResponseService} from "../services";
@@ -20,7 +21,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         protected workerId: string) {
         super(config, responseService, workerId);
         if (!this.config.apiKey) {
-            throw new Error('OpenAI API key is required');
+            throw new Error(ErrorMessages.apiKeyRequired('OpenAI'));
         }
 
         this.client = new OpenAI({
@@ -80,7 +81,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
     async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
         // Validate this is for OpenAI
         if (request.provider !== Provider.OPENAI) {
-            throw new Error(`Invalid provider for OpenAIProvider: ${request.provider}`);
+            throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.OPENAI));
         }
 
         const { sourceId, requestId, payload, type } = request;

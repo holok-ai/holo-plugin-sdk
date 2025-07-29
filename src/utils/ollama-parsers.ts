@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { OllamaGenerateQueueRequest, OllamaChatQueueRequest, LLMPayloadTypes, RequestType } from '../types';
+import { ErrorMessages } from './error-messages';
 
 /**
  * Parse Express request body into Ollama Generate request
@@ -8,11 +9,11 @@ export const parseOllamaGenerateRequest = (req: Request): OllamaGenerateQueueReq
     const { model, prompt, system, template, context, stream, raw, format, images, keep_alive, options } = req.body;
     
     if (!model) {
-        throw new Error('Model is required');
+        throw new Error(ErrorMessages.MODEL_REQUIRED);
     }
     
     if (!prompt) {
-        throw new Error('Prompt is required');
+        throw new Error(ErrorMessages.PROMPT_REQUIRED);
     }
 
     return {
@@ -37,11 +38,11 @@ export const parseOllamaChatRequest = (req: Request): OllamaChatQueueRequest => 
     const { model, messages, stream, format, keep_alive, tools, options } = req.body;
     
     if (!model) {
-        throw new Error('Model is required');
+        throw new Error(ErrorMessages.MODEL_REQUIRED);
     }
     
     if (!messages || !Array.isArray(messages)) {
-        throw new Error('Messages array is required');
+        throw new Error(ErrorMessages.MESSAGES_REQUIRED);
     }
 
     return {

@@ -1,7 +1,8 @@
 import AIProvider from "./ai.provider";
-import {ChatResponse, GenerateResponse, Ollama} from "ollama";
+import {Ollama} from "ollama";
 import {IProvider, ModelInfo, OllamaProviderConfig} from "./types";
 import {LLMWorkerRequest, OllamaGenerateQueueRequest, OllamaChatQueueRequest, Provider, RequestType} from "../types";
+import {ErrorMessages} from "../utils/error-messages";
 import logger from "../utils/logger";
 import {ResponseService} from "../services";
 
@@ -59,16 +60,6 @@ export class OllamaProvider extends AIProvider implements IProvider {
         }
     }
 
-    //TODO: check if this method is still required
-    generateOptionalData(fullResponse: string, chunk: GenerateResponse | ChatResponse) {
-        return {
-            fullResponse,
-            total_duration: chunk.total_duration,
-            prompt_eval_count: chunk.prompt_eval_count,
-            eval_count: chunk.eval_count,
-            eval_duration: chunk.eval_duration
-        }
-    }
 
 
     /**
@@ -77,7 +68,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
     async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
         // Validate this is for Ollama
         if (request.provider !== Provider.OLLAMA) {
-            throw new Error(`Invalid provider for OllamaProvider: ${request.provider}`);
+            throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.OLLAMA));
         }
 
         const { sourceId, requestId, payload, type } = request;
@@ -89,7 +80,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
             const chatPayload = payload as OllamaChatQueueRequest;
             return await this.wrapWithStats(RequestType.CHAT, this._ollamaChat.bind(this), sourceId, requestId, chatPayload);
         } else {
-            throw new Error(`Unsupported request type: ${type}`);
+            throw new Error(ErrorMessages.unsupportedRequestType(type));
         }
     }
 
