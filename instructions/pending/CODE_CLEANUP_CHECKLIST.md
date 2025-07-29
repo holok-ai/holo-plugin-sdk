@@ -95,7 +95,25 @@ This checklist outlines the recommended code modifications for cleaning up dead 
   - [x] Verify no additional dead code after method removal
   - [x] Reduce TODO count from 3 to 1 (only low-priority style improvement remains)
 
-### 6. Add Critical Logging
+### 6. Environment Configuration Cleanup
+- [x] **Environment Variable Loading**: Fix dotenv configuration timing issues (completed 2024-01-29)
+  - [x] Add dotenv.config() to all server entry points before any imports that depend on env variables
+  - [x] Add comprehensive comments explaining dotenv loading requirements and timing
+  - [x] Update env.ts with header documentation about module execution timing
+  - [x] Document the requirement in README.md for future developers
+- [x] **Environment Variable Naming**: Standardize server identification (completed 2024-01-29)
+  - [x] Rename SERVER_ID to API_SERVER_ID for clarity in env.ts
+  - [x] Update all references from env.api.serverId to env.api.apiServerId
+  - [x] Add JSDoc documentation for apiServerId explaining the name change
+  - [x] Update README.md documentation with migration note
+- [x] **Exchange and Queue Configuration**: Centralize and standardize queue configuration (completed 2024-01-29)
+  - [x] Add missing exchange defaults (llm_requests_exchange, llm_responses_exchange)
+  - [x] Make queueExpiration configurable via QUEUE_EXPIRATION environment variable
+  - [x] Add auditRoutingKey configuration for audit message routing
+  - [x] Comment out unused exchange configurations for cleaner config
+  - [x] Ensure consistent naming patterns across all queue/exchange configurations
+
+### 7. Add Critical Logging
 - [x] **Parser Methods**: Add request validation logging with context (completed 2024-01-29)
   - [x] Add logging to `parseOllamaGenerateRequest()` with model, prompt length, stream status
   - [x] Add logging to `parseOllamaChatRequest()` with model, message count, stream status
@@ -114,7 +132,7 @@ This checklist outlines the recommended code modifications for cleaning up dead 
 
 ## 🟢 **Medium Priority (Improvement)**
 
-### 7. Enhance Type Safety
+### 8. Enhance Type Safety
 - [ ] **Replace `any` Types**: Use proper interfaces instead of `any`
   - [ ] Audit all `any` types in provider methods
   - [ ] Create specific interfaces for provider responses
@@ -128,7 +146,7 @@ This checklist outlines the recommended code modifications for cleaning up dead 
   - [ ] Create `ClaudeStreamChunk` interface
   - [ ] Create `OpenAIStreamChunk` interface
 
-### 8. Improve Validation
+### 9. Improve Validation
 - [ ] **Input Sanitization**: Add validation/sanitization to all parser methods
   - [ ] Validate model names against allowed patterns
   - [ ] Sanitize message content for security
@@ -142,7 +160,7 @@ This checklist outlines the recommended code modifications for cleaning up dead 
   - [ ] Validate timestamp is reasonable
   - [ ] Check for required authentication context
 
-### 9. Logging Enhancements
+### 10. Logging Enhancements
 - [ ] **Consistent Log Levels**: Standardize when to use `debug`, `info`, `warn`, `error`
   - [ ] Create logging guidelines documentation
   - [ ] Audit existing log levels for consistency
@@ -158,7 +176,7 @@ This checklist outlines the recommended code modifications for cleaning up dead 
 
 ## 🔵 **Low Priority (Nice to Have)**
 
-### 10. Stream Improvements
+### 11. Stream Improvements
 - [ ] **Stream Cleanup**: Implement proper resource cleanup on stream errors
   - [ ] Add finally blocks to ensure stream cleanup
   - [ ] Implement timeout handling for hanging streams
@@ -172,7 +190,7 @@ This checklist outlines the recommended code modifications for cleaning up dead 
   - [ ] Implement stream garbage collection
   - [ ] Add memory usage monitoring
 
-### 11. Architecture Cleanup
+### 12. Architecture Cleanup
 - [x] **Interface Consistency**: Align `IProvider` interface with actual usage patterns (completed 2024-01-29)
   - [x] Fixed return type inconsistency: All `handleLLMRequest()` methods now return `Promise<AIRequestStat>`
   - [x] Added missing `AIRequestStat` imports to all provider implementations
