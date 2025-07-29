@@ -4,8 +4,13 @@ import { ErrorMessages } from './error-messages';
 import logger from './logger';
 
 /**
- * Parse Express request body into OpenAI request
- * OpenAI uses a unified chat completions API (no separate generate endpoint)
+ * Parses an Express request body into an OpenAI request format.
+ * OpenAI uses a unified chat completions API (no separate generate endpoint), so this handles
+ * all OpenAI requests with proper message format validation and parameter extraction.
+ * 
+ * @param req - Express request object containing the request body  
+ * @returns Parsed OpenAIWorkerRequest with validated messages and OpenAI-specific parameters
+ * @throws Error when required fields (model, messages) are missing or message format is invalid
  */
 export const parseOpenAIRequest = (req: Request): OpenAIWorkerRequest => {
     const { 
@@ -90,8 +95,14 @@ export const parseOpenAIRequest = (req: Request): OpenAIWorkerRequest => {
 };
 
 /**
- * Parse Express request into OpenAI queue request
- * OpenAI only supports chat-style interactions
+ * Routes Express requests to OpenAI parser with automatic generate-to-messages conversion.
+ * OpenAI only supports chat-style interactions, so generate requests are automatically
+ * converted to messages format with the prompt as a user message.
+ * 
+ * @param req - Express request object containing the request body
+ * @param type - RequestType enum indicating GENERATE (converted) or CHAT (direct) request  
+ * @returns Parsed LLMPayloadTypes in OpenAI's messages format
+ * @throws Error when required fields are missing or request format is invalid
  */
 export const parseOpenAIMessageRequest = (req: Request, type: RequestType): LLMPayloadTypes => {
     logger.debug('Routing OpenAI request', { type });

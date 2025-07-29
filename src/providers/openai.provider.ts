@@ -1,7 +1,7 @@
 import {AIProvider} from './ai.provider';
 import logger from '../utils/logger';
 import OpenAI from 'openai';
-import {AIProviderConfig, IProvider, ModelInfo} from './types';
+import {AIProviderConfig, IProvider, ModelInfo, AIRequestStat} from './types';
 import {LLMWorkerRequest, OpenAIWorkerRequest, Provider} from '../types';
 import {ErrorMessages} from '../utils/error-messages';
 import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
@@ -78,7 +78,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
     /**
      * Handle LLMWorkerRequest - unified interface
      */
-    async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
+    async handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
         logger.debug('OpenAI provider handling LLM request', {
             requestId: request.requestId,
             sourceId: request.sourceId,

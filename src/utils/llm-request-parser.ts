@@ -7,7 +7,15 @@ import { parseOpenAIMessageRequest } from './openai-parsers';
 import logger from './logger';
 
 /**
- * Unified LLM request parser that routes requests to the appropriate provider-specific parser
+ * Unified LLM request parser that routes requests to the appropriate provider-specific parser.
+ * Acts as the main entry point for parsing all LLM requests, dispatching to Ollama, Claude, 
+ * or OpenAI parsers based on the provider parameter.
+ * 
+ * @param req - Express request object containing the request body
+ * @param provider - Provider enum indicating which LLM provider to route the request to
+ * @param type - RequestType enum indicating whether this is a GENERATE or CHAT request
+ * @returns Parsed LLMPayloadTypes from the appropriate provider-specific parser
+ * @throws Error when provider is not supported or parsing fails
  */
 export const parseLLMRequest = (
     req: Request, 

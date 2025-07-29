@@ -37,7 +37,13 @@ export abstract class AIProvider {
     abstract handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat>;
 
     /**
-     * General stats/try-catch wrapper for chat/generate
+     * Wraps provider method calls with statistics tracking, error handling, and logging.
+     * Automatically measures execution time and tracks success/error counts.
+     * 
+     * @param type - The type of request being processed (GENERATE or CHAT)
+     * @param method - The provider method to execute (must be bound to provider instance)
+     * @param args - Arguments to pass to the method, first two must be sourceId and requestId
+     * @returns Promise resolving to AIRequestStat with timing and success/error metrics
      */
     protected async wrapWithStats<T extends [sourceId: string, requestId: string, ...any[]]>(
         type: RequestType,
@@ -74,6 +80,14 @@ export abstract class AIProvider {
 
 
 
+    /**
+     * Handles errors by creating a standardized error response and sending it via the response stream.
+     * Called automatically by wrapWithStats when a provider method throws an error.
+     * 
+     * @param sourceId - Unique identifier for the request source
+     * @param requestId - Unique identifier for the specific request  
+     * @param error - The error that occurred during processing
+     */
     async onError(sourceId: string, requestId: string, error: Error) {
         const errorResponse: LLMWorkerResponse = {
             sourceId: sourceId,
@@ -91,7 +105,11 @@ export abstract class AIProvider {
     }
 
     /**
-     * Validate that a model exists in the provider's models cache
+     * Validates that a model exists in the provider's models cache.
+     * Throws an error if the model is not found or if models haven't been loaded.
+     * 
+     * @param model - The model name to validate
+     * @throws Error when model is not found in the provider's model cache
      */
     protected validateModel(model: string): void {
         if (!this.models || !this.models[model]) {
@@ -100,7 +118,10 @@ export abstract class AIProvider {
     }
 
     /**
-     * Ensure the provider is initialized (client and models loaded)
+     * Ensures the provider is fully initialized by checking if models are loaded.
+     * If models are not loaded, triggers the init() method to initialize the provider.
+     * 
+     * @returns Promise that resolves when provider is confirmed to be initialized
      */
     protected async ensureInitialized(): Promise<void> {
         if (!this.models) {
@@ -109,7 +130,15 @@ export abstract class AIProvider {
     }
 
     /**
-     * Create a standardized LLMWorkerResponse object
+     * Creates a standardized LLMWorkerResponse object for sending data back to clients.
+     * Handles both streaming chunks and complete responses with optional full response text.
+     * 
+     * @param sourceId - Unique identifier for the request source
+     * @param requestId - Unique identifier for the specific request
+     * @param provider - Provider enum value identifying which LLM provider generated the response
+     * @param payload - The actual response data from the LLM provider
+     * @param fullResponse - Optional complete response text for final chunks
+     * @returns Standardized LLMWorkerResponse object ready for streaming
      */
     protected createWorkerResponse(
         sourceId: string,
@@ -127,6 +156,13 @@ export abstract class AIProvider {
         };
     }
 
+    /**
+     * Processes and sends response chunks to the response service for streaming to clients.
+     * Handles the final step of the response pipeline by routing chunks to the response service.
+     * 
+     * @param responseChunk - The standardized response chunk to send to clients
+     * @returns Promise that resolves when the chunk has been sent to the response service
+     */
     async onResponseChunk(responseChunk: LLMWorkerResponse){
         logger.info(`onResponseChunk: ${JSON.stringify(responseChunk)}`);
         await this.responseService.sendResponseChunk(this.workerId, responseChunk.sourceId, responseChunk.requestId, responseChunk, true);

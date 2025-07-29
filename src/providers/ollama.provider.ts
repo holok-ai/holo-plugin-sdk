@@ -1,6 +1,6 @@
 import AIProvider from "./ai.provider";
 import {Ollama} from "ollama";
-import {IProvider, ModelInfo, OllamaProviderConfig} from "./types";
+import {IProvider, ModelInfo, OllamaProviderConfig, AIRequestStat} from "./types";
 import {LLMWorkerRequest, OllamaGenerateQueueRequest, OllamaChatQueueRequest, Provider, RequestType} from "../types";
 import {ErrorMessages} from "../utils/error-messages";
 import logger from "../utils/logger";
@@ -65,7 +65,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
     /**
      * Handle LLMWorkerRequest - unified interface
      */
-    async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
+    async handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
         logger.debug('Ollama provider handling LLM request', {
             requestId: request.requestId,
             sourceId: request.sourceId,

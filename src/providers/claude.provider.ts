@@ -1,5 +1,5 @@
 import AIProvider from "./ai.provider";
-import {AIProviderConfig, IProvider, ModelInfo} from "./types";
+import {AIProviderConfig, IProvider, ModelInfo, AIRequestStat} from "./types";
 import {LLMWorkerRequest, ClaudeWorkerRequest, Provider} from "../types";
 import {ErrorMessages} from "../utils/error-messages";
 import logger from "../utils/logger";
@@ -75,7 +75,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
     /**
      * Handle LLMWorkerRequest - unified interface
      */
-    async handleLLMRequest(request: LLMWorkerRequest): Promise<any> {
+    async handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
         logger.debug('Claude provider handling LLM request', {
             requestId: request.requestId,
             sourceId: request.sourceId,

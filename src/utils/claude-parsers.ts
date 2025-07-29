@@ -4,8 +4,13 @@ import { ErrorMessages } from './error-messages';
 import logger from './logger';
 
 /**
- * Parse Express request body into Claude request
- * Claude uses a unified messages API (no separate generate endpoint)
+ * Parses an Express request body into a Claude request format.
+ * Claude uses a unified messages API (no separate generate endpoint), so this handles
+ * all Claude requests with proper message format validation and parameter extraction.
+ * 
+ * @param req - Express request object containing the request body
+ * @returns Parsed ClaudeWorkerRequest with validated messages and Claude-specific parameters
+ * @throws Error when required fields (model, messages) are missing or message format is invalid
  */
 export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
     const { 
@@ -78,8 +83,14 @@ export const parseClaudeRequest = (req: Request): ClaudeWorkerRequest => {
 };
 
 /**
- * Parse Express request into Claude queue request
- * Claude only supports chat-style interactions
+ * Routes Express requests to Claude parser with automatic generate-to-messages conversion.
+ * Claude only supports chat-style interactions, so generate requests are automatically
+ * converted to messages format with the prompt as a user message.
+ * 
+ * @param req - Express request object containing the request body
+ * @param type - RequestType enum indicating GENERATE (converted) or CHAT (direct) request
+ * @returns Parsed LLMPayloadTypes in Claude's messages format
+ * @throws Error when required fields are missing or request format is invalid
  */
 export const parseClaudeMessageRequest = (req: Request, type: RequestType): LLMPayloadTypes => {
     logger.debug('Routing Claude request', { type });

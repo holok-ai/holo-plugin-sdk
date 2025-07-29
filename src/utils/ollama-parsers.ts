@@ -4,7 +4,12 @@ import { ErrorMessages } from './error-messages';
 import logger from './logger';
 
 /**
- * Parse Express request body into Ollama Generate request
+ * Parses an Express request body into an Ollama Generate request format.
+ * Validates required fields (model, prompt) and extracts all Ollama-specific parameters.
+ * 
+ * @param req - Express request object containing the request body
+ * @returns Parsed OllamaGenerateQueueRequest with validated and structured data
+ * @throws Error when required fields (model, prompt) are missing
  */
 export const parseOllamaGenerateRequest = (req: Request): OllamaGenerateQueueRequest => {
     const { model, prompt, system, template, context, stream, raw, format, images, keep_alive, options } = req.body;
@@ -50,7 +55,12 @@ export const parseOllamaGenerateRequest = (req: Request): OllamaGenerateQueueReq
 };
 
 /**
- * Parse Express request body into Ollama Chat request
+ * Parses an Express request body into an Ollama Chat request format.
+ * Validates required fields (model, messages) and ensures messages array is properly formatted.
+ * 
+ * @param req - Express request object containing the request body
+ * @returns Parsed OllamaChatQueueRequest with validated messages and parameters
+ * @throws Error when required fields (model, messages) are missing or messages is not an array
  */
 export const parseOllamaChatRequest = (req: Request): OllamaChatQueueRequest => {
     const { model, messages, stream, format, keep_alive, tools, options } = req.body;
@@ -92,7 +102,12 @@ export const parseOllamaChatRequest = (req: Request): OllamaChatQueueRequest => 
 };
 
 /**
- * Parse Express request into appropriate Ollama queue request based on endpoint
+ * Routes Express requests to the appropriate Ollama parser based on request type.
+ * Acts as a unified entry point for parsing Ollama requests, dispatching to generate or chat parsers.
+ * 
+ * @param req - Express request object containing the request body
+ * @param type - RequestType enum indicating whether this is a GENERATE or CHAT request
+ * @returns Parsed LLMPayloadTypes (either OllamaGenerateQueueRequest or OllamaChatQueueRequest)
  */
 export const parseOllamaRequest = (req: Request, type: RequestType): LLMPayloadTypes => {
     logger.debug('Routing Ollama request', { type });
