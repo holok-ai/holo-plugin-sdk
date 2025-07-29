@@ -1,7 +1,7 @@
 import AIProvider from "./ai.provider";
 import {ChatResponse, GenerateResponse, Ollama} from "ollama";
 import {IProvider, ModelInfo, OllamaProviderConfig} from "./types";
-import {LLMWorkerRequest, OllamaGenerateQueueRequest, OllamaChatQueueRequest, Provider, LLMWorkerResponse, RequestType} from "../types";
+import {LLMWorkerRequest, OllamaGenerateQueueRequest, OllamaChatQueueRequest, Provider, RequestType} from "../types";
 import logger from "../utils/logger";
 import {ResponseService} from "../services";
 
@@ -101,12 +101,8 @@ export class OllamaProvider extends AIProvider implements IProvider {
         requestId: string,
         chatRequest: OllamaChatQueueRequest
     ): Promise<void> {
-        if (!this.models![chatRequest.model]) {
-            throw new Error(`Model ${chatRequest.model} not found`);
-        }
-        if (!this.client) {
-            await this.init();
-        }
+        await this.ensureInitialized();
+        this.validateModel(chatRequest.model);
 
         let fullResponse = '';
         // Pass the request directly to the client since it extends ChatRequest
@@ -117,13 +113,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
             for await (const chunk of response) {
                 //TODO simplify this logic
                 if (chunk.done) {
-                     const responseChunk: LLMWorkerResponse = {
-                        sourceId: sourceId,
-                        requestId: requestId,
-                        provider: Provider.OLLAMA,
-                        payload: chunk,
-                        fullResponse: fullResponse
-                    }
+                     const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk, fullResponse);
                     await this.onResponseChunk(responseChunk);
                     break;
                 }
@@ -132,24 +122,13 @@ export class OllamaProvider extends AIProvider implements IProvider {
                 fullResponse += token;
 
                 if (token) {
-                     const responseChunk: LLMWorkerResponse = {
-                        sourceId: sourceId,
-                        requestId: requestId,
-                        provider: Provider.OLLAMA,
-                        payload: chunk
-                    }
+                     const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk);
                     await this.onResponseChunk(responseChunk);
                 }
             }
         } else {
             fullResponse = response.message?.content || '';
-            const responseChunk: LLMWorkerResponse = {
-                sourceId: sourceId,
-                requestId: requestId,
-                provider: Provider.OLLAMA,
-                payload: response,
-                fullResponse: fullResponse
-            }
+            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, response, fullResponse);
             await this.onResponseChunk(responseChunk);
         }
     }
@@ -158,12 +137,8 @@ export class OllamaProvider extends AIProvider implements IProvider {
      * Ollama generate completion using OllamaGenerateQueueRequest object
      */
     async _ollamaGenerate(sourceId: string, requestId: string, generateRequest: OllamaGenerateQueueRequest): Promise<void> {
-        if (!this.models![generateRequest.model]) {
-                    throw new Error(`Model ${generateRequest.model} not found`);
-                }
-                if (!this.client) {
-                    await this.init();
-                }
+        await this.ensureInitialized();
+        this.validateModel(generateRequest.model);
 
                 let fullResponse = '';
                 // @ts-ignore
@@ -172,13 +147,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
                     // Use Ollama streaming API
                     for await (const chunk of response) {
                         if (chunk.done) {
-                             const responseChunk: LLMWorkerResponse = {
-                                sourceId: sourceId,
-                                requestId: requestId,
-                                provider: Provider.OLLAMA,
-                                payload: chunk,
-                                fullResponse: fullResponse
-                            }
+                             const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk, fullResponse);
                             await this.onResponseChunk(responseChunk);
                             break;
                         }
@@ -187,24 +156,13 @@ export class OllamaProvider extends AIProvider implements IProvider {
                         fullResponse += token;
 
                         if (token) {
-                            const responseChunk: LLMWorkerResponse = {
-                            sourceId: sourceId,
-                            requestId: requestId,
-                            provider: Provider.OLLAMA,
-                            payload: chunk
-                        }
+                            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk);
                             await this.onResponseChunk(responseChunk);
                         }
                     }
                 } else {
                     fullResponse = response.response;
-                    const responseChunk: LLMWorkerResponse = {
-                        sourceId: sourceId,
-                        requestId: requestId,
-                        provider: Provider.OLLAMA,
-                        payload: response,
-                        fullResponse: fullResponse
-                    }
+                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, response, fullResponse);
                     await this.onResponseChunk(responseChunk);
                 }
 

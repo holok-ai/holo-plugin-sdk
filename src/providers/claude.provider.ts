@@ -1,6 +1,6 @@
 import AIProvider from "./ai.provider";
 import {AIProviderConfig, IProvider, ModelInfo} from "./types";
-import {LLMWorkerRequest, ClaudeWorkerRequest, Provider, LLMWorkerResponse} from "../types";
+import {LLMWorkerRequest, ClaudeWorkerRequest, Provider} from "../types";
 import logger from "../utils/logger";
 import {Anthropic} from "@anthropic-ai/sdk/client";
 import {ResponseService} from "../services";
@@ -95,12 +95,8 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         requestId: string,
         messageRequest: ClaudeWorkerRequest
     ): Promise<void> {
-        if (!this.models![messageRequest.model]) {
-            throw new Error(`Model ${messageRequest.model} not found`);
-        }
-        if (!this.client) {
-            await this.init();
-        }
+        await this.ensureInitialized();
+        this.validateModel(messageRequest.model);
         let fullResponse = '';
         // Pass the request directly to the client since it extends MessageCreateParamsBase
         // @ts-ignore
@@ -111,12 +107,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             .stream(messageRequest)
             .on('streamEvent', (event: MessageStreamEvent, snapshot: Message) => {
                 logger.info(`Claude Event: ${JSON.stringify(event)}`);
-                const responseChunk: LLMWorkerResponse = {
-                    sourceId: sourceId,
-                    requestId: requestId,
-                    provider: Provider.CLAUDE,
-                    payload: event,
-                }
+                const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, event);
                 snapshot.id;
                 this.onResponseChunk(responseChunk);
             });
@@ -128,13 +119,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
                 fullResponse = message.content[0].text || '';
             }
             
-            const responseChunk: LLMWorkerResponse = {
-                sourceId: sourceId,
-                requestId: requestId,
-                provider: Provider.CLAUDE,
-                payload: response,
-                fullResponse: fullResponse
-            }
+            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, response, fullResponse);
             await this.onResponseChunk(responseChunk);
         }
     }

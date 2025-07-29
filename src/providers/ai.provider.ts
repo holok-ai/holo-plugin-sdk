@@ -73,7 +73,6 @@ export abstract class AIProvider {
 
 
 
-
     async onError(sourceId: string, requestId: string, error: Error) {
         const errorResponse: LLMWorkerResponse = {
             sourceId: sourceId,
@@ -88,6 +87,43 @@ export abstract class AIProvider {
             }
         };
         await this.onResponseChunk(errorResponse);
+    }
+
+    /**
+     * Validate that a model exists in the provider's models cache
+     */
+    protected validateModel(model: string): void {
+        if (!this.models || !this.models[model]) {
+            throw new Error(`Model ${model} not found`);
+        }
+    }
+
+    /**
+     * Ensure the provider is initialized (client and models loaded)
+     */
+    protected async ensureInitialized(): Promise<void> {
+        if (!this.models) {
+            await this.init();
+        }
+    }
+
+    /**
+     * Create a standardized LLMWorkerResponse object
+     */
+    protected createWorkerResponse(
+        sourceId: string,
+        requestId: string,
+        provider: any, // Provider enum value
+        payload: any,
+        fullResponse?: string
+    ): LLMWorkerResponse {
+        return {
+            sourceId,
+            requestId,
+            provider,
+            payload,
+            ...(fullResponse !== undefined && { fullResponse })
+        };
     }
 
     async onResponseChunk(responseChunk: LLMWorkerResponse){

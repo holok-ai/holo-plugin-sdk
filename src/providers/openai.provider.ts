@@ -2,7 +2,7 @@ import {AIProvider} from './ai.provider';
 import logger from '../utils/logger';
 import OpenAI from 'openai';
 import {AIProviderConfig, IProvider, ModelInfo} from './types';
-import {LLMWorkerRequest, OpenAIWorkerRequest, Provider, LLMWorkerResponse} from '../types';
+import {LLMWorkerRequest, OpenAIWorkerRequest, Provider} from '../types';
 import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 import {Stream} from "openai/streaming";
 import {ResponseService} from "../services";
@@ -98,12 +98,8 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         requestId: string,
         chatRequest: OpenAIWorkerRequest
     ): Promise<void> {
-        if (!this.models![chatRequest.model]) {
-            throw new Error(`Model ${chatRequest.model} not found`);
-        }
-        if (!this.client) {
-            await this.init();
-        }
+        await this.ensureInitialized();
+        this.validateModel(chatRequest.model);
 
         let fullResponse = '';
         // Pass the request directly to the client since it extends ChatCompletionCreateParams
@@ -114,13 +110,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                 const choice = chunk.choices?.[0];
                 
                 if (choice?.finish_reason) {
-                    const responseChunk: LLMWorkerResponse = {
-                        sourceId: sourceId,
-                        requestId: requestId,
-                        provider: Provider.OPENAI,
-                        payload: chunk,
-                        fullResponse: fullResponse
-                    }
+                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk, fullResponse);
                     await this.onResponseChunk(responseChunk);
                     break;
                 }
@@ -129,12 +119,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                     const token = choice.delta.content;
                     fullResponse += token;
 
-                    const responseChunk: LLMWorkerResponse = {
-                        sourceId: sourceId,
-                        requestId: requestId,
-                        provider: Provider.OPENAI,
-                        payload: chunk
-                    }
+                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk);
                     await this.onResponseChunk(responseChunk);
                 }
             }
@@ -145,13 +130,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                 fullResponse = message.choices[0].message?.content || '';
             }
             
-            const responseChunk: LLMWorkerResponse = {
-                sourceId: sourceId,
-                requestId: requestId,
-                provider: Provider.OPENAI,
-                payload: response,
-                fullResponse: fullResponse
-            }
+            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, response, fullResponse);
             await this.onResponseChunk(responseChunk);
         }
     }
