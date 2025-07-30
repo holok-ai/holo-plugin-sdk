@@ -1,11 +1,12 @@
 import AIProvider from "./ai.provider";
-import {ChatResponse, GenerateResponse, Ollama, Options} from "ollama";
-import {ModelInfo, OllamaProviderConfig} from "./types";
+import {Ollama} from "ollama";
+import {IProvider, ModelInfo, OllamaProviderConfig, AIRequestStat} from "./types";
+import {LLMWorkerRequest, OllamaWorkerChatRequest, OllamaWorkerGenerateRequest, Provider, RequestType} from "../types";
+import {ErrorMessages} from "../utils/error-messages";
 import logger from "../utils/logger";
 import {ResponseService} from "../services";
 
-
-export class OllamaProvider extends AIProvider {
+export class OllamaProvider extends AIProvider implements IProvider {
     readonly name = 'ollama';
     private readonly client: Ollama = new Ollama();
 
@@ -59,123 +60,147 @@ export class OllamaProvider extends AIProvider {
         }
     }
 
+
+
     /**
-     * Generate text from a prompt with streaming
+     * Handle LLMWorkerRequest - unified interface
      */
-    async _generate(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        prompt: string,
-        options: any,
-        stream: boolean
-    ): Promise<void> {
-        if (!this.models![model]) {
-            throw new Error(`Model ${model} not found`);
+    async handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
+        logger.debug('Ollama provider handling LLM request', {
+            requestId: request.requestId,
+            sourceId: request.sourceId,
+            type: request.type,
+            provider: request.provider
+        });
+
+        // Validate this is for Ollama
+        if (request.provider !== Provider.OLLAMA) {
+            logger.error('Provider validation failed for Ollama', {
+                expected: Provider.OLLAMA,
+                received: request.provider,
+                requestId: request.requestId
+            });
+            throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.OLLAMA));
         }
-        if (!this.client) {
-            await this.init();
-        }
 
-        const ollamaOptions = {
-            model,
-            prompt,
-            options: {
-                num_predict: options.max_tokens,
-                ...options
-            } as Partial<Options>,
-            stream
-        }
-        let fullResponse = '';
-        // @ts-ignore
-        const response = await this.client.generate(ollamaOptions);
-        if (stream) {
+        logger.debug('Provider validation successful for Ollama', {
+            requestId: request.requestId,
+            type: request.type
+        });
 
-
-            // Use Ollama streaming API
-            for await (const chunk of response) {
-                if (chunk.done) {
-                    await this.onGenerateComplete(sourceId, requestId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
-                    break;
-                }
-
-                const token = chunk.response;
-                fullResponse += token;
-
-                if (token) {
-                    await this.onGenerate(sourceId, requestId, chunk, 'token');
-                }
-            }
+        const { sourceId, requestId, payload, type } = request;
+        
+        if (type === RequestType.GENERATE) {
+            const generatePayload = payload as OllamaWorkerGenerateRequest;
+            return await this.wrapWithStats(RequestType.GENERATE, this._ollamaGenerate.bind(this), sourceId, requestId, generatePayload);
+        } else if (type === RequestType.CHAT) {
+            const chatPayload = payload as OllamaWorkerChatRequest;
+            return await this.wrapWithStats(RequestType.CHAT, this._ollamaChat.bind(this), sourceId, requestId, chatPayload);
         } else {
-            fullResponse = response.response;
-            await this.onGenerateComplete(sourceId, requestId, response, 'done', this.generateOptionalData(fullResponse, response));
-        }
-
-        logger.info(`Generated response with Ollama model ${model}, length: ${fullResponse.length}`);
-    }
-
-    generateOptionalData(fullResponse: string, chunk: GenerateResponse | ChatResponse) {
-        return {
-            fullResponse,
-            total_duration: chunk.total_duration,
-            prompt_eval_count: chunk.prompt_eval_count,
-            eval_count: chunk.eval_count,
-            eval_duration: chunk.eval_duration
+            throw new Error(ErrorMessages.unsupportedRequestType(type));
         }
     }
 
     /**
-     * Generate chat completion with streaming
+     * Ollama chat completion using OllamaChatQueueRequest object
      */
-    async _chat(
+    async _ollamaChat(
         sourceId: string,
         requestId: string,
-        model: string,
-        messages: any[],
-        options: any,
-        stream: boolean
+        chatRequest: OllamaWorkerChatRequest
     ): Promise<void> {
-        if (!this.models![model]) {
-            throw new Error(`Model ${model} not found`);
-        }
-        if (!this.client) {
-            await this.init();
-        }
-
-        const ollamaOptions = {
-            model,
-            messages,
-            options: {
-                num_predict: options.max_tokens,
-                ...options
-            } as Partial<Options>,
-            stream
-        }
+        await this.ensureInitialized();
+        this.validateModel(chatRequest.model);
 
         let fullResponse = '';
+        // Pass the request directly to the client since it extends ChatRequest
         // @ts-ignore
-        const response = await this.client.chat(ollamaOptions);
-        if (stream) {
-            // Use Ollama streaming API
-            for await (const chunk of response) {
-                if (chunk.done) {
-                    await this.onChatComplete(sourceId, requestId, chunk, 'done', this.generateOptionalData(fullResponse, chunk));
-                    break;
-                }
+        const response = await this.client.chat(chatRequest);
+        
+        if (chatRequest.stream) {
+            logger.debug('Starting Ollama chat stream', { requestId, model: chatRequest.model });
+            
+            try {
+                for await (const chunk of response) {
+                    // TODO: Simplify stream completion logic - consider extracting to a shared method
+                    // The chunk.done pattern is repeated across generate and chat methods
+                    if (chunk.done) {
+                        logger.debug('Ollama chat stream completed', { requestId, fullResponseLength: fullResponse.length });
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk, fullResponse);
+                        await this.onResponseChunk(responseChunk);
+                        break;
+                    }
 
-                const token = chunk.message?.content || '';
-                fullResponse += token;
+                    const token = chunk.message?.content || '';
+                    fullResponse += token;
 
-                if (token) {
-                    await this.onChat(sourceId, requestId, chunk, 'token', {
-                        delta: {content: token},
-                        model
-                    });
+                    if (token) {
+                         const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk);
+                        await this.onResponseChunk(responseChunk);
+                    }
                 }
+            } catch (error) {
+                logger.error('Ollama chat stream error', { 
+                    requestId, 
+                    error: (error as Error).message,
+                    partialResponseLength: fullResponse.length 
+                });
+                throw error;
             }
         } else {
             fullResponse = response.message?.content || '';
-            await this.onGenerateComplete(sourceId, requestId, response, 'done', this.generateOptionalData(fullResponse, response));
+            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, response, fullResponse);
+            await this.onResponseChunk(responseChunk);
         }
     }
+
+    /**
+     * Ollama generate completion using OllamaGenerateQueueRequest object
+     */
+    async _ollamaGenerate(sourceId: string, requestId: string, generateRequest: OllamaWorkerGenerateRequest): Promise<void> {
+        await this.ensureInitialized();
+        this.validateModel(generateRequest.model);
+
+                let fullResponse = '';
+                // @ts-ignore
+                const response = await this.client.generate(generateRequest);
+                if (generateRequest.stream) {
+                    logger.debug('Starting Ollama generate stream', { requestId, model: generateRequest.model });
+                    
+                    try {
+                        // Use Ollama streaming API
+                        for await (const chunk of response) {
+                            if (chunk.done) {
+                                logger.debug('Ollama generate stream completed', { requestId, fullResponseLength: fullResponse.length });
+                                const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk, fullResponse);
+                                await this.onResponseChunk(responseChunk);
+                                break;
+                            }
+
+                            const token = chunk.response;
+                            fullResponse += token;
+
+                            if (token) {
+                                const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk);
+                                await this.onResponseChunk(responseChunk);
+                            }
+                        }
+                    } catch (error) {
+                        logger.error('Ollama generate stream error', { 
+                            requestId, 
+                            error: (error as Error).message,
+                            partialResponseLength: fullResponse.length 
+                        });
+                        throw error;
+                    }
+                } else {
+                    fullResponse = response.response;
+                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, response, fullResponse);
+                    await this.onResponseChunk(responseChunk);
+                }
+
+                logger.info(`Generated response with Ollama model ${generateRequest.model}, length: ${fullResponse.length}`);
+            }
+            
+
 }

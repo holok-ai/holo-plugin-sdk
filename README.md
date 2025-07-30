@@ -131,16 +131,38 @@ POST /api/claude/v1/messages
 Content-Type: application/json
 
 {
-  "model": "claude-3-sonnet-20240229",
+  "model": "claude-3-5-sonnet-20241022",
   "messages": [
     {
       "role": "user",
       "content": "Explain machine learning"
     }
   ],
-  "max_tokens": 1000
+  "max_tokens": 1000,
+  "temperature": 0.7,
+  "stream": true,
+  "system": "You are a helpful AI assistant",
+  "tools": [...],               // Optional: Tool definitions
+  "tool_choice": "auto",        // Optional: Tool usage preference
+  "container": "my-session",    // Optional: Session container
+  "service_tier": "auto",       // Optional: 'auto' or 'standard_only'
+  "thinking": {                 // Optional: Extended thinking configuration
+    "enabled": true
+  },
+  "mcp_servers": [...],         // Optional: MCP server configurations
+  "stop_sequences": ["END"],    // Optional: Custom stop sequences
+  "metadata": {                 // Optional: Request metadata
+    "user_id": "user123"
+  }
 }
 ```
+
+**Supported Claude API Fields:**
+- `model`, `messages`, `max_tokens` (required)
+- `temperature`, `top_p`, `top_k`, `stream`, `system` (optional)
+- `tools`, `tool_choice`, `metadata`, `stop_sequences` (optional)
+- `container`, `mcp_servers`, `service_tier` (optional, new)
+- `thinking`, `betas` (optional, advanced features)
 
 ### Health & Status
 
@@ -163,19 +185,23 @@ Response:
 
 ### Environment Variables
 
+**Important**: Environment variables must be loaded before application startup. The application uses dotenv to load variables from a `.env` file in the project root. This is automatically configured in the main server files (`src/app.ts`, `src/servers/worker.server.ts`, `src/servers/audit.server.ts`).
+
 #### API Server Configuration
 ```bash
 # Server settings
 PORT=3000
 NODE_ENV=production
-SERVER_ID=api_server_001
+API_SERVER_ID=api_server_001    # Used to identify the API server instance
 
 # Worker settings
-WORKER_ID=worker_001
+WORKER_ID=worker_001            # Used to identify the worker instance
 
 # Audit settings
-AUDIT_ID=audit_001
+AUDIT_ID=audit_001              # Used to identify the audit server instance
 ```
+
+**Note**: The API server ID was previously configured as `SERVER_ID` but has been renamed to `API_SERVER_ID` for clarity.
 
 #### Database Configuration
 ```bash
@@ -271,51 +297,414 @@ npm run audit      # Audit service
 
 ### Adding a New Provider
 
-1. **Create Provider Class** (`src/providers/new-provider.provider.ts`):
+When adding a new LLM provider, you'll need to implement several components to ensure full integration with the proxy system. Follow these steps in order:
+
+#### Step 1: Add Provider Enum Value
+
+1. **Update Provider Enum** (`src/types/provider-request.types.ts`):
+```typescript
+export enum Provider {
+    OLLAMA = 'ollama',
+    CLAUDE = 'claude', 
+    OPENAI = 'openai',
+    NEW_PROVIDER = 'newprovider'  // Add your new provider here
+}
+```
+
+#### Step 2: Define Request Types
+
+2. **Add Provider-Specific Request Interfaces** (`src/types/provider-request.types.ts`):
+```typescript
+// Add interfaces for your provider's request formats
+export interface NewProviderGenerateRequest {
+    model: string;
+    prompt: string;
+    temperature?: number;
+    max_tokens?: number;
+    stream?: boolean;
+    // Add provider-specific parameters
+}
+
+export interface NewProviderChatRequest {
+    model: string;
+    messages: Array<{role: string, content: string}>;
+    temperature?: number;
+    max_tokens?: number;
+    stream?: boolean;
+    // Add provider-specific parameters
+}
+
+// Update the union type to include your new request types
+export type LLMPayloadTypes = 
+    | OllamaGenerateQueueRequest 
+    | OllamaChatQueueRequest 
+    | ClaudeWorkerRequest 
+    | OpenAIWorkerRequest
+    | NewProviderGenerateRequest  // Add here
+    | NewProviderChatRequest;     // Add here
+```
+
+#### Step 3: Create Request Parser
+
+3. **Create Parser** (`src/utils/new-provider-parsers.ts`):
+```typescript
+import { Request } from 'express';
+import { NewProviderGenerateRequest, NewProviderChatRequest, LLMPayloadTypes, RequestType } from '../types';
+import { ErrorMessages } from './error-messages';
+import logger from './logger';
+
+/**
+ * Parses an Express request body into a NewProvider Generate request format.
+ * @param req - Express request object containing the request body
+ * @returns Parsed NewProviderGenerateRequest with validated parameters
+ * @throws Error when required fields are missing
+ */
+export const parseNewProviderGenerateRequest = (req: Request): NewProviderGenerateRequest => {
+    const { model, prompt, temperature, max_tokens, stream } = req.body;
+    
+    logger.debug('Parsing NewProvider generate request', {
+        model,
+        promptLength: prompt?.length,
+        stream: stream ?? false
+    });
+    
+    if (!model) {
+        logger.error('NewProvider generate request validation failed: missing model');
+        throw new Error(ErrorMessages.MODEL_REQUIRED);
+    }
+    
+    if (!prompt) {
+        logger.error('NewProvider generate request validation failed: missing prompt');
+        throw new Error(ErrorMessages.PROMPT_REQUIRED);
+    }
+
+    const parsedRequest = {
+        model,
+        prompt,
+        temperature,
+        max_tokens,
+        stream: stream ?? false
+    };
+    
+    logger.debug('Successfully parsed NewProvider generate request', {
+        model,
+        stream: parsedRequest.stream
+    });
+    
+    return parsedRequest;
+};
+
+/**
+ * Parses an Express request body into a NewProvider Chat request format.
+ * @param req - Express request object containing the request body
+ * @returns Parsed NewProviderChatRequest with validated messages
+ * @throws Error when required fields are missing or invalid
+ */
+export const parseNewProviderChatRequest = (req: Request): NewProviderChatRequest => {
+    const { model, messages, temperature, max_tokens, stream } = req.body;
+    
+    logger.debug('Parsing NewProvider chat request', {
+        model,
+        messageCount: Array.isArray(messages) ? messages.length : 0,
+        stream: stream ?? false
+    });
+    
+    if (!model) {
+        logger.error('NewProvider chat request validation failed: missing model');
+        throw new Error(ErrorMessages.MODEL_REQUIRED);
+    }
+    
+    if (!messages || !Array.isArray(messages)) {
+        logger.error('NewProvider chat request validation failed: missing or invalid messages array');
+        throw new Error(ErrorMessages.MESSAGES_REQUIRED);
+    }
+
+    const parsedRequest = {
+        model,
+        messages,
+        temperature,
+        max_tokens,
+        stream: stream ?? false
+    };
+    
+    logger.debug('Successfully parsed NewProvider chat request', {
+        model,
+        messageCount: messages.length,
+        stream: parsedRequest.stream
+    });
+    
+    return parsedRequest;
+};
+
+/**
+ * Routes Express requests to the appropriate NewProvider parser based on request type.
+ * @param req - Express request object containing the request body
+ * @param type - RequestType enum indicating GENERATE or CHAT request
+ * @returns Parsed LLMPayloadTypes from the appropriate parser
+ */
+export const parseNewProviderRequest = (req: Request, type: RequestType): LLMPayloadTypes => {
+    logger.debug('Routing NewProvider request', { type });
+    
+    if (type === RequestType.GENERATE) {
+        return parseNewProviderGenerateRequest(req);
+    } else {
+        return parseNewProviderChatRequest(req);
+    }
+};
+```
+
+4. **Update Unified Parser** (`src/utils/llm-request-parser.ts`):
+```typescript
+import { parseNewProviderRequest } from './new-provider-parsers';
+
+export const parseLLMRequest = (
+    req: Request, 
+    provider: Provider, 
+    type: RequestType
+): LLMPayloadTypes => {
+    logger.debug('Unified LLM request parser routing', { provider, type });
+    
+    switch (provider) {
+        case Provider.OLLAMA:
+            return parseOllamaRequest(req, type);
+        case Provider.CLAUDE:
+            return parseClaudeMessageRequest(req, type);
+        case Provider.OPENAI:
+            return parseOpenAIMessageRequest(req, type);
+        case Provider.NEW_PROVIDER:  // Add your case here
+            return parseNewProviderRequest(req, type);
+        default:
+            logger.error('Unsupported provider in unified parser', { provider });
+            throw new Error(ErrorMessages.unsupportedProvider(provider));
+    }
+};
+```
+
+#### Step 4: Implement Provider Class
+
+5. **Create Provider Class** (`src/providers/new-provider.provider.ts`):
 ```typescript
 import AIProvider from './ai.provider';
-import { ModelInfo } from './types';
+import { IProvider, ModelInfo, AIProviderConfig, AIRequestStat } from './types';
+import { LLMWorkerRequest, Provider, RequestType } from '../types';
 
-export class NewProvider extends AIProvider {
-  name: string = 'newprovider';
+export class NewProvider extends AIProvider implements IProvider {
+  readonly name: string = 'newprovider';
   
   async init(): Promise<void> {
-    // Initialize provider client
+    // Initialize provider client and load models
+    await this.getModels();
   }
   
   async getModels(): Promise<ModelInfo[]> {
-    // Fetch available models
+    // Fetch available models and update this.models cache
+    // Return array of ModelInfo objects
   }
   
-  async generate(requestId: string, sourceId: string, model: string, 
-                prompt: string, options: {}, stream: boolean): Promise<void> {
-    // Implement text generation
+  async handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
+    // Validate provider matches
+    if (request.provider !== Provider.NEW_PROVIDER) {
+      throw new Error(`Invalid provider: expected ${Provider.NEW_PROVIDER}, got ${request.provider}`);
+    }
+    
+    const { sourceId, requestId, payload, type } = request;
+    
+    if (type === RequestType.GENERATE) {
+      return await this.wrapWithStats(RequestType.GENERATE, this._newProviderGenerate.bind(this), sourceId, requestId, payload);
+    } else if (type === RequestType.CHAT) {
+      return await this.wrapWithStats(RequestType.CHAT, this._newProviderChat.bind(this), sourceId, requestId, payload);
+    } else {
+      throw new Error(`Unsupported request type: ${type}`);
+    }
   }
   
-  async chat(requestId: string, sourceId: string, model: string,
-            messages: any[], options: {}, stream: boolean): Promise<void> {
-    // Implement chat completion
+  /**
+   * Implementation following _<provider><clientMethod> naming convention
+   */
+  private async _newProviderGenerate(sourceId: string, requestId: string, payload: NewProviderGenerateRequest): Promise<void> {
+    await this.ensureInitialized();
+    this.validateModel(payload.model);
+    
+    logger.debug('Starting NewProvider generate stream', { requestId, model: payload.model });
+    
+    try {
+      // Implement your provider's generation logic here
+      // Example streaming pattern:
+      if (payload.stream) {
+        // Initialize streaming response
+        for await (const chunk of yourProviderStreamingCall(payload)) {
+          if (chunk.done) {
+            logger.debug('NewProvider generate stream completed', { requestId });
+            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.NEW_PROVIDER, chunk, fullResponse);
+            await this.onResponseChunk(responseChunk);
+            break;
+          }
+          
+          const token = chunk.content;
+          const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.NEW_PROVIDER, chunk);
+          await this.onResponseChunk(responseChunk);
+        }
+      } else {
+        // Non-streaming response
+        const response = await yourProviderCall(payload);
+        const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.NEW_PROVIDER, response, response.content);
+        await this.onResponseChunk(responseChunk);
+      }
+    } catch (error) {
+      logger.error('NewProvider generate error', { 
+        requestId, 
+        error: (error as Error).message 
+      });
+      throw error;
+    }
+  }
+  
+  private async _newProviderChat(sourceId: string, requestId: string, payload: NewProviderChatRequest): Promise<void> {
+    await this.ensureInitialized();
+    this.validateModel(payload.model);
+    
+    logger.debug('Starting NewProvider chat stream', { requestId, model: payload.model });
+    
+    try {
+      // Implement your provider's chat logic here
+      // Similar pattern to generate method above
+    } catch (error) {
+      logger.error('NewProvider chat error', { 
+        requestId, 
+        error: (error as Error).message 
+      });
+      throw error;
+    }
   }
 }
 ```
 
-2. **Register Provider** (`src/services/provider.service.ts`):
+#### Step 5: Update Stream Formatter
+
+6. **Add Stream Formatting** (`src/services/streamFormatter.service.ts`):
+```typescript
+// Add your provider case to the formatAndSend method
+async formatAndSend(responseChunk: LLMWorkerResponse, res: ResponseStream) {
+    try {
+        switch(responseChunk.provider) {
+            case Provider.OLLAMA:
+                this.streamOllama(responseChunk, res);
+                break;
+            case Provider.CLAUDE:
+                this.streamClaude(responseChunk, res);
+                break;
+            case Provider.OPENAI:
+                this.streamOpenAI(responseChunk, res);
+                break;
+            case Provider.NEW_PROVIDER:  // Add your case here
+                this.streamNewProvider(responseChunk, res);
+                break;
+            default:
+                logger.error(`No stream formatter for provider: ${responseChunk.provider}`);
+                throw new Error(ErrorMessages.unsupportedProvider(responseChunk.provider));
+        }
+    } catch (error) {
+        // Error handling...
+    }
+}
+
+// Add your streaming method
+streamNewProvider(responseChunk: LLMWorkerResponse, res: ResponseStream) {
+    try {
+        const chunk = responseChunk.payload as any; // Type according to your provider's response format
+        
+        // Format according to your provider's streaming protocol
+        res.push(`data: ${JSON.stringify(chunk)}\\n\\n`);
+        
+        // Check for completion condition (varies by provider)
+        if (chunk.done || chunk.finish_reason || responseChunk.fullResponse !== undefined) {
+            logger.debug('NewProvider streaming complete: closing response stream');
+            res.end();
+        }
+    } catch (error) {
+        logger.error(`NewProvider streaming error: ${(error as Error).message}`, {
+            requestId: responseChunk.requestId
+        });
+        throw error;
+    }
+}
+```
+
+#### Step 6: Register Provider Service
+
 ```typescript
 // Add to refreshAvailableProviders method
 if (provider.name === 'newprovider') {
-  const aiProvider = new NewProvider(provider.config, this.queueService, serverId);
+  const aiProvider = new NewProvider(provider.config, this.responseService, serverId);
   await aiProvider.init();
   this.aiProviders.set('newprovider', aiProvider);
 }
 ```
 
-3. **Add Configuration**:
+#### Step 7: Add Configuration Support
+
+8. **Add Configuration** (`src/env.ts` or configuration system):
 ```typescript
-// Add to src/env.ts or configuration system
+// Add environment variable support for your provider
 export namespace newProvider {
   export const apiKey = process.env.NEW_PROVIDER_API_KEY;
-  export const baseUrl = process.env.NEW_PROVIDER_BASE_URL;
+  export const baseUrl = process.env.NEW_PROVIDER_BASE_URL || 'https://api.newprovider.com';
+  export const timeout = parseInt(process.env.NEW_PROVIDER_TIMEOUT || '60000');
 }
+```
+
+9. **Update Environment Variables** (`.env` file):
+```bash
+# New Provider Configuration
+NEW_PROVIDER_API_KEY=your_new_provider_api_key
+NEW_PROVIDER_BASE_URL=https://api.newprovider.com
+NEW_PROVIDER_TIMEOUT=60000
+```
+
+### Integration Checklist
+
+When adding a new provider, ensure you complete ALL of these steps:
+
+- [ ] **Provider Enum**: Added new provider value to `Provider` enum
+- [ ] **Request Types**: Created provider-specific request interfaces 
+- [ ] **Type Union**: Updated `LLMPayloadTypes` union type to include new request types
+- [ ] **Request Parser**: Created dedicated parser file with proper validation and logging
+- [ ] **Unified Parser**: Updated `parseLLMRequest()` to handle new provider
+- [ ] **Provider Class**: Implemented provider class following `_<provider><clientMethod>` naming convention
+- [ ] **Stream Formatter**: Added streaming support in `StreamFormatter` service
+- [ ] **Provider Registration**: Updated provider service to instantiate new provider
+- [ ] **Configuration**: Added environment variables and configuration support
+- [ ] **Documentation**: Updated API documentation and examples
+- [ ] **Testing**: Added unit tests for parser, provider, and streaming functionality
+
+### Common Integration Patterns
+
+**Request Validation**: All providers should validate required fields and log validation failures:
+```typescript
+if (!model) {
+    logger.error('Provider request validation failed: missing model');
+    throw new Error(ErrorMessages.MODEL_REQUIRED);
+}
+```
+
+**Error Handling**: Use consistent error handling with proper logging:
+```typescript
+try {
+    // Provider logic
+} catch (error) {
+    logger.error('Provider operation failed', { 
+        requestId, 
+        error: (error as Error).message 
+    });
+    throw error;
+}
+```
+
+**Streaming Pattern**: Follow the established streaming pattern with proper lifecycle logging:
+```typescript
+logger.debug('Starting provider stream', { requestId, model });
+// ... streaming logic ...
+logger.debug('Provider stream completed', { requestId });
 ```
 
 ## 📊 Monitoring & Observability

@@ -1,10 +1,11 @@
 import AIProvider from "./ai.provider";
-import {AIProviderConfig, CompleteHandler, IProvider, ModelInfo, TokenHandler} from "./types";
+import {AIProviderConfig, IProvider, ModelInfo, AIRequestStat} from "./types";
+import {LLMWorkerRequest, ClaudeWorkerRequest, Provider} from "../types";
+import {ErrorMessages} from "../utils/error-messages";
 import logger from "../utils/logger";
 import {Anthropic} from "@anthropic-ai/sdk/client";
-import {Stream} from "@anthropic-ai/sdk/streaming";
-import {MessageCreateParams, MessageCreateParamsStreaming, RawMessageStreamEvent} from "@anthropic-ai/sdk/resources";
 import {ResponseService} from "../services";
+import { Message, MessageStreamEvent } from "@anthropic-ai/sdk/resources/messages";
 
 export class ClaudeProvider extends AIProvider implements IProvider {
     readonly name: string = 'claude';
@@ -17,7 +18,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         super(config, responseService, workerId);
 
         if (!this.config.apiKey) {
-            throw new Error('OpenAI API key is required');
+            throw new Error(ErrorMessages.apiKeyRequired('Claude'));
         }
 
         this.client = new Anthropic({
@@ -27,7 +28,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
 
     async init(): Promise<void> {
         if (!this.config.apiKey) {
-            throw new Error('Claude API key is required');
+            throw new Error(ErrorMessages.apiKeyRequired('Claude'));
         }
 
         try {
@@ -70,105 +71,117 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         }
     }
 
-    /**
-     * Generate text from a prompt with streaming
-     */
-    async _generate(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        prompt: string,
-        options: {},
-        stream: boolean
-    ): Promise<void> {
-        // Convert text generation to chat format for Claude API
-        const messages = [
-            {
-                role: 'user' as const,
-                content: prompt
-            }
-        ];
-
-        await this.callClaude(
-            sourceId,
-            requestId,
-            model,
-            messages,
-            options,
-            stream,
-            this.onGenerate.bind(this),
-            this.onGenerateComplete.bind(this)
-        );
-    }
 
     /**
-     * Generate chat completion with streaming
+     * Handle LLMWorkerRequest - unified interface
      */
-    async _chat(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        messages: any[],
-        options: {},
-        stream: boolean
-    ): Promise<void> {
+    async handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
+        logger.debug('Claude provider handling LLM request', {
+            requestId: request.requestId,
+            sourceId: request.sourceId,
+            type: request.type,
+            provider: request.provider
+        });
 
-        await this.callClaude(
-            sourceId,
-            requestId,
-            model,
-            messages,
-            options,
-            stream,
-            this.onChat.bind(this),
-            this.onChatComplete.bind(this));
-
-    }
-
-    async callClaude(sourceId: string,
-                     requestId: string,
-                     model: string,
-                     messages: any[],
-                     options: {},
-                     stream: boolean,
-                     onToken: TokenHandler,
-                     onComplete: CompleteHandler
-    ): Promise<void> {
-        if (!this.models![model]) {
-            throw new Error(`Model ${model} not found`);
-        }
-
-        if (!this.client) {
-            await this.init();
-        }
-        const requestOptions: MessageCreateParamsStreaming | MessageCreateParams = {
-            model,
-            messages,
-            max_tokens: 4096,
-            ...options,
-            stream
-        };
-
-        const response = await this.client!.messages.create(requestOptions);
-        // Handle streaming response
-        if (stream) {
-            logger.debug(`Claude streaming: ${JSON.stringify(response)}`);
-
-            for await (const chunk of (response as unknown as Stream<RawMessageStreamEvent>)) {
-                // Pass the raw chunk directly to the onToken callback
-                await onToken(sourceId, requestId, chunk, 'sse');
-            }
-
-            // Call onComplete
-            await onComplete(sourceId, requestId, {
-                type: 'message',
-                model,
-                status: 'complete'
+        // Validate this is for Claude
+        if (request.provider !== Provider.CLAUDE) {
+            logger.error('Provider validation failed for Claude', {
+                expected: Provider.CLAUDE,
+                received: request.provider,
+                requestId: request.requestId
             });
+            throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.CLAUDE));
+        }
+
+        logger.debug('Provider validation successful for Claude', {
+            requestId: request.requestId,
+            type: request.type
+        });
+
+        const { sourceId, requestId, payload, type } = request;
+        const claudePayload = payload as ClaudeWorkerRequest;
+
+        // Claude uses a unified messages API, so both generate and chat go through the same method
+        return await this.wrapWithStats(type, this._claudeMessages.bind(this), sourceId, requestId, claudePayload);
+    }
+
+    /**
+     * Claude messages completion using ClaudeWorkerRequest object
+     */
+    async _claudeMessages(
+        sourceId: string,
+        requestId: string,
+        messageRequest: ClaudeWorkerRequest
+    ): Promise<void> {
+        await this.ensureInitialized();
+        this.validateModel(messageRequest.model);
+        let fullResponse = '';
+        // Pass the request directly to the client since it extends MessageCreateParamsBase
+        // @ts-ignore 
+        const startTime = Date.now();
+        const metrics = {
+            inputTokens: 0,
+            outputTokens: 0,
+            timeToFirstToken: 0,
+            totalProcessingTime: 9
+        };
+        if (messageRequest.stream) {
+            logger.debug('Starting Claude messages stream', { requestId, model: messageRequest.model });
+            
+            try {
+                this.client.messages
+                .stream(messageRequest)
+                .on('streamEvent', (event: MessageStreamEvent, snapshot: Message) => {
+                    logger.info(`Claude Event: ${JSON.stringify(event)}`);
+                    if(event.type === 'message_start'){
+                        metrics.timeToFirstToken = Date.now() - startTime;
+                    }
+                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, event);
+                    this.onResponseChunk(responseChunk);
+                    
+                    // Log completion when stream ends
+                    if (event.type === 'message_stop') {
+                        logger.debug('Claude messages stream completed', { requestId, messageId: snapshot.id });
+                    }
+                })
+                .on('text', (textDelta: string) => {
+                    fullResponse+= textDelta;
+                })
+                .on('error', (error) => {
+                    logger.error('Claude messages stream error', { 
+                        requestId, 
+                        error: error.message 
+                    });
+                    throw error;
+                })
+                .on('finalMessage', (message: Message) => {
+                    logger.info(`claude final message: ${JSON.stringify(message)}`);
+                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, message, fullResponse);
+                    metrics.inputTokens = message.usage.input_tokens;
+                    metrics.outputTokens = message.usage.output_tokens;
+                    metrics.totalProcessingTime = Date.now() - startTime;
+                    responseChunk.metrics = metrics;
+                    this.responseService.sendToAuditOnly(this.workerId, responseChunk.sourceId, responseChunk);
+                })
+;
+            } catch (error) {
+                logger.error('Claude messages stream initialization error', { 
+                    requestId, 
+                    error: (error as Error).message 
+                });
+                throw error;
+            }
         } else {
-            logger.debug(`Claude response: ${JSON.stringify(response)}`);
-            // Call onComplete with the full response
-            await onComplete(sourceId, requestId, response);
+            // For non-streaming, extract the text content
+            const response = await this.client.messages.create(messageRequest);
+            const message = response as any;
+            if (message.content && message.content.length > 0) {
+                fullResponse = message.content[0].text || '';
+            }
+            
+            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, response, fullResponse);
+            await this.onResponseChunk(responseChunk);
         }
     }
+
 }

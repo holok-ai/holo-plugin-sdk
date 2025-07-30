@@ -1,3 +1,8 @@
+// Configure dotenv FIRST, before any other imports that depend on environment variables
+// This ensures .env file is loaded before env.ts module executes
+import dotenv from 'dotenv';
+dotenv.config();
+
 import "reflect-metadata";
 import {container} from "tsyringe";
 import express, {Application, Request, Response} from 'express';
@@ -47,9 +52,9 @@ async function initApp(): Promise<void> {
         // const queueService = container.resolve(QueueService);
         const initService = container.resolve(InitService);
         const responseService: ResponseService = container.resolve(ResponseService);
-
-        await initService.setupQueues(env.api.serverId);
-        await responseService.setupResponseStream();
+        logger.debug(`Creating API Server with id ${env.api.apiServerId}`);
+        await initService.setupQueues(env.api.apiServerId);
+        await responseService.startLLMResponseConsumer();
         app.use('/api', createRoutes());
         // Start the HTTP server
         const server = app.listen(PORT, (): void => {
@@ -94,6 +99,8 @@ async function gracefulShutdown(signal: string): Promise<void> {
     logger.info(`${signal} received, shutting down gracefully`);
 
     try {
+        // TODO: Implement proper cleanup of database connections, RabbitMQ connections, and provider clients
+        // This should include: AppDB.close(), QueueService.disconnect(), ProviderService.cleanup()
         // Close database connections, RabbitMQ connections, etc.
         logger.info('Closed model registry connections');
 

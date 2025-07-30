@@ -2,6 +2,7 @@ import "reflect-metadata";
 import {QueueService} from "./queue.service";
 import {injectable} from "tsyringe";
 import {env} from "../env";
+import logger from "../utils/logger";
 
 @injectable()
 export class InitService {
@@ -11,54 +12,63 @@ export class InitService {
         private queueService: QueueService) {
 
     }
-
+    // TODO: Move exchange and queue configuration to a dedicated config service or external config file
+    // This would allow for better separation of concerns and easier configuration management
+    //to create and validate on every startup
     async setupQueues(serverId?: string) {
+        logger.debug(`setupQueues called with ${serverId}`);
         this.serverId = serverId || this.serverId;
+        await this._setupGlobalExchanges();
         await this._setupRequestQueues();
         await this._setupResponseQueues();
-        await this._setupAdminQueues();
+    }
+
+    async _setupGlobalExchanges() {
+        //One request exchange as a fanout. All bound queues will get a copy of the message
+        //Implementing more complex traffic segmentation such as segmentation based on model or
+        //provider will need to change this to a topic exchange which has some performance overhead
+        await this.queueService.assertExchange(env.queue.requestExchange, 'fanout');
+
+        //One response exchange with direct binding. Each api server should have its own queue
+        //with a unique binding key such that responses are directed back to the api server that 
+        //originated the request. For audit messages a second audit response message with a unique 
+        //routing key will be used
+        await this.queueService.assertExchange(env.queue.responseExchange, 'direct');
+
+        await this.queueService.assertExchange(env.queue.adminExchange, 'topic');
+        await this.queueService.assertExchange(env.queue.adminResponseExchange, 'direct');
     }
 
     async _setupRequestQueues() {
-        const {requestExchange, requestQueue, auditRequestQueue, auditRequestExchange} = env.queue;
-
-        await this.queueService.assertExchange(requestExchange, 'fanout');
-        await this.queueService.assertQueue(requestQueue, {durable: true}, requestExchange);
-
-        await this.queueService.assertExchange(auditRequestExchange, 'direct');
-        await this.queueService.assertQueue(auditRequestQueue, {durable: true}, auditRequestExchange);
+        
+        //Bind the env.queue.requestQueue(llm_requests) directly to the fanout exchange env.queue.requestExchange
+        await this.queueService.assertQueue(env.queue.requestQueue, {durable: true}, env.queue.requestExchange);
+        await this.queueService.assertQueue(env.queue.auditRequestQueue, {durable: true}, env.queue.requestExchange);
     }
 
     async _setupResponseQueues() {
-        const {
-            responseExchange,
-            responseQueue,
-            auditResponseQueue,
-            auditResponseExchange,
-            queueExpiration = 3600000
-        } = env.queue;
-        await this.queueService.assertExchange(responseExchange, 'direct');
-
-        const responseQueueName = `${responseQueue}.${this.serverId}`;
+        const responseQueueName = `${env.queue.responseQueue}.${this.serverId}`;
+        //Bind a queue with the name llm_responses.server_xxxxx to the 
+        //llm_responses_exchange with binding key server_xxxxx
         await this.queueService.assertQueue(
             responseQueueName,
             {
                 durable: true,
                 arguments: {
-                    'x-expires': queueExpiration
+                    'x-expires': env.queue.queueExpiration
                 }
             },
-            responseExchange,
+            env.queue.responseExchange,
             this.serverId);
 
-        await this.queueService.assertExchange(auditResponseExchange, 'direct');
-        await this.queueService.assertQueue(auditResponseQueue, {durable: true}, auditResponseExchange);
+        await this.queueService.assertQueue(
+            env.queue.auditResponseQueue,
+             {
+                durable: true
+            }, 
+            env.queue.responseExchange,
+            env.queue.auditRoutingKey);
     }
 
-    async _setupAdminQueues() {
-        const {adminExchange, adminResponseExchange} = env.queue;
-
-        await this.queueService.assertExchange(adminExchange, 'topic');
-        await this.queueService.assertExchange(adminResponseExchange, 'direct');
-    }
+    
 }

@@ -1,12 +1,10 @@
 import {AIProvider} from './ai.provider';
 import logger from '../utils/logger';
 import OpenAI from 'openai';
-import {AIProviderConfig, CompleteHandler, IProvider, ModelInfo, TokenHandler} from './types';
-import {
-    ChatCompletionChunk,
-    ChatCompletionCreateParams,
-    ChatCompletionCreateParamsStreaming
-} from "openai/resources/chat/completions/completions";
+import {AIProviderConfig, IProvider, ModelInfo, AIRequestStat} from './types';
+import {LLMWorkerRequest, OpenAIWorkerRequest, Provider} from '../types';
+import {ErrorMessages} from '../utils/error-messages';
+import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 import {Stream} from "openai/streaming";
 import {ResponseService} from "../services";
 
@@ -23,7 +21,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         protected workerId: string) {
         super(config, responseService, workerId);
         if (!this.config.apiKey) {
-            throw new Error('OpenAI API key is required');
+            throw new Error(ErrorMessages.apiKeyRequired('OpenAI'));
         }
 
         this.client = new OpenAI({
@@ -76,106 +74,98 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         }
     }
 
-    /**
-     * Generate text from a prompt with streaming
-     */
-    async _generate(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        prompt: string,
-        options: {},
-        stream: boolean
-    ): Promise<void> {
-        // Convert text generation to chat format for OpenAI API
-        const messages = [
-            {
-                role: 'user' as const,
-                content: prompt
-            }
-        ];
-
-        await this.callOpenAI(
-            sourceId,
-            requestId,
-            model,
-            messages,
-            options,
-            stream,
-            this.onGenerate.bind(this),
-            this.onGenerateComplete.bind(this)
-        );
-    }
 
     /**
-     * Generate chat completion with streaming
+     * Handle LLMWorkerRequest - unified interface
      */
-    async _chat(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        messages: any[],
-        options: {},
-        stream: boolean
-    ): Promise<void> {
-        await this.callOpenAI(
-            sourceId,
-            requestId,
-            model,
-            messages,
-            options,
-            stream,
-            this.onChat.bind(this),
-            this.onChatComplete.bind(this));
+    async handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
+        logger.debug('OpenAI provider handling LLM request', {
+            requestId: request.requestId,
+            sourceId: request.sourceId,
+            type: request.type,
+            provider: request.provider
+        });
 
-    }
-
-    async callOpenAI(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        messages: any[],
-        options: {},
-        stream: boolean,
-        onToken: TokenHandler,
-        onComplete: CompleteHandler
-    ): Promise<void> {
-        if (!this.models![model]) {
-            throw new Error(`Model ${model} not found`);
-        }
-
-        if (!this.client) {
-            await this.init();
-        }
-
-        logger.debug(`OpenAI request: ${JSON.stringify(messages)}`);
-        const requestOptions: ChatCompletionCreateParamsStreaming | ChatCompletionCreateParams = {
-            model,
-            messages,
-            ...options,
-            stream
-        };
-
-        const response = await this.client.chat.completions.create(requestOptions);
-        // Handle streaming response
-        if (stream) {
-            logger.debug(`OpenAI streaming: ${JSON.stringify(response)}`);
-
-            for await (const chunk of (response as Stream<ChatCompletionChunk>)) {
-                // Pass the raw chunk directly to the onToken callback
-                await onToken(sourceId, requestId, chunk, 'sse');
-            }
-
-            // Call onComplete
-            await onComplete(sourceId, requestId, {
-                type: 'chat.completion',
-                model,
-                status: 'complete'
+        // Validate this is for OpenAI
+        if (request.provider !== Provider.OPENAI) {
+            logger.error('Provider validation failed for OpenAI', {
+                expected: Provider.OPENAI,
+                received: request.provider,
+                requestId: request.requestId
             });
+            throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.OPENAI));
+        }
+
+        logger.debug('Provider validation successful for OpenAI', {
+            requestId: request.requestId,
+            type: request.type
+        });
+
+        const { sourceId, requestId, payload, type } = request;
+        const openaiPayload = payload as OpenAIWorkerRequest;
+
+        // OpenAI uses a unified chat completions API, so both generate and chat go through the same method
+        return await this.wrapWithStats(type, this._openaiChatCompletions.bind(this), sourceId, requestId, openaiPayload);
+    }
+
+    /**
+     * OpenAI chat completions using OpenAIWorkerRequest object
+     */
+    async _openaiChatCompletions(
+        sourceId: string,
+        requestId: string,
+        chatRequest: OpenAIWorkerRequest
+    ): Promise<void> {
+        await this.ensureInitialized();
+        this.validateModel(chatRequest.model);
+
+        let fullResponse = '';
+        // Pass the request directly to the client since it extends ChatCompletionCreateParams
+        const response = await this.client.chat.completions.create(chatRequest);
+        
+        if (chatRequest.stream) {
+            logger.debug('Starting OpenAI chat completions stream', { requestId, model: chatRequest.model });
+            
+            try {
+                for await (const chunk of (response as Stream<ChatCompletionChunk>)) {
+                    const choice = chunk.choices?.[0];
+                    
+                    if (choice?.finish_reason) {
+                        logger.debug('OpenAI chat completions stream completed', { 
+                            requestId, 
+                            finishReason: choice.finish_reason,
+                            fullResponseLength: fullResponse.length 
+                        });
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk, fullResponse);
+                        await this.onResponseChunk(responseChunk);
+                        break;
+                    }
+
+                    if (choice?.delta?.content) {
+                        const token = choice.delta.content;
+                        fullResponse += token;
+
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk);
+                        await this.onResponseChunk(responseChunk);
+                    }
+                }
+            } catch (error) {
+                logger.error('OpenAI chat completions stream error', { 
+                    requestId, 
+                    error: (error as Error).message,
+                    partialResponseLength: fullResponse.length 
+                });
+                throw error;
+            }
         } else {
-            logger.debug(`OpenAI response: ${JSON.stringify(response)}`);
-            // Call onComplete with the full response
-            await onComplete(sourceId, requestId, response);
+            // For non-streaming, extract the text content
+            const message = response as any;
+            if (message.choices && message.choices.length > 0) {
+                fullResponse = message.choices[0].message?.content || '';
+            }
+            
+            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, response, fullResponse);
+            await this.onResponseChunk(responseChunk);
         }
     }
 }

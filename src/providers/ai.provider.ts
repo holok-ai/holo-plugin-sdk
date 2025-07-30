@@ -1,5 +1,7 @@
 import {AIProviderConfig, AIRequestStat, ModelInfo} from "./types";
 import {ResponseService} from "../services";
+import {LLMWorkerRequest, LLMWorkerResponse, RequestType} from "../types";
+import {ErrorMessages} from "../utils/error-messages";
 import logger from "../utils/logger";
 
 /**
@@ -28,29 +30,23 @@ export abstract class AIProvider {
      */
     abstract getModels(): Promise<ModelInfo[]>;
 
-    abstract _generate(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        prompt: string,
-        options: {},
-        stream: boolean
-    ): Promise<void>;
-
-    abstract _chat(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        messages: any[],
-        options: {},
-        stream: boolean
-    ): Promise<void>;
 
     /**
-     * General stats/try-catch wrapper for chat/generate
+     * Handle LLMWorkerRequest - unified interface for all providers
+     */
+    abstract handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat>;
+
+    /**
+     * Wraps provider method calls with statistics tracking, error handling, and logging.
+     * Automatically measures execution time and tracks success/error counts.
+     * 
+     * @param type - The type of request being processed (GENERATE or CHAT)
+     * @param method - The provider method to execute (must be bound to provider instance)
+     * @param args - Arguments to pass to the method, first two must be sourceId and requestId
+     * @returns Promise resolving to AIRequestStat with timing and success/error metrics
      */
     protected async wrapWithStats<T extends [sourceId: string, requestId: string, ...any[]]>(
-        type: 'chat' | 'generate',
+        type: RequestType,
         method: (...args: T) => Promise<void>,
         ...args: T
     ): Promise<AIRequestStat> {
@@ -82,100 +78,94 @@ export abstract class AIProvider {
     }
 
 
-    async generate(
+
+
+    /**
+     * Handles errors by creating a standardized error response and sending it via the response stream.
+     * Called automatically by wrapWithStats when a provider method throws an error.
+     * 
+     * @param sourceId - Unique identifier for the request source
+     * @param requestId - Unique identifier for the specific request  
+     * @param error - The error that occurred during processing
+     */
+    async onError(sourceId: string, requestId: string, error: Error) {
+        const errorResponse: LLMWorkerResponse = {
+            sourceId: sourceId,
+            requestId: requestId,
+            provider: this.name as any, // Provider will be set by concrete implementation
+            payload: {
+                type: 'error',
+                error: {
+                    message: error.message
+                },
+                requestId
+            }
+        };
+        await this.onResponseChunk(errorResponse);
+    }
+
+    /**
+     * Validates that a model exists in the provider's models cache.
+     * Throws an error if the model is not found or if models haven't been loaded.
+     * 
+     * @param model - The model name to validate
+     * @throws Error when model is not found in the provider's model cache
+     */
+    protected validateModel(model: string): void {
+        if (!this.models || !this.models[model]) {
+            throw new Error(ErrorMessages.modelNotFound(model));
+        }
+    }
+
+    /**
+     * Ensures the provider is fully initialized by checking if models are loaded.
+     * If models are not loaded, triggers the init() method to initialize the provider.
+     * 
+     * @returns Promise that resolves when provider is confirmed to be initialized
+     */
+    protected async ensureInitialized(): Promise<void> {
+        if (!this.models) {
+            await this.init();
+        }
+    }
+
+    /**
+     * Creates a standardized LLMWorkerResponse object for sending data back to clients.
+     * Handles both streaming chunks and complete responses with optional full response text.
+     * 
+     * @param sourceId - Unique identifier for the request source
+     * @param requestId - Unique identifier for the specific request
+     * @param provider - Provider enum value identifying which LLM provider generated the response
+     * @param payload - The actual response data from the LLM provider
+     * @param fullResponse - Optional complete response text for final chunks
+     * @returns Standardized LLMWorkerResponse object ready for streaming
+     */
+    protected createWorkerResponse(
         sourceId: string,
         requestId: string,
-        model: string,
-        prompt: string,
-        options: {},
-        stream: boolean
-    ): Promise<AIRequestStat> {
-        return this.wrapWithStats(
-            'generate',
-            this._generate.bind(this),
-            sourceId,
-            requestId,
-            model,
-            prompt,
-            options,
-            stream
-        );
-    }
-
-    async chat(
-        sourceId: string,
-        requestId: string,
-        model: string,
-        messages: any[],
-        options: {},
-        stream: boolean
-    ): Promise<AIRequestStat> {
-        return this.wrapWithStats(
-            'chat',
-            this._chat.bind(this),
-            sourceId,
-            requestId,
-            model,
-            messages,
-            options,
-            stream
-        );
-    }
-
-
-    async sendResponseChunk(sourceId: string, requestId: string, data: object, auditEnabled: boolean = this.config.auditEnabled) {
-        await this.responseService.sendResponseChunk(this.workerId, sourceId, requestId, data, auditEnabled);
-    }
-
-    async onGenerate(sourceId: string, requestId: string, token: object, type: string, customFields?: object) {
-        await this.sendResponseChunk(
-            sourceId,
-            requestId,
-            this.formatToken(requestId, token, type, customFields));
-    }
-
-    formatToken(requestId: string, token: object, type: string, customFields?: object) {
+        provider: any, // Provider enum value
+        payload: any,
+        fullResponse?: string
+    ): LLMWorkerResponse {
         return {
-            type,
-            provider: this.name,
+            sourceId,
             requestId,
-            token,
-            ...customFields
+            provider,
+            payload,
+            ...(fullResponse !== undefined && { fullResponse })
         };
     }
 
-    async onGenerateComplete(sourceId: string, requestId: string, token: object, type: string = 'done', customFields?: object) {
-        await this.sendResponseChunk(
-            sourceId,
-            requestId,
-            this.formatToken(requestId, token, type, customFields)
-        );
-    }
-
-    async onChat(sourceId: string, requestId: string, token: object, type: string, customFields?: object) {
-        await this.sendResponseChunk(
-            sourceId,
-            requestId,
-            this.formatToken(requestId, token, type, customFields)
-        );
-    }
-
-    async onChatComplete(sourceId: string, requestId: string, token: object, type: string = 'done', customFields?: object) {
-        await this.sendResponseChunk(
-            sourceId,
-            requestId,
-            this.formatToken(requestId, token, type, customFields)
-        );
-    }
-
-    async onError(sourceId: string, requestId: string, error: Error) {
-        await this.sendResponseChunk(sourceId, requestId, {
-            type: 'error',
-            error: {
-                message: error.message
-            },
-            requestId
-        });
+    /**
+     * Processes and sends response chunks to the response service for streaming to clients.
+     * Handles the final step of the response pipeline by routing chunks to the response service.
+     * 
+     * @param responseChunk - The standardized response chunk to send to clients
+     * @returns Promise that resolves when the chunk has been sent to the response service
+     */
+    async onResponseChunk(responseChunk: LLMWorkerResponse){
+        logger.info(`onResponseChunk: ${JSON.stringify(responseChunk)}`);
+        await this.responseService.sendResponseChunk(this.workerId, responseChunk.sourceId, responseChunk.requestId, responseChunk, true);
     }
 }
 

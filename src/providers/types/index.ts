@@ -1,3 +1,5 @@
+import type { LLMWorkerRequest, LLMWorkerResponse, RequestType } from '../../types';
+
 /**
  * Interface for LLM providers
  * All LLM provider implementations must conform to this interface
@@ -16,42 +18,16 @@ export interface IProvider {
      */
     getModels(): Promise<ModelInfo[]>;
 
-    /**
-     * Generate text from a prompt with streaming.
-     * @param requestId Unique request identifier
-     * @param sourceId Source identifier
-     * @param model Model name
-     * @param prompt Prompt text
-     * @param options Additional options for generation
-     * @param stream Enable streaming responses
-     */
-    generate(
-        requestId: string,
-        sourceId: string,
-        model: string,
-        prompt: string,
-        options: {},
-        stream: boolean
-    ): Promise<AIRequestStat>;
 
     /**
-     * Generate chat completion with streaming.
-     * @param requestId Unique request identifier
-     * @param sourceId Source identifier
-     * @param model Model name
-     * @param messages Chat message array
-     * @param options Additional options for the chat
-     * @param stream Enable streaming responses
+     * Handle LLMWorkerRequest - unified interface for all providers
      */
-    chat(
-        requestId: string,
-        sourceId: string,
-        model: string,
-        messages: any[],
-        options: {},
-        stream: boolean
-    ): Promise<AIRequestStat>;
+    handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat>;
 
+    /**
+     * Handle response chunk data with ResponseStream
+     */
+    onResponseChunk(responseChunk: LLMWorkerResponse): Promise<void>;
 }
 
 export interface AIProviderConfig {
@@ -115,7 +91,7 @@ export interface ModelOperationResult {
 }
 
 export interface AIRequestStat {
-    type: 'generate' | 'chat';
+    type: RequestType;
     startTime: number;
     endTime: number;
     duration: number;

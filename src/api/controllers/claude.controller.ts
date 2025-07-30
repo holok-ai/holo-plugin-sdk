@@ -2,7 +2,8 @@ import 'reflect-metadata';
 import {BaseController} from "./base.controller";
 import {injectable} from "tsyringe";
 import {ResponseService} from "../../services";
-import {ApiRequest, ApiResponse} from "../types";
+import {HttpApiRequest, ApiResponse} from "../types";
+import { Provider, RequestType } from '../../types';
 
 @injectable()
 export class ClaudeController extends BaseController {
@@ -11,17 +12,15 @@ export class ClaudeController extends BaseController {
         super();
     }
 
-    public messages = async (req: ApiRequest, res: ApiResponse): Promise<void> => {
+    public messages = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            if (!this.hasRequiredFields(req.body, ['model', 'messages'], res)) return;
-            req.body.provider = 'claude';
-            await this.responseService.chatCompletionResponse(req, res);
+           await this.responseService.parseAndSendLLMRequest(Provider.CLAUDE, RequestType.CHAT, req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to complete chat');
         }
     }
 
-    public models = async (_req: ApiRequest, res: ApiResponse): Promise<void> => {
+    public models = async (_req: HttpApiRequest, res: ApiResponse): Promise<void> => {
 
         res.status(200).json({});
     }
