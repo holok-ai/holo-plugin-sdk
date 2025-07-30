@@ -118,6 +118,13 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         let fullResponse = '';
         // Pass the request directly to the client since it extends MessageCreateParamsBase
         // @ts-ignore 
+        const startTime = Date.now();
+        const metrics = {
+            inputTokens: 0,
+            outputTokens: 0,
+            timeToFirstToken: 0,
+            totalProcessingTime: 9
+        };
         if (messageRequest.stream) {
             logger.debug('Starting Claude messages stream', { requestId, model: messageRequest.model });
             
@@ -126,14 +133,19 @@ export class ClaudeProvider extends AIProvider implements IProvider {
                 .stream(messageRequest)
                 .on('streamEvent', (event: MessageStreamEvent, snapshot: Message) => {
                     logger.info(`Claude Event: ${JSON.stringify(event)}`);
+                    if(event.type === 'message_start'){
+                        metrics.timeToFirstToken = Date.now() - startTime;
+                    }
                     const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, event);
-                    snapshot.id;
                     this.onResponseChunk(responseChunk);
                     
                     // Log completion when stream ends
                     if (event.type === 'message_stop') {
                         logger.debug('Claude messages stream completed', { requestId, messageId: snapshot.id });
                     }
+                })
+                .on('text', (textDelta: string) => {
+                    fullResponse+= textDelta;
                 })
                 .on('error', (error) => {
                     logger.error('Claude messages stream error', { 
@@ -144,6 +156,12 @@ export class ClaudeProvider extends AIProvider implements IProvider {
                 })
                 .on('finalMessage', (message: Message) => {
                     logger.info(`claude final message: ${JSON.stringify(message)}`);
+                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, message, fullResponse);
+                    metrics.inputTokens = message.usage.input_tokens;
+                    metrics.outputTokens = message.usage.output_tokens;
+                    metrics.totalProcessingTime = Date.now() - startTime;
+                    responseChunk.metrics = metrics;
+                    this.responseService.sendToAuditOnly(this.workerId, responseChunk.sourceId, responseChunk);
                 })
 ;
             } catch (error) {

@@ -30,16 +30,24 @@ export interface LLMWorkerResponse {
     provider: Provider;
     payload: any;
     fullResponse?: string;
+    workerId?: string;
+    timestamp?: number;
+    metrics?: {
+        inputTokens: number;
+        outputTokens: number;
+        timeToFirstToken: number;
+        totalProcessingTime: number;
+    };
 }
 
 // Extended Ollama request types with additional queue metadata
-export interface OllamaGenerateQueueRequest extends GenerateRequest {}
+export interface OllamaWorkerGenerateRequest extends GenerateRequest {}
 
-export interface OllamaChatQueueRequest extends ChatRequest {}
+export interface OllamaWorkerChatRequest extends ChatRequest {}
 
 export interface ClaudeWorkerRequest extends MessageCreateParamsBase {}
 
 export interface OpenAIWorkerRequest extends ChatCompletionCreateParamsBase {}
 
 // Union type for all LLM Specific Requests
-export type LLMPayloadTypes = OllamaGenerateQueueRequest | OllamaChatQueueRequest | ClaudeWorkerRequest | OpenAIWorkerRequest;
+export type LLMPayloadTypes = OllamaWorkerChatRequest | OllamaWorkerGenerateRequest | ClaudeWorkerRequest | OpenAIWorkerRequest;

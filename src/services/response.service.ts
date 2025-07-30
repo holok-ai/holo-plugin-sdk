@@ -8,7 +8,7 @@ import {HttpApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
 import { parseLLMRequest } from '../utils';
-import { LLMWorkerRequest, Provider, RequestType } from '../types';
+import { LLMWorkerRequest, LLMWorkerResponse, Provider, RequestType } from '../types';
 import { StreamFormatter } from './streamFormatter.service';
 
 
@@ -219,6 +219,26 @@ export class ResponseService {
                 {correlationId: requestId}
             )
         }
+    }
+
+    /**
+     * Send data directly to audit exchange only
+     * Used for logging audit data without routing to client servers
+     * @param {string} workerId - ID of the worker sending the audit data
+     * @param {string} requestId - Request correlation ID
+     * @param {LLMWorkerResponse} data - Audit data to send
+     */
+    async sendToAuditOnly(workerId: string, requestId: string, data: LLMWorkerResponse) {
+        logger.debug(`Sending audit-only data: ${requestId}, ${JSON.stringify(data)}`);
+        data.workerId = workerId;
+        data.timestamp = Date.now();
+        await this.queueService.sendToExchange(
+            env.queue.responseExchange,
+            'audit', data,
+            {correlationId: requestId}
+        );
+
+        logger.debug(`Successfully sent audit-only data for request ${requestId}`);
     }
 }
 

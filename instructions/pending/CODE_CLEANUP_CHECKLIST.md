@@ -132,6 +132,50 @@ This checklist outlines the recommended code modifications for cleaning up dead 
 
 ## 🟢 **Medium Priority (Improvement)**
 
+### 7. Audit Logging Strategy Review
+- [ ] **Response Chunk vs Full Response Logging**: Evaluate current audit logging approach
+  - [ ] Analyze current implementation that logs every streaming response chunk
+  - [ ] Compare with alternative approach of logging only complete responses
+  - [ ] **Pros of logging every chunk**:
+    - **Granular debugging**: Can trace exactly when/where errors occur in streams
+    - **Real-time monitoring**: Immediate visibility into response generation progress
+    - **Partial response recovery**: Can reconstruct responses even if stream fails mid-way
+    - **Performance analysis**: Can measure token generation rates and identify bottlenecks
+    - **User experience insights**: Can analyze response latency patterns
+  - [ ] **Cons of logging every chunk**:
+    - **Database bloat**: Massive increase in audit table size (10-100x more records)
+    - **Performance impact**: High database write load during streaming responses
+    - **Storage costs**: Significant increase in storage requirements
+    - **Query complexity**: More complex queries to reconstruct full responses
+    - **Network overhead**: More audit messages through queues
+  - [ ] **Pros of logging only full responses**:
+    - **Storage efficiency**: Minimal database growth, one record per request
+    - **Performance**: Lower database write load and faster queries
+    - **Simpler analysis**: Direct access to complete response data
+    - **Cost effective**: Reduced storage and compute costs
+    - **Cleaner data model**: Easier to understand and maintain
+  - [ ] **Cons of logging only full responses**:  
+    - **Limited debugging**: Cannot trace mid-stream failures or issues
+    - **No real-time monitoring**: Must wait for completion to see audit data
+    - **Lost partial responses**: Failed streams provide no audit trail
+    - **Less performance insight**: Cannot analyze token-by-token generation patterns
+  - [ ] **Recommendation**: **Hybrid approach** - Log both chunk-level and response-level data
+    - **Streaming chunks**: Log only to separate high-volume table with shorter retention (7-30 days)
+    - **Complete responses**: Log to main audit table with full retention and rich metadata
+    - **Benefits**: Preserves debugging capability while managing storage costs
+    - **Implementation**: Use separate audit tables with different retention policies
+    - **Fallback**: Configuration flag to disable chunk logging in production if needed
+
+### 8. Database Schema Improvements
+- [ ] **LLM Responses Primary Key**: Modify `llm_responses` table primary key for proper ordering
+  - [ ] Change primary key from UUID `id` to auto-incrementing `BIGSERIAL` (PostgreSQL)
+  - [ ] Ensure ordering by primary key returns results in the order they were received
+  - [ ] Create Flyway migration script in moku project to handle schema change
+  - [ ] Update existing data handling to work with new sequential primary key
+  - [ ] Update audit service and response handling to work with new key structure
+  - [ ] Test ordering queries to verify chronological response sequence
+  - [ ] Consider adding index on `(request_id, id)` for efficient request-specific ordering
+
 ### 8. Enhance Type Safety
 - [ ] **Replace `any` Types**: Use proper interfaces instead of `any`
   - [ ] Audit all `any` types in provider methods

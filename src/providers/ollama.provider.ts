@@ -1,7 +1,7 @@
 import AIProvider from "./ai.provider";
 import {Ollama} from "ollama";
 import {IProvider, ModelInfo, OllamaProviderConfig, AIRequestStat} from "./types";
-import {LLMWorkerRequest, OllamaGenerateQueueRequest, OllamaChatQueueRequest, Provider, RequestType} from "../types";
+import {LLMWorkerRequest, OllamaWorkerChatRequest, OllamaWorkerGenerateRequest, Provider, RequestType} from "../types";
 import {ErrorMessages} from "../utils/error-messages";
 import logger from "../utils/logger";
 import {ResponseService} from "../services";
@@ -91,10 +91,10 @@ export class OllamaProvider extends AIProvider implements IProvider {
         const { sourceId, requestId, payload, type } = request;
         
         if (type === RequestType.GENERATE) {
-            const generatePayload = payload as OllamaGenerateQueueRequest;
+            const generatePayload = payload as OllamaWorkerGenerateRequest;
             return await this.wrapWithStats(RequestType.GENERATE, this._ollamaGenerate.bind(this), sourceId, requestId, generatePayload);
         } else if (type === RequestType.CHAT) {
-            const chatPayload = payload as OllamaChatQueueRequest;
+            const chatPayload = payload as OllamaWorkerChatRequest;
             return await this.wrapWithStats(RequestType.CHAT, this._ollamaChat.bind(this), sourceId, requestId, chatPayload);
         } else {
             throw new Error(ErrorMessages.unsupportedRequestType(type));
@@ -107,7 +107,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
     async _ollamaChat(
         sourceId: string,
         requestId: string,
-        chatRequest: OllamaChatQueueRequest
+        chatRequest: OllamaWorkerChatRequest
     ): Promise<void> {
         await this.ensureInitialized();
         this.validateModel(chatRequest.model);
@@ -157,7 +157,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
     /**
      * Ollama generate completion using OllamaGenerateQueueRequest object
      */
-    async _ollamaGenerate(sourceId: string, requestId: string, generateRequest: OllamaGenerateQueueRequest): Promise<void> {
+    async _ollamaGenerate(sourceId: string, requestId: string, generateRequest: OllamaWorkerGenerateRequest): Promise<void> {
         await this.ensureInitialized();
         this.validateModel(generateRequest.model);
 

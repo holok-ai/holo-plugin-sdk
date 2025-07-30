@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { OllamaGenerateQueueRequest, OllamaChatQueueRequest, LLMPayloadTypes, RequestType } from '../types';
+import { OllamaWorkerChatRequest, OllamaWorkerGenerateRequest, LLMPayloadTypes, RequestType } from '../types';
 import { ErrorMessages } from './error-messages';
 import logger from './logger';
 
@@ -11,7 +11,7 @@ import logger from './logger';
  * @returns Parsed OllamaGenerateQueueRequest with validated and structured data
  * @throws Error when required fields (model, prompt) are missing
  */
-export const parseOllamaGenerateRequest = (req: Request): OllamaGenerateQueueRequest => {
+export const parseOllamaGenerateRequest = (req: Request): OllamaWorkerGenerateRequest => {
     const { model, prompt, system, template, context, stream, raw, format, images, keep_alive, options } = req.body;
     
     logger.debug('Parsing Ollama generate request', {
@@ -62,7 +62,7 @@ export const parseOllamaGenerateRequest = (req: Request): OllamaGenerateQueueReq
  * @returns Parsed OllamaChatQueueRequest with validated messages and parameters
  * @throws Error when required fields (model, messages) are missing or messages is not an array
  */
-export const parseOllamaChatRequest = (req: Request): OllamaChatQueueRequest => {
+export const parseOllamaChatRequest = (req: Request): OllamaWorkerChatRequest => {
     const { model, messages, stream, format, keep_alive, tools, options } = req.body;
     
     logger.debug('Parsing Ollama chat request', {
