@@ -32,7 +32,7 @@ export interface ProviderModel {
     created_at: Date;
     updated_at: Date;
 }
-
+//Object that corresponds to the database llm_requests table
 export interface LlmRequest {
     id: string;
     request_id: string;
