@@ -31,6 +31,7 @@ export interface IProvider {
 }
 
 export interface AIProviderConfig {
+    baseUrl?: string
     apiKey?: string
     auditEnabled: boolean
 }

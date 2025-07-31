@@ -11,9 +11,9 @@ import {ResponseService} from "../services";
 /**
  * OpenAI provider for connecting to OpenAI API
  */
-export class OpenAIProvider extends AIProvider implements IProvider {
+export class PerplexityProvider extends AIProvider implements IProvider {
     private readonly client: OpenAI;
-    name: string = 'openai';
+    name: string = 'perplexity';
 
     constructor(
         protected config: AIProviderConfig,
@@ -21,11 +21,12 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         protected workerId: string) {
         super(config, responseService, workerId);
         if (!this.config.apiKey) {
-            throw new Error(ErrorMessages.apiKeyRequired('OpenAI'));
+            throw new Error(ErrorMessages.apiKeyRequired('Perplexity'));
         }
 
         this.client = new OpenAI({
-            apiKey: this.config.apiKey
+            apiKey: this.config.apiKey,
+            baseURL: this.config.baseUrl || 'https://api.perplexity.ai',
         });
     }
 
@@ -37,9 +38,9 @@ export class OpenAIProvider extends AIProvider implements IProvider {
             // Initialize the client
             await this.getModels();
 
-            logger.info('OpenAI provider initialized');
+            logger.info('Perplexity provider initialized');
         } catch (error) {
-            logger.error(`Failed to initialize OpenAI provider: ${(error as Error).message}`);
+            logger.error(`Failed to initialize Perplexity provider: ${(error as Error).message}`);
             throw error;
         }
     }
@@ -49,16 +50,18 @@ export class OpenAIProvider extends AIProvider implements IProvider {
      */
     async getModels(): Promise<ModelInfo[]> {
         try {
-            if (!this.client) {
-                await this.init();
-            }
-
-            const response = await this.client.models.list();
-            const modelList = response.data.map(model => ({
-                id: model.id,
-                name: model.id,
-                modified_at: new Date(model.created * 1000).toISOString()
-            }));
+            const modelList = [
+                {
+                    id: 'sonar',
+                    name: 'sonar',
+                    modified_at: new Date(1651000000000).toISOString(),
+                },
+                {
+                    id: 'sonar-pro',
+                    name: 'sonar-pro',
+                    modified_at: new Date(1651000000000).toISOString(),
+                }
+            ]
 
             // Update internal models cache
             this.models = modelList.reduce((acc, model) => {
@@ -66,10 +69,10 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                 return acc;
             }, {} as Record<string, ModelInfo>);
 
-            logger.debug(`OpenAI models: ${Object.keys(this.models)}`);
+            logger.debug(`Perplexity models: ${Object.keys(this.models)}`);
             return modelList;
         } catch (error) {
-            logger.error(`Error fetching OpenAI models: ${(error as Error).message}`);
+            logger.error(`Error fetching Perplexity models: ${(error as Error).message}`);
             throw error;
         }
     }
@@ -79,7 +82,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
      * Handle LLMWorkerRequest - unified interface
      */
     async handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
-        logger.debug('OpenAI provider handling LLM request', {
+        logger.debug('Perplexity provider handling LLM request', {
             requestId: request.requestId,
             sourceId: request.sourceId,
             type: request.type,
@@ -87,8 +90,8 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         });
 
         // Validate this is for OpenAI
-        if (request.provider !== Provider.OPENAI) {
-            logger.error('Provider validation failed for OpenAI', {
+        if (request.provider !== Provider.PERPLEXITY) {
+            logger.error('Provider validation failed for Perplexity', {
                 expected: Provider.OPENAI,
                 received: request.provider,
                 requestId: request.requestId
@@ -96,7 +99,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
             throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.OPENAI));
         }
 
-        logger.debug('Provider validation successful for OpenAI', {
+        logger.debug('Provider validation successful for Perplexity', {
             requestId: request.requestId,
             type: request.type
         });
@@ -105,13 +108,13 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         const openaiPayload = payload as OpenAIWorkerRequest;
 
         // OpenAI uses a unified chat completions API, so both generate and chat go through the same method
-        return await this.wrapWithStats(type, this._openaiChatCompletions.bind(this), sourceId, requestId, openaiPayload);
+        return await this.wrapWithStats(type, this._perplexityChatCompletions.bind(this), sourceId, requestId, openaiPayload);
     }
 
     /**
      * OpenAI chat completions using OpenAIWorkerRequest object
      */
-    async _openaiChatCompletions(
+    async _perplexityChatCompletions(
         sourceId: string,
         requestId: string,
         chatRequest: OpenAIWorkerRequest
@@ -124,14 +127,14 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         const response = await this.client.chat.completions.create(chatRequest);
 
         if (chatRequest.stream) {
-            logger.debug('Starting OpenAI chat completions stream', {requestId, model: chatRequest.model});
+            logger.debug('Starting Perplexity chat completions stream', {requestId, model: chatRequest.model});
 
             try {
                 for await (const chunk of (response as Stream<ChatCompletionChunk>)) {
                     const choice = chunk.choices?.[0];
 
                     if (choice?.finish_reason) {
-                        logger.debug('OpenAI chat completions stream completed', {
+                        logger.debug('Perplexity chat completions stream completed', {
                             requestId,
                             finishReason: choice.finish_reason,
                             fullResponseLength: fullResponse.length
@@ -150,7 +153,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                     }
                 }
             } catch (error) {
-                logger.error('OpenAI chat completions stream error', {
+                logger.error('Perplexity chat completions stream error', {
                     requestId,
                     error: (error as Error).message,
                     partialResponseLength: fullResponse.length
