@@ -25,7 +25,7 @@ export interface ParsedAuditData {
  */
 export function parseOllamaPayload(payload: any): ParsedAuditData {
     logger.debug(`Parsing Ollama payload for audit: ${JSON.stringify(payload)}`);
-    
+
     const isDone = payload.done === true;
     let token: string | undefined;
     let totalTokens: number | undefined;
@@ -44,7 +44,7 @@ export function parseOllamaPayload(payload: any): ParsedAuditData {
     // Extract performance metrics (available in final response)
     if (isDone && payload.total_duration) {
         processingTime = Math.round(payload.total_duration / 1000000); // Convert nanoseconds to milliseconds
-        
+
         const promptTokens = payload.prompt_eval_count || 0;
         const responseTokens = payload.eval_count || 0;
         totalTokens = promptTokens + responseTokens;
@@ -86,7 +86,7 @@ export function parseOllamaPayload(payload: any): ParsedAuditData {
  */
 export function parseClaudePayload(payload: any): ParsedAuditData {
     logger.debug(`Parsing Claude payload for audit - type: ${payload.type}`);
-    
+
     let token: string | undefined;
     let isDone = false;
     let totalTokens: number | undefined;
@@ -148,7 +148,7 @@ export function parseClaudePayload(payload: any): ParsedAuditData {
  */
 export function parseOpenAIPayload(payload: any): ParsedAuditData {
     logger.debug(`Parsing OpenAI payload for audit - object: ${payload.object}`);
-    
+
     let token: string | undefined;
     let isDone = false;
     let totalTokens: number | undefined;
@@ -178,7 +178,7 @@ export function parseOpenAIPayload(payload: any): ParsedAuditData {
     // Extract usage metrics
     if (payload.usage) {
         totalTokens = payload.usage.total_tokens;
-        
+
         // Calculate tokens per second if we have timing data
         if (payload.processing_time && payload.usage.completion_tokens) {
             tokensPerSecond = payload.usage.completion_tokens / (payload.processing_time / 1000);
@@ -221,9 +221,9 @@ export function parseWorkerResponseForAudit(response: LLMWorkerResponse): Parsed
         hasMetrics: !!response.metrics,
         hasFullResponse: !!response.fullResponse
     };
-    
+
     logger.debug(`Parsing worker response for audit`, logContext);
-    
+
     // Log enhanced metrics if available
     if (response.metrics) {
         logger.debug(`Enhanced metrics available - inputTokens: ${response.metrics.inputTokens}, outputTokens: ${response.metrics.outputTokens}, timeToFirstToken: ${response.metrics.timeToFirstToken}ms, totalTime: ${response.metrics.totalProcessingTime}ms`, {
@@ -231,7 +231,7 @@ export function parseWorkerResponseForAudit(response: LLMWorkerResponse): Parsed
             workerId: response.workerId
         });
     }
-    
+
     try {
         switch (response.provider) {
             case Provider.OLLAMA:
@@ -239,6 +239,8 @@ export function parseWorkerResponseForAudit(response: LLMWorkerResponse): Parsed
             case Provider.CLAUDE:
                 return parseClaudePayload(response.payload);
             case Provider.OPENAI:
+                return parseOpenAIPayload(response.payload);
+            case Provider.PERPLEXITY:
                 return parseOpenAIPayload(response.payload);
             default:
                 logger.warn(`Unknown provider for audit parsing: ${response.provider}`);
@@ -255,15 +257,15 @@ export function parseWorkerResponseForAudit(response: LLMWorkerResponse): Parsed
             requestId: response.requestId,
             error: error
         });
-        
+
         // Return basic fallback data
         return {
             token: undefined,
             model: undefined,
             isDone: false,
-            metadata: { 
+            metadata: {
                 parseError: error instanceof Error ? error.message : 'Unknown error',
-                rawPayload: response.payload 
+                rawPayload: response.payload
             }
         };
     }
@@ -277,26 +279,26 @@ export function parseWorkerResponseForAudit(response: LLMWorkerResponse): Parsed
  * @returns Database-ready LlmResponse object
  */
 export function mapWorkerResponseToLlmResponse(
-    response: LLMWorkerResponse, 
+    response: LLMWorkerResponse,
     parsedData: ParsedAuditData
 ): Omit<LlmResponse, 'id'> {
     const responseType = parsedData.isDone ? 'done' : 'token';
-    
+
     // Use metrics from LLMWorkerResponse if available, fallback to parsed data
     let totalTokens = parsedData.totalTokens;
     let processingTime = parsedData.processingTime;
     let tokensPerSecond = parsedData.tokensPerSecond;
-    
+
     if (response.metrics) {
         totalTokens = response.metrics.inputTokens + response.metrics.outputTokens;
         processingTime = response.metrics.totalProcessingTime;
-        
+
         // Calculate tokens per second from metrics if available
         if (response.metrics.outputTokens > 0 && response.metrics.totalProcessingTime > 0) {
             tokensPerSecond = response.metrics.outputTokens / (response.metrics.totalProcessingTime / 1000);
         }
     }
-    
+
     return {
         request_id: response.requestId,
         response_type: responseType,

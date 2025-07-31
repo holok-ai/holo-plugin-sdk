@@ -6,7 +6,8 @@ import { ChatCompletionCreateParamsBase } from 'openai/resources/chat/completion
 export enum Provider {
     OLLAMA = 'ollama',
     CLAUDE = 'claude',
-    OPENAI = 'openai'
+    OPENAI = 'openai',
+    PERPLEXITY = 'perplexity'
 }
 
 // Request type enum

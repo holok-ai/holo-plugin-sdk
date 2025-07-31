@@ -6,6 +6,7 @@ import {ProviderDB} from "../db";
 import {injectable} from "tsyringe";
 import {IProvider} from "../providers/types";
 import {ResponseService} from "./response.service";
+import {PerplexityProvider} from "../providers/perplexity.provider";
 
 @injectable()
 export class ProviderService {
@@ -39,6 +40,9 @@ export class ProviderService {
                     break;
                 case 'ollama':
                     aiProvider = new OllamaProvider(provider.config as any, this.responseService, serverId);
+                    break;
+                case 'perplexity':
+                    aiProvider = new PerplexityProvider(provider.config as any, this.responseService, serverId);
                     break;
                 default:
                     break;

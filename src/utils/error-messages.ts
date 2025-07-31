@@ -8,31 +8,35 @@ export class ErrorMessages {
     static readonly MODEL_REQUIRED = 'Model is required';
     static readonly PROMPT_REQUIRED = 'Prompt is required';
     static readonly MESSAGES_REQUIRED = 'Messages array is required';
-    
+
     // Dynamic validation errors
     static modelNotFound(model: string): string {
         return `Model '${model}' not found`;
     }
-    
+
+    static baseURLRequired(provider: string): string {
+        return `${provider} Base URL is required`;
+    }
+
     static apiKeyRequired(provider: string): string {
         return `${provider} API key is required`;
     }
-    
+
     static invalidProvider(provider: string, expectedProvider: string): string {
         return `Invalid provider '${provider}', expected '${expectedProvider}'`;
     }
-    
+
     static unsupportedProvider(provider: string): string {
         return `Unsupported provider: ${provider}`;
     }
-    
+
     static unsupportedRequestType(type: string): string {
         return `Unsupported request type: ${type}`;
     }
-    
+
     // Message validation errors
     static readonly MESSAGE_ROLE_CONTENT_REQUIRED = 'Each message must have role and content';
-    
+
     static invalidMessageRole(validRoles: string[]): string {
         return `Message role must be one of: ${validRoles.join(', ')}`;
     }
