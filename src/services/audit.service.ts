@@ -1,11 +1,10 @@
 import 'reflect-metadata';
-import {ProxyResponse, LLMWorkerResponse, LLMWorkerRequest} from '../types';
+import {LLMWorkerResponse, LLMWorkerRequest} from '../types';
 import {LlmRequest, LlmResponse} from "../db/types";
 import {container, injectable} from "tsyringe";
 import {RequestDB, ResponseDB} from "../db";
 import {AppDB} from "../db/app.db";
 import logger from "../utils/logger";
-import { parseWorkerResponseForAudit, mapWorkerResponseToLlmResponse } from '../utils/audit-parsers';
 import { TranslatorRegistry } from '../translators';
 
 /**
@@ -95,35 +94,28 @@ export class AuditService {
 
     /**
      * Log LLM response to database with comprehensive audit trail
-     * Supports ProxyResponse, LLMWorkerResponse, and direct LlmResponse formats
-     * @param {ProxyResponse | LLMWorkerResponse | Omit<LlmResponse, 'id'>} content - Response data to log
+     * Supports LLMWorkerResponse and direct LlmResponse formats
+     * @param {LLMWorkerResponse | Omit<LlmResponse, 'id'>} content - Response data to log
+     * @param requestContext - Optional context for userId and applicationId
      */
-    async logResponse(content: ProxyResponse): Promise<void>;
-    async logResponse(content: LLMWorkerResponse): Promise<void>;
+    async logResponse(content: LLMWorkerResponse, requestContext?: { userId?: string; applicationId?: string }): Promise<void>;
     async logResponse(content: Omit<LlmResponse, 'id'>): Promise<void>;
-    async logResponse(content: ProxyResponse | LLMWorkerResponse | Omit<LlmResponse, 'id'>): Promise<void> {
+    async logResponse(content: LLMWorkerResponse | Omit<LlmResponse, 'id'>, requestContext?: { userId?: string; applicationId?: string }): Promise<void> {
         const startTime = Date.now();
         
         try {
-            if (this.isProxyResponse(content)) {
-                logger.debug(`Logging ProxyResponse - requestId: ${content.requestId}, type: ${content.type}`);
-                const mappedResponse = this.mapProxyResponseToLlmResponse(content);
-                await this.insertResponse(mappedResponse);
-                logger.info(`Successfully logged ProxyResponse ${content.requestId} (${content.type}) in ${Date.now() - startTime}ms`);
-            } else if (this.isLLMWorkerResponse(content)) {
+            if (this.isLLMWorkerResponse(content)) {
                 logger.debug(`Logging LLMWorkerResponse - requestId: ${content.requestId}, provider: ${content.provider}`);
-                const mappedResponse = this.mapLLMWorkerResponseToLlmResponse(content);
+                const mappedResponse = this.translatorRegistry.translateResponse(content, requestContext);
                 await this.insertResponse(mappedResponse);
                 logger.info(`Successfully logged LLMWorkerResponse ${content.requestId} (${content.provider}) in ${Date.now() - startTime}ms`);
             } else {
-                logger.debug(`Logging direct LlmResponse - requestId: ${content.request_id}, type: ${content.response_type}`);
+                logger.debug(`Logging direct LlmResponse - requestId: ${content.request_id}`);
                 await this.insertResponse(content);
-                logger.info(`Successfully logged LlmResponse ${content.request_id} (${content.response_type}) in ${Date.now() - startTime}ms`);
+                logger.info(`Successfully logged LlmResponse ${content.request_id} in ${Date.now() - startTime}ms`);
             }
         } catch (error) {
-            const requestId = this.isProxyResponse(content) ? content.requestId : 
-                           this.isLLMWorkerResponse(content) ? content.requestId : 
-                           content.request_id;
+            const requestId = this.isLLMWorkerResponse(content) ? content.requestId : content.request_id;
             logger.error(`Failed to log response: ${error instanceof Error ? error.message : 'Unknown error'}`, {
                 requestId: requestId,
                 error: error,
@@ -133,18 +125,6 @@ export class AuditService {
         }
     }
 
-
-    /**
-     * Type guard to determine if object is a ProxyResponse
-     * @param {any} obj - Object to check
-     * @returns {boolean} True if object is ProxyResponse  
-     * @private
-     */
-    private isProxyResponse(obj: any): obj is ProxyResponse {
-        const isProxy = obj.requestId !== undefined && obj.type !== undefined;
-        logger.debug(`Type guard check - isProxyResponse: ${isProxy}`);
-        return isProxy;
-    }
 
     /**
      * Type guard to determine if object is an LLMWorkerResponse
@@ -161,154 +141,6 @@ export class AuditService {
         return isWorkerResponse;
     }
 
-    /**
-     * Map ProxyResponse to LlmResponse database format
-     * Extracts metrics from various provider formats and normalizes performance data
-     * @param {ProxyResponse} proxyResponse - Source proxy response
-     * @returns {Omit<LlmResponse, 'id'>} Mapped database response object
-     * @private
-     */
-    private mapProxyResponseToLlmResponse(proxyResponse: ProxyResponse): Omit<LlmResponse, 'id'> {
-        const {
-            requestId,
-            type,
-            token,
-            model,
-            workerId,
-            timestamp,
-            done,
-            metrics,
-            total_duration,
-            eval_duration,
-            prompt_eval_count,
-            eval_count
-        } = proxyResponse;
-
-        const isFinalResponse = (type === 'done' || done === true);
-        let totalTokens: number | undefined;
-        let processingTime: number | undefined;
-        let tokensPerSecond: number | undefined;
-
-        // Extract metrics from various possible locations
-        if (metrics) {
-            totalTokens = metrics.totalTokens;
-            processingTime = metrics.processingTime;
-            tokensPerSecond = metrics.tokensPerSecond;
-            logger.debug(`Extracted metrics from response ${requestId} - tokens: ${totalTokens}, time: ${processingTime}ms, rate: ${tokensPerSecond?.toFixed(2)}/s`);
-        }
-
-        // Fallback to Ollama-specific fields
-        if (total_duration) {
-            processingTime = Math.round(total_duration / 1000000); // Convert nanoseconds to milliseconds
-
-            const promptTokens = prompt_eval_count || 0;
-            const responseTokens = eval_count || 0;
-            totalTokens = promptTokens + responseTokens;
-
-            if (eval_duration && responseTokens > 0) {
-                const evalDurationSeconds = eval_duration / 1000000000;
-                tokensPerSecond = responseTokens / evalDurationSeconds;
-            }
-            
-            logger.debug(`Extracted Ollama metrics from response ${requestId} - promptTokens: ${promptTokens}, responseTokens: ${responseTokens}, totalTime: ${processingTime}ms`);
-        }
-
-        logger.debug(`Mapping ProxyResponse ${requestId} - type: ${type}, model: ${model}, workerId: ${workerId}, isFinal: ${isFinalResponse}`);
-
-        const mappedResponse = {
-            request_id: requestId,
-            response_type: type,
-            token: type === 'token' ? token : undefined,
-            model,
-            worker_id: workerId,
-            timestamp: new Date(timestamp).toISOString(),
-            is_final: isFinalResponse,
-            total_tokens: totalTokens,
-            processing_time: processingTime,
-            tokens_per_second: tokensPerSecond,
-            metadata: {
-                fullResponse: proxyResponse
-            }
-        };
-
-        if (isFinalResponse) {
-            logger.info(`Final response metrics for ${requestId} - tokens: ${totalTokens || 'N/A'}, time: ${processingTime || 'N/A'}ms, rate: ${tokensPerSecond?.toFixed(2) || 'N/A'}/s`);
-        }
-
-        return mappedResponse;
-    }
-
-    /**
-     * Map LLMWorkerResponse to LlmResponse database format using provider-specific parsers
-     * Uses audit parsers to extract relevant fields from provider payloads
-     * @param {LLMWorkerResponse} workerResponse - Source worker response
-     * @returns {Omit<LlmResponse, 'id'>} Mapped database response object
-     * @private
-     */
-    private mapLLMWorkerResponseToLlmResponse(workerResponse: LLMWorkerResponse): Omit<LlmResponse, 'id'> {
-        logger.debug(`Mapping LLMWorkerResponse ${workerResponse.requestId} - provider: ${workerResponse.provider}`);
-        
-        try {
-            // Use provider-specific parsers to extract audit data
-            const parsedData = parseWorkerResponseForAudit(workerResponse);
-            
-            // Map parsed data to database format (now leverages enhanced LLMWorkerResponse fields)
-            const mappedResponse = mapWorkerResponseToLlmResponse(workerResponse, parsedData);
-            
-            // Enhanced logging with new LLMWorkerResponse fields
-            const logContext = {
-                requestId: workerResponse.requestId,
-                workerId: workerResponse.workerId || 'unknown',
-                provider: workerResponse.provider,
-                isDone: parsedData.isDone,
-                hasMetrics: !!workerResponse.metrics,
-                hasTimestamp: !!workerResponse.timestamp
-            };
-            
-            logger.debug(`Mapped LLMWorkerResponse with enhanced fields`, logContext);
-            
-            if (parsedData.isDone) {
-                // Use enhanced metrics if available, fallback to parsed data
-                const finalTokens = workerResponse.metrics ? 
-                    workerResponse.metrics.inputTokens + workerResponse.metrics.outputTokens :
-                    parsedData.totalTokens;
-                const finalTime = workerResponse.metrics?.totalProcessingTime || parsedData.processingTime;
-                const finalRate = workerResponse.metrics && workerResponse.metrics.outputTokens > 0 && workerResponse.metrics.totalProcessingTime > 0 ?
-                    workerResponse.metrics.outputTokens / (workerResponse.metrics.totalProcessingTime / 1000) :
-                    parsedData.tokensPerSecond;
-                    
-                logger.info(`Final worker response metrics for ${workerResponse.requestId} - tokens: ${finalTokens || 'N/A'}, time: ${finalTime || 'N/A'}ms, rate: ${finalRate?.toFixed(2) || 'N/A'}/s, timeToFirstToken: ${workerResponse.metrics?.timeToFirstToken || 'N/A'}ms`);
-            }
-            
-            return mappedResponse;
-        } catch (error) {
-            logger.error(`Failed to map LLMWorkerResponse: ${error instanceof Error ? error.message : 'Unknown error'}`, {
-                requestId: workerResponse.requestId,
-                provider: workerResponse.provider,
-                error: error
-            });
-            
-            // Return fallback mapping
-            return {
-                request_id: workerResponse.requestId,
-                response_type: 'token',
-                token: undefined,
-                model: undefined,
-                worker_id: undefined,
-                timestamp: new Date().toISOString(),
-                is_final: false,
-                total_tokens: undefined,
-                processing_time: undefined,
-                tokens_per_second: undefined,
-                metadata: {
-                    provider: workerResponse.provider,
-                    fullResponse: workerResponse.fullResponse,
-                    mappingError: error instanceof Error ? error.message : 'Unknown error',
-                    rawPayload: workerResponse.payload
-                }
-            };
-        }
-    }
 
     /**
      * Insert response record into database
@@ -319,11 +151,11 @@ export class AuditService {
         const startTime = Date.now();
         try {
             await this.responseDB.insert(content);
-            logger.debug(`Database insert successful for response ${content.request_id} (${content.response_type}) in ${Date.now() - startTime}ms`);
+            logger.debug(`Database insert successful for response ${content.request_id} in ${Date.now() - startTime}ms`);
         } catch (error) {
             logger.error(`Database insert failed for response ${content.request_id}: ${error instanceof Error ? error.message : 'Unknown error'}`, {
                 requestId: content.request_id,
-                responseType: content.response_type,
+                status: content.status,
                 error: error,
                 duration: Date.now() - startTime
             });

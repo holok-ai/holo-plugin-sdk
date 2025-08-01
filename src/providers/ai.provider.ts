@@ -93,6 +93,7 @@ export abstract class AIProvider {
             sourceId: sourceId,
             requestId: requestId,
             provider: this.name as any, // Provider will be set by concrete implementation
+            workerId: process.env.WORKER_ID || 'unknown',
             payload: {
                 type: 'error',
                 error: {
@@ -151,6 +152,7 @@ export abstract class AIProvider {
             sourceId,
             requestId,
             provider,
+            workerId: process.env.WORKER_ID || 'unknown',
             payload,
             ...(fullResponse !== undefined && { fullResponse })
         };

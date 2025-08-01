@@ -38,30 +38,47 @@ export interface LlmRequest {
     request_id: string;
     request_type: string;
     model_slug: string;
-    user_prompt?: string | undefined;
-    options?: Record<string, any> | undefined;
-    source_id?: string | undefined;
-    user_id?: string | undefined;
+    user_prompt?: string;
+    options?: Record<string, any>;
+    source_id?: string;
+    user_id?: string;
     timestamp: string;
-    raw_request?: Record<string, any> | undefined;
+    raw_request?: Record<string, any>;
     application_id: string;
     provider_slug: string;
-    system_prompt?: string | undefined;
+    system_prompt?: string;
 }
 
+// Enum for LLM response status matching database llm_status type
+export enum LlmStatus {
+    SUCCESS = 'success',
+    ERROR = 'error',
+    TIMEOUT = 'timeout',
+    PARTIAL = 'partial',
+    RATE_LIMITED = 'rate_limited',
+    INVALID_REQUEST = 'invalid_request'
+}
+
+// Object that corresponds to the database llm_responses table
 export interface LlmResponse {
     id: string;
+    created_at: string;
+    user_id?: string;
+    application_id: string;
     request_id: string;
-    response_type: string;
-    token?: string | undefined;
-    model?: string | undefined;
-    worker_id?: string | undefined;
-    timestamp: any;
-    is_final?: boolean | undefined;
-    total_tokens?: number | undefined;
-    processing_time?: number | undefined;
-    tokens_per_second?: number | undefined;
-    metadata?: Record<string, any> | undefined;
+    provider_slug: string;
+    model_slug: string;
+    status: LlmStatus;
+    error_message?: string;
+    response?: string;
+    response_raw?: Record<string, any>;
+    input_tokens?: number;
+    output_tokens?: number;
+    time_to_first_token?: number;
+    total_processing_time?: number;
+    cost: number;
+    score?: number;
+    worker_id: string;
 }
 
 export interface Prompt extends BaseEntity {

@@ -1,5 +1,4 @@
 import { Provider, LLMWorkerResponse } from '../types';
-import { LlmResponse } from '../db/types';
 import logger from './logger';
 
 /**
@@ -272,6 +271,7 @@ export function parseWorkerResponseForAudit(response: LLMWorkerResponse): Parsed
 }
 
 /**
+ * @deprecated This function is deprecated. Use TranslatorRegistry.translateResponse() instead.
  * Map ParsedAuditData to LlmResponse database format
  * Now leverages new LLMWorkerResponse fields: workerId, timestamp, and metrics
  * @param response Original LLMWorkerResponse with enhanced fields
@@ -279,50 +279,10 @@ export function parseWorkerResponseForAudit(response: LLMWorkerResponse): Parsed
  * @returns Database-ready LlmResponse object
  */
 export function mapWorkerResponseToLlmResponse(
-    response: LLMWorkerResponse,
-    parsedData: ParsedAuditData
-): Omit<LlmResponse, 'id'> {
-    const responseType = parsedData.isDone ? 'done' : 'token';
-
-    // Use metrics from LLMWorkerResponse if available, fallback to parsed data
-    let totalTokens = parsedData.totalTokens;
-    let processingTime = parsedData.processingTime;
-    let tokensPerSecond = parsedData.tokensPerSecond;
-
-    if (response.metrics) {
-        totalTokens = response.metrics.inputTokens + response.metrics.outputTokens;
-        processingTime = response.metrics.totalProcessingTime;
-
-        // Calculate tokens per second from metrics if available
-        if (response.metrics.outputTokens > 0 && response.metrics.totalProcessingTime > 0) {
-            tokensPerSecond = response.metrics.outputTokens / (response.metrics.totalProcessingTime / 1000);
-        }
-    }
-
-    return {
-        request_id: response.requestId,
-        response_type: responseType,
-        token: responseType === 'token' ? parsedData.token : undefined,
-        model: parsedData.model,
-        worker_id: response.workerId || undefined, // Now uses workerId from LLMWorkerResponse
-        timestamp: response.timestamp ? new Date(response.timestamp).toISOString() : new Date().toISOString(),
-        is_final: parsedData.isDone,
-        total_tokens: totalTokens,
-        processing_time: processingTime,
-        tokens_per_second: tokensPerSecond,
-        metadata: {
-            provider: response.provider,
-            fullResponse: response.fullResponse,
-            usage: parsedData.usage,
-            finishReason: parsedData.finishReason,
-            // Include enhanced metrics if available
-            enhancedMetrics: response.metrics ? {
-                inputTokens: response.metrics.inputTokens,
-                outputTokens: response.metrics.outputTokens,
-                timeToFirstToken: response.metrics.timeToFirstToken,
-                totalProcessingTime: response.metrics.totalProcessingTime
-            } : undefined,
-            ...parsedData.metadata
-        }
-    };
+    _response: LLMWorkerResponse,
+    _parsedData: ParsedAuditData
+): any {
+    // This function is deprecated and should not be used
+    // Use TranslatorRegistry.translateResponse() for new implementations
+    throw new Error('mapWorkerResponseToLlmResponse is deprecated. Use TranslatorRegistry.translateResponse() instead.');
 }

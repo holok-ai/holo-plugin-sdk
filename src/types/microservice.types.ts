@@ -40,29 +40,8 @@ export interface AdminResponse {
 }
 
 // ProxyRequest has been replaced with LLMWorkerRequest from provider-request.types.ts
+// ProxyResponse has been replaced with LLMWorkerResponse from provider-request.types.ts
 // This provides better type safety and more comprehensive payload structure
-
-export interface ProxyResponse {
-    requestId: string;
-    type: 'token' | 'done' | 'error';
-    token?: any;
-    model?: string;
-    workerId?: string;
-    timestamp: number;
-    done?: boolean;
-    response?: any;
-    fullResponse?: any;
-    metrics?: {
-        totalTokens?: number;
-        processingTime?: number;
-        tokensPerSecond?: number;
-    };
-    // Ollama specific fields
-    total_duration?: number;
-    eval_duration?: number;
-    prompt_eval_count?: number;
-    eval_count?: number;
-}
 
 export interface AuditLogEntry {
     id: string;

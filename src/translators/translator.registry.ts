@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe';
 import { IRequestTranslator } from './types';
-import { Provider, LLMWorkerRequest } from '../types/provider-request.types';
-import { LlmRequest } from '../db/types';
+import { Provider, LLMWorkerRequest, LLMWorkerResponse } from '../types/provider-request.types';
+import { LlmRequest, LlmResponse } from '../db/types';
 import { OllamaRequestTranslator } from './providers/ollama.translator';
 import { ClaudeRequestTranslator } from './providers/claude.translator';
 import { OpenAIRequestTranslator } from './providers/openai.translator';
@@ -41,15 +41,9 @@ export class TranslatorRegistry {
             request_id: '',
             request_type: '',
             model_slug: '',
-            user_prompt: undefined,
-            options: undefined,
-            source_id: undefined,
-            user_id: undefined,
             timestamp: '',
-            raw_request: undefined,
             application_id: '',
-            provider_slug: '',
-            system_prompt: undefined
+            provider_slug: ''
         };
 
         // Use translator to populate fields
@@ -62,6 +56,40 @@ export class TranslatorRegistry {
         });
 
         return llmRequest;
+    }
+
+    /**
+     * Translate LLMWorkerResponse to LlmResponse using appropriate provider translator
+     */
+    translateResponse(
+        workerResponse: LLMWorkerResponse,
+        requestContext?: { userId?: string; applicationId?: string }
+    ): Omit<LlmResponse, 'id'> {
+        const translator = this.getTranslator(workerResponse.provider);
+        
+        // Create empty LlmResponse object
+        const llmResponse: Omit<LlmResponse, 'id'> = {
+            created_at: '',
+            application_id: '',
+            request_id: '',
+            provider_slug: '',
+            model_slug: '',
+            status: undefined as any,
+            cost: 0,
+            worker_id: ''
+        };
+
+        // Use translator to populate fields
+        translator.translateResponse(workerResponse, llmResponse, requestContext);
+
+        logger.debug('Translated LLMWorkerResponse to LlmResponse', {
+            provider: workerResponse.provider,
+            requestId: workerResponse.requestId,
+            model: llmResponse.model_slug,
+            status: llmResponse.status
+        });
+
+        return llmResponse;
     }
 
     /**
@@ -82,6 +110,7 @@ export class TranslatorRegistry {
         this.translators.set(Provider.OLLAMA, this.ollamaTranslator);
         this.translators.set(Provider.CLAUDE, this.claudeTranslator);
         this.translators.set(Provider.OPENAI, this.openaiTranslator);
+        this.translators.set(Provider.PERPLEXITY, this.openaiTranslator); // Perplexity uses OpenAI format
 
         logger.info('Translator registry initialized', {
             supportedProviders: this.getSupportedProviders()

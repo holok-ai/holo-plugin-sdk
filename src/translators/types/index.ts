@@ -1,5 +1,5 @@
-import { Provider, LLMWorkerRequest } from '../../types/provider-request.types';
-import { LlmRequest } from '../../db/types';
+import { Provider, LLMWorkerRequest, LLMWorkerResponse } from '../../types/provider-request.types';
+import { LlmRequest, LlmResponse } from '../../db/types';
 
 export interface IRequestTranslator {
     readonly provider: Provider;
@@ -10,7 +10,19 @@ export interface IRequestTranslator {
      * @param llmRequest - The LlmRequest object to populate (without id)
      */
     translate(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
+    
+    /**
+     * Translate LLMWorkerResponse (final response) into LlmResponse object
+     * @param workerResponse - The final worker response
+     * @param llmResponse - The LlmResponse object to populate (without id)
+     * @param requestContext - Additional context like userId and applicationId
+     */
+    translateResponse(
+        workerResponse: LLMWorkerResponse, 
+        llmResponse: Omit<LlmResponse, 'id'>,
+        requestContext?: { userId?: string; applicationId?: string }
+    ): void;
 }
 
-export { Provider, LLMWorkerRequest };
-export { LlmRequest } from '../../db/types';
+export { Provider, LLMWorkerRequest, LLMWorkerResponse };
+export { LlmRequest, LlmResponse } from '../../db/types';

@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe';
 import { BaseRequestTranslator } from './base.translator';
-import { Provider, LLMWorkerRequest } from '../../types/provider-request.types';
-import { LlmRequest } from '../../db/types';
+import { Provider, LLMWorkerRequest, LLMWorkerResponse } from '../../types/provider-request.types';
+import { LlmRequest, LlmResponse, LlmStatus } from '../../db/types';
 import { OpenAIWorkerRequest } from '../../types/provider-request.types';
 
 @injectable()
@@ -17,26 +17,35 @@ export class OpenAIRequestTranslator extends BaseRequestTranslator {
         llmRequest.model_slug = payload.model;
 
         // Extract user prompt from messages
-        llmRequest.user_prompt = this.extractUserPromptFromMessages(payload.messages);
+        const userPrompt = this.extractUserPromptFromMessages(payload.messages);
+        if (userPrompt !== undefined) {
+            llmRequest.user_prompt = userPrompt;
+        }
 
         // Extract system prompt from messages
-        llmRequest.system_prompt = this.extractSystemPromptFromMessages(payload.messages);
+        const systemPrompt = this.extractSystemPromptFromMessages(payload.messages);
+        if (systemPrompt !== undefined) {
+            llmRequest.system_prompt = systemPrompt;
+        }
 
         // Set options (OpenAI-specific parameters)
-        llmRequest.options = {
-            max_tokens: payload.max_tokens,
-            temperature: payload.temperature,
-            top_p: payload.top_p,
-            frequency_penalty: payload.frequency_penalty,
-            presence_penalty: payload.presence_penalty,
-            stop: payload.stop,
-            stream: payload.stream,
-            tools: payload.tools,
-            tool_choice: payload.tool_choice,
-            response_format: payload.response_format,
-            seed: payload.seed,
-            user: payload.user
-        };
+        const options: Record<string, any> = {};
+        if (payload.max_tokens !== undefined) options.max_tokens = payload.max_tokens;
+        if (payload.temperature !== undefined) options.temperature = payload.temperature;
+        if (payload.top_p !== undefined) options.top_p = payload.top_p;
+        if (payload.frequency_penalty !== undefined) options.frequency_penalty = payload.frequency_penalty;
+        if (payload.presence_penalty !== undefined) options.presence_penalty = payload.presence_penalty;
+        if (payload.stop !== undefined) options.stop = payload.stop;
+        if (payload.stream !== undefined) options.stream = payload.stream;
+        if (payload.tools !== undefined) options.tools = payload.tools;
+        if (payload.tool_choice !== undefined) options.tool_choice = payload.tool_choice;
+        if (payload.response_format !== undefined) options.response_format = payload.response_format;
+        if (payload.seed !== undefined) options.seed = payload.seed;
+        if (payload.user !== undefined) options.user = payload.user;
+        
+        if (Object.keys(options).length > 0) {
+            llmRequest.options = options;
+        }
     }
 
     private extractUserPromptFromMessages(messages?: any[]): string | undefined {
@@ -65,5 +74,68 @@ export class OpenAIRequestTranslator extends BaseRequestTranslator {
         
         const systemMessage = messages.find(msg => msg.role === 'system');
         return systemMessage && typeof systemMessage.content === 'string' ? systemMessage.content : undefined;
+    }
+
+    translateResponse(
+        workerResponse: LLMWorkerResponse, 
+        llmResponse: Omit<LlmResponse, 'id'>,
+        requestContext?: { userId?: string; applicationId?: string }
+    ): void {
+        this.setCommonResponseFields(workerResponse, llmResponse, requestContext);
+
+        const payload = workerResponse.payload;
+        
+        // Extract model from payload
+        llmResponse.model_slug = payload.model || 'unknown';
+        
+        // Extract response text from final response
+        if (workerResponse.fullResponse) {
+            llmResponse.response = typeof workerResponse.fullResponse === 'string' 
+                ? workerResponse.fullResponse 
+                : JSON.stringify(workerResponse.fullResponse);
+        } else if (payload.object === 'chat.completion') {
+            // Non-streaming completion
+            const choice = payload.choices?.[0];
+            if (choice?.message?.content) {
+                llmResponse.response = choice.message.content;
+            }
+        } else if (payload.object === 'chat.completion.chunk') {
+            // Streaming chunk
+            const choice = payload.choices?.[0];
+            if (choice?.delta?.content) {
+                llmResponse.response = choice.delta.content;
+            }
+        }
+
+        // Extract token usage from metrics or payload
+        if (workerResponse.metrics) {
+            llmResponse.input_tokens = workerResponse.metrics.inputTokens;
+            llmResponse.output_tokens = workerResponse.metrics.outputTokens;
+            llmResponse.time_to_first_token = workerResponse.metrics.timeToFirstToken;
+            llmResponse.total_processing_time = workerResponse.metrics.totalProcessingTime;
+        } else if (payload.usage) {
+            llmResponse.input_tokens = payload.usage.prompt_tokens;
+            llmResponse.output_tokens = payload.usage.completion_tokens;
+        }
+
+        // Set status based on completion and finish reason
+        const choice = payload.choices?.[0];
+        if (choice?.finish_reason) {
+            if (choice.finish_reason === 'length') {
+                llmResponse.status = LlmStatus.PARTIAL;
+            } else if (choice.finish_reason === 'stop' || choice.finish_reason === 'end_turn') {
+                llmResponse.status = LlmStatus.SUCCESS;
+            } else if (choice.finish_reason === 'content_filter') {
+                llmResponse.status = LlmStatus.ERROR;
+                llmResponse.error_message = 'Content filtered by OpenAI';
+            } else {
+                llmResponse.status = LlmStatus.SUCCESS;
+            }
+        } else if (payload.error) {
+            llmResponse.status = LlmStatus.ERROR;
+            llmResponse.error_message = payload.error.message || 'OpenAI API error';
+        } else {
+            llmResponse.status = LlmStatus.SUCCESS;
+        }
     }
 }

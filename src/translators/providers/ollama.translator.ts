@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe';
 import { BaseRequestTranslator } from './base.translator';
-import { Provider, LLMWorkerRequest, RequestType } from '../../types/provider-request.types';
-import { LlmRequest } from '../../db/types';
+import { Provider, LLMWorkerRequest, LLMWorkerResponse, RequestType } from '../../types/provider-request.types';
+import { LlmRequest, LlmResponse, LlmStatus } from '../../db/types';
 import { OllamaWorkerChatRequest, OllamaWorkerGenerateRequest } from '../../types/provider-request.types';
 
 @injectable()
@@ -19,16 +19,28 @@ export class OllamaRequestTranslator extends BaseRequestTranslator {
         // Set prompt/message content based on request type
         if (workerRequest.type === RequestType.CHAT) {
             const chatPayload = payload as OllamaWorkerChatRequest;
-            llmRequest.user_prompt = this.extractUserPromptFromMessages(chatPayload.messages);
-            llmRequest.system_prompt = this.extractSystemPromptFromMessages(chatPayload.messages);
+            const userPrompt = this.extractUserPromptFromMessages(chatPayload.messages);
+            const systemPrompt = this.extractSystemPromptFromMessages(chatPayload.messages);
+            if (userPrompt !== undefined) {
+                llmRequest.user_prompt = userPrompt;
+            }
+            if (systemPrompt !== undefined) {
+                llmRequest.system_prompt = systemPrompt;
+            }
         } else if (workerRequest.type === RequestType.GENERATE) {
             const generatePayload = payload as OllamaWorkerGenerateRequest;
-            llmRequest.user_prompt = generatePayload.prompt;
-            llmRequest.system_prompt = generatePayload.system;
+            if (generatePayload.prompt !== undefined) {
+                llmRequest.user_prompt = generatePayload.prompt;
+            }
+            if (generatePayload.system !== undefined) {
+                llmRequest.system_prompt = generatePayload.system;
+            }
         }
 
         // Set options
-        llmRequest.options = payload.options || {};
+        if (payload.options !== undefined) {
+            llmRequest.options = payload.options;
+        }
     }
 
     private extractUserPromptFromMessages(messages?: any[]): string | undefined {
@@ -47,5 +59,56 @@ export class OllamaRequestTranslator extends BaseRequestTranslator {
         
         const systemMessage = messages.find(msg => msg.role === 'system');
         return systemMessage && typeof systemMessage.content === 'string' ? systemMessage.content : undefined;
+    }
+
+    translateResponse(
+        workerResponse: LLMWorkerResponse, 
+        llmResponse: Omit<LlmResponse, 'id'>,
+        requestContext?: { userId?: string; applicationId?: string }
+    ): void {
+        this.setCommonResponseFields(workerResponse, llmResponse, requestContext);
+
+        const payload = workerResponse.payload;
+        
+        // Extract model from payload
+        llmResponse.model_slug = payload.model || 'unknown';
+        
+        // Extract response text from final response
+        if (workerResponse.fullResponse) {
+            llmResponse.response = typeof workerResponse.fullResponse === 'string' 
+                ? workerResponse.fullResponse 
+                : JSON.stringify(workerResponse.fullResponse);
+        } else if (payload.response) {
+            // Generate format
+            llmResponse.response = payload.response;
+        } else if (payload.message?.content) {
+            // Chat format
+            llmResponse.response = payload.message.content;
+        }
+
+        // Extract token usage from metrics or payload
+        if (workerResponse.metrics) {
+            llmResponse.input_tokens = workerResponse.metrics.inputTokens;
+            llmResponse.output_tokens = workerResponse.metrics.outputTokens;
+            llmResponse.time_to_first_token = workerResponse.metrics.timeToFirstToken;
+            llmResponse.total_processing_time = workerResponse.metrics.totalProcessingTime;
+        } else {
+            // Fallback to payload data
+            const promptTokens = payload.prompt_eval_count || 0;
+            const responseTokens = payload.eval_count || 0;
+            llmResponse.input_tokens = promptTokens;
+            llmResponse.output_tokens = responseTokens;
+            
+            if (payload.total_duration) {
+                llmResponse.total_processing_time = Math.round(payload.total_duration / 1000000); // Convert nanoseconds to milliseconds
+            }
+        }
+
+        // Set status based on completion
+        if (payload.done === true) {
+            llmResponse.status = LlmStatus.SUCCESS;
+        } else {
+            llmResponse.status = LlmStatus.PARTIAL;
+        }
     }
 }

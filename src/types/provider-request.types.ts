@@ -33,7 +33,7 @@ export interface LLMWorkerResponse {
     provider: Provider;
     payload: any;
     fullResponse?: string;
-    workerId?: string;
+    workerId: string;
     timestamp?: number;
     metrics?: {
         inputTokens: number;
