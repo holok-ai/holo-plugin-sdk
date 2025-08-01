@@ -180,7 +180,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             }
             
             const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, response, fullResponse);
-            await this.onResponseChunk(responseChunk);
+            await this.onResponseChunk(responseChunk, true);
         }
     }
 

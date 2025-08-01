@@ -74,7 +74,7 @@ export interface LlmResponse {
     response_raw?: Record<string, any>;
     input_tokens?: number;
     output_tokens?: number;
-    time_to_first_token?: number;
+    time_to_first_token?: number | undefined;
     total_processing_time?: number;
     cost: number;
     score?: number;

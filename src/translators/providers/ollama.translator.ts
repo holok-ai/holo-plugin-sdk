@@ -3,6 +3,7 @@ import { BaseRequestTranslator } from './base.translator';
 import { Provider, LLMWorkerRequest, LLMWorkerResponse, RequestType } from '../../types/provider-request.types';
 import { LlmRequest, LlmResponse, LlmStatus } from '../../db/types';
 import { OllamaWorkerChatRequest, OllamaWorkerGenerateRequest } from '../../types/provider-request.types';
+import logger from '../../utils/logger';
 
 @injectable()
 export class OllamaRequestTranslator extends BaseRequestTranslator {
@@ -75,6 +76,7 @@ export class OllamaRequestTranslator extends BaseRequestTranslator {
         
         // Extract response text from final response
         if (workerResponse.fullResponse) {
+            logger.debug(`has full response: ${workerResponse.fullResponse}`);
             llmResponse.response = typeof workerResponse.fullResponse === 'string' 
                 ? workerResponse.fullResponse 
                 : JSON.stringify(workerResponse.fullResponse);
@@ -102,6 +104,9 @@ export class OllamaRequestTranslator extends BaseRequestTranslator {
             if (payload.total_duration) {
                 llmResponse.total_processing_time = Math.round(payload.total_duration / 1000000); // Convert nanoseconds to milliseconds
             }
+            
+            // Calculate time to first token using Ollama timing data
+            llmResponse.time_to_first_token = this.calculateTimeToFirstToken(payload);
         }
 
         // Set status based on completion
@@ -110,5 +115,31 @@ export class OllamaRequestTranslator extends BaseRequestTranslator {
         } else {
             llmResponse.status = LlmStatus.PARTIAL;
         }
+        logger.debug(`end of translate: ${llmResponse.response}`);
+    }
+
+    /**
+     * Calculate time to first token using Ollama's timing data
+     * Time to first token = load_duration + prompt_eval_duration
+     * This represents the time spent loading the model and evaluating the prompt before generating the first token
+     * @param payload - Ollama response payload with timing information
+     * @returns Time to first token in milliseconds, or undefined if timing data is unavailable
+     */
+    private calculateTimeToFirstToken(payload: any): number | undefined {
+        const loadDuration = payload.load_duration;
+        const promptEvalDuration = payload.prompt_eval_duration;
+
+        if (loadDuration !== undefined && promptEvalDuration !== undefined) {
+            // Convert nanoseconds to milliseconds and sum the durations
+            const timeToFirstTokenNs = loadDuration + promptEvalDuration;
+            const timeToFirstTokenMs = Math.round(timeToFirstTokenNs / 1000000);
+            
+            logger.debug(`Calculated time to first token for Ollama: ${timeToFirstTokenMs}ms (load: ${Math.round(loadDuration / 1000000)}ms + prompt_eval: ${Math.round(promptEvalDuration / 1000000)}ms)`);
+            
+            return timeToFirstTokenMs;
+        }
+
+        logger.debug('Ollama timing data unavailable for time to first token calculation');
+        return undefined;
     }
 }

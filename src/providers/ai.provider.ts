@@ -165,9 +165,14 @@ export abstract class AIProvider {
      * @param responseChunk - The standardized response chunk to send to clients
      * @returns Promise that resolves when the chunk has been sent to the response service
      */
-    async onResponseChunk(responseChunk: LLMWorkerResponse){
-        logger.info(`onResponseChunk: ${JSON.stringify(responseChunk)}`);
-        await this.responseService.sendResponseChunk(this.workerId, responseChunk.sourceId, responseChunk.requestId, responseChunk, true);
+    async onResponseChunk(responseChunk: LLMWorkerResponse, auditEnabled?: boolean){
+        logger.info(`auditEnabled ${auditEnabled}`);
+        // Default to false if not provided
+        const auditEnabledValue = auditEnabled ?? false;
+        
+        logger.info(`onResponseChunk: ${JSON.stringify(responseChunk)} auditEnabled: ${auditEnabledValue}`);
+        
+        await this.responseService.sendResponseChunk(this.workerId, responseChunk.sourceId, responseChunk.requestId, responseChunk, auditEnabledValue);
     }
 }
 
