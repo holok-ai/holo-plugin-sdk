@@ -19,6 +19,8 @@ export enum RequestType {
 export interface LLMWorkerRequest {
     provider: Provider;
     sourceId: string;
+    applicationId?: string;
+    userId?: string;
     requestId: string;
     type: RequestType;
     payload: LLMPayloadTypes;

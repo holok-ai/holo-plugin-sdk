@@ -1,11 +1,12 @@
 import 'reflect-metadata';
-import {ProxyRequest, ProxyResponse, LLMWorkerResponse} from '../types';
+import {ProxyResponse, LLMWorkerResponse, LLMWorkerRequest} from '../types';
 import {LlmRequest, LlmResponse} from "../db/types";
 import {container, injectable} from "tsyringe";
 import {RequestDB, ResponseDB} from "../db";
 import {AppDB} from "../db/app.db";
 import logger from "../utils/logger";
 import { parseWorkerResponseForAudit, mapWorkerResponseToLlmResponse } from '../utils/audit-parsers';
+import { TranslatorRegistry } from '../translators';
 
 /**
  * Service for auditing and logging LLM requests and responses
@@ -14,27 +15,31 @@ import { parseWorkerResponseForAudit, mapWorkerResponseToLlmResponse } from '../
 @injectable()
 export class AuditService {
 
-    constructor(private requestDB: RequestDB, private responseDB: ResponseDB) {
+    constructor(
+        private requestDB: RequestDB, 
+        private responseDB: ResponseDB,
+        private translatorRegistry: TranslatorRegistry
+    ) {
         logger.info('AuditService initialized');
     }
 
     /**
      * Log LLM request to database with comprehensive audit trail
-     * Supports both ProxyRequest and direct LlmRequest formats
-     * @param {ProxyRequest | Omit<LlmRequest, 'id'>} content - Request data to log
+     * Supports both LLMWorkerRequest and direct LlmRequest formats
+     * @param {LLMWorkerRequest | Omit<LlmRequest, 'id'>} content - Request data to log
      */
-    async logRequest(content: ProxyRequest): Promise<void>;
+    async logRequest(content: LLMWorkerRequest): Promise<void>;
     async logRequest(content: Omit<LlmRequest, 'id'>): Promise<void>;
-    async logRequest(content: ProxyRequest | Omit<LlmRequest, 'id'>): Promise<void> {
+    async logRequest(content: LLMWorkerRequest | Omit<LlmRequest, 'id'>): Promise<void> {
         const startTime = Date.now();
         
         try {
-            // Type guard to check if it's a ProxyRequest
-            if (this.isProxyRequest(content)) {
-                logger.debug(`Logging ProxyRequest - requestId: ${content.requestId}, type: ${content.type}, provider: ${content.payload?.provider || 'unknown'}`);
-                const mappedRequest = this.mapProxyRequestToLlmRequest(content);
+            // Type guard to check if it's an LLMWorkerRequest
+            if (this.isLLMWorkerRequest(content)) {
+                logger.debug(`Logging LLMWorkerRequest - requestId: ${content.requestId}, type: ${content.type}, provider: ${content.provider}`);
+                const mappedRequest = this.translatorRegistry.translate(content);
                 await this.insertRequest(mappedRequest);
-                logger.info(`Successfully logged ProxyRequest ${content.requestId} in ${Date.now() - startTime}ms`);
+                logger.info(`Successfully logged LLMWorkerRequest ${content.requestId} in ${Date.now() - startTime}ms`);
             } else {
                 logger.debug(`Logging direct LlmRequest - requestId: ${content.request_id}, type: ${content.request_type}`);
                 await this.insertRequest(content);
@@ -42,7 +47,7 @@ export class AuditService {
             }
         } catch (error) {
             logger.error(`Failed to log request: ${error instanceof Error ? error.message : 'Unknown error'}`, {
-                requestId: this.isProxyRequest(content) ? content.requestId : content.request_id,
+                requestId: this.isLLMWorkerRequest(content) ? content.requestId : content.request_id,
                 error: error,
                 duration: Date.now() - startTime
             });
@@ -51,55 +56,22 @@ export class AuditService {
     }
 
     /**
-     * Type guard to determine if object is a ProxyRequest
+     * Type guard to determine if object is an LLMWorkerRequest
      * @param {any} obj - Object to check
-     * @returns {boolean} True if object is ProxyRequest
+     * @returns {boolean} True if object is LLMWorkerRequest
      * @private
      */
-    private isProxyRequest(obj: any): obj is ProxyRequest {
-        const isProxy = obj.payload !== undefined && obj.sourceId !== undefined;
-        logger.debug(`Type guard check - isProxyRequest: ${isProxy}`);
-        return isProxy;
+    private isLLMWorkerRequest(obj: any): obj is LLMWorkerRequest {
+        const isWorkerRequest = obj.payload !== undefined && 
+                               obj.sourceId !== undefined && 
+                               obj.provider !== undefined &&
+                               obj.type !== undefined;
+        logger.debug(`Type guard check - isLLMWorkerRequest: ${isWorkerRequest}`);
+        return isWorkerRequest;
     }
 
-    /**
-     * Map ProxyRequest to LlmRequest database format
-     * Extracts prompt from messages for chat requests and normalizes data structure
-     * @param {ProxyRequest} proxyRequest - Source proxy request
-     * @returns {Omit<LlmRequest, 'id'>} Mapped database request object
-     * @private
-     */
-    private mapProxyRequestToLlmRequest(proxyRequest: ProxyRequest): Omit<LlmRequest, 'id'> {
-        const {requestId, type, sourceId, payload, timestamp} = proxyRequest;
-        const {model, prompt, messages, options} = payload;
-
-        // For 'chat' type requests, use the last message as the prompt
-        const promptText = prompt || (messages && messages.length > 0
-            ? messages[messages.length - 1].content
-            : undefined);
-
-        // Get user ID from options if available
-        const userId = (options && options.user) || undefined;
-
-        logger.debug(`Mapping ProxyRequest ${requestId} - model: ${model}, type: ${type}, promptLength: ${promptText?.length || 0}, messageCount: ${messages?.length || 0}`);
-
-        const mappedRequest = {
-            request_id: requestId,
-            request_type: type,
-            model,
-            prompt: promptText,
-            options,
-            source_id: sourceId,
-            user_id: userId,
-            timestamp: new Date(timestamp).toISOString(),
-            metadata: {
-                fullRequest: proxyRequest
-            }
-        };
-
-        logger.debug(`Mapped ProxyRequest ${requestId} - userId: ${userId}, sourceId: ${sourceId}`);
-        return mappedRequest;
-    }
+    // LLMWorkerRequest mapping is now handled by the TranslatorRegistry
+    // This provides better type safety and provider-specific field extraction
 
     /**
      * Insert request record into database

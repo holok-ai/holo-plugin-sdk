@@ -2,11 +2,8 @@ import {Request, Response} from 'express';
 
 // Base API types
 export interface HttpApiRequest extends Request {
-    user?: {
-        id: string;
-        email: string;
-        roles: string[];
-    };
+    user?: string,
+    applicationId?: string
 }
 
 export interface ApiResponse<T = any> extends Response {

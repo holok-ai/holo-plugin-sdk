@@ -1,4 +1,4 @@
-import { RequestType } from './provider-request.types';
+// RequestType import removed as ProxyRequest was replaced with LLMWorkerRequest
 
 export interface AdminHandler {
     (payload: any): Promise<any>;
@@ -39,22 +39,8 @@ export interface AdminResponse {
     [key: string]: any;
 }
 
-export interface ProxyRequest {
-    requestId: string; // UUIDv4
-    type: RequestType;
-    sourceId: string; // Server ID for response routing
-    payload: {
-        model: string;
-        provider?: string;
-        options?: Record<string, any>;
-        stream?: boolean;
-        // For 'generate' type requests
-        prompt?: string;
-        // For 'chat' type requests
-        messages?: Array<{ role: string; content: string }>;
-    };
-    timestamp: number;
-}
+// ProxyRequest has been replaced with LLMWorkerRequest from provider-request.types.ts
+// This provides better type safety and more comprehensive payload structure
 
 export interface ProxyResponse {
     requestId: string;

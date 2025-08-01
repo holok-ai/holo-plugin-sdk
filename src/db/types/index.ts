@@ -37,13 +37,16 @@ export interface LlmRequest {
     id: string;
     request_id: string;
     request_type: string;
-    model: string;
-    prompt?: string | undefined;
+    model_slug: string;
+    user_prompt?: string | undefined;
     options?: Record<string, any> | undefined;
     source_id?: string | undefined;
     user_id?: string | undefined;
     timestamp: string;
-    metadata?: Record<string, any> | undefined;
+    raw_request?: Record<string, any> | undefined;
+    application_id: string;
+    provider_slug: string;
+    system_prompt?: string | undefined;
 }
 
 export interface LlmResponse {
