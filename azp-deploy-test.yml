@@ -27,15 +27,10 @@ stages:
     steps:
     - checkout: llm-proxy
     - checkout: dynamo-app-ops
-    
-    # - task: InstallSSHKey@0
-    #   inputs:
-    #     knownHostsEntry: 'nova-dev-2,100.97.194.71 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCA5pS7aqg6Az6u73bPD82Z0iOsNDB0ruvpPgYdWKksw7yfYQ8DpopD4HJyxuqidJuotgQW2UTsbZy7rB1lm1Cw='
-    #     sshKeySecureFile: dynamo-nova.key
 
     - task: InstallSSHKey@0
       inputs:
-        knownHostsEntry: '10.0.1.67 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCA5pS7aqg6Az6u73bPD82Z0iOsNDB0ruvpPgYdWKksw7yfYQ8DpopD4HJyxuqidJuotgQW2UTsbZy7rB1lm1Cw='
+        knownHostsEntry: '10.0.1.121 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBLyOv3jGD1duCFGQSns4zx008zmugbtsrFVwfnCFDNu5lnKpIz6Url5CpDkiBTBHibVCMAv0IRmigMl6GL14d+A='
         sshKeySecureFile: dynamo-nova.key
 
     - task: Docker@2
@@ -59,14 +54,14 @@ stages:
   jobs:
   - job: Deploy
     pool:
-      name: nova-dev-2
+      name: holokai-dev
     
     steps:
     - checkout: dynamo-app-ops
 
     - task: InstallSSHKey@0
       inputs:
-        knownHostsEntry: '10.0.1.67 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCA5pS7aqg6Az6u73bPD82Z0iOsNDB0ruvpPgYdWKksw7yfYQ8DpopD4HJyxuqidJuotgQW2UTsbZy7rB1lm1Cw='
+        knownHostsEntry: '10.0.1.121 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBLyOv3jGD1duCFGQSns4zx008zmugbtsrFVwfnCFDNu5lnKpIz6Url5CpDkiBTBHibVCMAv0IRmigMl6GL14d+A='
         sshKeySecureFile: dynamo-nova.key
 
     - task: ShellScript@2
