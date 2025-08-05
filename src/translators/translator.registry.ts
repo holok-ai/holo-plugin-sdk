@@ -7,10 +7,45 @@ import { ClaudeRequestTranslator } from './providers/claude.translator';
 import { OpenAIRequestTranslator } from './providers/openai.translator';
 import logger from '../utils/logger';
 
+/**
+ * Central registry for managing provider-specific request/response translators.
+ * 
+ * This registry implements the Factory pattern to provide appropriate translators
+ * for converting between LLMWorkerRequest/Response formats and database formats.
+ * It serves as the main entry point for the translation system, handling:
+ * 
+ * - Provider-specific translator lookup and management
+ * - Bidirectional translation (request and response)
+ * - Extensibility through custom translator registration
+ * - Type-safe translation operations with proper error handling
+ * 
+ * The registry is TSyringe injectable and automatically initializes all
+ * supported provider translators on construction.
+ * 
+ * @example
+ * ```typescript
+ * // Translate incoming worker request to database format
+ * const dbRequest = registry.translate(workerRequest);
+ * 
+ * // Translate worker response to database format
+ * const dbResponse = registry.translateResponse(workerResponse);
+ * ```
+ */
 @injectable()
 export class TranslatorRegistry {
+    /**
+     * Internal registry mapping providers to their specific translators.
+     * Uses Map for O(1) lookup performance and type safety.
+     */
     private translators = new Map<Provider, IRequestTranslator>();
 
+    /**
+     * Initialize the translator registry with all supported provider translators.
+     * 
+     * @param ollamaTranslator - Handles Ollama generate/chat request formats
+     * @param claudeTranslator - Handles Claude message format and stream events
+     * @param openaiTranslator - Handles OpenAI chat completions and streaming
+     */
     constructor(
         private ollamaTranslator: OllamaRequestTranslator,
         private claudeTranslator: ClaudeRequestTranslator,
