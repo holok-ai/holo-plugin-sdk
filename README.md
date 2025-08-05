@@ -58,6 +58,13 @@ The LLM Proxy Server follows a distributed microservices architecture:
 - Complete request/response logging
 - PostgreSQL-backed audit trails
 - Configurable audit levels
+- Provider-agnostic request translation system
+
+### Request Translation System
+- **Unified Request Format**: All providers use `LLMWorkerRequest` format
+- **Provider-Specific Translators**: Automatic field extraction for each provider
+- **Database Integration**: Seamless conversion to audit database schema
+- **Type Safety**: Full TypeScript support with proper type checking
 
 ## 📡 API Endpoints
 
@@ -480,9 +487,63 @@ export const parseLLMRequest = (
 };
 ```
 
-#### Step 4: Implement Provider Class
+#### Step 4: Create Request Translator
 
-5. **Create Provider Class** (`src/providers/new-provider.provider.ts`):
+4. **Create Request Translator** (`src/translators/providers/new-provider.translator.ts`):
+```typescript
+import { injectable } from 'tsyringe';
+import { BaseRequestTranslator } from './base.translator';
+import { Provider, LLMWorkerRequest } from '../../types/provider-request.types';
+import { LlmRequest } from '../../db/types';
+
+@injectable()
+export class NewProviderRequestTranslator extends BaseRequestTranslator {
+    readonly provider = Provider.NEW_PROVIDER;
+
+    translate(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
+        // Set common fields
+        this.setCommonFields(workerRequest, llmRequest);
+
+        const payload = workerRequest.payload as NewProviderRequest;
+        
+        // Extract provider-specific fields
+        llmRequest.model_slug = payload.model;
+        llmRequest.user_prompt = this.extractUserPrompt(payload);
+        llmRequest.system_prompt = this.extractSystemPrompt(payload);
+        llmRequest.options = payload.options || {};
+    }
+
+    private extractUserPrompt(payload: NewProviderRequest): string | undefined {
+        // Provider-specific logic to extract user prompt
+        return payload.prompt || payload.messages?.[0]?.content;
+    }
+
+    private extractSystemPrompt(payload: NewProviderRequest): string | undefined {
+        // Provider-specific logic to extract system prompt
+        return payload.system;
+    }
+}
+```
+
+5. **Register Translator** (`src/translators/translator.registry.ts`):
+```typescript
+// Add to constructor and initializeTranslators method
+constructor(
+    private newProviderTranslator: NewProviderRequestTranslator,
+    // ... other translators
+) {
+    this.initializeTranslators();
+}
+
+private initializeTranslators(): void {
+    this.translators.set(Provider.NEW_PROVIDER, this.newProviderTranslator);
+    // ... other translators
+}
+```
+
+#### Step 5: Implement Provider Class
+
+6. **Create Provider Class** (`src/providers/new-provider.provider.ts`):
 ```typescript
 import AIProvider from './ai.provider';
 import { IProvider, ModelInfo, AIProviderConfig, AIRequestStat } from './types';
@@ -670,12 +731,14 @@ When adding a new provider, ensure you complete ALL of these steps:
 - [ ] **Type Union**: Updated `LLMPayloadTypes` union type to include new request types
 - [ ] **Request Parser**: Created dedicated parser file with proper validation and logging
 - [ ] **Unified Parser**: Updated `parseLLMRequest()` to handle new provider
+- [ ] **Request Translator**: Created translator class extending `BaseRequestTranslator`
+- [ ] **Translator Registration**: Added translator to `TranslatorRegistry` constructor and initialization
 - [ ] **Provider Class**: Implemented provider class following `_<provider><clientMethod>` naming convention
 - [ ] **Stream Formatter**: Added streaming support in `StreamFormatter` service
 - [ ] **Provider Registration**: Updated provider service to instantiate new provider
 - [ ] **Configuration**: Added environment variables and configuration support
 - [ ] **Documentation**: Updated API documentation and examples
-- [ ] **Testing**: Added unit tests for parser, provider, and streaming functionality
+- [ ] **Testing**: Added unit tests for parser, provider, translator, and streaming functionality
 
 ### Common Integration Patterns
 

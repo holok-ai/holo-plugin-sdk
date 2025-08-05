@@ -67,6 +67,9 @@
 - Do not modify database schema without creating Prisma migrations
 - Do not use console.log - use Winston logger instead
 - Do not block the event loop with synchronous operations
+- **Do not use the deprecated `ProxyRequest` type** - it has been replaced with `LLMWorkerRequest`
+- Do not create manual request mapping code - use the `TranslatorRegistry` system instead
+- Do not access `payload` fields directly without proper type checking - use translator methods
 
 ## Provider Implementation
 When adding new LLM providers:
@@ -77,39 +80,121 @@ When adding new LLM providers:
 - Register in `ProviderService.refreshAvailableProviders()`
 - Add configuration to `src/env.ts`
 
-## Queue Message Format
+## Request/Response Flow
+
+### LLMWorkerRequest Format
+The system now uses `LLMWorkerRequest` (replacing the old `ProxyRequest` format) for unified request handling:
+
 ```typescript
-// Request format
-{
-  id: string,           // Request ID (correlation ID)
-  type: 'generate' | 'chat',
-  sourceId: string,     // Server ID for response routing  
-  payload: {
-    model: string,
-    prompt?: string,    // For generate
-    messages?: any[],   // For chat
-    options: {},
-    stream: boolean,
-    provider?: string
-  },
-  timestamp: number
+interface LLMWorkerRequest {
+  provider: Provider;           // OLLAMA | CLAUDE | OPENAI
+  sourceId: string;            // Server ID for response routing
+  applicationId?: string;      // Application identifier
+  userId?: string;             // User identifier  
+  requestId: string;           // Request ID (correlation ID)
+  type: RequestType;           // GENERATE | CHAT
+  payload: LLMPayloadTypes;    // Provider-specific payload
+  timestamp: number;           // Request timestamp
 }
 
-// Response format  
+// Provider-specific payload types
+type LLMPayloadTypes = 
+  | OllamaWorkerChatRequest 
+  | OllamaWorkerGenerateRequest 
+  | ClaudeWorkerRequest 
+  | OpenAIWorkerRequest;
+```
+
+### LLMWorkerResponse Format
+```typescript
 {
-  type: 'token' | 'sse' | 'done' | 'error',
-  provider: string,
+  sourceId: string,
   requestId: string,
-  token: any,          // Provider-specific response chunk
-  response?: any       // Final response for 'done' type
+  provider: Provider,
+  payload: any,              // Provider-specific response chunk
+  fullResponse?: string,     // Complete response when available
+  workerId?: string,         // Worker that processed the request
+  timestamp?: number,        // Response timestamp
+  metrics?: {                // Performance metrics
+    inputTokens: number,
+    outputTokens: number,
+    timeToFirstToken: number,
+    totalProcessingTime: number
+  }
 }
 ```
 
 ## Database Schema
+
+### Updated LlmRequest Table
+The `llm_requests` table has been refactored with enhanced schema:
+
+```sql
+Table "public.llm_requests"
+     Column     |              Type              | Nullable |      Default      
+----------------+--------------------------------+----------+-------------------
+ id             | uuid                           | not null | gen_random_uuid()
+ request_id     | character varying(36)          | not null | 
+ request_type   | character varying(50)          | not null | 
+ model_slug     | character varying(100)         | not null | 
+ user_prompt    | text                           |          | 
+ options        | jsonb                          |          | 
+ source_id      | character varying(100)         |          | 
+ user_id        | text                           |          | 
+ timestamp      | timestamp(6) without time zone | not null | CURRENT_TIMESTAMP
+ raw_request    | jsonb                          |          | 
+ application_id | text                           | not null | 'default'::text
+ provider_slug  | text                           | not null | 'default'::text
+ system_prompt  | text                           |          | 
+```
+
+### Other Tables
 - `models` - LLM model configurations
 - `providers` - Provider settings and credentials
-- `requests` - Request metadata and tracking
 - `response_audit` - Audit logs for compliance
+
+## Request Translation System
+
+### Translator Architecture
+The system now includes a comprehensive translator system that converts `LLMWorkerRequest` objects into database-ready `LlmRequest` objects:
+
+#### Base Translator
+```typescript
+export abstract class BaseRequestTranslator implements IRequestTranslator {
+  abstract readonly provider: Provider;
+  abstract translate(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
+  
+  // Common field mapping for all providers
+  protected setCommonFields(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
+}
+```
+
+#### Provider-Specific Translators
+- **OllamaRequestTranslator**: Handles both `chat` and `generate` request types, extracts prompts from messages or prompt fields
+- **ClaudeRequestTranslator**: Processes Claude's message format, handles TextBlockParam arrays via JSON.stringify
+- **OpenAIRequestTranslator**: Extracts data from OpenAI chat completion format, handles content arrays
+
+#### Translator Registry
+```typescript
+@injectable()
+export class TranslatorRegistry {
+  translate(workerRequest: LLMWorkerRequest): Omit<LlmRequest, 'id'>
+  getTranslator(provider: Provider): IRequestTranslator
+  hasTranslator(provider: Provider): boolean
+}
+```
+
+### Integration with Audit Service
+The `AuditService` now uses the translator system for consistent field extraction:
+
+```typescript
+// Old approach (removed)
+async logRequest(content: ProxyRequest): Promise<void>
+
+// New approach  
+async logRequest(content: LLMWorkerRequest): Promise<void>
+async logRequest(content: Omit<LlmRequest, 'id'>): Promise<void>
+```
 
 ## Streaming Implementation
 - Use `ResponseService.createResponseStream()` for request tracking

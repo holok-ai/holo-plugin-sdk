@@ -19,6 +19,8 @@ export enum RequestType {
 export interface LLMWorkerRequest {
     provider: Provider;
     sourceId: string;
+    applicationId?: string;
+    userId?: string;
     requestId: string;
     type: RequestType;
     payload: LLMPayloadTypes;
@@ -31,7 +33,7 @@ export interface LLMWorkerResponse {
     provider: Provider;
     payload: any;
     fullResponse?: string;
-    workerId?: string;
+    workerId: string;
     timestamp?: number;
     metrics?: {
         inputTokens: number;

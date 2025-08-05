@@ -12,31 +12,37 @@ export class RequestDB {
         const {
             request_id,
             request_type,
-            model,
-            prompt,
+            model_slug,
+            user_prompt,
             options,
             source_id,
             user_id,
             timestamp,
-            metadata
+            raw_request,
+            application_id,
+            provider_slug,
+            system_prompt
         } = request;
 
         const query = `
             INSERT INTO llm_requests
-            (request_id, request_type, model, prompt, options, source_id, user_id, timestamp, metadata)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            (request_id, request_type, model_slug, user_prompt, options, source_id, user_id, timestamp, raw_request, application_id, provider_slug, system_prompt)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         `;
 
         await this.db.query(query, [
             request_id,
             request_type,
-            model,
-            prompt,
+            model_slug,
+            user_prompt,
             JSON.stringify(options),
             source_id,
             user_id,
             timestamp,
-            JSON.stringify(metadata)
+            JSON.stringify(raw_request),
+            application_id,
+            provider_slug,
+            system_prompt
         ]);
     }
 }

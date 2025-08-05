@@ -127,7 +127,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
                     if (chunk.done) {
                         logger.debug('Ollama chat stream completed', { requestId, fullResponseLength: fullResponse.length });
                         const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk, fullResponse);
-                        await this.onResponseChunk(responseChunk);
+                        await this.onResponseChunk(responseChunk, true);
                         break;
                     }
 
@@ -150,7 +150,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
         } else {
             fullResponse = response.message?.content || '';
             const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, response, fullResponse);
-            await this.onResponseChunk(responseChunk);
+            await this.onResponseChunk(responseChunk, true);
         }
     }
 
@@ -162,6 +162,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
         this.validateModel(generateRequest.model);
 
                 let fullResponse = '';
+                
                 // @ts-ignore
                 const response = await this.client.generate(generateRequest);
                 if (generateRequest.stream) {
@@ -173,7 +174,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
                             if (chunk.done) {
                                 logger.debug('Ollama generate stream completed', { requestId, fullResponseLength: fullResponse.length });
                                 const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk, fullResponse);
-                                await this.onResponseChunk(responseChunk);
+                                await this.onResponseChunk(responseChunk, true);
                                 break;
                             }
 
@@ -182,7 +183,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
 
                             if (token) {
                                 const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, chunk);
-                                await this.onResponseChunk(responseChunk);
+                                await this.onResponseChunk(responseChunk, false);
                             }
                         }
                     } catch (error) {
@@ -196,7 +197,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
                 } else {
                     fullResponse = response.response;
                     const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OLLAMA, response, fullResponse);
-                    await this.onResponseChunk(responseChunk);
+                    await this.onResponseChunk(responseChunk, true);
                 }
 
                 logger.info(`Generated response with Ollama model ${generateRequest.model}, length: ${fullResponse.length}`);
