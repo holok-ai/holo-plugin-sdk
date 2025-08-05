@@ -2,26 +2,18 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy all package files first
+# Copy package files
 COPY package*.json ./
-COPY src/audit/package.json ./src/audit/
+COPY tsconfig.json ./
 
-# Install PostgreSQL client 
+# Install PostgreSQL client
 RUN apk --no-cache add postgresql-client
 
-# Install main dependencies
-RUN npm install --production
+# Install all dependencies (including TypeScript and ts-node)
+RUN npm install
 
-# Install audit service specific dependencies
-WORKDIR /app/src/audit
-RUN npm install --production
-WORKDIR /app
-
-# Copy necessary files
-COPY src/config ./src/config
-COPY src/utils ./src/utils
-COPY src/queue ./src/queue
-COPY src/audit ./src/audit
+# Copy source code
+COPY src/ ./src/
 
 # Create logs directory and set permissions
 RUN mkdir -p /app/logs \
@@ -33,5 +25,5 @@ USER node
 # Set environment variables
 ENV NODE_ENV=production
 
-# Run the audit service
-CMD ["node", "src/audit/audit-server.js"]
+# Run the audit server with ts-node (TypeScript runtime)
+CMD ["npx", "ts-node", "src/servers/audit.server.ts"]
