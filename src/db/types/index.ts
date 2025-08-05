@@ -1,3 +1,5 @@
+import {ProviderType} from "../../types";
+
 export interface BaseEntity {
     id: string;
     created_at: Date;
@@ -8,6 +10,7 @@ export interface BaseEntity {
 
 export interface Provider extends BaseEntity {
     name: string;
+    type: ProviderType;
     description?: string;
     config: Record<string, any>;
     status?: { enabled?: boolean };
@@ -32,6 +35,7 @@ export interface ProviderModel {
     created_at: Date;
     updated_at: Date;
 }
+
 //Object that corresponds to the database llm_requests table
 export interface LlmRequest {
     id: string;

@@ -1,6 +1,6 @@
 import {createOpenAIRoutes} from "./openai.routes";
 import express from "express";
-import {createApiRoutes} from "./llm.routes";
+import {createApiRoutes} from "./ollama.routes";
 import {createClaudeRoutes} from "./claude.routes";
 import {createPerplexityRoutes} from "./perplexity.routes";
 

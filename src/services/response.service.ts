@@ -7,10 +7,9 @@ import {v4 as uuidv4} from "uuid";
 import {HttpApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
-import { parseLLMRequest } from '../utils';
-import { LLMWorkerRequest, LLMWorkerResponse, Provider, RequestType } from '../types';
-import { StreamFormatter } from './streamFormatter.service';
-
+import {parseLLMRequest} from '../utils';
+import {LLMWorkerRequest, LLMWorkerResponse, ProviderType, RequestType} from '../types';
+import {StreamFormatter} from './streamFormatter.service';
 
 
 /**
@@ -36,6 +35,7 @@ export class ResponseService {
     private readonly responseQueue = env.queue.responseQueue;
     // private readonly requestQueue = env.queue.requestQueue;
     private readonly requestExchange = env.queue.requestExchange;
+
     //private readonly responseExchange = env.queue.responseExchange;
     constructor(
         private queueService: QueueService, private streamFormatter: StreamFormatter) {
@@ -72,7 +72,7 @@ export class ResponseService {
         const openResponseStream = this.streams.get(requestId);
 
         if (openResponseStream) {
-           this.streamFormatter.formatAndSend(content, openResponseStream);
+            this.streamFormatter.formatAndSend(content, openResponseStream);
         } else {
             logger.warn(`Received response for unknown request: ${requestId}`);
             logger.warn(this.streams);
@@ -131,7 +131,7 @@ export class ResponseService {
      * @param {HttpApiRequest} req - HTTP request object
      * @param {Response} res - HTTP response object
      */
-    async parseAndSendLLMRequest(provider: Provider, type: RequestType, req: HttpApiRequest, res: Response){
+    async parseAndSendLLMRequest(provider: ProviderType, type: RequestType, req: HttpApiRequest, res: Response) {
         const payload = parseLLMRequest(req, provider, type);
         const requestId = uuidv4();
 
@@ -148,12 +148,12 @@ export class ResponseService {
 
         await this._openResponseStream(req, res, workerRequest, requestId);
     }
-    
+
     /**
      * Set up Server-Sent Events streaming response and submit request to queue
      * Configures SSE headers, creates response stream, handles client disconnect, and pipes response
      * @param {HttpApiRequest} req - HTTP request object
-     * @param {Response} res - HTTP response object  
+     * @param {Response} res - HTTP response object
      * @param {Object} request - LLM worker request object to send to queue
      * @param {string} requestId - Unique request identifier
      * @private

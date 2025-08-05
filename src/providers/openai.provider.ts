@@ -1,25 +1,23 @@
 import {AIProvider} from './ai.provider';
 import logger from '../utils/logger';
 import OpenAI from 'openai';
-import {AIProviderConfig, AIRequestStat, IProvider, ModelInfo} from './types';
-import {LLMWorkerRequest, OpenAIWorkerRequest, Provider} from '../types';
+import {AIRequestStat, IProvider, ModelInfo} from './types';
+import {LLMWorkerRequest, OpenAIWorkerRequest, ProviderType} from '../types';
 import {ErrorMessages} from '../utils/error-messages';
-// import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
-// import {Stream} from "openai/streaming";
 import {ResponseService} from "../services";
+import {Provider} from "../db/types";
 
 /**
  * OpenAI provider for connecting to OpenAI API
  */
 export class OpenAIProvider extends AIProvider implements IProvider {
     private readonly client: OpenAI;
-    name: string = 'openai';
 
     constructor(
-        protected config: AIProviderConfig,
+        protected provider: Provider,
         protected responseService: ResponseService,
         protected workerId: string) {
-        super(config, responseService, workerId);
+        super(provider, responseService, workerId);
         if (!this.config.apiKey) {
             throw new Error(ErrorMessages.apiKeyRequired('OpenAI'));
         }
@@ -89,13 +87,13 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         });
 
         // Validate this is for OpenAI
-        if (request.provider !== Provider.OPENAI) {
+        if (request.provider !== ProviderType.OPENAI) {
             logger.error('Provider validation failed for OpenAI', {
-                expected: Provider.OPENAI,
+                expected: ProviderType.OPENAI,
                 received: request.provider,
                 requestId: request.requestId
             });
-            throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.OPENAI));
+            throw new Error(ErrorMessages.invalidProvider(request.provider, ProviderType.OPENAI));
         }
 
         logger.debug('Provider validation successful for OpenAI', {
@@ -120,17 +118,17 @@ export class OpenAIProvider extends AIProvider implements IProvider {
     ): Promise<void> {
         await this.ensureInitialized();
         this.validateModel(chatRequest.model);
-        chatRequest.stream_options = { include_usage: true};
+        chatRequest.stream_options = {include_usage: true};
         let fullResponse = '';
         // Pass the request directly to the client since it extends ChatCompletionCreateParams
-         // @ts-ignore
+        // @ts-ignore
         const response = await this.client.chat.completions.create(chatRequest);
 
         if (chatRequest.stream) {
             logger.debug('Starting OpenAI chat completions stream', {requestId, model: chatRequest.model});
 
             try {
-                         // @ts-ignore
+                // @ts-ignore
                 for await (const chunk of response) {
                     logger.debug(`chunk payload: ${JSON.stringify(chunk)}`);
                     const choice = chunk.choices?.[0];
@@ -140,7 +138,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                             finishReason: choice.finish_reason,
                             fullResponseLength: fullResponse.length
                         });
-                        const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk, fullResponse);
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk, fullResponse);
                         await this.onResponseChunk(responseChunk, true);
                         break;
                     }
@@ -149,7 +147,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                         const token = choice.delta.content;
                         fullResponse += token;
 
-                        const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk);
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk);
                         await this.onResponseChunk(responseChunk);
                     }
                 }
@@ -168,7 +166,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                 fullResponse = message.choices[0].message?.content || '';
             }
 
-            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, response, fullResponse);
+            const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, response, fullResponse);
             await this.onResponseChunk(responseChunk, true);
         }
     }

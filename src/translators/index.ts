@@ -5,4 +5,4 @@ export * from './types';
 export * from './providers';
 
 // Registry
-export { TranslatorRegistry } from './translator.registry';
+export {TranslatorRegistry} from './translator.registry';

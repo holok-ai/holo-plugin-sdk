@@ -13,8 +13,8 @@ export class ModelDB {
         const query = `
             SELECT *
             FROM models
-            WHERE status ->> 'enabled' = 'true'
-              AND status ->> 'available' = 'true'
+            WHERE enabled = true
+              AND available = true
             ORDER BY name
         `;
         return this.db.query<Model>(query);
@@ -24,8 +24,8 @@ export class ModelDB {
         const query = `SELECT *
                        FROM models
                        WHERE name = $1
-                         AND status ->> 'enabled' = true
-                         AND status ->> 'available' = true`;
+                         AND available = true
+                         AND enabled = true`;
         return this.db.queryOne<Model>(query, [name]);
     }
 }

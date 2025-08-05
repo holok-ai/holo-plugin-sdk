@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import {BaseController} from "./base.controller";
 import {injectable} from "tsyringe";
 import {ResponseService} from "../../services";
-import {HttpApiRequest, ApiResponse} from "../types";
-import { Provider, RequestType } from '../../types';
+import {ApiResponse, HttpApiRequest} from "../types";
+import {ProviderType, RequestType} from '../../types';
 
 @injectable()
 export class ClaudeController extends BaseController {
@@ -14,7 +14,7 @@ export class ClaudeController extends BaseController {
 
     public messages = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
         try {
-           await this.responseService.parseAndSendLLMRequest(Provider.CLAUDE, RequestType.CHAT, req, res);
+            await this.responseService.parseAndSendLLMRequest(ProviderType.CLAUDE, RequestType.CHAT, req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to complete chat');
         }

@@ -11,7 +11,7 @@ import {ProviderService} from "../services";
 import {container, injectable} from "tsyringe";
 import {env} from "../env";
 import {withStats} from "./mixins/withStats";
-import {AIRequestStat} from "../providers/types";
+import {AIRequestStat, IProvider} from "../providers/types";
 import { LLMWorkerRequest, RequestType } from '../types';
 
 @injectable()
@@ -32,8 +32,8 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
             this.stats.totalRequests++;
             logger.info(`Worker ${this.id} handling generate request: ${requestId} provider: ${llmRequest.provider} from server ${llmRequest.sourceId} and queue ${requestQueue}...`);
             try {
-                const ai = await this.providerService.matchProvider(llmRequest.provider);
-                
+                const ai: IProvider | undefined = await this.providerService.matchProvider(llmRequest.provider);
+
                 logger.info(`resolved ai provider: ${ai?.name}`);
                 let requestStats: AIRequestStat | null = null;
                 // explicitly define outcomes

@@ -1,25 +1,25 @@
 import {AIProvider} from './ai.provider';
 import logger from '../utils/logger';
 import OpenAI from 'openai';
-import {AIProviderConfig, AIRequestStat, IProvider, ModelInfo} from './types';
-import {LLMWorkerRequest, OpenAIWorkerRequest, Provider} from '../types';
+import {AIRequestStat, IProvider, ModelInfo} from './types';
+import {LLMWorkerRequest, OpenAIWorkerRequest, ProviderType} from '../types';
 import {ErrorMessages} from '../utils/error-messages';
 import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 import {Stream} from "openai/streaming";
 import {ResponseService} from "../services";
+import {Provider} from "../db/types";
 
 /**
  * OpenAI provider for connecting to OpenAI API
  */
 export class PerplexityProvider extends AIProvider implements IProvider {
     private readonly client: OpenAI;
-    name: string = 'perplexity';
 
     constructor(
-        protected config: AIProviderConfig,
+        protected provider: Provider,
         protected responseService: ResponseService,
         protected workerId: string) {
-        super(config, responseService, workerId);
+        super(provider, responseService, workerId);
         if (!this.config.apiKey) {
             throw new Error(ErrorMessages.apiKeyRequired('Perplexity'));
         }
@@ -90,13 +90,13 @@ export class PerplexityProvider extends AIProvider implements IProvider {
         });
 
         // Validate this is for OpenAI
-        if (request.provider !== Provider.PERPLEXITY) {
+        if (request.provider !== ProviderType.PERPLEXITY) {
             logger.error('Provider validation failed for Perplexity', {
-                expected: Provider.OPENAI,
+                expected: ProviderType.OPENAI,
                 received: request.provider,
                 requestId: request.requestId
             });
-            throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.OPENAI));
+            throw new Error(ErrorMessages.invalidProvider(request.provider, ProviderType.OPENAI));
         }
 
         logger.debug('Provider validation successful for Perplexity', {
@@ -139,7 +139,7 @@ export class PerplexityProvider extends AIProvider implements IProvider {
                             finishReason: choice.finish_reason,
                             fullResponseLength: fullResponse.length
                         });
-                        const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk, fullResponse);
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk, fullResponse);
                         await this.onResponseChunk(responseChunk);
                         break;
                     }
@@ -148,7 +148,7 @@ export class PerplexityProvider extends AIProvider implements IProvider {
                         const token = choice.delta.content;
                         fullResponse += token;
 
-                        const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, chunk);
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk);
                         await this.onResponseChunk(responseChunk);
                     }
                 }
@@ -167,7 +167,7 @@ export class PerplexityProvider extends AIProvider implements IProvider {
                 fullResponse = message.choices[0].message?.content || '';
             }
 
-            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.OPENAI, response, fullResponse);
+            const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, response, fullResponse);
             await this.onResponseChunk(responseChunk);
         }
     }

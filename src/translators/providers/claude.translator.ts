@@ -1,18 +1,17 @@
-import { injectable } from 'tsyringe';
-import { BaseRequestTranslator } from './base.translator';
-import { Provider, LLMWorkerRequest, LLMWorkerResponse } from '../../types/provider-request.types';
-import { LlmRequest, LlmResponse, LlmStatus } from '../../db/types';
-import { ClaudeWorkerRequest } from '../../types/provider-request.types';
+import {injectable} from 'tsyringe';
+import {BaseRequestTranslator} from './base.translator';
+import {ClaudeWorkerRequest, LLMWorkerRequest, LLMWorkerResponse, ProviderType} from '../../types';
+import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
 
 @injectable()
 export class ClaudeRequestTranslator extends BaseRequestTranslator {
-    readonly provider = Provider.CLAUDE;
+    readonly provider = ProviderType.CLAUDE;
 
     translate(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
         this.setCommonFields(workerRequest, llmRequest);
 
         const payload = workerRequest.payload as ClaudeWorkerRequest;
-        
+
         // Set model
         llmRequest.model_slug = payload.model;
 
@@ -24,8 +23,8 @@ export class ClaudeRequestTranslator extends BaseRequestTranslator {
 
         // Claude uses system parameter for system prompt (can be string or TextBlockParam array)
         if (payload.system !== undefined) {
-            llmRequest.system_prompt = typeof payload.system === 'string' 
-                ? payload.system 
+            llmRequest.system_prompt = typeof payload.system === 'string'
+                ? payload.system
                 : JSON.stringify(payload.system);
         }
 
@@ -38,7 +37,7 @@ export class ClaudeRequestTranslator extends BaseRequestTranslator {
         if (payload.stop_sequences !== undefined) options.stop_sequences = payload.stop_sequences;
         if (payload.stream !== undefined) options.stream = payload.stream;
         if (payload.metadata !== undefined) Object.assign(options, payload.metadata);
-        
+
         if (Object.keys(options).length > 0) {
             llmRequest.options = options;
         }
@@ -46,10 +45,10 @@ export class ClaudeRequestTranslator extends BaseRequestTranslator {
 
     private extractUserPromptFromMessages(messages?: any[]): string | undefined {
         if (!messages || !Array.isArray(messages)) return undefined;
-        
+
         const userMessages = messages.filter(msg => msg.role === 'user');
         if (userMessages.length === 0) return undefined;
-        
+
         // Return the last user message content
         const lastUserMessage = userMessages[userMessages.length - 1];
         if (typeof lastUserMessage.content === 'string') {
@@ -59,27 +58,25 @@ export class ClaudeRequestTranslator extends BaseRequestTranslator {
             const textBlocks = lastUserMessage.content.filter((block: any) => block.type === 'text');
             return textBlocks.length > 0 ? textBlocks[0].text : undefined;
         }
-        
+
         return undefined;
     }
 
     translateResponse(
-        workerResponse: LLMWorkerResponse, 
+        workerResponse: LLMWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>,
         requestContext?: { userId?: string; applicationId?: string }
     ): void {
         this.setCommonResponseFields(workerResponse, llmResponse, requestContext);
 
         const payload = workerResponse.payload;
-        
+
         // Extract model from payload
         llmResponse.model_slug = payload.model || 'unknown';
-        
+
         // Extract response text from final response
         if (workerResponse.fullResponse) {
-            llmResponse.response = typeof workerResponse.fullResponse === 'string' 
-                ? workerResponse.fullResponse 
-                : JSON.stringify(workerResponse.fullResponse);
+            llmResponse.response = workerResponse.fullResponse;
         } else if (payload.content && Array.isArray(payload.content)) {
             // Non-streaming final message format
             llmResponse.response = payload.content.map((block: any) => block.text).join('');

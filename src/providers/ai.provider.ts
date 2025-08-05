@@ -3,18 +3,18 @@ import {ResponseService} from "../services";
 import {LLMWorkerRequest, LLMWorkerResponse, RequestType} from "../types";
 import {ErrorMessages} from "../utils/error-messages";
 import logger from "../utils/logger";
+import {Provider} from "../db/types";
 
 /**
  * Base interface for LLM providers
  * All LLM implementations must implement these methods
  */
 export abstract class AIProvider {
-    abstract name: string;
     protected models: Record<string, ModelInfo> | null = null;
 
     //workerId is passed in via provider service
-    constructor(
-        protected config: AIProviderConfig,
+    protected constructor(
+        protected provider: Provider,
         protected responseService: ResponseService,
         protected workerId: string) {
     }
@@ -39,7 +39,7 @@ export abstract class AIProvider {
     /**
      * Wraps provider method calls with statistics tracking, error handling, and logging.
      * Automatically measures execution time and tracks success/error counts.
-     * 
+     *
      * @param type - The type of request being processed (GENERATE or CHAT)
      * @param method - The provider method to execute (must be bound to provider instance)
      * @param args - Arguments to pass to the method, first two must be sourceId and requestId
@@ -78,21 +78,19 @@ export abstract class AIProvider {
     }
 
 
-
-
     /**
      * Handles errors by creating a standardized error response and sending it via the response stream.
      * Called automatically by wrapWithStats when a provider method throws an error.
-     * 
+     *
      * @param sourceId - Unique identifier for the request source
-     * @param requestId - Unique identifier for the specific request  
+     * @param requestId - Unique identifier for the specific request
      * @param error - The error that occurred during processing
      */
     async onError(sourceId: string, requestId: string, error: Error) {
         const errorResponse: LLMWorkerResponse = {
             sourceId: sourceId,
             requestId: requestId,
-            provider: this.name as any, // Provider will be set by concrete implementation
+            provider: this.provider.type as any, // Provider will be set by concrete implementation
             workerId: process.env.WORKER_ID || 'unknown',
             payload: {
                 type: 'error',
@@ -108,7 +106,7 @@ export abstract class AIProvider {
     /**
      * Validates that a model exists in the provider's models cache.
      * Throws an error if the model is not found or if models haven't been loaded.
-     * 
+     *
      * @param model - The model name to validate
      * @throws Error when model is not found in the provider's model cache
      */
@@ -121,7 +119,7 @@ export abstract class AIProvider {
     /**
      * Ensures the provider is fully initialized by checking if models are loaded.
      * If models are not loaded, triggers the init() method to initialize the provider.
-     * 
+     *
      * @returns Promise that resolves when provider is confirmed to be initialized
      */
     protected async ensureInitialized(): Promise<void> {
@@ -133,7 +131,7 @@ export abstract class AIProvider {
     /**
      * Creates a standardized LLMWorkerResponse object for sending data back to clients.
      * Handles both streaming chunks and complete responses with optional full response text.
-     * 
+     *
      * @param sourceId - Unique identifier for the request source
      * @param requestId - Unique identifier for the specific request
      * @param provider - Provider enum value identifying which LLM provider generated the response
@@ -151,28 +149,41 @@ export abstract class AIProvider {
         return {
             sourceId,
             requestId,
-            provider,
+            provider: provider,
             workerId: process.env.WORKER_ID || 'unknown',
             payload,
-            ...(fullResponse !== undefined && { fullResponse })
+            ...(fullResponse !== undefined && {fullResponse})
         };
     }
 
     /**
      * Processes and sends response chunks to the response service for streaming to clients.
      * Handles the final step of the response pipeline by routing chunks to the response service.
-     * 
+     *
      * @param responseChunk - The standardized response chunk to send to clients
+     * @param auditEnabled
      * @returns Promise that resolves when the chunk has been sent to the response service
      */
-    async onResponseChunk(responseChunk: LLMWorkerResponse, auditEnabled?: boolean){
+    async onResponseChunk(responseChunk: LLMWorkerResponse, auditEnabled?: boolean) {
         logger.info(`auditEnabled ${auditEnabled}`);
         // Default to false if not provided
         const auditEnabledValue = auditEnabled ?? false;
-        
+
         logger.info(`onResponseChunk: ${JSON.stringify(responseChunk)} auditEnabled: ${auditEnabledValue}`);
-        
+
         await this.responseService.sendResponseChunk(this.workerId, responseChunk.sourceId, responseChunk.requestId, responseChunk, auditEnabledValue);
+    }
+
+    get id(): string {
+        return this.provider.name;
+    }
+
+    get name(): string {
+        return this.provider.name;
+    }
+
+    get config(): AIProviderConfig {
+        return this.provider.config as AIProviderConfig;
     }
 }
 

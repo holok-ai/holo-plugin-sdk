@@ -2,9 +2,9 @@ import 'reflect-metadata';
 import {BaseController} from "./base.controller";
 import {injectable} from "tsyringe";
 import {ResponseService} from "../../services";
-import {HttpApiRequest, ApiResponse} from "../types";
+import {ApiResponse, HttpApiRequest} from "../types";
 import logger from "../../utils/logger";
-import { Provider, RequestType } from '../../types';
+import {ProviderType, RequestType} from '../../types';
 
 @injectable()
 export class OpenAIController extends BaseController {
@@ -15,7 +15,7 @@ export class OpenAIController extends BaseController {
 
     public chatCompletions = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            await this.responseService.parseAndSendLLMRequest(Provider.OPENAI, RequestType.CHAT, req, res);
+            await this.responseService.parseAndSendLLMRequest(ProviderType.OPENAI, RequestType.CHAT, req, res);
         } catch (error) {
             logger.error('Error: ' + (error as Error).stack);
             this.handleError(res, error as Error, 'Failed to complete chat');

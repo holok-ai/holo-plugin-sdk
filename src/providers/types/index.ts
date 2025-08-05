@@ -1,4 +1,4 @@
-import type { LLMWorkerRequest, LLMWorkerResponse, RequestType } from '../../types';
+import {LLMWorkerRequest, LLMWorkerResponse, RequestType} from '../../types';
 
 /**
  * Interface for LLM providers
@@ -6,6 +6,7 @@ import type { LLMWorkerRequest, LLMWorkerResponse, RequestType } from '../../typ
  */
 export interface IProvider {
     name: string;
+    config: AIProviderConfig;
 
     /**
      * Initialize the provider.
@@ -58,39 +59,6 @@ export interface ModelInfo {
     [key: string]: any; // Allow additional properties
 }
 
-/**
- * Model status interface
- */
-export interface ModelStatus {
-    id: string;
-    loaded: boolean;
-    size?: number;
-    digest?: string;
-    details?: {
-        parent_model?: string;
-        format?: string;
-        family?: string;
-        families?: string[];
-        parameter_size?: string;
-        quantization_level?: string;
-    };
-    expires_at?: string;
-    size_vram?: number;
-
-    [key: string]: any;
-}
-
-/**
- * Model operation result interface
- */
-export interface ModelOperationResult {
-    success: boolean;
-    message?: string;
-    error?: string;
-
-    [key: string]: any;
-}
-
 export interface AIRequestStat {
     type: RequestType;
     startTime: number;
@@ -100,6 +68,4 @@ export interface AIRequestStat {
     error: number;
 }
 
-
-export type TokenHandler = (sourceId: string, requestId: string, token: object, type: string, customFields?: object) => Promise<void>;
-export type CompleteHandler = (sourceId: string, requestId: string, token: object, type?: string, customFields?: object) => Promise<void>;
+export {ProviderType} from '../../types';

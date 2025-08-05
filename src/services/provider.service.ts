@@ -4,7 +4,7 @@ import logger from "../utils/logger";
 import {Provider} from "../db/types";
 import {ProviderDB} from "../db";
 import {injectable} from "tsyringe";
-import {IProvider} from "../providers/types";
+import {IProvider, ProviderType} from "../providers/types";
 import {ResponseService} from "./response.service";
 import {PerplexityProvider} from "../providers/perplexity.provider";
 
@@ -27,32 +27,32 @@ export class ProviderService {
     }
 
     async refreshAvailableProviders(serverId: string) {
-        const providers = await this.getProviders();
+        const providers: Provider[] = await this.getProviders();
         if (providers.length === 0) return;
         let aiProvider;
         for (const provider of providers) {
-            switch (provider.name) {
-                case 'openai':
-                    aiProvider = new OpenAIProvider(provider.config as any, this.responseService, serverId);
+            switch (provider.type) {
+                case ProviderType.OPENAI:
+                    aiProvider = new OpenAIProvider(provider, this.responseService, serverId);
                     break;
-                case 'claude':
-                    aiProvider = new ClaudeProvider(provider.config as any, this.responseService, serverId);
+                case ProviderType.CLAUDE:
+                    aiProvider = new ClaudeProvider(provider, this.responseService, serverId);
                     break;
-                case 'ollama':
-                    aiProvider = new OllamaProvider(provider.config as any, this.responseService, serverId);
+                case ProviderType.OLLAMA:
+                    aiProvider = new OllamaProvider(provider, this.responseService, serverId);
                     break;
-                case 'perplexity':
-                    aiProvider = new PerplexityProvider(provider.config as any, this.responseService, serverId);
+                case ProviderType.PERPLEXITY:
+                    aiProvider = new PerplexityProvider(provider, this.responseService, serverId);
                     break;
                 default:
                     break;
             }
             if (!aiProvider) {
-                logger.warn(`No provider found for ${provider.name}`);
+                logger.warn(`No provider found for ${provider.name} (${provider.id}) with type ${provider.type}. Skipping...`);
                 continue;
             }
             await aiProvider.init();
-            this.aiProviders.set(provider.name, aiProvider);
+            this.aiProviders.set(provider.type, aiProvider);
         }
         logger.debug(`Available providers: ${Array.from(this.aiProviders.keys())}`);
     }

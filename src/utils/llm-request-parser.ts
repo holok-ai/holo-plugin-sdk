@@ -1,5 +1,5 @@
 import {Request} from 'express';
-import {LLMPayloadTypes, Provider, RequestType} from '../types';
+import {LLMPayloadTypes, ProviderType, RequestType} from '../types';
 import {ErrorMessages} from './error-messages';
 import {parseOllamaRequest} from './ollama-parsers';
 import {parseClaudeMessageRequest} from './claude-parsers';
@@ -13,30 +13,30 @@ import {parsePerplexityMessageRequest} from "./perplexity-parsers";
  * or OpenAI parsers based on the provider parameter.
  *
  * @param req - Express request object containing the request body
- * @param provider - Provider enum indicating which LLM provider to route the request to
+ * @param providerType - Provider enum indicating which LLM provider to route the request to
  * @param type - RequestType enum indicating whether this is a GENERATE or CHAT request
  * @returns Parsed LLMPayloadTypes from the appropriate provider-specific parser
  * @throws Error when provider is not supported or parsing fails
  */
 export const parseLLMRequest = (
     req: Request,
-    provider: Provider,
+    providerType: ProviderType,
     type: RequestType
 ): LLMPayloadTypes => {
-    logger.debug('Unified LLM request parser routing', {provider, type});
+    logger.debug('Unified LLM request parser routing', {providerType, type});
 
     // Route to appropriate provider parser
-    switch (provider) {
-        case Provider.OLLAMA:
+    switch (providerType) {
+        case ProviderType.OLLAMA:
             return parseOllamaRequest(req, type);
-        case Provider.CLAUDE:
+        case ProviderType.CLAUDE:
             return parseClaudeMessageRequest(req, type);
-        case Provider.OPENAI:
+        case ProviderType.OPENAI:
             return parseOpenAIMessageRequest(req, type);
-        case Provider.PERPLEXITY:
+        case ProviderType.PERPLEXITY:
             return parsePerplexityMessageRequest(req, type);
         default:
-            logger.error('Unsupported provider in unified parser', {provider});
-            throw new Error(ErrorMessages.unsupportedProvider(provider));
+            logger.error('Unsupported provider in unified parser', {providerType});
+            throw new Error(ErrorMessages.unsupportedProvider(providerType));
     }
 };

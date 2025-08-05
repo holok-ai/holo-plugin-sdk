@@ -13,8 +13,8 @@ export class ProviderDB {
         const query = `
             SELECT *
             FROM providers
-            WHERE status ->> 'enabled' = 'true'
-              AND status ->> 'available' = 'true'
+            WHERE enabled = true
+              AND available = true
             ORDER BY name
         `;
         return this.db.query<Provider>(query);
@@ -24,8 +24,8 @@ export class ProviderDB {
         const query = `SELECT *
                        FROM providers
                        WHERE name = $1
-                         AND status ->> 'enabled' = true
-                         AND status ->> 'available' = true`;
+                         AND enabled = true
+                         AND available = true`;
         return this.db.queryOne<Provider>(query, [name]);
     }
 }

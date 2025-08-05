@@ -1,17 +1,18 @@
-import { IRequestTranslator } from '../types';
-import { Provider, LLMWorkerRequest, LLMWorkerResponse } from '../../types/provider-request.types';
-import { LlmRequest, LlmResponse, LlmStatus } from '../../db/types';
+import {IRequestTranslator} from '../types';
+import {LLMWorkerRequest, LLMWorkerResponse, ProviderType} from '../../types';
+import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
 
 export abstract class BaseRequestTranslator implements IRequestTranslator {
-    abstract readonly provider: Provider;
-    
+    abstract readonly provider: ProviderType;
+
     abstract translate(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
+
     abstract translateResponse(
-        workerResponse: LLMWorkerResponse, 
+        workerResponse: LLMWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>,
         requestContext?: { userId?: string; applicationId?: string }
     ): void;
-    
+
     /**
      * Set common fields that are the same across all providers for requests
      */
@@ -21,7 +22,7 @@ export abstract class BaseRequestTranslator implements IRequestTranslator {
         llmRequest.timestamp = new Date(workerRequest.timestamp).toISOString();
         llmRequest.application_id = workerRequest.applicationId || 'default';
         llmRequest.provider_slug = workerRequest.provider;
-        
+
         // Optional fields - only set if defined
         if (workerRequest.sourceId !== undefined) {
             llmRequest.source_id = workerRequest.sourceId;
@@ -33,12 +34,12 @@ export abstract class BaseRequestTranslator implements IRequestTranslator {
             llmRequest.raw_request = workerRequest.payload;
         }
     }
-    
+
     /**
      * Set common fields that are the same across all providers for responses
      */
     protected setCommonResponseFields(
-        workerResponse: LLMWorkerResponse, 
+        workerResponse: LLMWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>,
         requestContext?: { userId?: string; applicationId?: string }
     ): void {
@@ -49,7 +50,7 @@ export abstract class BaseRequestTranslator implements IRequestTranslator {
         llmResponse.worker_id = workerResponse.workerId || 'unknown';
         llmResponse.status = LlmStatus.SUCCESS; // Default, can be overridden by specific translators
         llmResponse.cost = 0; // TODO: Implement cost calculation
-        
+
         // Optional fields - only set if defined
         if (requestContext?.userId !== undefined) {
             llmResponse.user_id = requestContext.userId;

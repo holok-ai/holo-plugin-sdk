@@ -1,21 +1,21 @@
 import AIProvider from "./ai.provider";
-import {AIProviderConfig, IProvider, ModelInfo, AIRequestStat} from "./types";
-import {LLMWorkerRequest, ClaudeWorkerRequest, Provider} from "../types";
+import {AIRequestStat, IProvider, ModelInfo} from "./types";
+import {ClaudeWorkerRequest, LLMWorkerRequest, ProviderType} from "../types";
 import {ErrorMessages} from "../utils/error-messages";
 import logger from "../utils/logger";
 import {Anthropic} from "@anthropic-ai/sdk/client";
 import {ResponseService} from "../services";
-import { Message, MessageStreamEvent } from "@anthropic-ai/sdk/resources/messages";
+import {Message, MessageStreamEvent} from "@anthropic-ai/sdk/resources/messages";
+import {Provider} from "../db/types";
 
 export class ClaudeProvider extends AIProvider implements IProvider {
-    readonly name: string = 'claude';
     private readonly client: Anthropic;
 
     constructor(
-        protected config: AIProviderConfig,
+        protected provider: Provider,
         protected responseService: ResponseService,
         protected workerId: string) {
-        super(config, responseService, workerId);
+        super(provider, responseService, workerId);
 
         if (!this.config.apiKey) {
             throw new Error(ErrorMessages.apiKeyRequired('Claude'));
@@ -84,13 +84,13 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         });
 
         // Validate this is for Claude
-        if (request.provider !== Provider.CLAUDE) {
+        if (request.provider !== ProviderType.CLAUDE) {
             logger.error('Provider validation failed for Claude', {
-                expected: Provider.CLAUDE,
+                expected: ProviderType.CLAUDE,
                 received: request.provider,
                 requestId: request.requestId
             });
-            throw new Error(ErrorMessages.invalidProvider(request.provider, Provider.CLAUDE));
+            throw new Error(ErrorMessages.invalidProvider(request.provider, ProviderType.CLAUDE));
         }
 
         logger.debug('Provider validation successful for Claude', {
@@ -98,7 +98,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             type: request.type
         });
 
-        const { sourceId, requestId, payload, type } = request;
+        const {sourceId, requestId, payload, type} = request;
         const claudePayload = payload as ClaudeWorkerRequest;
 
         // Claude uses a unified messages API, so both generate and chat go through the same method
@@ -117,7 +117,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
         this.validateModel(messageRequest.model);
         let fullResponse = '';
         // Pass the request directly to the client since it extends MessageCreateParamsBase
-        // @ts-ignore 
+        // @ts-ignore
         const startTime = Date.now();
         const metrics = {
             inputTokens: 0,
@@ -126,48 +126,48 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             totalProcessingTime: 9
         };
         if (messageRequest.stream) {
-            logger.debug('Starting Claude messages stream', { requestId, model: messageRequest.model });
-            
+            logger.debug('Starting Claude messages stream', {requestId, model: messageRequest.model});
+
             try {
                 this.client.messages
-                .stream(messageRequest)
-                .on('streamEvent', (event: MessageStreamEvent, snapshot: Message) => {
-                    logger.info(`Claude Event: ${JSON.stringify(event)}`);
-                    if(event.type === 'message_start'){
-                        metrics.timeToFirstToken = Date.now() - startTime;
-                    }
-                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, event);
-                    this.onResponseChunk(responseChunk);
-                    
-                    // Log completion when stream ends
-                    if (event.type === 'message_stop') {
-                        logger.debug('Claude messages stream completed', { requestId, messageId: snapshot.id });
-                    }
-                })
-                .on('text', (textDelta: string) => {
-                    fullResponse+= textDelta;
-                })
-                .on('error', (error) => {
-                    logger.error('Claude messages stream error', { 
-                        requestId, 
-                        error: error.message 
-                    });
-                    throw error;
-                })
-                .on('finalMessage', (message: Message) => {
-                    logger.info(`claude final message: ${JSON.stringify(message)}`);
-                    const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, message, fullResponse);
-                    metrics.inputTokens = message.usage.input_tokens;
-                    metrics.outputTokens = message.usage.output_tokens;
-                    metrics.totalProcessingTime = Date.now() - startTime;
-                    responseChunk.metrics = metrics;
-                    this.responseService.sendToAuditOnly(this.workerId, responseChunk.sourceId, responseChunk);
-                })
-;
+                    .stream(messageRequest)
+                    .on('streamEvent', (event: MessageStreamEvent, snapshot: Message) => {
+                        logger.info(`Claude Event: ${JSON.stringify(event)}`);
+                        if (event.type === 'message_start') {
+                            metrics.timeToFirstToken = Date.now() - startTime;
+                        }
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.CLAUDE, event);
+                        this.onResponseChunk(responseChunk);
+
+                        // Log completion when stream ends
+                        if (event.type === 'message_stop') {
+                            logger.debug('Claude messages stream completed', {requestId, messageId: snapshot.id});
+                        }
+                    })
+                    .on('text', (textDelta: string) => {
+                        fullResponse += textDelta;
+                    })
+                    .on('error', (error) => {
+                        logger.error('Claude messages stream error', {
+                            requestId,
+                            error: error.message
+                        });
+                        throw error;
+                    })
+                    .on('finalMessage', (message: Message) => {
+                        logger.info(`claude final message: ${JSON.stringify(message)}`);
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.CLAUDE, message, fullResponse);
+                        metrics.inputTokens = message.usage.input_tokens;
+                        metrics.outputTokens = message.usage.output_tokens;
+                        metrics.totalProcessingTime = Date.now() - startTime;
+                        responseChunk.metrics = metrics;
+                        this.responseService.sendToAuditOnly(this.workerId, responseChunk.sourceId, responseChunk);
+                    })
+                ;
             } catch (error) {
-                logger.error('Claude messages stream initialization error', { 
-                    requestId, 
-                    error: (error as Error).message 
+                logger.error('Claude messages stream initialization error', {
+                    requestId,
+                    error: (error as Error).message
                 });
                 throw error;
             }
@@ -178,8 +178,8 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             if (message.content && message.content.length > 0) {
                 fullResponse = message.content[0].text || '';
             }
-            
-            const responseChunk = this.createWorkerResponse(sourceId, requestId, Provider.CLAUDE, response, fullResponse);
+
+            const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.CLAUDE, response, fullResponse);
             await this.onResponseChunk(responseChunk, true);
         }
     }

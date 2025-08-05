@@ -1,6 +1,6 @@
 import {injectable} from "tsyringe";
 import {ResponseStream} from "./response.service";
-import {LLMWorkerResponse, Provider} from "../types";
+import {LLMWorkerResponse, ProviderType} from "../types";
 import {ErrorMessages} from "../utils/error-messages";
 import {MessageStreamEvent} from "@anthropic-ai/sdk/resources/messages";
 import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
@@ -14,20 +14,21 @@ export class StreamFormatter {
         try {
             logger.debug("Calling format and send");
             switch (responseChunk.provider) {
-                case Provider.OLLAMA:
+                case ProviderType.OLLAMA:
                     this.streamOllama(responseChunk, res);
                     break;
-                case Provider.CLAUDE:
+                case ProviderType.CLAUDE:
                     this.streamClaude(responseChunk, res);
                     break;
-                case Provider.OPENAI:
+                case ProviderType.OPENAI:
                     this.streamOpenAI(responseChunk, res);
                     break;
-                case Provider.PERPLEXITY:
+                case ProviderType.PERPLEXITY:
                     this.streamOpenAI(responseChunk, res);
                     break;
                 default:
                     logger.error(`No stream formatter for provider: ${responseChunk.provider}`);
+                    // noinspection ExceptionCaughtLocallyJS
                     throw new Error(ErrorMessages.unsupportedProvider(responseChunk.provider));
             }
         } catch (error) {

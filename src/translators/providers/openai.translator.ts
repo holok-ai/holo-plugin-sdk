@@ -1,18 +1,17 @@
-import { injectable } from 'tsyringe';
-import { BaseRequestTranslator } from './base.translator';
-import { Provider, LLMWorkerRequest, LLMWorkerResponse } from '../../types/provider-request.types';
-import { LlmRequest, LlmResponse, LlmStatus } from '../../db/types';
-import { OpenAIWorkerRequest } from '../../types/provider-request.types';
+import {injectable} from 'tsyringe';
+import {BaseRequestTranslator} from './base.translator';
+import {LLMWorkerRequest, LLMWorkerResponse, OpenAIWorkerRequest, ProviderType} from '../../types';
+import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
 
 @injectable()
 export class OpenAIRequestTranslator extends BaseRequestTranslator {
-    readonly provider = Provider.OPENAI;
+    readonly provider = ProviderType.OPENAI;
 
     translate(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
         this.setCommonFields(workerRequest, llmRequest);
 
         const payload = workerRequest.payload as OpenAIWorkerRequest;
-        
+
         // Set model
         llmRequest.model_slug = payload.model;
 
@@ -42,7 +41,7 @@ export class OpenAIRequestTranslator extends BaseRequestTranslator {
         if (payload.response_format !== undefined) options.response_format = payload.response_format;
         if (payload.seed !== undefined) options.seed = payload.seed;
         if (payload.user !== undefined) options.user = payload.user;
-        
+
         if (Object.keys(options).length > 0) {
             llmRequest.options = options;
         }
@@ -50,10 +49,10 @@ export class OpenAIRequestTranslator extends BaseRequestTranslator {
 
     private extractUserPromptFromMessages(messages?: any[]): string | undefined {
         if (!messages || !Array.isArray(messages)) return undefined;
-        
+
         const userMessages = messages.filter(msg => msg.role === 'user');
         if (userMessages.length === 0) return undefined;
-        
+
         // Return the last user message content
         const lastUserMessage = userMessages[userMessages.length - 1];
         if (typeof lastUserMessage.content === 'string') {
@@ -65,34 +64,32 @@ export class OpenAIRequestTranslator extends BaseRequestTranslator {
                 .map((part: any) => part.text);
             return textParts.length > 0 ? textParts.join('\n') : undefined;
         }
-        
+
         return undefined;
     }
 
     private extractSystemPromptFromMessages(messages?: any[]): string | undefined {
         if (!messages || !Array.isArray(messages)) return undefined;
-        
+
         const systemMessage = messages.find(msg => msg.role === 'system');
         return systemMessage && typeof systemMessage.content === 'string' ? systemMessage.content : undefined;
     }
 
     translateResponse(
-        workerResponse: LLMWorkerResponse, 
+        workerResponse: LLMWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>,
         requestContext?: { userId?: string; applicationId?: string }
     ): void {
         this.setCommonResponseFields(workerResponse, llmResponse, requestContext);
 
         const payload = workerResponse.payload;
-        
+
         // Extract model from payload
         llmResponse.model_slug = payload.model || 'unknown';
-        
+
         // Extract response text from final response
         if (workerResponse.fullResponse) {
-            llmResponse.response = typeof workerResponse.fullResponse === 'string' 
-                ? workerResponse.fullResponse 
-                : JSON.stringify(workerResponse.fullResponse);
+            llmResponse.response = workerResponse.fullResponse;
         } else if (payload.object === 'chat.completion') {
             // Non-streaming completion
             const choice = payload.choices?.[0];
