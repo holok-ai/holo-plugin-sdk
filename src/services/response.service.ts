@@ -141,7 +141,10 @@ export class ResponseService {
             requestId: requestId,
             type: type,
             payload,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            ...(req.user !== undefined && { userId: req.user.userId }),
+            ...(req.applicationId !== undefined && { applicationId: req.applicationId })
+
         };
 
         logger.debug(`LLMWorkerRequest: ${JSON.stringify(workerRequest)}`);

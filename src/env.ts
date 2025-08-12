@@ -86,8 +86,6 @@ export namespace env {
         export const adminResponseExchange = process.env.RABBITMQ_ADMIN_RESPONSE_EXCHANGE || 'llm_admin_responses';
         export const adminResponseQueue = process.env.RABBITMQ_ADMIN_RESPONSE_QUEUE || 'llm_admin_responses';
 
-        // export const auditRequestExchange = process.env.RABBITMQ_AUDIT_REQUEST_EXCHANGE || 'llm_requests_audit';
-        // export const auditResponseExchange = process.env.RABBITMQ_AUDIT_RESPONSE_EXCHANGE || 'llm_responses_audit';
         export const auditRequestQueue = process.env.RABBITMQ_AUDIT_REQUEST_QUEUE || 'llm_requests_audit';
         export const auditResponseQueue = process.env.RABBITMQ_AUDIT_RESPONSE_QUEUE || 'llm_responses_audit';
         export const auditRoutingKey = process.env.AUDIT_ROUTING_KEY || "audit";
@@ -111,4 +109,20 @@ export namespace env {
         export const serverId = process.env.AUDIT_ID ||
             `audit_${id}`;
     }
+
+    export interface JWTConfig {
+        secret: string;
+        expiresIn: string;
+        algorithm: 'HS256';
+    }
+
+    if (!process.env.JWT_SECRET) {
+        throw new Error('JWT_SECRET environment variable is required');
+    }
+
+    export const jwtConfig: JWTConfig = {
+        secret: process.env.JWT_SECRET,
+        expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+        algorithm: 'HS256'
+    };
 }
