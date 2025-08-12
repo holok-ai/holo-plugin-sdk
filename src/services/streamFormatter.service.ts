@@ -13,7 +13,7 @@ export class StreamFormatter {
     async formatAndSend(responseChunk: LLMWorkerResponse, res: ResponseStream) {
         try {
             logger.debug("Calling format and send");
-            switch (responseChunk.provider) {
+            switch (responseChunk.providerType) {
                 case ProviderType.OLLAMA:
                     this.streamOllama(responseChunk, res);
                     break;
@@ -27,14 +27,14 @@ export class StreamFormatter {
                     this.streamOpenAI(responseChunk, res);
                     break;
                 default:
-                    logger.error(`No stream formatter for provider: ${responseChunk.provider}`);
+                    logger.error(`No stream formatter for provider: ${responseChunk.providerType}`);
                     // noinspection ExceptionCaughtLocallyJS
-                    throw new Error(ErrorMessages.unsupportedProvider(responseChunk.provider));
+                    throw new Error(ErrorMessages.unsupportedProvider(responseChunk.providerType));
             }
         } catch (error) {
             logger.error(`StreamFormatter error: ${(error as Error).message}`, {
                 requestId: responseChunk.requestId,
-                provider: responseChunk.provider,
+                providerType: responseChunk.providerType,
                 sourceId: responseChunk.sourceId
             });
 

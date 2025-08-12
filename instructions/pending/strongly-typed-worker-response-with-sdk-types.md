@@ -20,7 +20,7 @@ import type { ChatCompletionChunk, ChatCompletion } from 'openai/resources/chat/
 ```
 
 ### 2. Update LLMWorkerResponse Interface
-Modify `LLMWorkerResponse` in `src/types/provider-request.types.ts`:
+Modify `LLMWorkerResponse` in `src/types/worker.request.types.ts`:
 
 ```typescript
 export interface LLMWorkerResponse<T = any> {
@@ -161,7 +161,7 @@ Check which SDK packages are already installed and their versions:
 
 ## Files to Modify
 
-1. `src/types/provider-request.types.ts` - Import SDK types and update interfaces
+1. `src/types/worker.request.types.ts` - Import SDK types and update interfaces
 2. `src/translators/types/index.ts` - Update translator interface
 3. `src/translators/providers/*.translator.ts` - Update all provider translators
 4. `src/providers/*.provider.ts` - Ensure typed response creation

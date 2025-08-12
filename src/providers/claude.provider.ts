@@ -80,17 +80,17 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             requestId: request.requestId,
             sourceId: request.sourceId,
             type: request.type,
-            provider: request.provider
+            provider: request.providerType
         });
 
         // Validate this is for Claude
-        if (request.provider !== ProviderType.CLAUDE) {
+        if (request.providerType !== ProviderType.CLAUDE) {
             logger.error('Provider validation failed for Claude', {
                 expected: ProviderType.CLAUDE,
-                received: request.provider,
+                received: request.providerType,
                 requestId: request.requestId
             });
-            throw new Error(ErrorMessages.invalidProvider(request.provider, ProviderType.CLAUDE));
+            throw new Error(ErrorMessages.invalidProvider(request.providerType, ProviderType.CLAUDE));
         }
 
         logger.debug('Provider validation successful for Claude', {

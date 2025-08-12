@@ -9,6 +9,7 @@ export interface BaseEntity {
 }
 
 export interface Provider extends BaseEntity {
+    organization_id: string;
     name: string;
     type: ProviderType;
     description?: string;
@@ -17,6 +18,7 @@ export interface Provider extends BaseEntity {
 }
 
 export interface Model extends BaseEntity {
+    organization_id: string;
     name: string;
     description?: string;
     capabilities: Record<string, any>;
@@ -25,19 +27,9 @@ export interface Model extends BaseEntity {
     status: { enabled: boolean; available: boolean };
 }
 
-export interface ProviderModel {
-    provider_id: string;
-    model_id: string;
-    config: Record<string, any>;
-    status: { enabled: boolean };
-    active: boolean;
-    last_active_at?: Date;
-    created_at: Date;
-    updated_at: Date;
-}
-
 //Object that corresponds to the database llm_requests table
 export interface LlmRequest {
+    organization_id?: string | undefined;
     id: string;
     request_id: string;
     request_type: string;
@@ -65,6 +57,7 @@ export enum LlmStatus {
 
 // Object that corresponds to the database llm_responses table
 export interface LlmResponse {
+    organization_id?: string | undefined;
     id: string;
     created_at: string;
     user_id?: string;
@@ -86,9 +79,10 @@ export interface LlmResponse {
 }
 
 export interface Prompt extends BaseEntity {
+    organization_id: string;
     name: string;
     description?: string;
-    provider: 'ollama' | 'claude' | 'openai' | 'gemini' | 'grok';
+    providerType: 'ollama' | 'claude' | 'openai' | 'gemini' | 'grok';
     prompt_type: 'chat' | 'completion' | 'image' | 'audio' | 'vision';
     system_prompt?: string;
     user_prompt: string;

@@ -83,17 +83,17 @@ export class OpenAIProvider extends AIProvider implements IProvider {
             requestId: request.requestId,
             sourceId: request.sourceId,
             type: request.type,
-            provider: request.provider
+            provider: request.providerType
         });
 
         // Validate this is for OpenAI
-        if (request.provider !== ProviderType.OPENAI) {
+        if (request.providerType !== ProviderType.OPENAI) {
             logger.error('Provider validation failed for OpenAI', {
                 expected: ProviderType.OPENAI,
-                received: request.provider,
+                received: request.providerType,
                 requestId: request.requestId
             });
-            throw new Error(ErrorMessages.invalidProvider(request.provider, ProviderType.OPENAI));
+            throw new Error(ErrorMessages.invalidProvider(request.providerType, ProviderType.OPENAI));
         }
 
         logger.debug('Provider validation successful for OpenAI', {

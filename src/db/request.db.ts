@@ -10,6 +10,7 @@ export class RequestDB {
 
     async insert(request: Omit<LlmRequest, 'id'>) {
         const {
+            organization_id,
             request_id,
             request_type,
             model_slug,
@@ -26,11 +27,12 @@ export class RequestDB {
 
         const query = `
             INSERT INTO llm_requests
-            (request_id, request_type, model_slug, user_prompt, options, source_id, user_id, timestamp, raw_request, application_id, provider_slug, system_prompt)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            (organization_id, request_id, request_type, model_slug, user_prompt, options, source_id, user_id, timestamp, raw_request, application_id, provider_slug, system_prompt)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         `;
 
         await this.db.query(query, [
+            organization_id,
             request_id,
             request_type,
             model_slug,

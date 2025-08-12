@@ -15,7 +15,7 @@ import { TranslatorRegistry } from '../translators';
 export class AuditService {
 
     constructor(
-        private requestDB: RequestDB, 
+        private requestDB: RequestDB,
         private responseDB: ResponseDB,
         private translatorRegistry: TranslatorRegistry
     ) {
@@ -31,11 +31,11 @@ export class AuditService {
     async logRequest(content: Omit<LlmRequest, 'id'>): Promise<void>;
     async logRequest(content: LLMWorkerRequest | Omit<LlmRequest, 'id'>): Promise<void> {
         const startTime = Date.now();
-        
+
         try {
             // Type guard to check if it's an LLMWorkerRequest
             if (this.isLLMWorkerRequest(content)) {
-                logger.debug(`Logging LLMWorkerRequest - requestId: ${content.requestId}, type: ${content.type}, provider: ${content.provider}`);
+                logger.debug(`Logging LLMWorkerRequest - requestId: ${content.requestId}, type: ${content.type}, provider: ${content.providerType}`);
                 const mappedRequest = this.translatorRegistry.translate(content);
                 await this.insertRequest(mappedRequest);
                 logger.info(`Successfully logged LLMWorkerRequest ${content.requestId} in ${Date.now() - startTime}ms`);
@@ -61,9 +61,9 @@ export class AuditService {
      * @private
      */
     private isLLMWorkerRequest(obj: any): obj is LLMWorkerRequest {
-        const isWorkerRequest = obj.payload !== undefined && 
-                               obj.sourceId !== undefined && 
-                               obj.provider !== undefined &&
+        const isWorkerRequest = obj.payload !== undefined &&
+                               obj.sourceId !== undefined &&
+                               obj.providerType !== undefined &&
                                obj.type !== undefined;
         logger.debug(`Type guard check - isLLMWorkerRequest: ${isWorkerRequest}`);
         return isWorkerRequest;
@@ -102,13 +102,13 @@ export class AuditService {
     async logResponse(content: Omit<LlmResponse, 'id'>): Promise<void>;
     async logResponse(content: LLMWorkerResponse | Omit<LlmResponse, 'id'>, requestContext?: { userId?: string; applicationId?: string }): Promise<void> {
         const startTime = Date.now();
-        
+
         try {
             if (this.isLLMWorkerResponse(content)) {
-                logger.debug(`Logging LLMWorkerResponse - requestId: ${content.requestId}, provider: ${content.provider}`);
+                logger.debug(`Logging LLMWorkerResponse - requestId: ${content.requestId}, provider: ${content.providerType}`);
                 const mappedResponse = this.translatorRegistry.translateResponse(content, requestContext);
                 await this.insertResponse(mappedResponse);
-                logger.info(`Successfully logged LLMWorkerResponse ${content.requestId} (${content.provider}) in ${Date.now() - startTime}ms`);
+                logger.info(`Successfully logged LLMWorkerResponse ${content.requestId} (${content.providerType}) in ${Date.now() - startTime}ms`);
             } else {
                 logger.debug(`Logging direct LlmResponse - requestId: ${content.request_id}`);
                 await this.insertResponse(content);
@@ -133,8 +133,8 @@ export class AuditService {
      * @private
      */
     private isLLMWorkerResponse(obj: any): obj is LLMWorkerResponse {
-        const isWorkerResponse = obj.requestId !== undefined && 
-                                obj.provider !== undefined && 
+        const isWorkerResponse = obj.requestId !== undefined &&
+                                obj.providerType !== undefined &&
                                 obj.payload !== undefined &&
                                 obj.sourceId !== undefined;
         logger.debug(`Type guard check - isLLMWorkerResponse: ${isWorkerResponse}`);

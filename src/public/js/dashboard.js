@@ -4,17 +4,17 @@
 let workerChart = null;
 let modelChart = null;
 
-// Store current section 
+// Store current section
 let currentSection = 'dashboard';
 
 // Initialize application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   // Set up navigation
   setupNavigation();
-  
+
   // Initial data load
   loadDashboardData();
-  
+
   // Set up auto-refresh (every 30 seconds)
   setInterval(() => {
     if (currentSection === 'dashboard') {
@@ -31,30 +31,30 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupNavigation() {
   // Get all navigation links
   const navLinks = document.querySelectorAll('.nav-link');
-  
+
   // Add click event to each link
   navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      
+
       // Remove active class from all links
       navLinks.forEach(l => l.classList.remove('active'));
-      
+
       // Add active class to clicked link
       link.classList.add('active');
-      
+
       // Get the section ID from the href
       const sectionId = link.getAttribute('href').substring(1);
-      
+
       // Update current section
       currentSection = sectionId;
-      
+
       // Hide all sections
       document.getElementById('dashboard-section').classList.add('d-none');
       document.getElementById('requests-section').classList.add('d-none');
       document.getElementById('workers-section').classList.add('d-none');
       document.getElementById('models-section').classList.add('d-none');
-      
+
       // Show the selected section
       if (sectionId === 'dashboard') {
         document.getElementById('dashboard-section').classList.remove('d-none');
@@ -78,28 +78,28 @@ function setupNavigation() {
 async function loadDashboardData() {
   try {
     const response = await fetch('/api/monitoring/dashboard');
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch dashboard data');
     }
-    
+
     const data = await response.json();
-    
+
     // Update queue metrics
     updateQueueMetrics(data.queueMetrics);
-    
+
     // Update recent requests table
     updateRecentRequests(data.recentRequests);
-    
+
     // Update worker performance chart
     updateWorkerChart(data.workerMetrics);
-    
+
     // Update model usage chart
     updateModelChart(data.modelMetrics);
-    
+
     // Update models count
     document.getElementById('models-count').textContent = data.modelMetrics.length;
-    
+
   } catch (error) {
     console.error('Error loading dashboard data:', error);
     showErrorAlert('Failed to load dashboard data. Please try again later.');
@@ -122,14 +122,14 @@ function formatTime(ms) {
 // Update recent requests table
 function updateRecentRequests(requests) {
   const tableBody = document.getElementById('recent-requests');
-  
+
   if (!requests || requests.length === 0) {
     tableBody.innerHTML = '<tr><td colspan="7" class="text-center">No requests found</td></tr>';
     return;
   }
-  
+
   let html = '';
-  
+
   requests.forEach(request => {
     html += `
       <tr>
@@ -147,29 +147,29 @@ function updateRecentRequests(requests) {
       </tr>
     `;
   });
-  
+
   tableBody.innerHTML = html;
 }
 
 // Update worker performance chart
 function updateWorkerChart(workerMetrics) {
   const ctx = document.getElementById('worker-chart').getContext('2d');
-  
+
   if (workerChart) {
     workerChart.destroy();
   }
-  
+
   if (!workerMetrics || workerMetrics.length === 0) {
     ctx.font = '16px Arial';
     ctx.fillText('No worker data available', 10, 50);
     return;
   }
-  
+
   // Prepare data for chart
   const labels = workerMetrics.map(worker => worker.worker_id.substring(0, 8) + '...');
   const requestsData = workerMetrics.map(worker => worker.requests_processed);
   const tokensPerSecData = workerMetrics.map(worker => Math.round(worker.avg_tokens_per_second * 10) / 10);
-  
+
   workerChart = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -221,27 +221,27 @@ function updateWorkerChart(workerMetrics) {
 // Update model usage chart
 function updateModelChart(modelMetrics) {
   const ctx = document.getElementById('model-chart').getContext('2d');
-  
+
   if (modelChart) {
     modelChart.destroy();
   }
-  
+
   if (!modelMetrics || modelMetrics.length === 0) {
     ctx.font = '16px Arial';
     ctx.fillText('No model data available', 10, 50);
     return;
   }
-  
+
   // Prepare data for chart
   const labels = modelMetrics.map(model => model.model);
   const requestData = modelMetrics.map(model => model.request_count);
   const tokensData = modelMetrics.map(model => Math.round(model.avg_tokens));
-  
+
   // Generate random colors for each model
-  const backgroundColors = modelMetrics.map(() => 
+  const backgroundColors = modelMetrics.map(() =>
     `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, 0.5)`
   );
-  
+
   modelChart = new Chart(ctx, {
     type: 'pie',
     data: {
@@ -283,27 +283,27 @@ function updateModelChart(modelMetrics) {
 async function loadRequestHistory() {
   try {
     const response = await fetch('/api/monitoring/requests?limit=20');
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch request history');
     }
-    
+
     const data = await response.json();
-    
+
     const tableBody = document.getElementById('requests-history');
-    
+
     if (!data.requests || data.requests.length === 0) {
       tableBody.innerHTML = '<tr><td colspan="8" class="text-center">No requests found</td></tr>';
       return;
     }
-    
+
     let html = '';
-    
+
     data.requests.forEach(request => {
-      const promptText = request.prompt ? 
-        (request.prompt.length > 50 ? request.prompt.substring(0, 50) + '...' : request.prompt) : 
+      const promptText = request.prompt ?
+        (request.prompt.length > 50 ? request.prompt.substring(0, 50) + '...' : request.prompt) :
         'N/A';
-      
+
       html += `
         <tr>
           <td class="truncate">${request.request_id.substring(0, 8)}...</td>
@@ -321,9 +321,9 @@ async function loadRequestHistory() {
         </tr>
       `;
     });
-    
+
     tableBody.innerHTML = html;
-    
+
   } catch (error) {
     console.error('Error loading request history:', error);
     showErrorAlert('Failed to load request history. Please try again later.');
@@ -334,22 +334,22 @@ async function loadRequestHistory() {
 async function loadWorkerPerformance() {
   try {
     const response = await fetch('/api/monitoring/workers');
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch worker performance data');
     }
-    
+
     const data = await response.json();
-    
+
     const tableBody = document.getElementById('workers-list');
-    
+
     if (!data.workers || data.workers.length === 0) {
       tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No worker data found</td></tr>';
       return;
     }
-    
+
     let html = '';
-    
+
     data.workers.forEach(worker => {
       html += `
         <tr>
@@ -366,9 +366,9 @@ async function loadWorkerPerformance() {
         </tr>
       `;
     });
-    
+
     tableBody.innerHTML = html;
-    
+
   } catch (error) {
     console.error('Error loading worker performance:', error);
     showErrorAlert('Failed to load worker performance data. Please try again later.');
@@ -384,16 +384,16 @@ function refreshWorkerStats() {
 async function loadLiveWorkerStatus() {
   try {
     const response = await fetch('/api/admin/workers');
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch live worker status');
     }
-    
+
     const data = await response.json();
     console.log('Worker status response:', data); // Debug log
-    
+
     const tableBody = document.getElementById('live-workers-list');
-    
+
     // Check for different response formats
     let workers = [];
     if (data.status && Array.isArray(data.status)) {
@@ -407,30 +407,30 @@ async function loadLiveWorkerStatus() {
       tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No live worker data available</td></tr>';
       return;
     }
-    
+
     if (workers.length === 0) {
       tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No active workers found</td></tr>';
       return;
     }
-    
+
     let html = '';
-    
+
     workers.forEach(worker => {
       // Format uptime
       const uptime = worker.uptime ? formatUptime(worker.uptime) : 'Unknown';
-      
+
       // Format memory usage (handle potentially missing fields)
       let memoryUsage = 'Unknown';
       if (worker.memory && typeof worker.memory === 'object') {
         memoryUsage = `${worker.memory.heapUsed || 0}/${worker.memory.heapTotal || 0} MB`;
       }
-      
+
       // Format active models (handle potentially missing fields)
       let activeModels = 'None';
       if (worker.stats && worker.stats.activeModels && worker.stats.activeModels.length > 0) {
         activeModels = worker.stats.activeModels.map(m => m.name || m.id || 'Unknown').join(', ');
       }
-      
+
       html += `
         <tr>
           <td>${worker.workerId}</td>
@@ -449,9 +449,9 @@ async function loadLiveWorkerStatus() {
         </tr>
       `;
     });
-    
+
     tableBody.innerHTML = html;
-    
+
   } catch (error) {
     console.error('Error loading live worker status:', error);
     const tableBody = document.getElementById('live-workers-list');
@@ -467,12 +467,12 @@ function refreshLiveWorkerStatus() {
 // Format uptime in a human-readable format
 function formatUptime(ms) {
   if (!ms) return 'Unknown';
-  
+
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  
+
   if (days > 0) {
     return `${days}d ${hours % 24}h`;
   } else if (hours > 0) {
@@ -490,7 +490,7 @@ async function viewWorkerDetails(workerId) {
     // Show the modal
     const modal = new bootstrap.Modal(document.getElementById('workerDetailsModal'));
     modal.show();
-    
+
     // Show loading state
     document.getElementById('worker-details-content').innerHTML = `
       <div class="text-center">
@@ -499,17 +499,17 @@ async function viewWorkerDetails(workerId) {
         </div>
       </div>
     `;
-    
+
     // Fetch worker details
     const response = await fetch(`/api/admin/workers/${workerId}`);
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch worker details');
     }
-    
+
     const data = await response.json();
     console.log('Worker details response:', data); // Debug log
-    
+
     // Determine actual worker data structure
     let worker;
     if (data.status) {
@@ -519,25 +519,25 @@ async function viewWorkerDetails(workerId) {
     } else {
       throw new Error('Unexpected response format');
     }
-    
+
     // Default values for potentially missing data
     const uptime = worker.uptime ? formatUptime(worker.uptime) : 'Unknown';
-    
+
     // Format memory usage (handle potentially missing fields)
     let memoryUsage = 'Unknown';
     if (worker.memory && typeof worker.memory === 'object') {
       memoryUsage = `${worker.memory.heapUsed || 0}/${worker.memory.heapTotal || 0} MB`;
     }
-    
+
     // Handle potentially missing stats
     const stats = worker.stats || { totalRequests: 0, requestsProcessed: { generate: 0, chat: 0 }, activeModels: [] };
     const requestsProcessed = stats.requestsProcessed || { generate: 0, chat: 0 };
     const totalRequests = stats.totalRequests || 0;
     const activeModels = stats.activeModels || [];
-    
+
     // Handle connection count
     const connectionCount = worker.connections?.active || 'Unknown';
-    
+
     const html = `
       <div class="worker-details-section">
         <h6>Worker Information</h6>
@@ -623,9 +623,9 @@ async function viewWorkerDetails(workerId) {
         </div>
       </div>
     `;
-    
+
     document.getElementById('worker-details-content').innerHTML = html;
-    
+
   } catch (error) {
     console.error('Error loading worker details:', error);
     document.getElementById('worker-details-content').innerHTML = `
@@ -640,22 +640,22 @@ async function viewWorkerDetails(workerId) {
 function openWorkerCommandModal(workerId) {
   // Set worker ID in hidden field
   document.getElementById('command-worker-id').value = workerId;
-  
+
   // Reset form
   document.getElementById('command-type').value = '';
   document.getElementById('model-param-group').classList.add('d-none');
-  
+
   // Load available models for the dropdown
   loadCommandModelOptions();
-  
+
   // Show the modal
   const modal = new bootstrap.Modal(document.getElementById('workerCommandModal'));
   modal.show();
-  
+
   // Add change event to command type
   document.getElementById('command-type').addEventListener('change', function() {
     const commandType = this.value;
-    
+
     if (commandType === 'load_model' || commandType === 'unload_model') {
       document.getElementById('model-param-group').classList.remove('d-none');
     } else {
@@ -668,20 +668,20 @@ function openWorkerCommandModal(workerId) {
 async function loadCommandModelOptions() {
   try {
     const response = await fetch('/api/admin/models');
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch models');
     }
-    
+
     const data = await response.json();
-    
+
     const select = document.getElementById('command-model-id');
-    
+
     // Clear existing options except the first one
     while (select.options.length > 1) {
       select.remove(1);
     }
-    
+
     // Add models to dropdown
     if (data.models && data.models.length > 0) {
       data.models.forEach(model => {
@@ -691,7 +691,7 @@ async function loadCommandModelOptions() {
         select.appendChild(option);
       });
     }
-    
+
   } catch (error) {
     console.error('Error loading models for command:', error);
   }
@@ -701,14 +701,14 @@ async function loadCommandModelOptions() {
 async function sendWorkerCommand() {
   const workerId = document.getElementById('command-worker-id').value;
   const commandType = document.getElementById('command-type').value;
-  
+
   if (!commandType) {
     alert('Please select a command');
     return;
   }
-  
+
   let params = {};
-  
+
   if (commandType === 'load_model' || commandType === 'unload_model') {
     const modelId = document.getElementById('command-model-id').value;
     if (!modelId) {
@@ -717,13 +717,13 @@ async function sendWorkerCommand() {
     }
     params.modelId = modelId;
   }
-  
+
   try {
     // Disable submit button
     const submitButton = document.querySelector('#workerCommandModal .btn-primary');
     submitButton.disabled = true;
     submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
-    
+
     // Send command
     const response = await fetch(`/api/admin/workers/${workerId}/command`, {
       method: 'POST',
@@ -735,22 +735,22 @@ async function sendWorkerCommand() {
         params
       })
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to send command');
     }
-    
+
     const data = await response.json();
-    
+
     // Close modal
     bootstrap.Modal.getInstance(document.getElementById('workerCommandModal')).hide();
-    
+
     // Show success message
     alert('Command sent successfully');
-    
+
     // Refresh worker status
     loadLiveWorkerStatus();
-    
+
   } catch (error) {
     console.error('Error sending worker command:', error);
     alert('Failed to send command: ' + error.message);
@@ -768,7 +768,7 @@ async function viewRequestDetails(requestId) {
     // Show the modal
     const modal = new bootstrap.Modal(document.getElementById('requestDetailsModal'));
     modal.show();
-    
+
     // Show loading state
     document.getElementById('request-details-content').innerHTML = `
       <div class="text-center">
@@ -777,20 +777,20 @@ async function viewRequestDetails(requestId) {
         </div>
       </div>
     `;
-    
+
     // Fetch request details
     const response = await fetch(`/api/monitoring/requests/${requestId}`);
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch request details');
     }
-    
+
     const data = await response.json();
-    
+
     // Format request details
     const request = data.request;
     const finalResponse = data.responses.find(r => r.is_final);
-    
+
     let html = `
       <div class="request-details-section">
         <h6>Request Information</h6>
@@ -835,7 +835,7 @@ async function viewRequestDetails(requestId) {
         <div class="prompt-text">${escapeHtml(request.prompt || 'N/A')}</div>
       </div>
     `;
-    
+
     if (finalResponse) {
       html += `
         <div class="request-details-section">
@@ -863,16 +863,16 @@ async function viewRequestDetails(requestId) {
         </div>
       `;
     }
-    
+
     html += `
       <div class="request-details-section">
         <h6>Response</h6>
         <div class="response-text">${getResponseText(data.responses)}</div>
       </div>
     `;
-    
+
     document.getElementById('request-details-content').innerHTML = html;
-    
+
   } catch (error) {
     console.error('Error loading request details:', error);
     document.getElementById('request-details-content').innerHTML = `
@@ -891,7 +891,7 @@ function getResponseText(responses) {
   //   // Check if token contains the full response
   //   if (finalResponse.token) {
   //     return escapeHtml(finalResponse.token);
-  //   } 
+  //   }
   //   // Check if metadata contains the full response
   //   else if (finalResponse.metadata && finalResponse.metadata.fullResponse) {
   //     // Check if it's an object containing a response property
@@ -904,21 +904,21 @@ function getResponseText(responses) {
   //     }
   //   }
   // }
-  
+
   // If we couldn't find the complete response in the final message,
   // concatenate all token messages to rebuild the full response
   const tokens = responses
     .filter(r => r.token && r.response_type === 'token')
     .map(r => r.metadata.fullResponse.token.message.content)
     .join('');
-  
+
   return escapeHtml(tokens || 'No response content available');
 }
 
 // Format date to a readable string
 function formatDate(dateString) {
   if (!dateString) return 'N/A';
-  
+
   const date = new Date(dateString);
   return date.toLocaleString();
 }
@@ -926,15 +926,15 @@ function formatDate(dateString) {
 // Format options object to a readable string
 function formatOptions(options) {
   if (!options) return 'None';
-  
+
   try {
     // If options is a string (JSON), parse it
     const optionsObj = typeof options === 'string' ? JSON.parse(options) : options;
-    
+
     // Return a shortened representation of keys
     const keys = Object.keys(optionsObj);
     if (keys.length === 0) return 'None';
-    
+
     if (keys.length <= 3) {
       return keys.join(', ');
     } else {
@@ -954,7 +954,7 @@ function showErrorAlert(message) {
 // Escape HTML to prevent XSS
 function escapeHtml(str) {
   if (!str) return '';
-  
+
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
@@ -964,22 +964,22 @@ function escapeHtml(str) {
 async function loadModels() {
   try {
     const response = await fetch('/api/admin/models');
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch models');
     }
-    
+
     const data = await response.json();
-    
+
     const tableBody = document.getElementById('models-list');
-    
+
     if (!data.models || data.models.length === 0) {
       tableBody.innerHTML = '<tr><td colspan="6" class="text-center">No models found. Try syncing models first.</td></tr>';
       return;
     }
-    
+
     let html = '';
-    
+
     data.models.forEach(model => {
       // Determine status badge
       let statusBadge = '';
@@ -996,16 +996,16 @@ async function loadModels() {
       } else {
         statusBadge = '<span class="badge bg-secondary">Unknown</span>';
       }
-      
+
       // Format description
-      const description = model.description ? 
-        (model.description.length > 50 ? model.description.substring(0, 50) + '...' : model.description) : 
+      const description = model.description ?
+        (model.description.length > 50 ? model.description.substring(0, 50) + '...' : model.description) :
         'No description';
-      
+
       html += `
         <tr>
           <td>${model.id}</td>
-          <td>${model.provider}</td>
+          <td>${model.providerType}</td>
           <td>${model.name}</td>
           <td class="truncate">${description}</td>
           <td>${statusBadge}</td>
@@ -1025,9 +1025,9 @@ async function loadModels() {
         </tr>
       `;
     });
-    
+
     tableBody.innerHTML = html;
-    
+
   } catch (error) {
     console.error('Error loading models:', error);
     const tableBody = document.getElementById('models-list');
@@ -1046,7 +1046,7 @@ async function viewModelDetails(modelId) {
     // Show the modal
     const modal = new bootstrap.Modal(document.getElementById('modelDetailsModal'));
     modal.show();
-    
+
     // Show loading state
     document.getElementById('model-details-content').innerHTML = `
       <div class="text-center">
@@ -1055,19 +1055,19 @@ async function viewModelDetails(modelId) {
         </div>
       </div>
     `;
-    
+
     // Fetch model details
     const response = await fetch(`/api/admin/models/${modelId}`);
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch model details');
     }
-    
+
     const data = await response.json();
-    
+
     // Format model details
     const model = data.model;
-    
+
     const html = `
       <div class="model-details-section">
         <h6>Basic Information</h6>
@@ -1083,7 +1083,7 @@ async function viewModelDetails(modelId) {
             </div>
             <div class="metric-item">
               <span class="metric-label">Provider:</span>
-              <span class="metric-value">${model.provider}</span>
+              <span class="metric-value">${model.providerType}</span>
             </div>
           </div>
           <div class="col-md-6">
@@ -1172,9 +1172,9 @@ async function viewModelDetails(modelId) {
         }
       </div>
     `;
-    
+
     document.getElementById('model-details-content').innerHTML = html;
-    
+
   } catch (error) {
     console.error('Error loading model details:', error);
     document.getElementById('model-details-content').innerHTML = `
@@ -1192,7 +1192,7 @@ async function updateModelStatus(modelId, enable) {
     if (!confirm(`Are you sure you want to ${enable ? 'enable' : 'disable'} this model?`)) {
       return;
     }
-    
+
     // Send update
     const response = await fetch(`/api/admin/models/${modelId}`, {
       method: 'PUT',
@@ -1205,26 +1205,26 @@ async function updateModelStatus(modelId, enable) {
         }
       })
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to update model status');
     }
-    
+
     const data = await response.json();
-    
+
     // Show success message
     alert(`Model ${enable ? 'enabled' : 'disabled'} successfully`);
-    
+
     // Refresh models list
     loadModels();
-    
+
     // If modal is open, close it
     const modalElement = document.getElementById('modelDetailsModal');
     const modalInstance = bootstrap.Modal.getInstance(modalElement);
     if (modalInstance) {
       modalInstance.hide();
     }
-    
+
   } catch (error) {
     console.error('Error updating model status:', error);
     alert('Failed to update model status: ' + error.message);
@@ -1238,29 +1238,29 @@ async function syncModels() {
     if (!confirm('This will sync models from all providers. Continue?')) {
       return;
     }
-    
+
     // Change button to loading state
     const syncButton = document.querySelector('#models-section .btn-secondary');
     syncButton.disabled = true;
     syncButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Syncing...';
-    
+
     // Send sync request
     const response = await fetch('/api/admin/models/sync', {
       method: 'POST'
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to sync models');
     }
-    
+
     const data = await response.json();
-    
+
     // Show success message
     alert('Models synced successfully');
-    
+
     // Refresh models list
     loadModels();
-    
+
   } catch (error) {
     console.error('Error syncing models:', error);
     alert('Failed to sync models: ' + error.message);

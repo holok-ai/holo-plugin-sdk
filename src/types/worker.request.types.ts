@@ -10,7 +10,8 @@ export enum RequestType {
 }
 
 export interface LLMWorkerRequest {
-    provider: ProviderType;
+    organizationId?: string;
+    providerType: ProviderType;
     sourceId: string;
     applicationId?: string;
     userId?: string;
@@ -21,9 +22,10 @@ export interface LLMWorkerRequest {
 }
 
 export interface LLMWorkerResponse {
+    organizationId?: string;
     sourceId: string;
     requestId: string;
-    provider: ProviderType;
+    providerType: ProviderType;
     payload: any;
     fullResponse?: string;
     workerId: string;

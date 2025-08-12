@@ -33,10 +33,8 @@ export class ResponseService {
     private serverId: string = env.api.apiServerId;
     private streams: Map<string, ResponseStream>;
     private readonly responseQueue = env.queue.responseQueue;
-    // private readonly requestQueue = env.queue.requestQueue;
     private readonly requestExchange = env.queue.requestExchange;
 
-    //private readonly responseExchange = env.queue.responseExchange;
     constructor(
         private queueService: QueueService, private streamFormatter: StreamFormatter) {
         this.streams = new Map<string, ResponseStream>();
@@ -126,25 +124,27 @@ export class ResponseService {
     /**
      * Parse HTTP request into LLM worker request and initiate streaming response
      * Handles the complete request lifecycle: parsing, validation, queue submission, and stream setup
-     * @param {Provider} provider - LLM provider (ollama, claude, openai)
+     * @param {ProviderType} providerType - LLM provider (ollama, claude, openai)
      * @param {RequestType} type - Request type (generate or chat)
      * @param {HttpApiRequest} req - HTTP request object
      * @param {Response} res - HTTP response object
      */
-    async parseAndSendLLMRequest(provider: ProviderType, type: RequestType, req: HttpApiRequest, res: Response) {
-        const payload = parseLLMRequest(req, provider, type);
+    async parseAndSendLLMRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest, res: Response) {
+        const payload = parseLLMRequest(req, providerType, type);
         const requestId = uuidv4();
 
         const workerRequest: LLMWorkerRequest = {
-            provider: provider,
+            providerType: providerType,
             sourceId: this.serverId,
             requestId: requestId,
             type: type,
             payload,
             timestamp: Date.now(),
-            ...(req.user !== undefined && { userId: req.user.userId }),
-            ...(req.applicationId !== undefined && { applicationId: req.applicationId })
-
+            ...(req.user !== undefined && {
+                organizationId: req.user.organizationId,
+                userId: req.user.userId
+            }),
+            ...(req.applicationId !== undefined && {applicationId: req.applicationId})
         };
 
         logger.debug(`LLMWorkerRequest: ${JSON.stringify(workerRequest)}`);

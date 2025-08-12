@@ -88,9 +88,10 @@ export abstract class AIProvider {
      */
     async onError(sourceId: string, requestId: string, error: Error) {
         const errorResponse: LLMWorkerResponse = {
+            organizationId: this.provider.organization_id,
             sourceId: sourceId,
             requestId: requestId,
-            provider: this.provider.type as any, // Provider will be set by concrete implementation
+            providerType: this.provider.type as any, // Provider will be set by concrete implementation
             workerId: process.env.WORKER_ID || 'unknown',
             payload: {
                 type: 'error',
@@ -134,7 +135,7 @@ export abstract class AIProvider {
      *
      * @param sourceId - Unique identifier for the request source
      * @param requestId - Unique identifier for the specific request
-     * @param provider - Provider enum value identifying which LLM provider generated the response
+     * @param providerType - Provider enum value identifying which LLM provider generated the response
      * @param payload - The actual response data from the LLM provider
      * @param fullResponse - Optional complete response text for final chunks
      * @returns Standardized LLMWorkerResponse object ready for streaming
@@ -142,14 +143,15 @@ export abstract class AIProvider {
     protected createWorkerResponse(
         sourceId: string,
         requestId: string,
-        provider: any, // Provider enum value
+        providerType: any, // Provider enum value
         payload: any,
         fullResponse?: string
     ): LLMWorkerResponse {
         return {
+            organizationId: this.provider.organization_id,
             sourceId,
             requestId,
-            provider: provider,
+            providerType,
             workerId: process.env.WORKER_ID || 'unknown',
             payload,
             ...(fullResponse !== undefined && {fullResponse})
