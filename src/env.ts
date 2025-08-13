@@ -113,7 +113,7 @@ export namespace env {
     export interface JWTConfig {
         secret: string;
         expiresIn: string;
-        algorithm: 'HS256';
+        algorithm: 'HS384';
     }
 
     if (!process.env.JWT_SECRET) {
@@ -123,6 +123,6 @@ export namespace env {
     export const jwtConfig: JWTConfig = {
         secret: process.env.JWT_SECRET,
         expiresIn: process.env.JWT_EXPIRES_IN || '1h',
-        algorithm: 'HS256'
+        algorithm: 'HS384'
     };
 }
