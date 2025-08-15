@@ -12,14 +12,6 @@ export type AzureIterationsResponse = { value: GitPullRequestIteration[]; count:
 export type AzureChangesResponse = GitPullRequestIterationChanges;
 export type AzureFileContentResponse = GitItem;
 
-// Re-export commonly used types for convenience
-export {
-  GitPullRequest,
-  GitPullRequestIteration,
-  GitPullRequestIterationChanges,
-  GitItem
-} from 'azure-devops-node-api/interfaces/GitInterfaces';
-
 export interface ChangedFile {
   filePath: string;
   changeType: string;
@@ -41,14 +33,6 @@ export interface FileLineChanges {
   modifiedLines: LineChange[];
 }
 
-
-// Additional analysis types
-export interface EditToolInput {
-  file_path: string;
-  old_string: string;
-  new_string: string;
-}
-
 export interface EditToolResponse {
   filePath: string;
   oldString: string;
@@ -65,32 +49,6 @@ export interface EditToolResponse {
   replaceAll: boolean;
 }
 
-export interface ReadToolInput {
-  file_path: string;
-}
-
-export interface ReadToolResponse {
-  type: string;
-  file: {
-    filePath: string;
-    content: string;
-    numLines: number;
-    startLine: number;
-    totalLines: number;
-  };
-}
-
-export interface LSToolInput {
-  path: string;
-}
-
-export interface LSToolResponse {
-  [key: string]: any;
-}
-
-export type ToolInput = EditToolInput | ReadToolInput | LSToolInput | { [key: string]: any };
-export type ToolResponse = EditToolResponse | ReadToolResponse | LSToolResponse | string | { [key: string]: any };
-
 export interface PreToolUseEvent {
   id: string;
   session_id: string;
@@ -98,7 +56,7 @@ export interface PreToolUseEvent {
   cwd: string;
   hook_event_name: 'PreToolUse';
   tool_name: string | null;
-  tool_input: ToolInput;
+  tool_input: Record<string, unknown> | null;
   user_message: string;
   event_date: Date;
 }
@@ -110,8 +68,8 @@ export interface PostToolUseEvent {
   cwd: string;
   hook_event_name: 'PostToolUse';
   tool_name: string;
-  tool_input: ToolInput;
-  tool_response: ToolResponse;
+  tool_input: Record<string, unknown> | null;
+  tool_response: EditToolResponse | string | Record<string, unknown> | null;
   event_date: Date;
 }
 
@@ -127,7 +85,7 @@ export interface ClaudeChangeAnalysis {
 
 export interface AiChange {
   filePath: string;
-  typeOfChange: string;
+  typeOfChange: 'generated' | 'deleted';
   changedLines: string;
 }
 
