@@ -1,4 +1,5 @@
 export {AdminService} from './admin.service'
+export {AnalysisService} from './analysis.service';
 export {AuditService} from './audit.service';
 export {InitService} from './init.service';
 export {ProviderService} from './provider.service';
