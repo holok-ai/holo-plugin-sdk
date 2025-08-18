@@ -280,13 +280,15 @@ cp .env.example .env
 # Edit .env with your configurations
 
 # Run database migrations
+npx prisma db pull    ## to pull db changes into schema if db already updated by Flyway
 npx prisma migrate deploy
 npx prisma generate
 
 # Start in development mode
-npm run api:dev     # API server
-npm run worker:dev  # Worker node
-npm run audit:dev   # Audit service
+npm run api:dev       # API server
+npm run worker:dev    # Worker node
+npm run audit:dev     # Audit service
+npm run analysis:dev  # Analysis service
 ```
 
 ### Production Deployment
