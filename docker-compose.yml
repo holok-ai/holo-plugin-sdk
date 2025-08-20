@@ -28,7 +28,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["node", "src/worker/llm-worker.js"]
+    command: ["npx", "ts-node", "src/servers/worker.server.ts"]
     environment:
       - NODE_ENV=production
       - RABBITMQ_URL=amqp://rabbitmq

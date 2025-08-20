@@ -49,7 +49,7 @@ export namespace env {
 
     // Database config
     export namespace auditDb {
-        export const host = process.env.AUDIT_PG_HOST || process.env.APP_PG_HOST || 'localhost';
+        export const host = process.env.AUDIT_PG_HOST || process.env.APP_PG_HOST || 'postgres';
         export const port = parseNumber(process.env.AUDIT_PG_PORT || process.env.APP_PG_PORT, 5432);
         export const database = process.env.AUDIT_PG_DATABASE || process.env.APP_PG_DATABASE || 'holokai';
         export const user = process.env.AUDIT_PG_USER || process.env.APP_PG_USER || 'holo';
@@ -90,6 +90,9 @@ export namespace env {
         export const auditResponseQueue = process.env.RABBITMQ_AUDIT_RESPONSE_QUEUE || 'llm_responses_audit';
         export const auditRoutingKey = process.env.AUDIT_ROUTING_KEY || "audit";
 
+        export const analysisQueue = process.env.RABBITMQ_ANALYSIS_REQUEST_QUEUE || 'analysis-tasks';
+        export const analysisRoutingKey = process.env.ANALYSIS_ROUTING_KEY || "analysis-tasks";
+
         export const queueExpiration = process.env.QUEUE_EXPIRATION || 3600000;
 
         export const config = {
@@ -108,6 +111,11 @@ export namespace env {
     export namespace audit {
         export const serverId = process.env.AUDIT_ID ||
             `audit_${id}`;
+    }
+
+    export namespace analysis {
+        export const serverId = process.env.ANALYSIS_ID ||
+            `analysis_${id}`;
     }
 
     export interface JWTConfig {
