@@ -28,6 +28,7 @@ export class ProviderService {
 
     async refreshAvailableProviders(serverId: string) {
         const providers: Provider[] = await this.getProviders();
+        logger.debug(`Refreshing available providers: ${providers.map(p => p.name)}`);
         if (providers.length === 0) return;
         let aiProvider;
         for (const provider of providers) {
