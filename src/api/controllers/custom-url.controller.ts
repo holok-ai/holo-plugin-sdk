@@ -22,10 +22,6 @@ export class CustomUrlController extends BaseController {
             const urlPath = req.params[0]; // This captures the rest of the URL after /:provider/:appId/
             req.applicationId = appId;
             
-            if(!this.validateApplication(appId)){
-                logger.error(`applicationId: ${appId} is not valid`);
-                res.status(400).json({ error: `Unsupported application ID: ${appId}` });
-            }
             // Get the appropriate controller based on provider
             const controller = this.getControllerForProvider(provider.toUpperCase() as ProviderType);
             
@@ -114,10 +110,4 @@ export class CustomUrlController extends BaseController {
         }
    }
 
-   private validateApplication(appId: string): boolean {
-        logger.debug(`validating appId: ${appId}`);
-        logger.debug(`appId: ${appId} is valid`);
-        //TODO: make call to db to ensure appid is valid and user has access to application
-        return true;
-   }
 }

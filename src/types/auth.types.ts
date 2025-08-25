@@ -10,23 +10,14 @@ export interface JWTPayload {
 export interface AuthenticatedRequest extends Request {
   user?: JWTPayload;
 }
-
-export interface LoginRequest {
-  email: string;
-  password: string;
+export interface AdminJWTPayload extends JWTPayload {
+  urlSlugs: string[];
 }
 
-export interface LoginResponse {
-  message: string;
-  token: string;
-  user: {
-    id: number;
-    email: string;
-    role: string;
-  };
+export interface TokenRefreshRequest {
+  apiKey: string;
 }
 
-export interface User {
-  id: string;
-  email: string;
+export interface TokenRefreshResponse {
+  accessToken: string;
 }

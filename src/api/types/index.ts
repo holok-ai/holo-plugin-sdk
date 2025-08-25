@@ -4,7 +4,8 @@ import {JWTPayload} from '../../types/auth.types';
 // Base API types
 export interface HttpApiRequest extends Request {
     user?: JWTPayload,
-    applicationId?: string
+    applicationId?: string,
+    urlSlugs?: string[]
 }
 
 export interface ApiResponse<T = any> extends Response {
