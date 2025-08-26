@@ -133,4 +133,9 @@ export namespace env {
         expiresIn: process.env.JWT_EXPIRES_IN || '1h',
         algorithm: 'HS384'
     };
+
+    export const mokuUrl = process.env.MOKU_URL;
+    if (!mokuUrl) {
+        throw new Error('MOKU_URL environment variable is required for the application to start');
+    }
 }
