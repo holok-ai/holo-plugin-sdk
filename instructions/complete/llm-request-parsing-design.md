@@ -8,7 +8,7 @@ This document outlines the design and implementation of the LLM request parsing 
 
 The parsing system consists of four main components:
 
-1. **Type Definitions** (`/src/types/provider-request.types.ts`)
+1. **Type Definitions** (`/src/types/worker.request.types.ts`)
 2. **Provider-Specific Parsers** (`/src/utils/ollama-parsers.ts`, `/src/utils/claude-parsers.ts`, `/src/utils/openai-parsers.ts`)
 3. **Unified Request Parser** (`/src/utils/llm-request-parser.ts`)
 4. **Centralized Error Handling** (`/src/utils/error-messages.ts`)
@@ -17,7 +17,7 @@ The parsing system consists of four main components:
 
 ### Type System
 
-Located in `/src/types/provider-request.types.ts`:
+Located in `/src/types/worker.request.types.ts`:
 
 ```typescript
 // Provider enum - supports all three major LLM providers
@@ -155,7 +155,7 @@ Native SDK API Call (ollama-js, @anthropic-ai/sdk, openai)
 ```
 src/
 ├── types/
-│   ├── provider-request.types.ts    # Type definitions, enums
+│   ├── worker.request.types.ts    # Type definitions, enums
 │   └── index.ts                     # Export types
 ├── utils/
 │   ├── ollama-parsers.ts           # Ollama-specific parsers

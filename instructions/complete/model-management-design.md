@@ -125,27 +125,48 @@ class WorkerManager {
 
 ```javascript
 {
-  id: "ollama:llama2",              // Unique identifier
-  provider: "ollama",               // AiProvider name
-  name: "Llama 2",                  // Display name
-  description: "Open source LLM",   // Description
-  capabilities: {                   // Supported operations
-    chat: true,
-    generate: true
-  },
-  parameters: {                     // Default parameters
-    maxTokens: 2048,
-    temperature: 0.7
-  },
-  metadata: {                       // Additional info
-    contextSize: 4096,
-    tags: ["open-source", "local"]
-  },
-  status: {                         // Runtime status
-    enabled: true,                  // Available to users
-    available: true,                // Actually working
-    lastUpdated: "2024-05-02T..."
-  }
+    id: "ollama:llama2",              // Unique identifier
+        providerType
+:
+    "ollama",               // AiProvider name
+        name
+:
+    "Llama 2",                  // Display name
+        description
+:
+    "Open source LLM",   // Description
+        capabilities
+:
+    {                   // Supported operations
+        chat: true,
+            generate
+    :
+        true
+    }
+,
+    parameters: {                     // Default parameters
+        maxTokens: 2048,
+            temperature
+    :
+        0.7
+    }
+,
+    metadata: {                       // Additional info
+        contextSize: 4096,
+            tags
+    :
+        ["open-source", "local"]
+    }
+,
+    status: {                         // Runtime status
+        enabled: true,                  // Available to users
+            available
+    :
+        true,                // Actually working
+            lastUpdated
+    :
+        "2024-05-02T..."
+    }
 }
 ```
 

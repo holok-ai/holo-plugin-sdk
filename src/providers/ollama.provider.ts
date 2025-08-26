@@ -75,17 +75,17 @@ export class OllamaProvider extends AIProvider implements IProvider {
             requestId: request.requestId,
             sourceId: request.sourceId,
             type: request.type,
-            provider: request.provider
+            provider: request.providerType
         });
 
         // Validate this is for Ollama
-        if (request.provider !== ProviderType.OLLAMA) {
+        if (request.providerType !== ProviderType.OLLAMA) {
             logger.error('Provider validation failed for Ollama', {
                 expected: ProviderType.OLLAMA,
-                received: request.provider,
+                received: request.providerType,
                 requestId: request.requestId
             });
-            throw new Error(ErrorMessages.invalidProvider(request.provider, ProviderType.OLLAMA));
+            throw new Error(ErrorMessages.invalidProvider(request.providerType, ProviderType.OLLAMA));
         }
 
         logger.debug('Provider validation successful for Ollama', {

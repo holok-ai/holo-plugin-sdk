@@ -310,7 +310,7 @@ When adding a new LLM provider, you'll need to implement several components to e
 
 #### Step 1: Add Provider Enum Value
 
-1. **Update Provider Enum** (`src/types/provider-request.types.ts`):
+1. **Update Provider Enum** (`src/types/worker.request.types.ts`):
 ```typescript
 export enum Provider {
     OLLAMA = 'ollama',
@@ -322,7 +322,7 @@ export enum Provider {
 
 #### Step 2: Define Request Types
 
-2. **Add Provider-Specific Request Interfaces** (`src/types/provider-request.types.ts`):
+2. **Add Provider-Specific Request Interfaces** (`src/types/worker.request.types.ts`):
 ```typescript
 // Add interfaces for your provider's request formats
 export interface NewProviderGenerateRequest {

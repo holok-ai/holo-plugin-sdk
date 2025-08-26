@@ -1,8 +1,6 @@
 // Configure dotenv FIRST, before any other imports that depend on environment variables
 // This ensures .env file is loaded before env.ts module executes
 import dotenv from 'dotenv';
-dotenv.config();
-
 import 'reflect-metadata';
 import {withAdmin, withDB} from "./mixins";
 import {BaseServer} from "./base.server";
@@ -12,7 +10,9 @@ import {container, injectable} from "tsyringe";
 import {env} from "../env";
 import {withStats} from "./mixins/withStats";
 import {AIRequestStat, IProvider} from "../providers/types";
-import { LLMWorkerRequest, RequestType } from '../types';
+import {LLMWorkerRequest, RequestType} from '../types';
+
+dotenv.config();
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -30,9 +30,9 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
 
         await this.queueService.consume(requestQueue, async (requestId, llmRequest: LLMWorkerRequest) => {
             this.stats.totalRequests++;
-            logger.info(`Worker ${this.id} handling generate request: ${requestId} provider: ${llmRequest.provider} from server ${llmRequest.sourceId} and queue ${requestQueue}...`);
+            logger.info(`Worker ${this.id} handling generate request: ${requestId} provider: ${llmRequest.providerType} from server ${llmRequest.sourceId} and queue ${requestQueue}...`);
             try {
-                const ai: IProvider | undefined = await this.providerService.matchProvider(llmRequest.provider);
+                const ai: IProvider | undefined = await this.providerService.matchProvider(llmRequest.providerType);
 
                 logger.info(`resolved ai provider: ${ai?.name}`);
                 let requestStats: AIRequestStat | null = null;
@@ -90,3 +90,8 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
 
 const worker = container.resolve(WorkerServer);
 worker.start();
+
+process.on("uncaughtException", (err) => {
+    logger.error(`Uncaught exception in worker server: ${err.message}`);
+    logger.error(err.stack);
+});

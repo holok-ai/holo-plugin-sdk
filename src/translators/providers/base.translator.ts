@@ -21,7 +21,8 @@ export abstract class BaseRequestTranslator implements IRequestTranslator {
         llmRequest.request_type = workerRequest.type;
         llmRequest.timestamp = new Date(workerRequest.timestamp).toISOString();
         llmRequest.application_id = workerRequest.applicationId || 'default';
-        llmRequest.provider_slug = workerRequest.provider;
+        llmRequest.provider_slug = workerRequest.providerType;
+        llmRequest.organization_id = workerRequest.organizationId;
 
         // Optional fields - only set if defined
         if (workerRequest.sourceId !== undefined) {
@@ -44,9 +45,10 @@ export abstract class BaseRequestTranslator implements IRequestTranslator {
         requestContext?: { userId?: string; applicationId?: string }
     ): void {
         llmResponse.created_at = workerResponse.timestamp ? new Date(workerResponse.timestamp).toISOString() : new Date().toISOString();
+        llmResponse.organization_id = workerResponse.organizationId;
         llmResponse.application_id = requestContext?.applicationId || 'default';
         llmResponse.request_id = workerResponse.requestId;
-        llmResponse.provider_slug = workerResponse.provider;
+        llmResponse.provider_slug = workerResponse.providerType;
         llmResponse.worker_id = workerResponse.workerId || 'unknown';
         llmResponse.status = LlmStatus.SUCCESS; // Default, can be overridden by specific translators
         llmResponse.cost = 0; // TODO: Implement cost calculation

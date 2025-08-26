@@ -1,9 +1,9 @@
 /**
  * Environment Configuration Module
- * 
+ *
  * IMPORTANT: This module executes immediately when imported and reads from process.env.
  * Ensure dotenv.config() is called BEFORE importing this module in your main server files.
- * 
+ *
  * The application entry points (app.ts, worker.server.ts, audit.server.ts) have been
  * configured to load dotenv before any other imports.
  */
@@ -16,7 +16,7 @@ export namespace env {
 
     // API config
     export namespace api {
-        /** 
+        /**
          * API server identifier used for queue naming and server identification
          * Uses API_SERVER_ID environment variable (formerly SERVER_ID)
          */
@@ -28,9 +28,9 @@ export namespace env {
     export namespace appDb {
         export const host = process.env.APP_PG_HOST || process.env.AUDIT_PG_HOST || 'localhost';
         export const port = parseNumber(process.env.APP_PG_PORT || process.env.AUDIT_PG_PORT, 5432);
-        export const database = process.env.APP_PG_DATABASE || process.env.AUDIT_PG_DATABASE || 'llm_audit';
-        export const user = process.env.APP_PG_USER || process.env.AUDIT_PG_USER || 'postgres';
-        export const password = process.env.APP_PG_PASSWORD || process.env.AUDIT_PG_PASSWORD || 'postgrespassword';
+        export const database = process.env.APP_PG_DATABASE || process.env.AUDIT_PG_DATABASE || 'holokai';
+        export const user = process.env.APP_PG_USER || process.env.AUDIT_PG_USER || 'holo';
+        export const password = process.env.APP_PG_PASSWORD || process.env.AUDIT_PG_PASSWORD || 'holopassword';
         export const ssl = parseBoolean(process.env.APP_PG_SSL || process.env.AUDIT_PG_SSL, false);
         export const maxConnections = parseNumber(process.env.APP_PG_MAX_CONNECTIONS || process.env.AUDIT_PG_MAX_CONNECTIONS, 20);
         export const idleTimeout = parseNumber(process.env.APP_PG_IDLE_TIMEOUT || process.env.AUDIT_PG_IDLE_TIMEOUT, 30000);
@@ -51,9 +51,9 @@ export namespace env {
     export namespace auditDb {
         export const host = process.env.AUDIT_PG_HOST || process.env.APP_PG_HOST || 'postgres';
         export const port = parseNumber(process.env.AUDIT_PG_PORT || process.env.APP_PG_PORT, 5432);
-        export const database = process.env.AUDIT_PG_DATABASE || process.env.APP_PG_DATABASE || 'llm_audit';
-        export const user = process.env.AUDIT_PG_USER || process.env.APP_PG_USER || 'postgres';
-        export const password = process.env.AUDIT_PG_PASSWORD || process.env.APP_PG_PASSWORD || 'postgrespassword';
+        export const database = process.env.AUDIT_PG_DATABASE || process.env.APP_PG_DATABASE || 'holokai';
+        export const user = process.env.AUDIT_PG_USER || process.env.APP_PG_USER || 'holo';
+        export const password = process.env.AUDIT_PG_PASSWORD || process.env.APP_PG_PASSWORD || 'holopassword';
         export const ssl = parseBoolean(process.env.AUDIT_PG_SSL || process.env.APP_PG_SSL, false);
         export const maxConnections = parseNumber(process.env.AUDIT_PG_MAX_CONNECTIONS || process.env.APP_PG_MAX_CONNECTIONS, 20);
         export const idleTimeout = parseNumber(process.env.AUDIT_PG_IDLE_TIMEOUT || process.env.APP_PG_IDLE_TIMEOUT, 30000);

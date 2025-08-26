@@ -67,7 +67,7 @@ export class TranslatorRegistry {
      * Translate LLMWorkerRequest to LlmRequest using appropriate provider translator
      */
     translate(workerRequest: LLMWorkerRequest): Omit<LlmRequest, 'id'> {
-        const translator = this.getTranslator(workerRequest.provider);
+        const translator = this.getTranslator(workerRequest.providerType);
 
         // Create empty LlmRequest object
         const llmRequest: Omit<LlmRequest, 'id'> = {
@@ -83,7 +83,8 @@ export class TranslatorRegistry {
         translator.translate(workerRequest, llmRequest);
 
         logger.debug('Translated LLMWorkerRequest to LlmRequest', {
-            provider: workerRequest.provider,
+            organizationId: workerRequest.organizationId,
+            providerType: workerRequest.providerType,
             requestId: workerRequest.requestId,
             model: llmRequest.model_slug
         });
@@ -98,10 +99,11 @@ export class TranslatorRegistry {
         workerResponse: LLMWorkerResponse,
         requestContext?: { userId?: string; applicationId?: string }
     ): Omit<LlmResponse, 'id'> {
-        const translator = this.getTranslator(workerResponse.provider);
+        const translator = this.getTranslator(workerResponse.providerType);
 
         // Create empty LlmResponse object
         const llmResponse: Omit<LlmResponse, 'id'> = {
+            organization_id: '',
             created_at: '',
             application_id: '',
             request_id: '',
@@ -116,7 +118,7 @@ export class TranslatorRegistry {
         translator.translateResponse(workerResponse, llmResponse, requestContext);
 
         logger.debug('Translated LLMWorkerResponse to LlmResponse', {
-            provider: workerResponse.provider,
+            provider: workerResponse.providerType,
             requestId: workerResponse.requestId,
             model: llmResponse.model_slug,
             status: llmResponse.status
