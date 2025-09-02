@@ -1,19 +1,15 @@
 // Configure dotenv FIRST, before any other imports that depend on environment variables
 // This ensures .env file is loaded before env.ts module executes
-import dotenv from 'dotenv';
-dotenv.config();
 import 'reflect-metadata';
 import {withAdmin, withDB} from "./mixins";
 import {BaseServer} from "./base.server";
 import logger from "../utils/logger";
 import {ProviderService} from "../services";
 import {container, injectable} from "tsyringe";
-import {env} from "../env";
 import {withStats} from "./mixins/withStats";
 import {AIRequestStat, IProvider} from "../providers/types";
 import {LLMWorkerRequest, RequestType} from '../types';
-
-dotenv.config();
+import {env} from "../env";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {

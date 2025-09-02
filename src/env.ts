@@ -7,7 +7,9 @@
  * The application entry points (app.ts, worker.server.ts, audit.server.ts) have been
  * configured to load dotenv before any other imports.
  */
+import dotenv from 'dotenv';
 import {parseBoolean, parseNumber} from "./utils";
+dotenv.config();
 
 export namespace env {
     export const NODE_ENV = process.env.NODE_ENV || 'development';
