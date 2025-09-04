@@ -17,6 +17,16 @@ export interface Provider extends BaseEntity {
     status?: { enabled?: boolean };
 }
 
+export interface Evaluator extends BaseEntity {
+      name: string;
+      description?: string | null;
+      prompt_id?: string | null;  // uuid
+      enabled: boolean;
+      available: boolean;
+      deleted?: boolean;
+      active?: boolean;  // Generated column - read-only
+}
+
 export interface Model extends BaseEntity {
     organization_id: string;
     name: string;
@@ -82,6 +92,7 @@ export interface Prompt extends BaseEntity {
     organization_id: string;
     name: string;
     description?: string;
+    provider?: string;  // Added to match database field
     providerType: 'ollama' | 'claude' | 'openai' | 'gemini' | 'grok';
     prompt_type: 'chat' | 'completion' | 'image' | 'audio' | 'vision';
     system_prompt?: string;

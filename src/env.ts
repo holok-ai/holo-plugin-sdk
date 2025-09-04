@@ -92,8 +92,8 @@ export namespace env {
         export const auditResponseQueue = process.env.RABBITMQ_AUDIT_RESPONSE_QUEUE || 'llm_responses_audit';
         export const auditRoutingKey = process.env.AUDIT_ROUTING_KEY || "audit";
 
-        export const analysisQueue = process.env.RABBITMQ_ANALYSIS_REQUEST_QUEUE || 'analysis-tasks';
-        export const analysisRoutingKey = process.env.ANALYSIS_ROUTING_KEY || "analysis-tasks";
+        export const evaluatorQueue = process.env.RABBITMQ_ANALYSIS_REQUEST_QUEUE || 'evaluator-tasks';
+        export const evaluatorRoutingKey = process.env.ANALYSIS_ROUTING_KEY || "evaluator-tasks";
 
         export const queueExpiration = process.env.QUEUE_EXPIRATION || 3600000;
 
