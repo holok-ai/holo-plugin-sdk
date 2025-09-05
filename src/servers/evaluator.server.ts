@@ -1,8 +1,3 @@
-// Configure dotenv FIRST, before any other imports that depend on environment variables
-// This ensures .env file is loaded before env.ts module executes
-import dotenv from 'dotenv';
-dotenv.config();
-
 import 'reflect-metadata';
 import {BaseServer} from "./base.server";
 import {EvaluatorService} from "../services";

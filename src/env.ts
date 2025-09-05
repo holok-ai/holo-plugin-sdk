@@ -7,6 +7,11 @@
  * The application entry points (app.ts, worker.server.ts, audit.server.ts) have been
  * configured to load dotenv before any other imports.
  */
+// Configure dotenv FIRST, before any other imports that depend on environment variables
+// This ensures .env file is loaded before env.ts module executes
+import dotenv from 'dotenv';
+dotenv.config();
+
 import {parseBoolean, parseNumber} from "./utils";
 
 export namespace env {
