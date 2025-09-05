@@ -1,11 +1,13 @@
 import 'reflect-metadata';
 import {LLMWorkerResponse, LLMWorkerRequest} from '../types';
-import {LlmRequest, LlmResponse} from "../db/types";
+import {LlmRequest, LlmResponse, LlmStatus} from "../db/types";
 import {container, injectable} from "tsyringe";
-import {RequestDB, ResponseDB} from "../db";
+import {EvaluatorDB, RequestDB, ResponseDB} from "../db";
 import {AppDB} from "../db/app.db";
 import logger from "../utils/logger";
 import { TranslatorRegistry } from '../translators';
+import {QueueService} from "./queue.service";
+import {env} from '../env';
 
 /**
  * Service for auditing and logging LLM requests and responses
@@ -15,9 +17,11 @@ import { TranslatorRegistry } from '../translators';
 export class AuditService {
 
     constructor(
+        private evaluatorDB: EvaluatorDB, 
         private requestDB: RequestDB,
         private responseDB: ResponseDB,
-        private translatorRegistry: TranslatorRegistry
+        private translatorRegistry: TranslatorRegistry,
+        private queueService: QueueService
     ) {
         logger.info('AuditService initialized');
     }
@@ -107,7 +111,8 @@ export class AuditService {
             if (this.isLLMWorkerResponse(content)) {
                 logger.debug(`Logging LLMWorkerResponse - requestId: ${content.requestId}, provider: ${content.providerType}`);
                 const mappedResponse = this.translatorRegistry.translateResponse(content, requestContext);
-                await this.insertResponse(mappedResponse);
+                const responseId = await this.insertResponse(mappedResponse);
+                if (mappedResponse.status === LlmStatus.SUCCESS && responseId) await this.sendToEvaluatorQ(responseId, mappedResponse.application_id); 
                 logger.info(`Successfully logged LLMWorkerResponse ${content.requestId} (${content.providerType}) in ${Date.now() - startTime}ms`);
             } else {
                 logger.debug(`Logging direct LlmResponse - requestId: ${content.request_id}`);
@@ -125,6 +130,39 @@ export class AuditService {
         }
     }
 
+    /**
+     * Creates a list of evaluators for the application id (in the response) and queues a msg for each evaluator
+     * @param responseId - the llm response to evaluate
+     * @param applicationId - the application used for the request-response
+     */
+    async sendToEvaluatorQ(responseId: string, applicationId: string): Promise<void> {
+        // if default string, use default application
+        if (applicationId.toLowerCase() === 'default') {
+            const application = await this.evaluatorDB.getApplicationByName(applicationId); 
+            applicationId = application?.id || '';
+            logger.info(`Using default application. ${application?.id} `);
+        }
+        const evaluators = await this.evaluatorDB.list(applicationId); 
+        if (!evaluators || evaluators.length == 0) {
+            logger.info(`No evaluators found for application. ${applicationId} `);
+            return; 
+        }
+
+        // send a message to evaluator Q for each (evaluator,application) pair
+        for (const evaluator of evaluators) {
+            await this.queueService.sendToExchange(
+                    env.queue.directExchange,
+                    env.queue.evaluatorRoutingKey, 
+                    {
+                        timestamp: Date.now(),
+                        evaluatorId: evaluator.id,
+                        responseId: responseId, 
+                        applicationId: applicationId
+                    },
+                    {correlationId: responseId}
+                );
+        }
+    }
 
     /**
      * Type guard to determine if object is an LLMWorkerResponse
@@ -147,11 +185,12 @@ export class AuditService {
      * @param {Omit<LlmResponse, 'id'>} content - Response data to insert
      * @private
      */
-    private async insertResponse(content: Omit<LlmResponse, 'id'>): Promise<void> {
+    private async insertResponse(content: Omit<LlmResponse, 'id'>): Promise<string | null> {
         const startTime = Date.now();
         try {
-            await this.responseDB.insert(content);
-            logger.debug(`Database insert successful for response ${content.request_id} in ${Date.now() - startTime}ms`);
+            const result = await this.responseDB.insert(content);
+            logger.debug(`Database insert successful for response ${content.request_id} new id ${result?.id} in ${Date.now() - startTime}ms`);
+            return result ? result.id : null;
         } catch (error) {
             logger.error(`Database insert failed for response ${content.request_id}: ${error instanceof Error ? error.message : 'Unknown error'}`, {
                 requestId: content.request_id,

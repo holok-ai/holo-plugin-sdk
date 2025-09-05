@@ -36,6 +36,9 @@ export class InitService {
 
         await this.queueService.assertExchange(env.queue.adminExchange, 'topic');
         await this.queueService.assertExchange(env.queue.adminResponseExchange, 'direct');
+        
+        // Direct exchange for evaluator tasks
+        await this.queueService.assertExchange(env.queue.directExchange, 'direct');
     }
 
     async _setupRequestQueues() {

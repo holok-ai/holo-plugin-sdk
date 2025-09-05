@@ -101,7 +101,7 @@ export class EvaluatorService {
     }
 
     async _lookupEvaluator(evaluatorRequest: EvaluatorQCommand): Promise<[Evaluator, Prompt, Provider, LlmResponse]> {
-        const evaluator: Evaluator | null = await this.evaluatorDb.getEvaluator(evaluatorRequest.evaluatorId);
+        const evaluator: Evaluator | null = await this.evaluatorDb.get(evaluatorRequest.evaluatorId);
         if (!evaluator) {
             throw new Error(`Evaluator was not found by id: ${evaluatorRequest.evaluatorId}`);
         }

@@ -21,6 +21,7 @@ export interface Evaluator extends BaseEntity {
       name: string;
       description?: string | null;
       prompt_id?: string | null;  // uuid
+      grading_prompt_id?: string | null;  // uuid
       enabled: boolean;
       available: boolean;
       deleted?: boolean;
@@ -35,6 +36,17 @@ export interface Model extends BaseEntity {
     parameters: Record<string, any>;
     metadata: Record<string, any>;
     status: { enabled: boolean; available: boolean };
+}
+
+export interface Application extends BaseEntity {
+    name: string;
+    provider_id: string; 
+    model_id: string; 
+    system_prompt: string; 
+    url_slug: string;
+    active?: boolean;  
+    organization_id: string; 
+    team_id?: string; 
 }
 
 //Object that corresponds to the database llm_requests table
@@ -86,6 +98,18 @@ export interface LlmResponse {
     cost: number;
     score?: number;
     worker_id: string;
+}
+
+export interface EvaluatorData {
+    id: string;
+    evaluator_id: string;
+    llmresponse_id: string;
+    application_id: string;
+    user_id: string;
+    organization_id: string;
+    results: any;
+    raw_score: number | null;
+    scaled_score: number | null;
 }
 
 export interface Prompt extends BaseEntity {

@@ -17,20 +17,18 @@ export class EvaluatorServer extends withQueue(withDB(BaseServer)) {
 
     constructor(
         private evaluatorService: EvaluatorService) {
-        super(env.analysis.serverId);
+        super(env.evaluator.serverId);
     }
 
     async onInit(): Promise<void> {
         await super.onInit();
-        // await this.queueService.consume(env.queue.evaluatorQueue, async (_id, content) => {
-        //     await this.evaluatorService.handleRequest(content);
-        // });
-        let mockContent : EvaluatorQCommand= {
-            evaluatorId: '93c4c311-d3e1-4a8b-9bf4-c6505a4a97b6',
-            applicationId: '',
-            responseId: '02527ba8-9bda-4573-bd2c-8721218c8a8a' //,'02527ba8-9bda-4573-bd2c-8721218c8a8a'
-        };
-        await this.evaluatorService.handleRequest(mockContent);
+        await this.queueService.assertQueue(env.queue.evaluatorQueue, {
+            durable: true
+        });
+        await this.queueService.bindQueue(env.queue.evaluatorQueue, env.queue.directExchange, env.queue.evaluatorRoutingKey);
+        await this.queueService.consume(env.queue.evaluatorQueue, async (_id, content) => {
+             await this.evaluatorService.handleRequest(content as EvaluatorQCommand);
+         });
     }
 
     async onShutdown(): Promise<void> {
