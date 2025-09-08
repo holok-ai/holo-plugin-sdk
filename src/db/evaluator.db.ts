@@ -23,20 +23,27 @@ export class EvaluatorDB {
         `;
         return await this.db.query<Evaluator>(query, [applicationId]);
     }
-    async insert(results: String, evaluatorId: String, llmResponseId: String, applicationId: String, userId: String, organizationId: String): Promise<void> {
+    async insert(evaluatorId: string, llmResponseId: string, results: string): Promise<string | undefined> {
         const query = `
         INSERT INTO holokai.evaluators_data(
-	    evaluator_id, llmresponse_id, application_id, user_id, organization_id, results)
-	    VALUES ($1, $2, $3, $4, $5, $6);
+	    evaluator_id, llmresponse_id, results)
+	    VALUES ($1, $2, $3)
+        RETURNING id;
     `;
-       await this.db.query(query, [
+       const newRecord = await this.db.queryOne<{id: string}>(query, [
             evaluatorId || null,
             llmResponseId || null, 
-            applicationId || null, 
-            userId || null, 
-            organizationId || null, 
-            results ? JSON.stringify({ result: results }) : null
+            results || null            
         ]);
+        return newRecord?.id;
+    }
+    async getData(id: string): Promise<EvaluatorData | null> {
+        const query = `
+            SELECT *
+            FROM evaluators_data
+            WHERE id = $1  
+                `;
+        return await this.db.queryOne<EvaluatorData>(query, [id]);
     }
 
   async getUngradedEvaluatorData(): Promise<EvaluatorData[]> {

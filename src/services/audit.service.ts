@@ -154,6 +154,7 @@ export class AuditService {
                     env.queue.directExchange,
                     env.queue.evaluatorRoutingKey, 
                     {
+                        taskType: "analyzer",
                         timestamp: Date.now(),
                         evaluatorId: evaluator.id,
                         responseId: responseId, 

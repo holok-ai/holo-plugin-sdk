@@ -4,7 +4,7 @@ import {EvaluatorService} from "../services";
 import {withDB, withQueue} from "./mixins";
 import {container, injectable} from "tsyringe";
 import {env} from "../env";
-import { EvaluatorQCommand } from '../types/evaluator.types';
+import { EvaluatorMessage } from '../types/evaluator.types';
 
 
 @injectable()
@@ -22,7 +22,7 @@ export class EvaluatorServer extends withQueue(withDB(BaseServer)) {
         });
         await this.queueService.bindQueue(env.queue.evaluatorQueue, env.queue.directExchange, env.queue.evaluatorRoutingKey);
         await this.queueService.consume(env.queue.evaluatorQueue, async (_id, content) => {
-             await this.evaluatorService.handleRequest(content as EvaluatorQCommand);
+             await this.evaluatorService.handleRequest(content as EvaluatorMessage);
          });
     }
 

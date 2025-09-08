@@ -18,14 +18,23 @@ export interface Provider extends BaseEntity {
 }
 
 export interface Evaluator extends BaseEntity {
-      name: string;
-      description?: string | null;
-      prompt_id?: string | null;  // uuid
-      grading_prompt_id?: string | null;  // uuid
-      enabled: boolean;
-      available: boolean;
-      deleted?: boolean;
-      active?: boolean;  // Generated column - read-only
+      name:             string;
+      description?:     string | null;
+      prompt_id?:       string | null;  // uuid
+      parameters:       Record<string, any>;
+      enabled:          boolean;
+      available:        boolean;
+      deleted?:         boolean;
+      active?:          boolean;  // Generated column - read-only
+}
+
+export interface EvaluatorData {
+  id:             string;
+  created_at:     Date; 
+  evaluator_id:   string; 
+  llmresponse_id: string;
+  results:        Record<string, any>;
+  scoring:        Record<string, any>;
 }
 
 export interface Model extends BaseEntity {
@@ -98,18 +107,6 @@ export interface LlmResponse {
     cost: number;
     score?: number;
     worker_id: string;
-}
-
-export interface EvaluatorData {
-    id: string;
-    evaluator_id: string;
-    llmresponse_id: string;
-    application_id: string;
-    user_id: string;
-    organization_id: string;
-    results: any;
-    raw_score: number | null;
-    scaled_score: number | null;
 }
 
 export interface Prompt extends BaseEntity {
