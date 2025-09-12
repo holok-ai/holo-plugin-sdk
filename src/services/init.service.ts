@@ -7,7 +7,6 @@ import logger from "../utils/logger";
 @injectable()
 export class InitService {
     private serverId: string = env.worker.serverId;
-
     constructor(
         private queueService: QueueService) {
 
@@ -69,6 +68,7 @@ export class InitService {
             env.queue.responseExchange,
             env.queue.auditRoutingKey);
     }
+
 
     
 }

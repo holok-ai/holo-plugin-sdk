@@ -86,6 +86,8 @@ export namespace env {
         export const adminResponseExchange = process.env.RABBITMQ_ADMIN_RESPONSE_EXCHANGE || 'llm_admin_responses';
         export const adminResponseQueue = process.env.RABBITMQ_ADMIN_RESPONSE_QUEUE || 'llm_admin_responses';
 
+        export const platformExchange = process.env.RABBITMQ_PLATFORM_EXCHANGE || 'platform';
+
         export const auditRequestQueue = process.env.RABBITMQ_AUDIT_REQUEST_QUEUE || 'llm_requests_audit';
         export const auditResponseQueue = process.env.RABBITMQ_AUDIT_RESPONSE_QUEUE || 'llm_responses_audit';
         export const auditRoutingKey = process.env.AUDIT_ROUTING_KEY || "audit";
@@ -94,6 +96,8 @@ export namespace env {
         export const analysisRoutingKey = process.env.ANALYSIS_ROUTING_KEY || "analysis-tasks";
 
         export const queueExpiration = process.env.QUEUE_EXPIRATION || 3600000;
+
+        export const managementQueue = process.env.PROXY_MANAGEMENT_QUEUE || 'proxy_management';
 
         export const config = {
             url,
@@ -137,5 +141,10 @@ export namespace env {
     export const mokuUrl = process.env.MOKU_URL;
     if (!mokuUrl) {
         throw new Error('MOKU_URL environment variable is required for the application to start');
+    }
+
+    export namespace proxy {
+        export const configMode = process.env.PROXY_CONFIG_MODE || 'local';
+        export const configFilePath = process.env.PROXY_CONFIG_FILE || './sample.app.config.json';
     }
 }
