@@ -1,6 +1,7 @@
 // services/cacheService.ts
 import NodeCache from 'node-cache';
 import {CacheType, User, AllCacheStats } from '../types/cache.types';
+import { ApplicationConfig } from '../types/config.types';
 import logger from '../utils/logger';
 
 class CacheService {
@@ -17,6 +18,12 @@ class CacheService {
       }),
       tokens: new NodeCache({
         stdTTL: 3600,       // 1 hour - matches typical JWT expiration
+        checkperiod: 300,   // Check expired keys every 5 minutes
+        useClones: false,   // Better performance
+        maxKeys: 5000       // Allow more tokens to be cached
+      }),
+      applications: new NodeCache({
+        stdTTL: 0,       // Infinite
         checkperiod: 300,   // Check expired keys every 5 minutes
         useClones: false,   // Better performance
         maxKeys: 5000       // Allow more tokens to be cached
@@ -79,6 +86,50 @@ class CacheService {
 
   hasToken(jwtToken: string): boolean {
     return this.has('tokens', `token:${jwtToken}`);
+  }
+
+  // Application cache operations
+  setApplications(applications: ApplicationConfig[]): boolean {
+    let allSucceeded = true;
+    
+    applications.forEach(app => {
+      const success = this.set('applications', app.urlSlug, app);
+      if (!success) {
+        logger.error(`Failed to cache application with urlSlug: ${app.urlSlug}`);
+        allSucceeded = false;
+      } else {
+        logger.debug(`Cached application with urlSlug: ${app.urlSlug}`);
+      }
+    });
+    
+    return allSucceeded;
+  }
+
+  getApplication(urlSlug: string): ApplicationConfig | undefined {
+    return this.get<ApplicationConfig>('applications', urlSlug);
+  }
+  
+  removeApplication(urlSlug: string): boolean {
+    const removed = this.del('applications', urlSlug);
+    if (removed > 0) {
+      logger.debug(`Removed application from cache: ${urlSlug}`);
+      return true;
+    }
+    return false;
+  }
+
+  getAllApplications(): ApplicationConfig[] {
+    const keys = this.getKeys('applications');
+    const applications: ApplicationConfig[] = [];
+    
+    keys.forEach(urlSlug => {
+      const app = this.getApplication(urlSlug);
+      if (app) {
+        applications.push(app);
+      }
+    });
+    
+    return applications;
   }
 
   // Stats for monitoring

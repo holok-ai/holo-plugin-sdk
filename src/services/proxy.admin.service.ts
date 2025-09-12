@@ -3,46 +3,41 @@ import { injectable, inject } from 'tsyringe';
 import { QueueService } from './queue.service';
 import { env } from '../env';
 import logger from '../utils/logger';
-import { ConsumeMessage } from 'amqplib';
 import { ConfigLoader, ConfigLoaderFactory } from './config-loader';
-
-export interface AdminMessage {
-    type: string;
-    messageId: string;
-    timestamp: string;
-    [key: string]: any;
-}
-
+import { ProxyConfig } from '../types';
 export interface MessageHandler {
-    handle(message: AdminMessage, rawMessage: ConsumeMessage): Promise<void>;
+    handle(message: ProxyConfig): Promise<void>;
 }
 
 @injectable()
 export class ProxyAdminService {
     private messageHandlers: Map<string, MessageHandler> = new Map();
-    private isConsuming: boolean = false;
+    private isListening: boolean = false;
     private serverId: string = env.api.apiServerId;
-
+    private configLoader: ConfigLoader | null = null;
+    
     constructor(
         @inject(QueueService) private queueService: QueueService, 
     ) {}
 
     /**
-     * Initialize the ProxyAdminService with default handlers and start consuming
+     * Initialize the ProxyAdminService with default handlers and start listening for config events
      */
     async init(): Promise<void> {
         try {
             logger.info('Initializing ProxyAdminService...');
 
-            const configLoader: ConfigLoader = ConfigLoaderFactory.createConfigLoader(this.serverId);
+            // Create config loader
+            this.configLoader = ConfigLoaderFactory.createConfigLoader(this.serverId);
 
-            await configLoader.loadConfig();
-         
             // Register default handlers
             await this.registerDefaultHandlers();
 
-            // Start consuming messages
-            await this.startConsuming();
+            // Setup event listeners
+            await this.setupConfigEventListeners();
+
+            // Load initial configuration (this will trigger events)
+            await this.configLoader.loadConfig();
 
             logger.info('ProxyAdminService initialized successfully');
         } catch (error) {
@@ -61,12 +56,12 @@ export class ProxyAdminService {
             // Import and register ConfigUpdateHandler
             const { ConfigUpdateHandler } = await import('./handlers/config-update.handler');
             const configHandler = container.resolve(ConfigUpdateHandler);
-            this.registerHandler('config_update', configHandler);
+            this.registerHandler('APPLICATION', configHandler);
 
             // Import and register JwtInvalidationHandler
             const { JwtInvalidationHandler } = await import('./handlers/jwt-invalidation.handler');
             const jwtHandler = container.resolve(JwtInvalidationHandler);
-            this.registerHandler('jwt_invalidation', jwtHandler);
+            this.registerHandler('JWT', jwtHandler);
 
             logger.debug('Default admin message handlers registered');
         } catch (error) {
@@ -84,92 +79,99 @@ export class ProxyAdminService {
     }
 
     /**
-     * Start consuming admin messages from the management queue
+     * Setup event listeners for ConfigLoader events
      */
-    async startConsuming(): Promise<void> {
-        if (this.isConsuming) {
-            logger.warn('ProxyAdminService is already consuming messages');
-            return;
+    private async setupConfigEventListeners(): Promise<void> {
+        if (!this.configLoader) {
+            throw new Error('ConfigLoader not initialized');
         }
 
+        logger.debug('Setting up config event listeners...');
+
+        // Listen for initial config
+        this.configLoader.on('config:initial', (config: ProxyConfig) => {
+            logger.info(`ProxyAdminService received initial config with ${config.data.length} applications`);
+            this.handleConfigMessage('INITIAL', config);
+        });
+
+        // Listen for config updates
+        this.configLoader.on('config:updated', (config: ProxyConfig) => {
+            logger.info(`ProxyAdminService received config update with ${config.data.length} applications`);
+            this.handleConfigMessage('UPDATE', config);
+        });
+
+        // Listen for config errors
+        this.configLoader.on('config:error', (error: Error) => {
+            logger.error(`ProxyAdminService received config error: ${error.message}`);
+            this.handleConfigError(error);
+        });
+
+        // Listen for loader ready
+        this.configLoader.on('loader:ready', () => {
+            logger.debug('Config loader is ready');
+        });
+
+        this.isListening = true;
+        logger.debug('Config event listeners setup complete');
+    }
+
+    /**
+     * Handle config messages from ConfigLoader events
+     */
+    private async handleConfigMessage(eventType: string, config: ProxyConfig): Promise<void> {
         try {
-            logger.info('Starting ProxyAdminService message consumption...');
-            
-            // Ensure queue service is connected
-            if (!this.queueService.isConnected) {
-                await this.queueService.connect();
+            logger.debug(`Handling config message of type: ${config.entity_type} from event: ${eventType}`);
+
+            // Find appropriate handler based on entity_type
+            const handler = this.messageHandlers.get(config.entity_type);
+            if (!handler) {
+                logger.warn(`No handler registered for config type: ${config.entity_type}`);
+                return;
             }
 
-            // Assert the management queue exists
-            await this.queueService.assertQueue(env.queue.managementQueue);
-
-            // Start consuming messages
-            await this.queueService.consume(
-                env.queue.managementQueue,
-                this.handleMessage.bind(this),
-                false, // Don't ignore errors
-                { noAck: false } // Require acknowledgment
-            );
-
-            this.isConsuming = true;
-            logger.info(`ProxyAdminService started consuming from queue: ${env.queue.managementQueue}`);
+            // Process config with handler
+            await handler.handle(config);
+            logger.debug(`Successfully processed config of type: ${config.entity_type} from event: ${eventType}`);
 
         } catch (error) {
-            logger.error(`Failed to start ProxyAdminService: ${(error as Error).message}`);
+            logger.error(`Error processing config message from event ${eventType}: ${(error as Error).message}`, {
+                configType: config.entity_type,
+                error: (error as Error).stack
+            });
             throw error;
         }
     }
 
     /**
-     * Stop consuming messages
+     * Handle config errors from ConfigLoader events
      */
-    async stopConsuming(): Promise<void> {
-        if (!this.isConsuming) {
+    private handleConfigError(error: Error): void {
+        logger.error(`Config error received: ${error.message}`, {
+            error: error.stack
+        });
+        // Could emit events here for other services to react to config errors
+    }
+
+    /**
+     * Stop listening for config events
+     */
+    async stopListening(): Promise<void> {
+        if (!this.isListening) {
             return;
         }
 
         try {
-            await this.queueService.stop();
-            this.isConsuming = false;
-            logger.info('ProxyAdminService stopped consuming messages');
+            if (this.configLoader) {
+                this.configLoader.removeAllListeners();
+            }
+            this.isListening = false;
+            logger.info('ProxyAdminService stopped listening for config events');
         } catch (error) {
             logger.error(`Error stopping ProxyAdminService: ${(error as Error).message}`);
             throw error;
         }
     }
 
-    /**
-     * Handle incoming admin messages and route to appropriate handlers
-     */
-    private async handleMessage(messageId: string, content: AdminMessage, rawMessage: ConsumeMessage): Promise<void> {
-        try {
-            logger.debug(`Received admin message of type: ${content.type} with ID: ${messageId}`);
-
-            // Validate message structure
-            if (!content.type) {
-                logger.error(`Message ${messageId} missing required 'type' field`);
-                return;
-            }
-
-            // Find appropriate handler
-            const handler = this.messageHandlers.get(content.type);
-            if (!handler) {
-                logger.warn(`No handler registered for message type: ${content.type}`);
-                return;
-            }
-
-            // Process message with handler
-            await handler.handle(content, rawMessage);
-            logger.debug(`Successfully processed message ${messageId} of type: ${content.type}`);
-
-        } catch (error) {
-            logger.error(`Error processing admin message ${messageId}: ${(error as Error).message}`, {
-                messageType: content.type,
-                error: (error as Error).stack
-            });
-            throw error; // Re-throw to let queue service handle retry logic
-        }
-    }
 
     /**
      * Send a response message back through the admin response exchange
@@ -203,9 +205,16 @@ export class ProxyAdminService {
     }
 
     /**
-     * Check if service is currently consuming messages
+     * Check if service is currently listening for config events
      */
-    get consuming(): boolean {
-        return this.isConsuming;
+    get listening(): boolean {
+        return this.isListening;
+    }
+
+    /**
+     * Get the current config loader instance
+     */
+    get currentConfigLoader(): ConfigLoader | null {
+        return this.configLoader;
     }
 }

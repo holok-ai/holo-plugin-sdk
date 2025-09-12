@@ -1,14 +1,19 @@
 import fs from 'fs';
 import path from 'path';
+import { EventEmitter } from 'events';
 import { injectable } from 'tsyringe';
 import { ProxyConfig } from '../../types';
 import { ConfigLoader } from './config-loader.interface';
 import logger from '../../utils/logger';
+import cacheService from '../cache.service';
 
 @injectable()
-export class LocalFileConfigLoader implements ConfigLoader {
+export class LocalFileConfigLoader extends EventEmitter implements ConfigLoader {
     
-    constructor(private configFilePath?: string) {}
+    constructor(private configFilePath?: string) {
+        super();
+        this.setMaxListeners(10);
+    }
 
     async loadConfig(): Promise<ProxyConfig> {
         try {
@@ -26,11 +31,19 @@ export class LocalFileConfigLoader implements ConfigLoader {
             
             this.validateConfig(config);
             
+            // Cache applications
+            cacheService.setApplications(config.data);
+            
+            // Emit events
+            this.emit('loader:ready');
+            this.emit('config:initial', config);
+            
             logger.info(`Successfully loaded ${config.data.length} applications from configuration file`);
             return config;
             
         } catch (error) {
             logger.error(`Failed to load configuration file: ${(error as Error).message}`);
+            this.emit('config:error', error as Error);
             throw error;
         }
     }
