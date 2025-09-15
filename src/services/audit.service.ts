@@ -1,13 +1,14 @@
 import 'reflect-metadata';
-import {LLMWorkerResponse, LLMWorkerRequest} from '../types';
-import {LlmRequest, LlmResponse, LlmStatus} from "../db/types";
-import {container, injectable} from "tsyringe";
-import {EvaluatorDB, RequestDB, ResponseDB} from "../db";
-import {AppDB} from "../db/app.db";
+import { LLMWorkerResponse, LLMWorkerRequest } from '../types';
+import { LlmRequest, LlmResponse, LlmStatus } from "../db/types";
+import { AuditServiceEvent } from '../types/evaluator.types';
+import { container, injectable } from "tsyringe";
+import { EvaluatorDB, RequestDB, ResponseDB } from "../db";
+import { AppDB } from "../db/app.db";
 import logger from "../utils/logger";
 import { TranslatorRegistry } from '../translators';
-import {QueueService} from "./queue.service";
-import {env} from '../env';
+import { QueueService } from "./queue.service";
+import { env } from '../env';
 
 /**
  * Service for auditing and logging LLM requests and responses
@@ -17,7 +18,7 @@ import {env} from '../env';
 export class AuditService {
 
     constructor(
-        private evaluatorDB: EvaluatorDB, 
+        private evaluatorDB: EvaluatorDB,
         private requestDB: RequestDB,
         private responseDB: ResponseDB,
         private translatorRegistry: TranslatorRegistry,
@@ -66,9 +67,9 @@ export class AuditService {
      */
     private isLLMWorkerRequest(obj: any): obj is LLMWorkerRequest {
         const isWorkerRequest = obj.payload !== undefined &&
-                               obj.sourceId !== undefined &&
-                               obj.providerType !== undefined &&
-                               obj.type !== undefined;
+            obj.sourceId !== undefined &&
+            obj.providerType !== undefined &&
+            obj.type !== undefined;
         logger.debug(`Type guard check - isLLMWorkerRequest: ${isWorkerRequest}`);
         return isWorkerRequest;
     }
@@ -112,7 +113,7 @@ export class AuditService {
                 logger.debug(`Logging LLMWorkerResponse - requestId: ${content.requestId}, provider: ${content.providerType}`);
                 const mappedResponse = this.translatorRegistry.translateResponse(content, requestContext);
                 const responseId = await this.insertResponse(mappedResponse);
-                if (mappedResponse.status === LlmStatus.SUCCESS && responseId) await this.sendToEvaluatorQ(responseId, mappedResponse.application_id); 
+                if (mappedResponse.status === LlmStatus.SUCCESS && responseId) await this.sendToEvaluatorQ(responseId, mappedResponse.application_id);
                 logger.info(`Successfully logged LLMWorkerResponse ${content.requestId} (${content.providerType}) in ${Date.now() - startTime}ms`);
             } else {
                 logger.debug(`Logging direct LlmResponse - requestId: ${content.request_id}`);
@@ -138,31 +139,23 @@ export class AuditService {
     async sendToEvaluatorQ(responseId: string, applicationId: string): Promise<void> {
         // if default string, use default application
         if (applicationId.toLowerCase() === 'default') {
-            const application = await this.evaluatorDB.getApplicationByName(applicationId); 
+            const application = await this.evaluatorDB.getApplicationByName(applicationId);
             applicationId = application?.id || '';
             logger.info(`Using default application. ${application?.id} `);
         }
-        const evaluators = await this.evaluatorDB.list(applicationId); 
-        if (!evaluators || evaluators.length == 0) {
-            logger.info(`No evaluators found for application. ${applicationId} `);
-            return; 
-        }
+        const auditEvent: AuditServiceEvent = {
+            source: "audit",
+            eventName: "response-complete",
+            timestamp: Date.now(),
+            llmResponseDataId: responseId
+        };
+        await this.queueService.sendToExchange(
+            env.queue.directExchange,
+            env.queue.evaluatorRoutingKey,
+            auditEvent,
+            { correlationId: responseId }
+        );
 
-        // send a message to evaluator Q for each (evaluator,application) pair
-        for (const evaluator of evaluators) {
-            await this.queueService.sendToExchange(
-                    env.queue.directExchange,
-                    env.queue.evaluatorRoutingKey, 
-                    {
-                        taskType: "analyzer",
-                        timestamp: Date.now(),
-                        evaluatorId: evaluator.id,
-                        responseId: responseId, 
-                        applicationId: applicationId
-                    },
-                    {correlationId: responseId}
-                );
-        }
     }
 
     /**
@@ -173,9 +166,9 @@ export class AuditService {
      */
     private isLLMWorkerResponse(obj: any): obj is LLMWorkerResponse {
         const isWorkerResponse = obj.requestId !== undefined &&
-                                obj.providerType !== undefined &&
-                                obj.payload !== undefined &&
-                                obj.sourceId !== undefined;
+            obj.providerType !== undefined &&
+            obj.payload !== undefined &&
+            obj.sourceId !== undefined;
         logger.debug(`Type guard check - isLLMWorkerResponse: ${isWorkerResponse}`);
         return isWorkerResponse;
     }

@@ -32,3 +32,6 @@ Thumbs.db
 curl.json
 
 /src/generated/prisma
+
+# Application evaluators and scripts
+applications/
