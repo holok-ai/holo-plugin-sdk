@@ -53,34 +53,3 @@ export class AnalysisResultsRepository {
     }
         
 }
-
-// // Usage
-// async function main() {
-//     const client = new Client({
-//         // connection config
-//     });
-//     await client.connect();
-    
-//     try {
-//         const repo = new MetricsRepository(client);
-        
-//         // Upsert a metric (will create record if needed, insert or update metric)
-//         await repo.upsertMetric({
-//             organization: 'org1',
-//             repository: 'alpha',
-//             prid: '123',
-//             changedFiles: 10,
-//             localAdditions: 200,
-//             localDeletions: 50,
-//             prAdditions: 180,
-//             prDeletions: 45,
-//             prAdditionsFromLocal: 170,
-//             prDeletionsFromLocal: 40,
-//             additionPercentage: 85.0,
-//             deletionPercentage: 80.0
-//         });
-        
-//     } finally {
-//         await client.end();
-//     }
-// }

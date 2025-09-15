@@ -99,7 +99,7 @@ export class EvaluatorService {
                     context: savedData ? [{key: "previous", value: savedData}] : []
                 };
                 // for testing
-                await this.handleRequest(chainedEventMessage); 
+                // await this.handleRequest(chainedEventMessage); 
                 await this.queueService.sendToExchange(
                     env.queue.directExchange,
                     env.queue.evaluatorRoutingKey,

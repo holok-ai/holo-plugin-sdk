@@ -216,7 +216,7 @@ export class CalculatePrMetrics extends InternalEvaluatorBase {
             results.message = "No previous PR data found. Skipping metrics calculation.";
             return Promise.resolve(results);
         }
-        const userId: string = '485e2e34-c88e-46bf-a69f-fbe6eb989fb7' ; //  previousData.reference.user_id;
+        const userId: string = previousData.reference.user_id; // me = '485e2e34-c88e-46bf-a69f-fbe6eb989fb7' 
         const startDate = previousData.data?.earliest_date || Date.now();
         const closeDate = previousData.data?.close_date || Date.now();
 
