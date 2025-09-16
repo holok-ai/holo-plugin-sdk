@@ -126,11 +126,18 @@ export class OpenAIProvider extends AIProvider implements IProvider {
 
         if (chatRequest.stream) {
             logger.debug('Starting OpenAI chat completions stream', {requestId, model: chatRequest.model});
-
             try {
                 // @ts-ignore
                 for await (const chunk of response) {
+
                     logger.debug(`chunk payload: ${JSON.stringify(chunk)}`);
+
+                    if (chunk?.usage) {
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk, fullResponse);
+                        await this.onResponseChunk(responseChunk, true);
+                        break;
+                    }
+
                     const choice = chunk.choices?.[0];
                     if (choice?.finish_reason) {
                         logger.debug('OpenAI chat completions stream completed', {
@@ -138,9 +145,6 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                             finishReason: choice.finish_reason,
                             fullResponseLength: fullResponse.length
                         });
-                        const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk, fullResponse);
-                        await this.onResponseChunk(responseChunk, true);
-                        break;
                     }
 
                     if (choice?.delta?.content) {
@@ -151,6 +155,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                         await this.onResponseChunk(responseChunk);
                     }
                 }
+
             } catch (error) {
                 logger.error('OpenAI chat completions stream error', {
                     requestId,
