@@ -12,6 +12,7 @@ import {createRoutes} from "./api/routes";
 import {env} from "./env";
 import listEndpoints from "express-list-endpoints";
 import {AppDB} from "./db/app.db";
+import { ProxyAdminService } from './services/proxy.admin.service';
 
 // Initialize Express app
 const app: Application = express();
@@ -42,6 +43,7 @@ app.get('/health', (_req: Request, res: Response): void => {
 const PORT: number = env.api.port || 3000;
 container.registerSingleton(ResponseService)
 container.registerSingleton(AppDB);
+container.registerSingleton(ProxyAdminService);
 
 // Initialize app with async components
 async function initApp(): Promise<void> {
@@ -49,9 +51,13 @@ async function initApp(): Promise<void> {
         // const queueService = container.resolve(QueueService);
         const initService = container.resolve(InitService);
         const responseService: ResponseService = container.resolve(ResponseService);
+        const proxyAdminService: ProxyAdminService = container.resolve(ProxyAdminService);
+
         logger.debug(`Creating API Server with id ${env.api.apiServerId}`);
         await initService.setupQueues(env.api.apiServerId);
         await responseService.startLLMResponseConsumer();
+        await proxyAdminService.init();
+        logger.debug("proxy admin service initialized");
         app.use('/api', createRoutes());
         // Start the HTTP server
         const server = app.listen(PORT, (): void => {

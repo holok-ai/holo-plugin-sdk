@@ -11,6 +11,7 @@ export interface CacheConfig {
 export interface CacheConfigs {
   users: CacheConfig;
   tokens: CacheConfig;
+  applications: CacheConfig;
 }
 
 export interface CacheStats extends Stats {
