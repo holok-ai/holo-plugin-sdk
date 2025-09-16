@@ -8,7 +8,7 @@ export class ResponseDB {
 
     }
 
-    async insert(response: Omit<LlmResponse, 'id'>) {
+    async insert(response: Omit<LlmResponse, 'id'>): Promise<{ id: string } | null> {
         const {
             organization_id,
             created_at,
@@ -36,9 +36,10 @@ export class ResponseDB {
              error_message, response, response_raw, input_tokens, output_tokens, time_to_first_token,
              total_processing_time, cost, score, worker_id)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+            RETURNING id
         `;
 
-        return this.db.query<LlmResponse>(query, [
+        return this.db.queryOne<{ id: string }>(query, [
             organization_id,
             created_at,
             user_id,
