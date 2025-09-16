@@ -113,6 +113,8 @@ export class OpenAIRequestTranslator extends BaseRequestTranslator {
         } else if (payload.usage) {
             llmResponse.input_tokens = payload.usage.prompt_tokens;
             llmResponse.output_tokens = payload.usage.completion_tokens;
+            llmResponse.time_to_first_token = payload.usage.timeToFirstToken;
+            llmResponse.total_processing_time = payload.usage.totalProcessingTime;
         }
 
         // Set status based on completion and finish reason

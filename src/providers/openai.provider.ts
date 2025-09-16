@@ -123,6 +123,8 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         // Pass the request directly to the client since it extends ChatCompletionCreateParams
         // @ts-ignore
         const response = await this.client.chat.completions.create(chatRequest);
+        const startTime = Date.now();
+        let timeToFirst: number = 0; 
 
         if (chatRequest.stream) {
             logger.debug('Starting OpenAI chat completions stream', {requestId, model: chatRequest.model});
@@ -133,6 +135,8 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                     logger.debug(`chunk payload: ${JSON.stringify(chunk)}`);
 
                     if (chunk?.usage) {
+                        chunk.usage.timeToFirstToken = timeToFirst; 
+                        chunk.usage.totalProcessingTime = Date.now() - startTime;
                         const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk, fullResponse);
                         await this.onResponseChunk(responseChunk, true);
                         break;
@@ -148,6 +152,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                     }
 
                     if (choice?.delta?.content) {
+                        if (timeToFirst == 0) timeToFirst = Date.now() - startTime; 
                         const token = choice.delta.content;
                         fullResponse += token;
 
