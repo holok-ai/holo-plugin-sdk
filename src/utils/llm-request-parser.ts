@@ -2,10 +2,10 @@ import {Request} from 'express';
 import {LLMPayloadTypes, ProviderType, RequestType} from '../types';
 import {ErrorMessages} from './error-messages';
 import {parseOllamaRequest} from './ollama-parsers';
-import {parseClaudeMessageRequest} from './claude-parsers';
 import {parseOpenAIMessageRequest} from './openai-parsers';
 import logger from './logger';
 import {parsePerplexityMessageRequest} from "./perplexity-parsers";
+import {parseClaudeMessageRequest} from "./claude-parsers";
 
 /**
  * Unified LLM request parser that routes requests to the appropriate provider-specific parser.

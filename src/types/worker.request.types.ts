@@ -1,4 +1,4 @@
-import {MessageCreateParamsBase} from '@anthropic-ai/sdk/resources/messages';
+import {MessageCreateParamsBase} from '@anthropic-ai/sdk/resources/beta/messages/messages';
 import {ChatRequest, GenerateRequest} from 'ollama';
 import {ChatCompletionCreateParamsBase} from 'openai/resources/chat/completions/completions';
 import {ProviderType} from "./provider.types";
@@ -55,5 +55,5 @@ export interface OpenAIWorkerRequest extends ChatCompletionCreateParamsBase {
 export type LLMPayloadTypes =
     OllamaWorkerChatRequest
     | OllamaWorkerGenerateRequest
-    | ClaudeWorkerRequest
+    | MessageCreateParamsBase
     | OpenAIWorkerRequest;

@@ -6,7 +6,7 @@ import {ProviderDB} from "../db";
 import {injectable} from "tsyringe";
 import {IProvider, ProviderType} from "../providers/types";
 import {ResponseService} from "./response.service";
-import {PerplexityProvider} from "../providers/perplexity.provider";
+import {PerplexityProvider} from "../providers/perplexity/perplexity.provider";
 
 @injectable()
 export class ProviderService {

@@ -1,11 +1,11 @@
 import 'reflect-metadata';
-import {LLMWorkerResponse, LLMWorkerRequest} from '../types';
+import {LLMWorkerRequest, LLMWorkerResponse} from '../types';
 import {LlmRequest, LlmResponse} from "../db/types";
 import {container, injectable} from "tsyringe";
 import {RequestDB, ResponseDB} from "../db";
 import {AppDB} from "../db/app.db";
 import logger from "../utils/logger";
-import { TranslatorRegistry } from '../translators';
+import {TranslatorRegistry} from "../providers/translator.registry";
 
 /**
  * Service for auditing and logging LLM requests and responses
@@ -62,9 +62,9 @@ export class AuditService {
      */
     private isLLMWorkerRequest(obj: any): obj is LLMWorkerRequest {
         const isWorkerRequest = obj.payload !== undefined &&
-                               obj.sourceId !== undefined &&
-                               obj.providerType !== undefined &&
-                               obj.type !== undefined;
+            obj.sourceId !== undefined &&
+            obj.providerType !== undefined &&
+            obj.type !== undefined;
         logger.debug(`Type guard check - isLLMWorkerRequest: ${isWorkerRequest}`);
         return isWorkerRequest;
     }
@@ -98,9 +98,15 @@ export class AuditService {
      * @param {LLMWorkerResponse | Omit<LlmResponse, 'id'>} content - Response data to log
      * @param requestContext - Optional context for userId and applicationId
      */
-    async logResponse(content: LLMWorkerResponse, requestContext?: { userId?: string; applicationId?: string }): Promise<void>;
+    async logResponse(content: LLMWorkerResponse, requestContext?: {
+        userId?: string;
+        applicationId?: string
+    }): Promise<void>;
     async logResponse(content: Omit<LlmResponse, 'id'>): Promise<void>;
-    async logResponse(content: LLMWorkerResponse | Omit<LlmResponse, 'id'>, requestContext?: { userId?: string; applicationId?: string }): Promise<void> {
+    async logResponse(content: LLMWorkerResponse | Omit<LlmResponse, 'id'>, requestContext?: {
+        userId?: string;
+        applicationId?: string
+    }): Promise<void> {
         const startTime = Date.now();
 
         try {
@@ -134,9 +140,9 @@ export class AuditService {
      */
     private isLLMWorkerResponse(obj: any): obj is LLMWorkerResponse {
         const isWorkerResponse = obj.requestId !== undefined &&
-                                obj.providerType !== undefined &&
-                                obj.payload !== undefined &&
-                                obj.sourceId !== undefined;
+            obj.providerType !== undefined &&
+            obj.payload !== undefined &&
+            obj.sourceId !== undefined;
         logger.debug(`Type guard check - isLLMWorkerResponse: ${isWorkerResponse}`);
         return isWorkerResponse;
     }

@@ -5,11 +5,15 @@ import {Transform, TransformCallback} from "node:stream";
 import {container, injectable} from "tsyringe";
 import {v4 as uuidv4} from "uuid";
 import {HttpApiRequest} from "../api/types";
-import {Response} from "express";
+import {Request, Response} from "express";
 import {env} from "../env";
-import {parseLLMRequest} from '../utils';
 import {LLMWorkerRequest, LLMWorkerResponse, ProviderType, RequestType} from '../types';
 import {StreamFormatter} from './streamFormatter.service';
+import {OllamaParser} from "../providers/ollama/ollama.parser";
+import {ClaudeParser} from "../providers/claude/claude.parser";
+import {OpenAIParser} from "../providers/openai/openai.parser";
+import {ErrorMessages} from "../utils/error-messages";
+import {ProviderRequestTypes} from "../providers/types";
 
 
 /**
@@ -130,7 +134,7 @@ export class ResponseService {
      * @param {Response} res - HTTP response object
      */
     async parseAndSendLLMRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest, res: Response) {
-        const payload = parseLLMRequest(req, providerType, type);
+        const payload = await this.parseLLMRequest(req, providerType, type);
         const requestId = uuidv4();
 
         const workerRequest: LLMWorkerRequest = {
@@ -150,6 +154,28 @@ export class ResponseService {
         logger.debug(`LLMWorkerRequest: ${JSON.stringify(workerRequest)}`);
 
         await this._openResponseStream(req, res, workerRequest, requestId);
+    }
+
+    async parseLLMRequest(
+        req: Request,
+        providerType: ProviderType,
+        type: RequestType
+    ): Promise<ProviderRequestTypes> {
+        logger.debug('Unified LLM request parser routing', {providerType, type});
+
+        switch (providerType) {
+            case ProviderType.OLLAMA:
+                return OllamaParser.parseRequest(req, type);
+            case ProviderType.CLAUDE:
+                return ClaudeParser.parseRequest(req, type);
+            case ProviderType.OPENAI:
+                return OpenAIParser.parseRequest(req, type);
+            case ProviderType.PERPLEXITY:
+                return OpenAIParser.parseRequest(req, type);
+            default:
+                logger.error('Unsupported provider in unified parser', {providerType});
+                throw new Error(ErrorMessages.unsupportedProvider(providerType));
+        }
     }
 
     /**
