@@ -84,6 +84,7 @@ export namespace env {
         export const responseExchange = process.env.RABBITMQ_RESPONSE_EXCHANGE || 'llm_responses_exchange';
 
         export const adminExchange = process.env.RABBITMQ_ADMIN_EXCHANGE || 'llm_admin';
+        export const directExchange = process.env.RABBITMQ_DIRECT_EXCHANGE || 'direct-exchange';
         export const adminCommandQueue = process.env.RABBITMQ_ADMIN_COMMAND_QUEUE || 'llm_admin_commands';
         export const adminResponseExchange = process.env.RABBITMQ_ADMIN_RESPONSE_EXCHANGE || 'llm_admin_responses';
         export const adminResponseQueue = process.env.RABBITMQ_ADMIN_RESPONSE_QUEUE || 'llm_admin_responses';
@@ -94,8 +95,8 @@ export namespace env {
         export const auditResponseQueue = process.env.RABBITMQ_AUDIT_RESPONSE_QUEUE || 'llm_responses_audit';
         export const auditRoutingKey = process.env.AUDIT_ROUTING_KEY || "audit";
 
-        export const analysisQueue = process.env.RABBITMQ_ANALYSIS_REQUEST_QUEUE || 'analysis-tasks';
-        export const analysisRoutingKey = process.env.ANALYSIS_ROUTING_KEY || "analysis-tasks";
+        export const evaluatorQueue = process.env.RABBITMQ_ANALYSIS_REQUEST_QUEUE || 'evaluator-tasks';
+        export const evaluatorRoutingKey = process.env.ANALYSIS_ROUTING_KEY || "evaluator-tasks";
 
         export const queueExpiration = process.env.QUEUE_EXPIRATION || 3600000;
 
@@ -119,9 +120,9 @@ export namespace env {
             `audit_${id}`;
     }
 
-    export namespace analysis {
+    export namespace evaluator {
         export const serverId = process.env.ANALYSIS_ID ||
-            `analysis_${id}`;
+            `evaluator_${id}`;
     }
 
     export interface JWTConfig {

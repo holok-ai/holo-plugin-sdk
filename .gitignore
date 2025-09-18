@@ -30,3 +30,8 @@ Thumbs.db
 
 # Testing Files
 curl.json
+
+/src/generated/prisma
+
+# Application evaluators and scripts
+applications/

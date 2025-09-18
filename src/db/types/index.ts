@@ -17,6 +17,27 @@ export interface Provider extends BaseEntity {
     status?: { enabled?: boolean };
 }
 
+export interface Evaluator extends BaseEntity {
+      name:             string;
+      description?:     string | null;
+      prompt_id?:       string | null;  // uuid
+      parameters:       Record<string, any>;
+      evaluator_type:   string;
+      enabled:          boolean;
+      available:        boolean;
+      deleted?:         boolean;
+      active?:          boolean;  // Generated column - read-only
+}
+
+export interface EvaluatorData {
+  id:             string;
+  created_at:     Date; 
+  evaluator_id:   string; 
+  llmresponse_id: string;
+  results:        Record<string, any>;
+  scoring:        Record<string, any>;
+}
+
 export interface Model extends BaseEntity {
     organization_id: string;
     name: string;
@@ -25,6 +46,17 @@ export interface Model extends BaseEntity {
     parameters: Record<string, any>;
     metadata: Record<string, any>;
     status: { enabled: boolean; available: boolean };
+}
+
+export interface Application extends BaseEntity {
+    name: string;
+    provider_id: string; 
+    model_id: string; 
+    system_prompt: string; 
+    url_slug: string;
+    active?: boolean;  
+    organization_id: string; 
+    team_id?: string; 
 }
 
 //Object that corresponds to the database llm_requests table
@@ -69,6 +101,7 @@ export interface LlmResponse {
     error_message?: string;
     response?: string;
     response_raw?: Record<string, any>;
+    usage_raw?: Record<string, any>;
     input_tokens?: number;
     output_tokens?: number;
     time_to_first_token?: number | undefined;
@@ -82,6 +115,7 @@ export interface Prompt extends BaseEntity {
     organization_id: string;
     name: string;
     description?: string;
+    provider?: string;  // Added to match database field
     providerType: 'ollama' | 'claude' | 'openai' | 'gemini' | 'grok';
     prompt_type: 'chat' | 'completion' | 'image' | 'audio' | 'vision';
     system_prompt?: string;
@@ -101,4 +135,12 @@ export interface Prompt extends BaseEntity {
     tags: string[];
     version: string;
     is_active: boolean;
+}
+
+export interface AnalysisResult {
+    id: string;  // uuid
+    created_at: Date;
+    analysis_name: string | null;
+    reference: Record<string, any>;  // jsonb
+    results: Record<string, any>;    // jsonb
 }
