@@ -94,14 +94,15 @@ export class OllamaRequestTranslator extends BaseRequestTranslator {
 
         // Extract token usage from metrics or payload
         if (workerResponse.metrics) {
+            llmResponse.usage_raw = workerResponse.metrics; 
             llmResponse.input_tokens = workerResponse.metrics.inputTokens;
             llmResponse.output_tokens = workerResponse.metrics.outputTokens;
             llmResponse.time_to_first_token = workerResponse.metrics.timeToFirstToken;
             llmResponse.total_processing_time = workerResponse.metrics.totalProcessingTime;
         } else {
-            // Fallback to payload data
             const promptTokens = payload.prompt_eval_count || 0;
             const responseTokens = payload.eval_count || 0;
+            // Fallback to payload data
             llmResponse.input_tokens = promptTokens;
             llmResponse.output_tokens = responseTokens;
 
@@ -111,6 +112,14 @@ export class OllamaRequestTranslator extends BaseRequestTranslator {
 
             // Calculate time to first token using Ollama timing data
             llmResponse.time_to_first_token = this.calculateTimeToFirstToken(payload);
+
+            const metrics = {
+                input_tokens: promptTokens,
+                output_tokens: responseTokens, 
+                time_to_first_token: this.calculateTimeToFirstToken(payload), 
+                total_processing_time: (payload.total_duration ? Math.round(payload.total_duration / 1000000) : undefined)
+            }; 
+            llmResponse.usage_raw = metrics; 
         }
 
         // Set status based on completion

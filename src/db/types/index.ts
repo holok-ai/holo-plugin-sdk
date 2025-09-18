@@ -101,6 +101,7 @@ export interface LlmResponse {
     error_message?: string;
     response?: string;
     response_raw?: Record<string, any>;
+    usage_raw?: Record<string, any>;
     input_tokens?: number;
     output_tokens?: number;
     time_to_first_token?: number | undefined;
