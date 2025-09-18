@@ -1,12 +1,15 @@
 import {type, type Type} from 'arktype';
-import {ChatRequest, GenerateRequest, Message, Options, Tool, ToolCall} from 'ollama';
-
-// Ollama type aliases (map to Ollama SDK types)
-export type OllamaToolCall = ToolCall;
-export type OllamaMessage = Message;
-export type OllamaTool = Tool;
-export type OllamaOptions = Options;
-export type OllamaGenerateRequest = GenerateRequest;
+import {GenerateRequest} from 'ollama';
+import {
+    OllamaChatRequest,
+    OllamaGenerateRequest,
+    OllamaMessage,
+    OllamaOnlyChatRequest,
+    OllamaOptions,
+    OllamaSharedChatRequest,
+    OllamaTool,
+    OllamaToolCall
+} from "./types";
 
 export const OllamaImageValidator = type('instanceof', Uint8Array).array().or('string[]');
 
@@ -41,7 +44,7 @@ export const OllamaOptionsValidator = type({
     mirostat_eta: 'number',
     penalize_newline: 'boolean',
     stop: 'string[]'
-}) satisfies Type<Options>;
+}) satisfies Type<OllamaOptions>;
 
 export const OllamaToolCallValidator = type({
     function: {
@@ -79,12 +82,6 @@ export const OllamaToolValidator = type({
         }
     }
 }) satisfies Type<OllamaTool>;
-
-export type OllamaChatRequest = ChatRequest;
-
-export type OllamaOnlyChatRequestFields = readonly['keep_alive', 'options'];
-export type OllamaOnlyChatRequest = Pick<OllamaChatRequest, OllamaOnlyChatRequestFields[number]>;
-export type OllamaSharedChatRequest = Omit<OllamaChatRequest, OllamaOnlyChatRequestFields[number]>;
 
 // Common fields that exist across all providers
 export const OllamaSharedChatRequestValidator = type({

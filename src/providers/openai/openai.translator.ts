@@ -1,61 +1,41 @@
-import {ITranslator} from '../base.translator.interface';
-import {OpenAIChatRequest, HoloRequest, HoloRequestValidator, OpenAIResponse, HoloResponse, HoloResponseValidator} from "../types";
+import {IProviderTranslator} from '../base.translator.interface';
+import {OpenAIChatRequest, HoloRequest, OpenAIResponse, HoloResponse} from "../types";
 import logger from "../../utils/logger";
-import {OpenAIChatRequestValidator} from "./openai.request.validators";
-import {OpenAIResponseValidator} from "./openai.response.validators";
 import {type} from "arktype";
-import {translate} from "../translators";
-import {fromHoloRequestTranslators} from "./translators/openai.request.translators";
-import {toHoloResponseTranslators} from "./translators/openai.response.translators";
-import {toHoloRequestTranslators} from "./translators/openai.request.reverse.translators";
-import {fromHoloResponseTranslators} from "./translators/openai.response.reverse.translators";
+import {OpenAIRequestTranslator} from "./translators/openai.request.translators";
 
-// Create the main translation pipelines using the parallel translate function
-const holoToOpenAIRequest = translate(
-    HoloRequestValidator,
-    OpenAIChatRequestValidator,
-    fromHoloRequestTranslators
-);
-
-// Response translation pipeline
-const openaiToHoloResponse = translate(
-    OpenAIResponseValidator,
-    HoloResponseValidator,
-    toHoloResponseTranslators
-);
-
-// Reverse request translation using parallel translators
-const openaiToHoloRequest = translate(
-    OpenAIChatRequestValidator,
-    HoloRequestValidator,
-    toHoloRequestTranslators
-);
-
-// Reverse response translation using parallel translators
-const holoToOpenAIResponse = translate(
-    HoloResponseValidator,
-    OpenAIResponseValidator,
-    fromHoloResponseTranslators
-);
-
-export class OpenAITranslator implements ITranslator {
-    fromHoloChatRequest(request: HoloRequest): OpenAIChatRequest | type.errors {
+export class OpenAITranslator implements IProviderTranslator {
+    async fromHoloChatRequest(request: HoloRequest): Promise<Partial<OpenAIChatRequest> | type.errors> {
         logger.debug('translating holo request to openai request', request);
-        return holoToOpenAIRequest(request);
+        try {
+            const result = await OpenAIRequestTranslator.fromHolo(request);
+            return result;
+        } catch (error) {
+            logger.error('Error translating holo to openai request', error);
+            return {}
+        }
     }
 
-    toHoloChatRequest(request: OpenAIChatRequest): HoloRequest | type.errors {
+    async toHoloChatRequest(request: OpenAIChatRequest): Promise<Partial<HoloRequest> | type.errors> {
         logger.debug('translating openai request to holo request', request);
-        return openaiToHoloRequest(request);
+        try {
+            const result = await OpenAIRequestTranslator.toHolo(request);
+            return result;
+        } catch (error) {
+            logger.error('Error translating openai to holo request', error);
+            return {}
+        }
     }
 
     fromOpenAIResponse(response: OpenAIResponse): HoloResponse | type.errors {
         logger.debug('translating openai response to holo response', response);
-        return openaiToHoloResponse(response);
+        // TODO: Implement response translation with new architecture
+        throw new Error('Response translation not yet implemented with new architecture');
     }
 
     toOpenAIResponse(response: HoloResponse): OpenAIResponse | type.errors {
         logger.debug('translating holo response to openai response', response);
-        return holoToOpenAIResponse(response);
+        // TODO: Implement response translation with new architecture
+        throw new Error('Response translation not yet implemented with new architecture');
     }
 }

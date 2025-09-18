@@ -1,51 +1,62 @@
-import {Translator} from "../../translators";
-import {HoloRequest} from "../../holo";
-import {ClaudeChatRequest} from "../types";
+import {FieldTranslator, Guard, TranslateFunc} from "../../translators";
+import {HoloTool, HoloToolChoice, HoloToolChoiceValidator, HoloToolValidator} from "../../holo";
+import {ClaudeTool, ClaudeToolChoice, ClaudeToolUnion} from "../types";
+import {ClaudeToolChoiceValidator, ClaudeToolUnionValidator, ClaudeToolValidator} from "../claude.request.validators";
+import {ArkErrors} from "arktype";
 
-export const fromHoloToolsTranslator: Translator<HoloRequest, ClaudeChatRequest> = (source) => {
-    if (!source.tools) return {};
-
-    // Direct tool translation
-    const claudeTools = source.tools.map(tool => ({
-        name: tool.name,
-        ...(tool.description && {description: tool.description}),
-        input_schema: {
-            type: 'object' as const,
-            properties: tool.parameters || {},
-            required: Object.keys(tool.parameters || {})
-        }
-    }));
-
-    return {tools: claudeTools};
+const defaultToolInputSchema: ClaudeTool["input_schema"] = {
+    type: "object",
+    properties: {},
+    required: [] as string[],
 };
-export const fromHoloToolChoiceTranslator: Translator<HoloRequest, ClaudeChatRequest> = (source) => {
-    if (!source.tool_choice) return {};
 
-    // Direct tool choice translation
-    let claudeToolChoice: any;
-    if (typeof source.tool_choice === 'string') {
-        switch (source.tool_choice) {
-            case 'auto':
-                claudeToolChoice = {type: 'auto'};
-                break;
-            case 'none':
-                claudeToolChoice = {type: 'none'};
-                break;
-            case 'required':
-                claudeToolChoice = {type: 'any'}; // Claude's 'any' is similar to 'required'
-                break;
-            default:
-                claudeToolChoice = {type: 'auto'};
-                break;
-        }
-    } else if (source.tool_choice.type === 'specific') {
-        claudeToolChoice = {
-            type: 'tool',
-            name: source.tool_choice.name
-        };
-    } else {
-        claudeToolChoice = {type: 'auto'};
+export const fromToolParametersTranslator: TranslateFunc<HoloTool, ClaudeToolUnion> = async (holoTool: HoloTool): Promise<Partial<ClaudeToolUnion>> => ({
+    type: 'custom',
+    input_schema: {
+        type: 'object',
+        ...(holoTool.parameters ?? defaultToolInputSchema)
+    }
+});
+
+export const customToolOnlyGuard = new Guard<ClaudeToolUnion>(
+    "allowOnlyCustomTool",
+    (tool) => !(ClaudeToolValidator(tool) instanceof ArkErrors) // pass if it IS a custom tool
+);
+
+
+export const toToolParameterTranslator = async (tool: ClaudeToolUnion): Promise<Partial<HoloTool>> => ({
+    parameters: (tool as ClaudeTool).input_schema
+});
+
+export const ClaudeToolTranslator = new FieldTranslator<HoloTool, ClaudeToolUnion>(
+    HoloToolValidator,
+    ClaudeToolUnionValidator,
+    [fromToolParametersTranslator],
+    [toToolParameterTranslator],
+    [],
+    [customToolOnlyGuard]
+)
+
+
+export const fromHoloToolChoiceTranslator = async (choice: HoloToolChoice): Promise<Partial<ClaudeToolChoice>> => {
+    if (choice.type === "specific") {
+        return {type: "tool", name: choice.name};
+    }
+    return {type: choice.type === "required" ? "any" : choice.type};
+};
+
+// ClaudeToolChoice → HoloToolChoice
+export const toHoloToolChoiceTranslator = async (tc: ClaudeToolChoice): Promise<HoloToolChoice> => {
+    if (tc.type === "tool") {
+        return {type: "specific", name: tc.name};
     }
 
-    return {tool_choice: claudeToolChoice};
+    return {type: tc.type === "any" ? "required" : tc.type};
 };
+
+export const ClaudeToolChoiceTranslator = new FieldTranslator<HoloToolChoice, ClaudeToolChoice>(
+    HoloToolChoiceValidator,
+    ClaudeToolChoiceValidator,
+    [fromHoloToolChoiceTranslator],
+    [toHoloToolChoiceTranslator]
+);

@@ -1,262 +1,228 @@
-import {ClaudeResponse, HoloResponse} from "../../types";
-import {Translator} from "../../translators";
-
-// ========== SHARED FIELD TRANSLATORS ==========
-
-// Service tier mapping (enum normalization - runs in parallel)
-export const toHoloServiceTierTranslator: Translator<ClaudeResponse, HoloResponse> = (source) => {
-    // Claude responses contain service_tier in usage.service_tier
-    if ('usage' in source && source.usage && 'service_tier' in source.usage && source.usage.service_tier) {
-        const service_tier = source.usage.service_tier;
-        return {service_tier};
-    }
-    return {};
-};
-
-// ID field mapping
-export const toHoloIdTranslator: Translator<ClaudeResponse, HoloResponse> = (source) => {
-    if ('id' in source && source.id) {
-        return {id: source.id};
-    }
-    return {};
-};
-
-// Model field mapping
-export const toHoloModelTranslator: Translator<ClaudeResponse, HoloResponse> = (source) => {
-    if ('model' in source && source.model) {
-        return {model: source.model};
-    }
-    return {};
-};
-
-// Role field mapping
-export const toHoloRoleTranslator: Translator<ClaudeResponse, HoloResponse> = (source) => {
-    if ('role' in source && source.role) {
-        return {role: source.role};
-    }
-    return {};
-};
-
-// ========== COMPLEX OBJECT TRANSLATORS ==========
-
-// Content blocks mapping (ClaudeContentBlock[] -> HoloResponseContent)
-export const toHoloContentTranslator: Translator<ClaudeResponse, HoloResponse> = (source) => {
-    if ('content' in source && source.content) {
-        const content = fromClaudeContentBlocksToHoloContent(source.content);
-        return {content};
-    }
-    return {};
-};
-
-// Usage mapping
-export const toHoloUsageTranslator: Translator<ClaudeResponse, HoloResponse> = (source) => {
-    if ('usage' in source && source.usage) {
-        const inputTokens = source.usage.input_tokens || 0;
-        const outputTokens = source.usage.output_tokens || 0;
-        const usage: {
-            input_tokens: number;
-            output_tokens: number;
-            total_tokens: number;
-            cache_read_tokens?: number;
-            cache_write_tokens?: number;
-        } = {
-            input_tokens: inputTokens,
-            output_tokens: outputTokens,
-            total_tokens: inputTokens + outputTokens
-        };
-
-        // Only include cache tokens if they exist
-        if (source.usage.cache_read_input_tokens) {
-            usage.cache_read_tokens = source.usage.cache_read_input_tokens;
-        }
-        if (source.usage.cache_creation_input_tokens) {
-            usage.cache_write_tokens = source.usage.cache_creation_input_tokens;
-        }
-
-        return {usage};
-    }
-    return {};
-};
-
-// Stop reason mapping
-export const toHoloStopReasonTranslator: Translator<ClaudeResponse, HoloResponse> = (source) => {
-    if ('stop_reason' in source && source.stop_reason) {
-        // Map Claude stop reasons to Holo equivalents
-        let stop_reason: 'stop' | 'length' | 'tool_calls' | 'content_filter' | 'function_call' | 'max_tokens' | 'end_turn' | 'tool_use' | 'pause_turn' | 'refusal';
-        switch (source.stop_reason) {
-            case 'end_turn':
-                stop_reason = 'stop';
-                break;
-            case 'max_tokens':
-                stop_reason = 'length';
-                break;
-            case 'tool_use':
-                stop_reason = 'tool_calls';
-                break;
-            case 'stop_sequence':
-                stop_reason = 'stop';
-                break;
-            case 'pause_turn':
-                stop_reason = 'pause_turn';
-                break;
-            case 'refusal':
-                stop_reason = 'refusal';
-                break;
-            default:
-                stop_reason = 'stop';
-                break;
-        }
-        return {stop_reason};
-    }
-    return {};
-};
-
-// ========== HELPER FUNCTIONS ==========
-
-// Helper function to convert Claude content blocks to Holo content format
-const fromClaudeContentBlocksToHoloContent = (contentBlocks: unknown[]): string => {
-    const textParts: string[] = [];
-
-    contentBlocks.forEach(block => {
-        if (!block || typeof block !== 'object') return;
-
-        const contentBlock = block as Record<string, unknown>;
-        const blockType = contentBlock.type;
-
-        switch (blockType) {
-            case 'text':
-                if (typeof contentBlock.text === 'string') {
-                    textParts.push(contentBlock.text);
-                }
-                break;
-            case 'thinking':
-                // Include thinking content with delimiter
-                if (typeof contentBlock.thinking === 'string') {
-                    textParts.push(`<thinking>${contentBlock.thinking}</thinking>`);
-                }
-                break;
-            case 'tool_use':
-                // Convert tool use to structured format
-                const name = typeof contentBlock.name === 'string' ? contentBlock.name : 'unknown';
-                const input = contentBlock.input || {};
-                const toolUseText = `Tool: ${name}\nArguments: ${JSON.stringify(input, null, 2)}`;
-                textParts.push(toolUseText);
-                break;
-            case 'web_search_tool_result':
-            case 'code_execution_tool_result':
-            case 'mcp_tool_result':
-                // Handle tool results
-                const resultContent = contentBlock.content;
-                if (typeof resultContent === 'string') {
-                    textParts.push(resultContent);
-                } else if (Array.isArray(resultContent)) {
-                    resultContent.forEach((contentItem: unknown) => {
-                        if (contentItem && typeof contentItem === 'object') {
-                            const item = contentItem as Record<string, unknown>;
-                            if (item.type === 'text' && typeof item.text === 'string') {
-                                textParts.push(item.text);
-                            }
-                        }
-                    });
-                }
-                break;
-            default:
-                // Handle other block types generically
-                if (typeof contentBlock.text === 'string') {
-                    textParts.push(contentBlock.text);
-                } else if (contentBlock.content && typeof contentBlock.content === 'string') {
-                    textParts.push(contentBlock.content);
-                }
-                break;
-        }
-    });
-
-    return textParts.join('\n\n');
-};
-
-// ========== STREAMING EVENT TRANSLATORS ==========
-
-// Stream event type mapping
-export const toHoloStreamEventTranslator: Translator<ClaudeResponse, HoloResponse> = (source) => {
-    if ('type' in source) {
-        let event_type: string;
-        switch (source.type) {
-            case 'message_start':
-                event_type = 'message_start';
-                break;
-            case 'message_delta':
-                event_type = 'message_delta';
-                break;
-            case 'message_stop':
-                event_type = 'message_stop';
-                break;
-            case 'content_block_start':
-                event_type = 'content_start';
-                break;
-            case 'content_block_delta':
-                event_type = 'content_delta';
-                break;
-            case 'content_block_stop':
-                event_type = 'content_stop';
-                break;
-            default:
-                event_type = source.type;
-                break;
-        }
-        return {type: event_type};
-    }
-    return {};
-};
-
-// Stream delta mapping
-export const toHoloStreamDeltaTranslator: Translator<ClaudeResponse, HoloResponse> = (source) => {
-    if ('delta' in source && source.delta && typeof source.delta === 'object') {
-        const sourceDelta = source.delta as unknown as Record<string, unknown>;
-        const delta: Record<string, unknown> = {};
-
-        // Handle different delta types
-        if (sourceDelta.type === 'text_delta' && typeof sourceDelta.text === 'string') {
-            delta.content = sourceDelta.text;
-        } else if (sourceDelta.type === 'thinking_delta' && typeof sourceDelta.thinking === 'string') {
-            delta.content = `<thinking>${sourceDelta.thinking}</thinking>`;
-        } else if (sourceDelta.type === 'input_json_delta' && typeof sourceDelta.partial_json === 'string') {
-            delta.tool_calls = [{
-                function: {
-                    arguments: sourceDelta.partial_json
-                }
-            }];
-        }
-
-        // Handle message-level deltas
-        if (typeof sourceDelta.stop_reason === 'string') {
-            delta.stop_reason = sourceDelta.stop_reason === 'end_turn' ? 'stop' : sourceDelta.stop_reason;
-        }
-
-        return {delta};
-    }
-    return {};
-};
-
-// Stream index mapping
-export const toHoloStreamIndexTranslator: Translator<ClaudeResponse, HoloResponse> = (source) => {
-    if ('index' in source && source.index !== undefined) {
-        return {index: source.index};
-    }
-    return {};
-};
-
-// ========== TRANSLATOR COLLECTION ==========
-
-// Array of translators that will run in parallel via Promise.all
-export const toHoloResponseTranslators: Translator<ClaudeResponse, HoloResponse>[] = [
-    toHoloServiceTierTranslator,
-    toHoloIdTranslator,
-    toHoloModelTranslator,
-    toHoloRoleTranslator,
-    toHoloContentTranslator,
-    toHoloUsageTranslator,
-    toHoloStopReasonTranslator,
-    toHoloStreamEventTranslator,
-    toHoloStreamDeltaTranslator,
-    toHoloStreamIndexTranslator
-];
+// import {createTranslateFunc, FieldTranslator, TranslateFunc} from "../../translators";
+// import {HoloResponse, HoloResponseValidator, HoloUsage, HoloUsageValidator} from "../../holo";
+// import {ClaudeResponse, ClaudeResponseMessage, ClaudeUsage} from "../types";
+// import {ClaudeMessageValidator, ClaudeUsageValidator} from "../claude.response.validators";
+// import {claudeMessageToHoloArray} from "./claude.message.translators";
+// import {createStableId} from "../util/stable-id";
+//
+// // Usage field translator
+// export const fromHoloUsageTranslator: TranslateFunc<HoloUsage, ClaudeUsage> =
+//     async (holoUsage: HoloUsage): Promise<Partial<ClaudeUsage>> => {
+//         const result: Partial<ClaudeUsage> = {};
+//
+//         // Direct copies
+//         if (holoUsage.input_tokens !== undefined) result.input_tokens = holoUsage.input_tokens;
+//         if (holoUsage.output_tokens !== undefined) result.output_tokens = holoUsage.output_tokens;
+//
+//         // Service tier - only map compatible values, omit if not supported
+//         if (holoUsage.service_tier !== undefined &&
+//             ['standard', 'priority', 'batch'].includes(holoUsage.service_tier)) {
+//             result.service_tier = holoUsage.service_tier as 'standard' | 'priority' | 'batch';
+//         }
+//
+//         // Field name mappings - only set if not null
+//         if (holoUsage.cache_read_tokens !== undefined && holoUsage.cache_read_tokens !== null) {
+//             result.cache_read_input_tokens = holoUsage.cache_read_tokens;
+//         }
+//         if (holoUsage.cache_write_tokens !== undefined && holoUsage.cache_write_tokens !== null) {
+//             result.cache_creation_input_tokens = holoUsage.cache_write_tokens;
+//         }
+//
+//         return result;
+//     };
+//
+// export const toHoloUsageTranslator: TranslateFunc<ClaudeUsage, HoloUsage> =
+//     async (claudeUsage: ClaudeUsage): Promise<Partial<HoloUsage>> => {
+//         const result: Partial<HoloUsage> = {};
+//
+//         // Direct copies
+//         if (claudeUsage.input_tokens !== undefined) result.input_tokens = claudeUsage.input_tokens;
+//         if (claudeUsage.output_tokens !== undefined) result.output_tokens = claudeUsage.output_tokens;
+//         if (claudeUsage.service_tier !== undefined && claudeUsage.service_tier !== null) {
+//             result.service_tier = claudeUsage.service_tier;
+//         }
+//
+//         // Computed fields
+//         if (claudeUsage.input_tokens !== undefined && claudeUsage.output_tokens !== undefined) {
+//             result.total_tokens = claudeUsage.input_tokens + claudeUsage.output_tokens;
+//         }
+//
+//         // Field name mappings
+//         if (claudeUsage.cache_read_input_tokens !== undefined && claudeUsage.cache_read_input_tokens !== null) {
+//             result.cache_read_tokens = claudeUsage.cache_read_input_tokens;
+//         }
+//         if (claudeUsage.cache_creation_input_tokens !== undefined && claudeUsage.cache_creation_input_tokens !== null) {
+//             result.cache_write_tokens = claudeUsage.cache_creation_input_tokens;
+//         }
+//
+//         return result;
+//     };
+//
+// export const ClaudeUsageTranslator = new FieldTranslator<HoloUsage, ClaudeUsage>(
+//     HoloUsageValidator,
+//     ClaudeUsageValidator,
+//     [fromHoloUsageTranslator],
+//     [toHoloUsageTranslator]
+// );
+//
+// // Finish reason field translator - returns partial to avoid overwriting when not present
+// export const fromHoloFinishReasonTranslator: TranslateFunc<HoloResponse, ClaudeResponse> =
+//     async (holoResponse: HoloResponse): Promise<Partial<ClaudeResponseMessage>> => {
+//         if (!holoResponse.finish_reason) return {};
+//
+//         let stop_reason = null;
+//         switch (holoResponse.finish_reason) {
+//             case 'stop':
+//                 stop_reason = 'end_turn';
+//                 break;
+//             case 'length':
+//                 stop_reason = 'max_tokens';
+//                 break;
+//             case 'tool_calls':
+//             case 'function_call':
+//                 stop_reason = 'tool_use';
+//                 break;
+//             case 'content_filter':
+//                 stop_reason = 'refusal';
+//                 break;
+//             default:
+//                 return {}; // Don't force a value when Holo has no opinion
+//         }
+//         return {stop_reason} as Partial<ClaudeResponseMessage>;
+//     };
+//
+// export const toHoloFinishReasonTranslator: TranslateFunc<ClaudeResponseMessage, HoloResponse> =
+//     async (claudeResponse: ClaudeResponseMessage): Promise<Partial<HoloResponse>> => {
+//         if (!claudeResponse.stop_reason) return {};
+//
+//         let finish_reason = null;
+//         switch (claudeResponse.stop_reason) {
+//             case 'end_turn':
+//                 finish_reason = 'stop';
+//                 break;
+//             case 'max_tokens':
+//                 finish_reason = 'length';
+//                 break;
+//             case 'tool_use':
+//                 finish_reason = 'tool_calls';
+//                 break;
+//             case 'refusal':
+//                 finish_reason = 'content_filter';
+//                 break;
+//             default:
+//                 return {}; // Don't invent a Holo finish reason for unknown values
+//         }
+//         return {finish_reason} as Partial<HoloResponse>;
+//     };
+//
+// export const fromHoloResponseMessagesTranslator: TranslateFunc<HoloResponse, ClaudeResponse> =
+//     async (holoResponse: HoloResponse): Promise<Partial<ClaudeResponse>> => {
+//         const message = {message: {role: 'assistant', content: []}};
+//         if (!holoResponse.messages?.length) {
+//             return message;
+//         }
+//
+//         // Take the first message (assistant response) and flatten to Claude format
+//         // Claude responses expect the first message to be the assistant reply
+//         const assistantMessage = holoResponse.messages[0];
+//         if (assistantMessage.role !== 'assistant') {
+//             // Option A: return empty; Option B: coerce. Keeping empty since upstream should guarantee assistant first.
+//             message.
+//             return ;
+//         }
+//
+//         // Set role and convert content
+//         const result: any = {
+//             role: 'assistant'
+//         };
+//
+//         // Handle content conversion
+//         if (typeof assistantMessage.content === 'string') {
+//             result.content = [{type: 'text', text: assistantMessage.content}];
+//         } else if (Array.isArray(assistantMessage.content)) {
+//             // Convert HoloContent to Claude content blocks
+//             const contentBlocks = await Promise.all(
+//                 assistantMessage.content.map(async (content: any) => {
+//                     if (content.type === 'text') {
+//                         return {type: 'text', text: content.text};
+//                     } else if (content.type === 'image') {
+//                         // Convert image back to Claude format with robust data URI parsing
+//                         if (content.url.startsWith('data:')) {
+//                             const comma = content.url.indexOf(',');
+//                             const header = content.url.slice(0, comma);
+//                             const data = content.url.slice(comma + 1);
+//                             const mediaType = /data:([^;]+);base64/i.exec(header)?.[1] ?? 'image/png';
+//                             return {
+//                                 type: 'image',
+//                                 source: {
+//                                     type: 'base64',
+//                                     media_type: mediaType,
+//                                     data: data
+//                                 }
+//                             };
+//                         } else {
+//                             return {
+//                                 type: 'image',
+//                                 source: {
+//                                     type: 'url',
+//                                     url: content.url
+//                                 }
+//                             };
+//                         }
+//                     }
+//                     return null; // Skip unknown content types
+//                 })
+//             );
+//             result.content = contentBlocks.filter(Boolean);
+//         } else {
+//             result.content = [];
+//         }
+//
+//         // Add tool_calls as tool_use blocks in content (appends after content for consistent ordering)
+//         if (assistantMessage.tool_calls?.length) {
+//             const toolUseBlocks = assistantMessage.tool_calls.map((toolCall: any, idx: number) => ({
+//                 type: 'tool_use',
+//                 id: toolCall.id ?? createStableId(`${toolCall.function.name}#${idx}`, toolCall.function.arguments),
+//                 name: toolCall.function.name,
+//                 input: toolCall.function.arguments
+//             }));
+//             result.content = result.content || [];
+//             result.content.push(...toolUseBlocks);
+//         }
+//
+//         // Ensure non-empty content for Claude API compatibility
+//         if (!result.content || (Array.isArray(result.content) && result.content.length === 0)) {
+//             result.content = [{type: 'text', text: ''}];
+//         }
+//
+//         return result;
+//     };
+//
+// export const toHoloResponseMessagesTranslator: TranslateFunc<ClaudeResponseMessage, HoloResponse> =
+//     async (claudeResponse: ClaudeResponseMessage): Promise<Partial<HoloResponse>> => {
+//         // Claude response is always a single assistant message
+//         // Use the message-to-holo array translator with response message shape
+//         const holoMessages = await claudeMessageToHoloArray({
+//             role: claudeResponse.role,
+//             content: claudeResponse.content
+//         } as any); // Cast to handle request/response type compatibility
+//
+//         return {messages: holoMessages};
+//     };
+//
+// // Main Claude response translator using field translators
+// export const ClaudeResponseTranslator = new FieldTranslator<HoloResponse, ClaudeResponse>(
+//     HoloResponseValidator,
+//     ClaudeMessageValidator,
+//     [
+//         createTranslateFunc(ClaudeUsageTranslator.fromHolo, 'usage'),
+//         fromHoloFinishReasonTranslator,
+//         fromHoloResponseMessagesTranslator,
+//         fromHoloRequiredFieldsTranslator
+//     ],
+//     [
+//         createTranslateFunc(ClaudeUsageTranslator.toHolo, 'usage'),
+//         toHoloFinishReasonTranslator,
+//         toHoloResponseMessagesTranslator
+//     ]
+// );

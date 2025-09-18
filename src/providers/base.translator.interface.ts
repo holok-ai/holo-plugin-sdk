@@ -2,8 +2,8 @@ import {ClaudeChatRequest, HoloRequest, OllamaChatRequest, OpenAIChatRequest} fr
 import type {type} from "arktype";
 
 
-export interface ITranslator {
-    toHoloChatRequest(request: ClaudeChatRequest | OllamaChatRequest | OpenAIChatRequest): HoloRequest | type.errors;
+export interface IProviderTranslator {
+    toHoloChatRequest(request: ClaudeChatRequest | OllamaChatRequest | OpenAIChatRequest): Promise<Partial<HoloRequest> | type.errors>;
 
-    fromHoloChatRequest(request: HoloRequest): ClaudeChatRequest | OllamaChatRequest | OpenAIChatRequest | type.errors;
+    fromHoloChatRequest(request: HoloRequest): Promise<Partial<ClaudeChatRequest> | Partial<OllamaChatRequest> | Partial<OpenAIChatRequest> | type.errors>;
 }

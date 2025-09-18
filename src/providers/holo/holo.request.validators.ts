@@ -3,9 +3,8 @@ import {
     HoloContent,
     HoloContentImage,
     HoloContentText,
-    HoloContentToolResult,
+    HoloMessage,
     HoloRequest,
-    HoloRequestMessage,
     HoloRequestMetadata,
     HoloResponseFormat,
     HoloTool,
@@ -27,17 +26,9 @@ export const HoloContentImageValidator = type({
     'alt_text?': 'string'
 }) satisfies Type<HoloContentImage>;
 
-export const HoloContentToolResultValidator = type({
-    type: "'tool_result'",
-    tool_call_id: 'string',                                             // Must match the originating tool call
-    'content?': type('string').or((HoloContentTextValidator.or(HoloContentImageValidator)).array()),
-    'is_error?': 'boolean'
-}) satisfies Type<HoloContentToolResult>;
-
 export const HoloContentValidator =
     HoloContentTextValidator
-        .or(HoloContentImageValidator)
-        .or(HoloContentToolResultValidator) satisfies Type<HoloContent>;
+        .or(HoloContentImageValidator) satisfies Type<HoloContent>;
 
 // ---------- Tool calling validators ----------
 export const HoloToolFunctionCallValidator = type({
@@ -58,17 +49,17 @@ export const HoloRequestMessageValidator = type({
     'tool_calls?': HoloToolCallValidator.array(),
     'tool_call_id?': 'string',
     'name?': 'string'
-}) satisfies Type<HoloRequestMessage>;
+}) satisfies Type<HoloMessage>;
 
 // ---------- Tool definition validator ----------
-export const HoloRequestToolValidator = type({
+export const HoloToolValidator = type({
     name: 'string',
     'description?': 'string',
     'parameters?': 'Record<string, unknown>'
 }) satisfies Type<HoloTool>;
 
 // ---------- Tool choice validator ----------
-export const HoloRequestToolChoiceValidator = type("'auto'|'none'|'required'").or(type({
+export const HoloToolChoiceValidator = type({type: "'auto'|'none'|'required'"}).or(type({
     type: "'specific'",
     name: 'string'
 })) satisfies Type<HoloToolChoice>;
@@ -105,16 +96,15 @@ export const HoloRequestValidator = type({
     'temperature?': 'number',
     'top_p?': 'number',
     'stream?': 'boolean',
-    'tools?': HoloRequestToolValidator.array(),
+    'tools?': HoloToolValidator.array(),
 
     // 🟡 MAPPED (≥2 Providers)
     'system?': 'string',
     'max_tokens?': 'number',
-    'max_completion_tokens?': 'number',
     'stop_sequences?': 'string[]',
     'response_format?': HoloRequestResponseFormatValidator,
     'service_tier?': "'auto'|'default'|'standard_only'",
-    'tool_choice?': HoloRequestToolChoiceValidator,
+    'tool_choice?': HoloToolChoiceValidator,
     'top_k?': 'number',
     'frequency_penalty?': 'number',
     'presence_penalty?': 'number',
@@ -127,7 +117,7 @@ const HoloRequestDefaults: Partial<HoloRequest> = {
     stream: false,
     temperature: 1.0,
     top_p: 1.0,
-    tool_choice: 'auto',
+    tool_choice: {type: 'auto'},
     response_format: {type: 'text'}
 };
 

@@ -1,5 +1,5 @@
 // ---------- HoloContent (portable response content) ----------
-import {HoloContent, HoloToolCall} from "./requests";
+import {HoloMessage} from "./requests";
 
 // ---------- Usage & Performance (portable superset) ----------
 export interface HoloUsage {
@@ -25,15 +25,6 @@ export type HoloFinishReason =
     | 'content_filter'
     | 'function_call'
     | null;
-
-// ---------- Message structure (portable) ----------
-export interface HoloMessage {
-    role: 'assistant' | 'tool';
-    content: HoloContent[] | string;
-
-    // When role === 'assistant'
-    tool_calls?: HoloToolCall[];
-}
 
 // ---------- Main Holo Response (portable fields only) ----------
 export interface HoloResponse {

@@ -11,15 +11,8 @@ export interface HoloContentImage {
     alt_text?: string;    // Accessibility text (portable; safe to drop on emit)
 }
 
-export interface HoloContentToolResult {
-    type: 'tool_result';
-    tool_call_id: string;                 // Must match the originating tool call
-    content?: string | HoloContent[];     // If structured, will down-convert to text for non-structured providers
-    is_error?: boolean;                   // hint; not all providers expose it
-}
-
 // Union of all portable content types
-export type HoloContent = HoloContentText | HoloContentImage | HoloContentToolResult;
+export type HoloContent = HoloContentText | HoloContentImage;
 
 // ---------- Tool calling (portable) ----------
 export interface HoloToolFunctionCall {
@@ -34,7 +27,7 @@ export interface HoloToolCall {
 }
 
 // ---------- Messages ----------
-export interface HoloRequestMessage {
+export interface HoloMessage {
     role: 'user' | 'assistant' | 'tool';  // No 'developer' here; use top-level system
     content: string | HoloContent[];      // Plain text or structured portable content
 
@@ -55,9 +48,9 @@ export interface HoloTool {
 }
 
 export type HoloToolChoice =
-    | 'auto'
-    | 'none'
-    | 'required'
+    | { type: 'auto' }
+    | { type: 'none' }
+    | { type: 'required' }
     | { type: 'specific'; name: string }; // Specific tool to use
 
 // ---------- Response format ----------
@@ -89,7 +82,7 @@ export interface HoloRequestMetadata {
 export interface HoloRequest {
     // 🟢 COMMON (All Providers)
     model: string;                        // Required
-    messages?: HoloRequestMessage[];
+    messages?: HoloMessage[];
     temperature?: number;                 // 0.0–2.0 (provider-dependent caps)
     top_p?: number;                       // 0.0–1.0
     stream?: boolean;
@@ -98,7 +91,6 @@ export interface HoloRequest {
     // 🟡 MAPPED (≥2 Providers)
     system?: string;                      // System prompt (top-level)
     max_tokens?: number;                  // Claude/OpenAI
-    max_completion_tokens?: number;       // OpenAI
     stop_sequences?: string[];            // Normalize to array
     response_format?: HoloResponseFormat;
     service_tier?: 'auto' | 'default' | 'standard_only';  // OpenAI / Claude

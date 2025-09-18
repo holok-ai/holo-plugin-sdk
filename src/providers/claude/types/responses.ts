@@ -91,14 +91,3 @@ export type ClaudeRawContentBlockDeltaEvent = BetaRawContentBlockDeltaEvent;
 export type ClaudeRawContentBlockStopEvent = BetaRawContentBlockStopEvent;
 export type ClaudeRawMessageStreamEvent = BetaRawMessageStreamEvent;
 export type ClaudeResponse = ClaudeRawMessageStreamEvent | ClaudeResponseMessage;
-// export type ClaudeOnlyResponseFields = readonly[
-//     'container',
-//     'thinking',
-//     'citations',
-//     'type',
-//     'index',
-//     'content_block',
-//     'delta'
-// ];
-// export type ClaudeSharedResponse = Omit<ClaudeResponse, ClaudeOnlyResponseFields[number]>;
-// export type ClaudeOnlyResponse = Pick<ClaudeResponse, ClaudeOnlyResponseFields[number]>;

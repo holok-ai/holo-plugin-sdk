@@ -1,134 +1,142 @@
-// Helper function to detect image media type from base64 or file extension
-import {HoloRequestMessage} from "../../types";
+import {FieldTranslator, Guard, TranslateFunc} from "../../translators";
+import {
+    HoloContent,
+    HoloContentImage,
+    HoloContentImageValidator,
+    HoloContentText,
+    HoloContentTextValidator,
+    HoloContentValidator
+} from "../../holo";
+import {ClaudeContentBlockParam, ClaudeImageBlockParam, ClaudeTextBlockParam} from "../types";
+import {
+    ClaudeContentBlockParamValidator,
+    ClaudeImageBlockParamValidator,
+    ClaudeTextBlockParamValidator
+} from "../claude.request.validators";
 
-const detectImageMediaType = (imageData: string): string => {
-    // Check for base64 data URL prefix
-    if (imageData.startsWith('data:image/')) {
-        const match = imageData.match(/^data:image\/([^;]+)/);
-        if (match) {
-            const type = match[1].toLowerCase();
-            if (['jpeg', 'jpg', 'png', 'gif', 'webp'].includes(type)) {
-                return type === 'jpg' ? 'image/jpeg' : `image/${type}`;
-            }
-        }
+// Helper function to detect media type from data URI or default
+const detectMediaType = (url: string): 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' => {
+    if (url.startsWith('data:image/')) {
+        const match = url.match(/^data:image\/([^;]+)/);
+        return match ? `image/${match[1]}` as 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' : 'image/png';
     }
-
-    // Check for file extension or assume from base64 header
-    const lowerData = imageData.toLowerCase();
-    if (lowerData.includes('png') || imageData.startsWith('iVBOR')) return 'image/png';
-    if (lowerData.includes('gif') || imageData.startsWith('R0lGOD')) return 'image/gif';
-    if (lowerData.includes('webp') || imageData.includes('WEBP')) return 'image/webp';
-
-    // Default to JPEG for unknown types
-    return 'image/jpeg';
-};
-// Helper function to determine if image data is base64 or file ID
-const isBase64Image = (imageData: string): boolean => {
-    return imageData.startsWith('data:image/') ||
-        imageData.startsWith('/9j/') || // JPEG base64 start
-        imageData.startsWith('iVBOR') || // PNG base64 start
-        imageData.startsWith('R0lGOD') || // GIF base64 start
-        Boolean(imageData.match(/^[A-Za-z0-9+/]+=*$/)); // Generic base64 pattern
+    return 'image/png'; // Default
 };
 
-// Content blocks translation (HoloRequestMessage content -> ClaudeContentBlockParam[])
-export const fromHoloMessageContent = (message: HoloRequestMessage) => {
-    const contentBlocks: any[] = [];
+// Individual specialized translators
+export const fromHoloTextContentTranslator: TranslateFunc<HoloContentText, ClaudeTextBlockParam> =
+    async (holoText: HoloContentText): Promise<Partial<ClaudeTextBlockParam>> => ({
+        type: 'text',
+        text: holoText.text
+    });
 
-    // Handle tool result messages (tool_call_id indicates this is a tool response)
-    if (message.tool_call_id) {
-        contentBlocks.push({
-            type: 'tool_result',
-            tool_use_id: message.tool_call_id,
-            content: message.content,
-            is_error: false // Could be enhanced to detect error responses
-        });
-        return {content: contentBlocks};
-    }
-
-    // Basic text content
-    if (message.content) {
-        contentBlocks.push({
-            type: 'text',
-            text: message.content
-        });
-    }
-
-    // Image content
-    if (message.images && message.images.length > 0) {
-        message.images.forEach(image => {
-            if (isBase64Image(image)) {
-                // Base64 image
-                const cleanBase64 = image.startsWith('data:') ?
-                    image.split(',')[1] : image;
-
-                contentBlocks.push({
-                    type: 'image',
-                    source: {
-                        type: 'base64',
-                        data: cleanBase64,
-                        media_type: detectImageMediaType(image)
-                    }
-                });
-            } else {
-                // File ID
-                contentBlocks.push({
-                    type: 'image',
-                    source: {
-                        type: 'file',
-                        file_id: image
-                    }
-                });
-            }
-        });
-    }
-
-    // Tool calls (for assistant messages)
-    if (message.tool_calls && message.tool_calls.length > 0) {
-        message.tool_calls.forEach((toolCall: any) => {
-            const toolUseBlock: any = {
-                type: 'tool_use',
-                id: toolCall.id || `tool_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-                name: toolCall.name || toolCall.function?.name,
-                input: {}
+export const fromHoloImageContentTranslator: TranslateFunc<HoloContentImage, ClaudeImageBlockParam> =
+    async (holoImage: HoloContentImage): Promise<Partial<ClaudeImageBlockParam>> => {
+        if (holoImage.url.startsWith('data:')) {
+            // Data URI - convert to Claude base64 format
+            const [_header, data] = holoImage.url.split(',');
+            const mediaType = detectMediaType(holoImage.url);
+            return {
+                type: 'image',
+                source: {
+                    type: 'base64',
+                    data: data,
+                    media_type: mediaType
+                }
             };
-
-            // Handle different tool call argument formats
-            if (toolCall.arguments) {
-                if (typeof toolCall.arguments === 'string') {
-                    try {
-                        toolUseBlock.input = JSON.parse(toolCall.arguments);
-                    } catch {
-                        toolUseBlock.input = {arguments: toolCall.arguments};
-                    }
-                } else {
-                    toolUseBlock.input = toolCall.arguments;
+        } else {
+            // HTTPS URL - convert to Claude URL format
+            return {
+                type: 'image',
+                source: {
+                    type: 'url',
+                    url: holoImage.url
                 }
-            } else if (toolCall.function?.arguments) {
-                if (typeof toolCall.function.arguments === 'string') {
-                    try {
-                        toolUseBlock.input = JSON.parse(toolCall.function.arguments);
-                    } catch {
-                        toolUseBlock.input = {arguments: toolCall.function.arguments};
-                    }
-                } else {
-                    toolUseBlock.input = toolCall.function.arguments;
-                }
-            }
+            };
+        }
+    };
 
-            contentBlocks.push(toolUseBlock);
-        });
+export const toHoloTextContentTranslator: TranslateFunc<ClaudeTextBlockParam, HoloContentText> =
+    async (claudeText: ClaudeTextBlockParam): Promise<Partial<HoloContentText>> => ({
+        type: 'text',
+        text: claudeText.text
+    });
+
+export const toHoloImageContentTranslator: TranslateFunc<ClaudeImageBlockParam, HoloContentImage> =
+    async (claudeImage: ClaudeImageBlockParam): Promise<Partial<HoloContentImage>> => {
+        const {source} = claudeImage;
+        if (source.type === 'base64' && source.data && source.media_type) {
+            return {
+                type: 'image',
+                url: `data:${source.media_type};base64,${source.data}`,
+                mime: source.media_type
+            };
+        } else if (source.type === 'url' && source.url) {
+            return {
+                type: 'image',
+                url: source.url
+            };
+        }
+        // Ignore unsupported image sources - return empty object
+        return {};
+    };
+
+// Individual specialized content translators
+export const ClaudeTextContentTranslator = new FieldTranslator<HoloContentText, ClaudeTextBlockParam>(
+    HoloContentTextValidator,
+    ClaudeTextBlockParamValidator,
+    [fromHoloTextContentTranslator],
+    [toHoloTextContentTranslator]
+);
+
+export const ClaudeImageContentTranslator = new FieldTranslator<HoloContentImage, ClaudeImageBlockParam>(
+    HoloContentImageValidator,
+    ClaudeImageBlockParamValidator,
+    [fromHoloImageContentTranslator],
+    [toHoloImageContentTranslator]
+);
+
+// Orchestrating translator functions that delegate to specialized translators
+export const fromHoloContentTranslator: TranslateFunc<HoloContent, ClaudeContentBlockParam> =
+    async (holoContent: HoloContent): Promise<Partial<ClaudeContentBlockParam>> => {
+        switch (holoContent.type) {
+            case 'text':
+                return await ClaudeTextContentTranslator.fromHolo(holoContent);
+            case 'image':
+                return await ClaudeImageContentTranslator.fromHolo(holoContent);
+            default:
+                // Ignore unsupported content types - return empty object
+                return {};
+        }
+    };
+
+export const toHoloContentTranslator: TranslateFunc<ClaudeContentBlockParam, HoloContent> =
+    async (claudeContent: ClaudeContentBlockParam): Promise<Partial<HoloContent>> => {
+        switch (claudeContent.type) {
+            case 'text':
+                return await ClaudeTextContentTranslator.toHolo(claudeContent as ClaudeTextBlockParam);
+            case 'image':
+                return await ClaudeImageContentTranslator.toHolo(claudeContent as ClaudeImageBlockParam);
+            default:
+                // Ignore non-portable content types - return empty object
+                return {};
+        }
+    };
+
+
+export const portableContentOnlyGuard = new Guard<ClaudeContentBlockParam>(
+    "portableContentOnly",
+    (content) => {
+        return content.type === 'text' || content.type === 'image';
     }
+);
 
-    // Audio content (if present) - Claude doesn't directly support audio in content blocks
-    // This would need to be handled at a higher level or converted to text
-    if (message.audio) {
-        // For now, add a placeholder text block indicating audio content
-        contentBlocks.push({
-            type: 'text',
-            text: '[Audio content - processing not implemented]'
-        });
-    }
-
-    return {content: contentBlocks.length > 0 ? contentBlocks : message.content};
-};
+// Single unified content translator
+export const ClaudeContentTranslator = new FieldTranslator<HoloContent, ClaudeContentBlockParam>(
+    HoloContentValidator,              // Input validator (HoloContent union)
+    ClaudeContentBlockParamValidator,  // Output validator (Claude content union)
+    [fromHoloContentTranslator],       // Holo → Claude transformer
+    [toHoloContentTranslator],         // Claude → Holo transformer
+    [],                               // Pre-transform guards for Holo → Claude
+    [portableContentOnlyGuard]        // Pre-transform guards for Claude → Holo (filters non-portable)
+);

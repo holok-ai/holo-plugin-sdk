@@ -16,3 +16,14 @@ export const parseArray = (value: string | undefined, defaultValue: string[] = [
     if (!value) return defaultValue;
     return value.split(',').map(item => item.trim());
 };
+// helper: Uint8Array -> data URL
+export const uint8ToDataUrl = (bytes: Uint8Array, mime = "image/png") =>
+    `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
+// Check if it has the properties/methods of a Uint8Array
+export const isUint8Array = (value: any): value is Uint8Array => {
+    return value &&
+        typeof value === 'object' &&
+        typeof value.byteLength === 'number' &&
+        typeof value.buffer === 'object' &&
+        value.constructor?.name === 'Uint8Array';
+};

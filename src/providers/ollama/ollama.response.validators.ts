@@ -1,34 +1,20 @@
 import {type, type Type} from 'arktype';
-import type {
-    ChatResponse,
-    EmbeddingsResponse,
-    EmbedResponse,
-    ErrorResponse,
-    GenerateResponse,
-    ListResponse,
-    Message,
-    ModelDetails,
-    ModelResponse,
-    ProgressResponse,
-    ShowResponse,
-    StatusResponse,
-    ToolCall
-} from 'ollama';
-
-// Ollama response type aliases (map to Ollama SDK types)
-export type OllamaToolCall = ToolCall;
-export type OllamaMessage = Message;
-export type OllamaGenerateResponse = GenerateResponse;
-export type OllamaChatResponse = ChatResponse;
-export type OllamaEmbedResponse = EmbedResponse;
-export type OllamaEmbeddingsResponse = EmbeddingsResponse;
-export type OllamaProgressResponse = ProgressResponse;
-export type OllamaModelDetails = ModelDetails;
-export type OllamaModelResponse = ModelResponse;
-export type OllamaShowResponse = ShowResponse;
-export type OllamaListResponse = ListResponse;
-export type OllamaErrorResponse = ErrorResponse;
-export type OllamaStatusResponse = StatusResponse;
+import {
+    OllamaChatResponse,
+    OllamaEmbeddingsResponse,
+    OllamaEmbedResponse,
+    OllamaErrorResponse,
+    OllamaGenerateResponse,
+    OllamaListResponse,
+    OllamaMessage,
+    OllamaModelDetails,
+    OllamaModelResponse,
+    OllamaOnlyResponse,
+    OllamaProgressResponse,
+    OllamaShowResponse,
+    OllamaStatusResponse,
+    OllamaToolCall
+} from "./types";
 
 export const OllamaToolCallValidator = type({
     function: type({
@@ -139,33 +125,6 @@ export const OllamaStatusResponseValidator = type({
     'total?': 'number',
     'completed?': 'number'
 }) satisfies Type<OllamaStatusResponse>;
-
-export type OllamaResponse = GenerateResponse | ChatResponse | EmbedResponse | EmbeddingsResponse | ProgressResponse | ModelResponse | ShowResponse | ListResponse | ErrorResponse | StatusResponse;
-
-export type OllamaOnlyResponseFields = readonly[
-    'done',
-    'done_reason',
-    'response',
-    'context',
-    'total_duration',
-    'load_duration',
-    'prompt_eval_count',
-    'prompt_eval_duration',
-    'eval_count',
-    'eval_duration'
-];
-export type OllamaOnlyResponse = {
-    done?: boolean;
-    done_reason?: string;
-    response?: string;
-    context?: number[];
-    total_duration?: number;
-    load_duration?: number;
-    prompt_eval_count?: number;
-    prompt_eval_duration?: number;
-    eval_count?: number;
-    eval_duration?: number;
-};
 
 export const OllamaOnlyResponseValidator = type({
     'done?': 'boolean',

@@ -1,38 +1,30 @@
 import {type, type Type} from 'arktype';
-import type {
-    ChatCompletion,
-    ChatCompletionAudio,
-    ChatCompletionChunk,
-    ChatCompletionMessage,
-    ChatCompletionMessageToolCall
-} from 'openai/resources/chat/completions';
-import type {CompletionUsage} from 'openai/resources/completions';
-import {ChatCompletionTokenLogprob} from "openai/src/resources/chat/completions/completions";
 import {stringOrNull} from "../types/validator.types";
-
-// OpenAI response type aliases (map to OpenAI SDK types)
-export type OpenAICompletionUsage = CompletionUsage;
-export type OpenAICompletionUsageCompletionTokensDetails = CompletionUsage.CompletionTokensDetails;
-export type OpenAICompletionUsagePromptTokensDetails = CompletionUsage.PromptTokensDetails;
-export type OpenAIChatCompletionAudio = ChatCompletionAudio;
-export type OpenAIChatCompletionMessageAnnotationURLCitation = ChatCompletionMessage.Annotation.URLCitation;
-export type OpenAIChatCompletionMessageAnnotation = ChatCompletionMessage.Annotation;
-export type OpenAIChatCompletionMessageFunctionCall = ChatCompletionMessage.FunctionCall;
-export type OpenAIChatCompletionMessageToolCallFunction = ChatCompletionMessageToolCall.Function;
-export type OpenAIChatCompletionMessageToolCall = ChatCompletionMessageToolCall;
-export type OpenAIChatCompletionMessage = ChatCompletionMessage;
-export type OpenAIChatCompletionTokenLogprobTopLogprob = ChatCompletionTokenLogprob.TopLogprob;
-export type OpenAIChatCompletionTokenLogprob = ChatCompletionTokenLogprob;
-export type OpenAIChatCompletionChoiceLogprobs = ChatCompletion.Choice.Logprobs;
-export type OpenAIChatCompletionChoice = ChatCompletion.Choice;
-export type OpenAIChatCompletion = ChatCompletion;
-export type OpenAIChatCompletionChunkChoiceDeltaFunctionCall = ChatCompletionChunk.Choice.Delta.FunctionCall;
-export type OpenAIChatCompletionChunkChoiceDeltaToolCallFunction = ChatCompletionChunk.Choice.Delta.ToolCall.Function;
-export type OpenAIChatCompletionChunkChoiceDeltaToolCall = ChatCompletionChunk.Choice.Delta.ToolCall;
-export type OpenAIChatCompletionChunkChoiceDelta = ChatCompletionChunk.Choice.Delta;
-export type OpenAIChatCompletionChunkChoiceLogprobs = ChatCompletionChunk.Choice.Logprobs;
-export type OpenAIChatCompletionChunkChoice = ChatCompletionChunk.Choice;
-export type OpenAIChatCompletionChunk = ChatCompletionChunk;
+import {
+    OpenAIChatCompletion,
+    OpenAIChatCompletionAudio,
+    OpenAIChatCompletionChoice,
+    OpenAIChatCompletionChoiceLogprobs,
+    OpenAIChatCompletionChunk,
+    OpenAIChatCompletionChunkChoice,
+    OpenAIChatCompletionChunkChoiceDelta,
+    OpenAIChatCompletionChunkChoiceDeltaFunctionCall,
+    OpenAIChatCompletionChunkChoiceDeltaToolCall,
+    OpenAIChatCompletionChunkChoiceDeltaToolCallFunction,
+    OpenAIChatCompletionChunkChoiceLogprobs,
+    OpenAIChatCompletionMessage,
+    OpenAIChatCompletionMessageAnnotation,
+    OpenAIChatCompletionMessageAnnotationURLCitation,
+    OpenAIChatCompletionMessageFunctionCall,
+    OpenAIChatCompletionMessageToolCall,
+    OpenAIChatCompletionMessageToolCallFunction,
+    OpenAIChatCompletionTokenLogprob,
+    OpenAIChatCompletionTokenLogprobTopLogprob,
+    OpenAICompletionUsage,
+    OpenAICompletionUsageCompletionTokensDetails,
+    OpenAICompletionUsagePromptTokensDetails,
+    OpenAIOnlyResponse
+} from "./types";
 
 export const OpenAICompletionUsageCompletionTokensDetailsValidator = type({
     'accepted_prediction_tokens?': 'number',
@@ -182,28 +174,6 @@ export const OpenAIChatCompletionChunkValidator = type({
     'system_fingerprint?': 'string',
     'usage?': OpenAICompletionUsageValidator.or('null')
 }) satisfies Type<OpenAIChatCompletionChunk>;
-
-export type OpenAIResponse = ChatCompletion | ChatCompletionChunk;
-
-export type OpenAIOnlyResponseFields = readonly[
-    'system_fingerprint',
-    'logprobs',
-    'refusal',
-    'function_call',
-    'audio',
-    'annotations'
-];
-export type OpenAIOnlyResponse = {
-    system_fingerprint?: string | null;
-    logprobs?: unknown;
-    refusal?: string | null;
-    function_call?: {
-        name?: string;
-        arguments?: string;
-    };
-    audio?: unknown;
-    annotations?: unknown[];
-};
 
 export const OpenAIOnlyResponseValidator = type({
     'system_fingerprint?': 'string | null',

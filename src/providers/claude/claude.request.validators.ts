@@ -359,7 +359,7 @@ const ClaudeToolInputSchemaValidator = type({
     'required?': stringArrayOrNull
 }) satisfies Type<BetaTool.InputSchema>;
 
-const ClaudeToolValidator = type({
+export const ClaudeToolValidator = type({
     input_schema: ClaudeToolInputSchemaValidator,
     name: 'string',
     'cache_control?': cache_control,
