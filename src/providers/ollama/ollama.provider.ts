@@ -1,14 +1,8 @@
-import AIProvider from "../ai.provider";
+import AIProvider from "../types/ai.provider";
 import {Ollama} from "ollama";
-import {AIRequestStat, IProvider, ModelInfo, OllamaProviderConfig} from "../types";
-import {
-    LLMWorkerRequest,
-    OllamaWorkerChatRequest,
-    OllamaWorkerGenerateRequest,
-    ProviderType,
-    RequestType
-} from "../../types";
-import {ErrorMessages} from "../../utils/error-messages";
+import {AIRequestStat, IProvider, ModelInfo, OllamaProviderConfig, ProviderType, RequestType} from "../types";
+import {LLMWorkerRequest, OllamaWorkerChatRequest, OllamaWorkerGenerateRequest} from "../../types";
+import {ErrorMessages} from "../../utils";
 import logger from "../../utils/logger";
 import {ResponseService} from "../../services";
 import {Provider} from "../../db/types";

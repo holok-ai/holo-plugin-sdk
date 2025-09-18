@@ -1,7 +1,7 @@
-import {createTranslateFunc, FieldTranslator, TranslateFunc} from "../../translators";
 import {HoloFinishReason, HoloResponse, HoloResponseValidator, HoloUsage} from "../../holo";
-import {OllamaChatResponseValidator} from "../ollama.response.validators";
+import {OllamaChatResponseValidator} from "../validators";
 import {OllamaChatResponse} from "../types";
+import {createTranslateFunc, FieldTranslator, TranslateFunc} from "../../types";
 
 export const fromHoloUsageTranslator: TranslateFunc<HoloUsage, Partial<OllamaChatResponse>> =
     async (holoUsage: HoloUsage): Promise<Partial<Partial<OllamaChatResponse>>> => {

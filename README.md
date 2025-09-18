@@ -491,7 +491,7 @@ export const parseLLMRequest = (
 
 #### Step 4: Create Request Translator
 
-4. **Create Request Translator** (`src/translators/providers/new-provider.translator.ts`):
+4. **Create Request Translator** (`src/translators/providers/new-provider.auditors.ts`):
 ```typescript
 import { injectable } from 'tsyringe';
 import { BaseRequestTranslator } from './base.translator';
@@ -527,7 +527,7 @@ export class NewProviderRequestTranslator extends BaseRequestTranslator {
 }
 ```
 
-5. **Register Translator** (`src/translators/translator.registry.ts`):
+5. **Register Translator** (`src/translators/auditor.registry.ts`):
 ```typescript
 // Add to constructor and initializeTranslators method
 constructor(

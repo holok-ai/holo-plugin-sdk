@@ -7,7 +7,7 @@ import type {
     ChatCompletionMessageToolCall
 } from "openai/resources/chat/completions";
 import type {CompletionUsage} from "openai/resources/completions";
-import {ChatCompletionTokenLogprob} from "openai/src/resources/chat/completions/completions";
+import {ChatCompletionTokenLogprob} from "openai/resources/chat/completions/completions";
 
 export type OpenAICompletionUsage = CompletionUsage;
 export type OpenAICompletionUsageCompletionTokensDetails = CompletionUsage.CompletionTokensDetails;

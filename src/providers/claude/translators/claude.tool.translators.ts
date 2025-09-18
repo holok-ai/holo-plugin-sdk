@@ -1,8 +1,8 @@
-import {FieldTranslator, Guard, TranslateFunc} from "../../translators";
 import {HoloTool, HoloToolChoice, HoloToolChoiceValidator, HoloToolValidator} from "../../holo";
 import {ClaudeTool, ClaudeToolChoice, ClaudeToolUnion} from "../types";
-import {ClaudeToolChoiceValidator, ClaudeToolUnionValidator, ClaudeToolValidator} from "../claude.request.validators";
+import {ClaudeToolChoiceValidator, ClaudeToolUnionValidator, ClaudeToolValidator} from "../validators";
 import {ArkErrors} from "arktype";
+import {FieldTranslator, Guard, TranslateFunc} from "../../types";
 
 const defaultToolInputSchema: ClaudeTool["input_schema"] = {
     type: "object",

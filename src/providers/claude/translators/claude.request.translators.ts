@@ -1,8 +1,8 @@
-import {ClaudeChatRequest, HoloRequest, HoloRequestValidator} from "../../types";
-import {createTranslateFunc, FieldTranslator, TranslateFunc} from "../../translators";
+import {ClaudeChatRequest, createTranslateFunc, FieldTranslator, HoloRequest, TranslateFunc} from "../../types";
+import {HoloRequestValidator} from "../../holo";
+import {ClaudeChatRequestValidator} from "../validators";
 import {fromHoloMessagesTranslator, toHoloMessagesTranslator} from "./claude.message.translators";
 import {ClaudeToolChoiceTranslator, ClaudeToolTranslator} from "./claude.tool.translators";
-import {ClaudeChatRequestValidator} from "../claude.request.validators";
 
 export const fromHoloServiceTierTranslator: TranslateFunc<HoloRequest, ClaudeChatRequest> = async (source: HoloRequest) => {
     if (!source.service_tier) return {};

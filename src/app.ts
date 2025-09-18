@@ -12,7 +12,7 @@ import {createRoutes} from "./api/routes";
 import {env} from "./env";
 import listEndpoints from "express-list-endpoints";
 import {AppDB} from "./db/app.db";
-import { ProxyAdminService } from './services/proxy.admin.service';
+import {ProxyAdminService} from './services/proxy.admin.service';
 
 // Initialize Express app
 const app: Application = express();

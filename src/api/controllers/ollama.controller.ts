@@ -4,7 +4,7 @@ import {BaseController} from './base.controller';
 import {HttpApiRequest} from '../types';
 import {injectable} from 'tsyringe';
 import {ResponseService} from "../../services";
-import {ProviderType, RequestType} from '../../types';
+import {ProviderType, RequestType} from "../../providers/types";
 
 @injectable()
 export default class OllamaController extends BaseController {

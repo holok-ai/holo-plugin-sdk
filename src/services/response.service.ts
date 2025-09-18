@@ -7,13 +7,13 @@ import {v4 as uuidv4} from "uuid";
 import {HttpApiRequest} from "../api/types";
 import {Request, Response} from "express";
 import {env} from "../env";
-import {LLMWorkerRequest, LLMWorkerResponse, ProviderType, RequestType} from '../types';
+import {LLMWorkerRequest, LLMWorkerResponse} from '../types';
 import {StreamFormatter} from './streamFormatter.service';
-import {OllamaParser} from "../providers/ollama/ollama.parser";
-import {ClaudeParser} from "../providers/claude/claude.parser";
-import {OpenAIParser} from "../providers/openai/openai.parser";
-import {ErrorMessages} from "../utils/error-messages";
-import {ProviderRequestTypes} from "../providers/types";
+import {OllamaParser} from "../providers/ollama";
+import {ClaudeParser} from "../providers/claude";
+import {OpenAIParser} from "../providers/openai";
+import {ErrorMessages} from "../utils";
+import {ProviderChatRequest, ProviderType, RequestType} from "../providers/types";
 
 
 /**
@@ -160,7 +160,7 @@ export class ResponseService {
         req: Request,
         providerType: ProviderType,
         type: RequestType
-    ): Promise<ProviderRequestTypes> {
+    ): Promise<ProviderChatRequest> {
         logger.debug('Unified LLM request parser routing', {providerType, type});
 
         switch (providerType) {

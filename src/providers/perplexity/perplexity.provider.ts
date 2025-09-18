@@ -1,9 +1,9 @@
-import {AIProvider} from '../ai.provider';
+import {AIProvider} from '../types/ai.provider';
 import logger from '../../utils/logger';
 import OpenAI from 'openai';
-import {AIRequestStat, IProvider, ModelInfo} from '../types';
-import {LLMWorkerRequest, OpenAIWorkerRequest, ProviderType} from '../../types';
-import {ErrorMessages} from '../../utils/error-messages';
+import {AIRequestStat, IProvider, ModelInfo, ProviderType} from '../types';
+import {LLMWorkerRequest, OpenAIWorkerRequest} from '../../types';
+import {ErrorMessages} from '../../utils';
 import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 import {Stream} from "openai/streaming";
 import {ResponseService} from "../../services";

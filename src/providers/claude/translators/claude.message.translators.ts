@@ -1,9 +1,9 @@
-import {FieldTranslator, Guard, TranslateFunc} from "../../translators";
 import {HoloMessage, HoloMessageValidator, HoloRequest} from "../../holo";
-import {ClaudeRequestMessage, ClaudeChatRequest} from "../types";
-import {ClaudeMessageValidator} from "../claude.request.validators";
+import {ClaudeChatRequest, ClaudeRequestMessage} from "../types";
+import {ClaudeMessageValidator} from "../validators";
 import {ClaudeContentTranslator} from "./claude.content.translators";
 import {createStableId} from "../util/stable-id";
+import {FieldTranslator, Guard, TranslateFunc} from "../../types";
 
 // Individual FieldTranslators for different aspects of messages
 export const ClaudeMessageRoleTranslator = new FieldTranslator<HoloMessage, ClaudeRequestMessage>(
@@ -204,38 +204,38 @@ export const ClaudeMessageTranslator = new FieldTranslator<HoloMessage, ClaudeRe
 );
 
 // Messages array translator for HoloRequest.messages[] -> ClaudeChatRequest.messages[]
-export const fromHoloMessagesTranslator: TranslateFunc<HoloRequest, ClaudeChatRequest> = 
+export const fromHoloMessagesTranslator: TranslateFunc<HoloRequest, ClaudeChatRequest> =
     async (holoRequest: HoloRequest): Promise<Partial<ClaudeChatRequest>> => {
         if (!holoRequest.messages || holoRequest.messages.length === 0) return {};
-        
+
         const claudeMessages = await Promise.all(
-            holoRequest.messages.map(async (message) => 
+            holoRequest.messages.map(async (message) =>
                 await ClaudeMessageTranslator.fromHolo(message)
             )
         );
-        
+
         // Filter out any failed translations
         const validMessages = claudeMessages.filter(msg => Object.keys(msg).length > 0) as ClaudeRequestMessage[];
-        
-        return { messages: validMessages };
+
+        return {messages: validMessages};
     };
 
 // Reverse: ClaudeChatRequest.messages[] -> HoloRequest.messages[]
-export const toHoloMessagesTranslator: TranslateFunc<ClaudeChatRequest, HoloRequest> = 
+export const toHoloMessagesTranslator: TranslateFunc<ClaudeChatRequest, HoloRequest> =
     async (claudeRequest: ClaudeChatRequest): Promise<Partial<HoloRequest>> => {
         if (!claudeRequest.messages || claudeRequest.messages.length === 0) return {};
-        
+
         // Each Claude message can split into multiple Holo messages
         const holoMessageArrays = await Promise.all(
-            claudeRequest.messages.map(async (message) => 
+            claudeRequest.messages.map(async (message) =>
                 await toHoloMessageArrayTranslator(message)
             )
         );
-        
+
         // Flatten the array of arrays into a single array
         const allHoloMessages = holoMessageArrays.flat();
-        
-        return { messages: allHoloMessages };
+
+        return {messages: allHoloMessages};
     };
 
 // Export the array splitting function for use in response translators

@@ -1,5 +1,5 @@
 import {type, type Type} from 'arktype';
-import {stringOrNull} from "../types/validator.types";
+import {stringOrNull} from "../../types";
 import {
     OpenAIChatCompletion,
     OpenAIChatCompletionAudio,
@@ -24,7 +24,7 @@ import {
     OpenAICompletionUsageCompletionTokensDetails,
     OpenAICompletionUsagePromptTokensDetails,
     OpenAIOnlyResponse
-} from "./types";
+} from "../types";
 
 export const OpenAICompletionUsageCompletionTokensDetailsValidator = type({
     'accepted_prediction_tokens?': 'number',

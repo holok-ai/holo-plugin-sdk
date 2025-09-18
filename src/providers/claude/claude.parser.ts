@@ -1,9 +1,7 @@
 import {Request} from 'express';
 import {MessageCreateParamsBase} from '@anthropic-ai/sdk/resources/beta/messages/messages';
-import {ClaudeChatRequestWithDefaults} from "./claude.request.validators";
-import {validateRequest} from "../types/validator.types";
-import {RequestType} from '../../types';
-import {ProviderType} from '../types';
+import {ClaudeChatRequestWithDefaults} from "./validators";
+import {ProviderType, RequestType, validateRequest} from "../types";
 
 
 export class ClaudeParser {

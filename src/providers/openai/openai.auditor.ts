@@ -1,7 +1,7 @@
 import {injectable} from 'tsyringe';
-import {LLMWorkerRequest, LLMWorkerResponse, OpenAIWorkerRequest, ProviderType} from '../../types';
+import {LLMWorkerRequest, LLMWorkerResponse, OpenAIWorkerRequest} from '../../types';
 import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
-import {BaseAuditor} from "../types";
+import {BaseAuditor, ProviderType} from "../types";
 
 @injectable()
 export class OpenAIAuditor extends BaseAuditor {
@@ -111,14 +111,14 @@ export class OpenAIAuditor extends BaseAuditor {
 
         // Extract token usage from metrics or payload
         if (workerResponse.metrics) {
-            llmResponse.usage_raw = workerResponse.metrics; 
+            llmResponse.usage_raw = workerResponse.metrics;
             llmResponse.input_tokens = workerResponse.metrics.inputTokens;
             llmResponse.output_tokens = workerResponse.metrics.outputTokens;
             llmResponse.time_to_first_token = workerResponse.metrics.timeToFirstToken;
             llmResponse.total_processing_time = workerResponse.metrics.totalProcessingTime;
-            
+
         } else if (payload.usage) {
-            llmResponse.usage_raw = payload.usage; 
+            llmResponse.usage_raw = payload.usage;
             llmResponse.input_tokens = payload.usage.prompt_tokens;
             llmResponse.output_tokens = payload.usage.completion_tokens;
             llmResponse.time_to_first_token = payload.usage.timeToFirstToken;

@@ -1,13 +1,8 @@
 import {MessageCreateParamsBase} from '@anthropic-ai/sdk/resources/beta/messages/messages';
 import {ChatRequest, GenerateRequest} from 'ollama';
 import {ChatCompletionCreateParamsBase} from 'openai/resources/chat/completions/completions';
-import {ProviderType} from "./provider.types";
 
-// Request type enum
-export enum RequestType {
-    GENERATE = 'generate',
-    CHAT = 'chat'
-}
+import {ProviderType, RequestType} from "../providers/types";
 
 export interface LLMWorkerRequest {
     organizationId?: string;

@@ -1,7 +1,7 @@
-import {FieldTranslator, Guard, TranslateFunc} from "../../translators";
 import {HoloContent, HoloMessage, HoloMessageValidator, HoloRequest} from "../../holo";
 import {OllamaChatRequest, OllamaMessage, OllamaMessageValidator} from "../types";
 import {isUint8Array, uint8ToDataUrl} from "../../../utils";
+import {FieldTranslator, Guard, TranslateFunc} from "../../types";
 
 // Individual message translator functions
 export const fromHoloMessageTranslator: TranslateFunc<HoloMessage, OllamaMessage> =

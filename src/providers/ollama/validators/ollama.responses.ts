@@ -6,29 +6,16 @@ import {
     OllamaErrorResponse,
     OllamaGenerateResponse,
     OllamaListResponse,
-    OllamaMessage,
+    OllamaMessageValidator,
     OllamaModelDetails,
     OllamaModelResponse,
     OllamaOnlyResponse,
     OllamaProgressResponse,
+    OllamaResponse,
     OllamaShowResponse,
-    OllamaStatusResponse,
-    OllamaToolCall
-} from "./types";
+    OllamaStatusResponse
+} from "../types";
 
-export const OllamaToolCallValidator = type({
-    function: type({
-        name: 'string',
-        arguments: 'Record<string, unknown>'
-    })
-}) satisfies Type<OllamaToolCall>;
-
-export const OllamaMessageValidator = type({
-    role: 'string',
-    content: 'string',
-    'images?': type('string[]'),
-    'tool_calls?': OllamaToolCallValidator.array()
-}) satisfies Type<OllamaMessage>;
 
 export const OllamaGenerateResponseValidator = type({
     model: 'string',
@@ -148,4 +135,4 @@ export const OllamaResponseValidator = OllamaGenerateResponseValidator
     .or(OllamaShowResponseValidator)
     .or(OllamaListResponseValidator)
     .or(OllamaErrorResponseValidator)
-    .or(OllamaStatusResponseValidator);
+    .or(OllamaStatusResponseValidator) satisfies Type<OllamaResponse>;

@@ -1,13 +1,13 @@
-import {IProviderTranslator} from '../base.translator.interface';
 import {ClaudeChatRequest, HoloRequest,} from "../types";
 import logger from "../../utils/logger";
-import {ClaudeRequestTranslator} from "./translators/claude.request.translators";
+import {ClaudeRequestTranslator} from "./translators";
+import {IProviderTranslator} from "../types";
 
 
 export class ClaudeTranslator implements IProviderTranslator {
     fromHoloChatRequest(request: HoloRequest): Promise<Partial<ClaudeChatRequest>> {
         logger.debug('translating holo request to claude request', request);
-        return ClaudeRequestTranslator.fromHolo(request) as ClaudeChatRequest;
+        return ClaudeRequestTranslator.fromHolo(request);
     }
 
     toHoloChatRequest(request: ClaudeChatRequest): Promise<Partial<HoloRequest>> {

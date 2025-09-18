@@ -1,13 +1,13 @@
 import 'reflect-metadata';
 import {BaseController} from "./base.controller";
-import {injectable, container} from "tsyringe";
+import {container, injectable} from "tsyringe";
 import {ApiResponse, HttpApiRequest} from "../types";
-import {ProviderType} from '../../types';
 import {OpenAIController} from './openai.controller';
 import {ClaudeController} from './claude.controller';
 import OllamaController from './ollama.controller';
 import {PerplexityController} from './perplexity.controller';
 import logger from '../../utils/logger';
+import {ProviderType} from "../../providers/types";
 
 @injectable()
 export class CustomUrlController extends BaseController {
@@ -16,38 +16,38 @@ export class CustomUrlController extends BaseController {
         super();
     }
 
-   public resolveRequest = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+    public resolveRequest = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            const { provider, appId } = req.params;
+            const {provider, appId} = req.params;
             const urlPath = req.params[0]; // This captures the rest of the URL after /:provider/:appId/
             req.applicationId = appId;
-            
+
             // Get the appropriate controller based on provider
             const controller = this.getControllerForProvider(provider.toUpperCase() as ProviderType);
-            
+
             if (!controller) {
                 logger.error(`no controller resolved for : ${provider}`);
-                res.status(400).json({ error: `Unsupported provider: ${provider}` });
+                res.status(400).json({error: `Unsupported provider: ${provider}`});
                 return;
             }
 
             // Route to the appropriate method based on the URL path and provider
             const method = this.getMethodForPath(urlPath, provider.toUpperCase() as ProviderType);
-            
+
             if (!method || typeof controller[method] !== 'function') {
-                res.status(404).json({ error: `Method not found for path: ${urlPath}` });
+                res.status(404).json({error: `Method not found for path: ${urlPath}`});
                 return;
             }
 
             // Call the appropriate method on the controller
             await controller[method](req, res);
-            
+
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to resolve request');
         }
-   }
+    }
 
-   private getControllerForProvider(provider: ProviderType): any {
+    private getControllerForProvider(provider: ProviderType): any {
         switch (provider) {
             case ProviderType.OPENAI:
                 return container.resolve(OpenAIController);
@@ -60,13 +60,13 @@ export class CustomUrlController extends BaseController {
             default:
                 return null;
         }
-   }
+    }
 
-   private getMethodForPath(urlPath: string, provider: ProviderType): string | null {
+    private getMethodForPath(urlPath: string, provider: ProviderType): string | null {
         // Remove leading slash if present
         const cleanPath = urlPath.startsWith('/') ? urlPath.substring(1) : urlPath;
         logger.debug(`resolving method for path: ${cleanPath} and provider: ${provider}`);
-        
+
         // Map URL paths to controller methods based on provider
         switch (provider) {
             case ProviderType.OPENAI:
@@ -108,6 +108,6 @@ export class CustomUrlController extends BaseController {
             default:
                 return null;
         }
-   }
+    }
 
 }

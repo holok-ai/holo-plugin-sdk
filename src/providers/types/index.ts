@@ -1,19 +1,18 @@
-import {LLMWorkerRequest, LLMWorkerResponse, RequestType} from '../../types';
-import {ClaudeChatRequest} from "../claude/claude.request.validators";
-import {OllamaChatRequest} from "../ollama/types";
-import {OpenAIChatRequest} from "../openai/types";
+import {LLMWorkerRequest, LLMWorkerResponse} from '../../types';
+import {OllamaChatRequest} from "../ollama";
+import {OpenAIChatRequest} from "../openai";
+import {ClaudeChatRequest} from "../claude";
 
-export * from './auditor.types';
+export * from '../types/auditor.types';
+export * from '../types/validator.types';
+export * from '../types/translators';
+export * from '../types/ai.provider';
 
-// Universal Request/Response System
-export * from '../holo/holo.request.validators';
-export * from '../holo/holo.response.validators';
+export * from '../claude/types';
+export * from '../ollama/types';
+export * from '../openai/types';
+export * from '../holo/types';
 
-// Provider-specific translators
-export * as ClaudeTranslator from '../claude/claude.translator';
-export * as ClaudeRequestTranslators from '../claude/translators/claude.request.translators';
-export * as OpenAITranslator from '../openai/openai.translator';
-export * as OllamaTranslator from '../ollama/ollama.translator';
 
 /**
  * Interface for LLM providers
@@ -74,6 +73,12 @@ export interface ModelInfo {
     [key: string]: any; // Allow additional properties
 }
 
+// Request type enum
+export enum RequestType {
+    GENERATE = 'generate',
+    CHAT = 'chat'
+}
+
 export interface AIRequestStat {
     type: RequestType;
     startTime: number;
@@ -83,30 +88,15 @@ export interface AIRequestStat {
     error: number;
 }
 
-export {ProviderType} from '../../types';
-export {ClaudeChatRequest} from '../claude/claude.request.validators';
-
-export type ProviderRequestTypes =
+export type ProviderChatRequest =
     ClaudeChatRequest
     | OllamaChatRequest
     | OpenAIChatRequest;
-export {HoloRequest} from "../holo/types/requests";
-export {HoloRequestMetadata} from "../holo/types/requests";
-export {HoloResponseFormat} from "../holo/types/requests";
-export {HoloToolChoice} from "../holo/types/requests";
-export {HoloTool} from "../holo/types/requests";
-export {HoloMessage} from "../holo/types/requests";
-export {ClaudeResponse} from "../claude/types";
-export {HoloStreamChunk} from "../holo";
-export {HoloResponse} from "../holo";
-export {HoloResponseStreamChoice} from "../holo";
-export {HoloResponseStreamDelta} from "../holo";
-export {HoloResponseChoice} from "../holo";
-export {HoloFinishReason} from "../holo";
-export {HoloResponseMessage} from "../holo";
-export {HoloResponseToolCall} from "../holo";
-export {HoloResponseUsage} from "../holo";
-export {OllamaChatRequest} from "../ollama/types";
-export {OllamaResponse} from "../ollama/types/responses";
-export {OpenAIChatRequest} from "../openai/types";
-export {OpenAIResponse} from "../openai/types";
+
+export enum ProviderType {
+    OLLAMA = 'OLLAMA',
+    CLAUDE = 'ANTHROPIC',
+    ANTHROPIC = 'ANTHROPIC',
+    OPENAI = 'OPENAI',
+    PERPLEXITY = 'PERPLEXITY'
+}

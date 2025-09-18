@@ -1,4 +1,4 @@
-import { ProviderType } from './provider.types';
+import {ProviderType} from "../providers/types";
 
 export interface DatabaseConfig {
     host: string;

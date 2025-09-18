@@ -1,7 +1,7 @@
-import {FieldTranslator, TranslateFunc} from "../../translators";
 import {HoloTool, HoloToolChoice, HoloToolChoiceValidator, HoloToolValidator} from "../../holo";
 import {type} from "arktype";
 import {OpenAIChatCompletionTool, OpenAIChatCompletionToolChoiceOption} from "../types";
+import {FieldTranslator, TranslateFunc} from "../../types";
 
 const ChatCompletionToolValidator = type({
     function: type({
@@ -24,15 +24,15 @@ export const fromHoloToolTranslator: TranslateFunc<HoloTool, OpenAIChatCompletio
     type: 'function',
     function: {
         name: holoTool.name,
-        ...(holoTool.description && { description: holoTool.description }),
-        ...(holoTool.parameters && { parameters: holoTool.parameters })
+        ...(holoTool.description && {description: holoTool.description}),
+        ...(holoTool.parameters && {parameters: holoTool.parameters})
     }
 });
 
 export const toHoloToolTranslator: TranslateFunc<OpenAIChatCompletionTool, HoloTool> = async (openaiTool: OpenAIChatCompletionTool): Promise<Partial<HoloTool>> => ({
     name: openaiTool.function.name,
-    ...(openaiTool.function.description && { description: openaiTool.function.description }),
-    ...(openaiTool.function.parameters && { parameters: openaiTool.function.parameters })
+    ...(openaiTool.function.description && {description: openaiTool.function.description}),
+    ...(openaiTool.function.parameters && {parameters: openaiTool.function.parameters})
 });
 
 export const OpenAIToolTranslator = new FieldTranslator<HoloTool, OpenAIChatCompletionTool>(
@@ -46,7 +46,7 @@ export const fromHoloToolChoiceTranslator: TranslateFunc<HoloToolChoice, OpenAIC
     if (choice.type === "specific") {
         return {
             type: "function",
-            function: { name: choice.name }
+            function: {name: choice.name}
         };
     }
     return choice.type;
@@ -60,7 +60,7 @@ export const toHoloToolChoiceTranslator: TranslateFunc<OpenAIChatCompletionToolC
         };
     }
 
-    return { type: choice as 'auto' | 'none' | 'required' };
+    return {type: choice as 'auto' | 'none' | 'required'};
 };
 
 export const OpenAIToolChoiceTranslator = new FieldTranslator<HoloToolChoice, OpenAIChatCompletionToolChoiceOption>(

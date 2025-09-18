@@ -1,6 +1,7 @@
 import {type, type Type} from 'arktype';
-import type {
+import {
     ChatCompletionAssistantMessageParam,
+    ChatCompletionCreateParams,
     ChatCompletionDeveloperMessageParam,
     ChatCompletionMessageToolCall,
     ChatCompletionNamedToolChoice,
@@ -10,8 +11,7 @@ import type {
     ChatCompletionToolMessageParam,
     ChatCompletionUserMessageParam
 } from 'openai/resources/chat/completions';
-import {booleanOrNull, numberOrNull, stringOrNull} from "../types/validator.types";
-import {ChatCompletionCreateParams} from "openai/src/resources/chat/completions/completions";
+import {booleanOrNull, numberOrNull, stringOrNull} from "../../types";
 import {
     OpenAIAssistantMessageAudio,
     OpenAIChatCompletionAudioParam,
@@ -38,7 +38,7 @@ import {
     OpenAIResponseFormatJSONSchemaJSONSchema,
     OpenAIResponseFormatText,
     OpenAISharedChatRequest
-} from "./types";
+} from "../types";
 
 
 export const OpenAIMetadataValidator = type('Record<string, string>') satisfies Type<OpenAIMetadata>;

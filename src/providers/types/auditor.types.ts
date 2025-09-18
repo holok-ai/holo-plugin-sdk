@@ -1,5 +1,7 @@
-import {LLMWorkerRequest, LLMWorkerResponse, ProviderType} from "../../types";
+import {LLMWorkerRequest, LLMWorkerResponse} from "../../types";
 import {LlmRequest, LlmResponse, LlmStatus} from "../../db/types";
+import {ProviderType} from "./index";
+
 
 export interface IAuditor {
     readonly provider: ProviderType;

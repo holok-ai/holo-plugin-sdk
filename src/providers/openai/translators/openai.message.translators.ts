@@ -1,7 +1,14 @@
-import {FieldTranslator, Guard, TranslateFunc} from "../../translators";
-import {HoloMessage, HoloMessageValidator, HoloRequest} from "../../holo";
-import {OpenAIContentTranslator} from "./openai.content.translators";
-import {OpenAIChatRequest, OpenAIRequestMessage} from "../types";
+import {
+    FieldTranslator,
+    Guard,
+    HoloMessage,
+    HoloRequest,
+    OpenAIChatRequest,
+    OpenAIRequestMessage,
+    TranslateFunc
+} from "../../types";
+import {OpenAIContentTranslator} from "./index";
+import {HoloMessageValidator} from "../../holo";
 
 export const fromHoloMessageContentTranslator: TranslateFunc<HoloMessage, OpenAIRequestMessage> =
     async (holoMessage: HoloMessage): Promise<Partial<OpenAIRequestMessage>> => {

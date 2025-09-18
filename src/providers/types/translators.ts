@@ -1,10 +1,15 @@
-import {type} from "arktype";
-import logger from "../utils/logger";
+import {ArkErrors, type} from "arktype";
+import logger from "../../utils/logger";
+import {ClaudeChatRequest} from "../claude";
+import {OllamaChatRequest} from "../ollama";
+import {OpenAIChatRequest} from "../openai";
+import {HoloRequest} from "../holo";
 
-export * from './claude/claude.auditor';
-export * from './ollama/ollama.auditor';
-export * from './openai/openai.auditor';
+export interface IProviderTranslator {
+    toHoloChatRequest(request: ClaudeChatRequest | OllamaChatRequest | OpenAIChatRequest): Promise<Partial<HoloRequest> | type.errors>;
 
+    fromHoloChatRequest(request: HoloRequest): Promise<Partial<ClaudeChatRequest> | Partial<OllamaChatRequest> | Partial<OpenAIChatRequest> | type.errors>;
+}
 
 export interface IFieldTranslator<THolo, TProvider> {
     fromHolo(source: THolo): Promise<Partial<TProvider>>;
@@ -78,10 +83,8 @@ export function createTranslateFunc<TSource extends {}, TTarget, TSourceField, T
     };
 }
 
-
 export type TranslateFunc<TSource, TTarget> =
     (source: TSource) => Promise<Partial<TTarget>>;
-
 
 export class Guard<TSource> {
     constructor(
@@ -98,7 +101,6 @@ export class Guard<TSource> {
         throw new Error(`Guard ${this.name} failed`);
     }
 }
-
 
 export class TranslatorPipeline<TSource, TTarget> {
     constructor(
@@ -128,7 +130,7 @@ export class TranslatorPipeline<TSource, TTarget> {
 
         const result = await translate(source);
 
-        if (result instanceof type.errors) {
+        if (result instanceof ArkErrors) {
             //TODO: Send off to logging
             logger.error('Error running translation pipeline', result.summary);
             if (!failQuietly) {

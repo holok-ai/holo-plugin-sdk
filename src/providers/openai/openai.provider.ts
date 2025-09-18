@@ -1,9 +1,9 @@
-import {AIProvider} from '../ai.provider';
+import {AIProvider} from '../types/ai.provider';
 import logger from '../../utils/logger';
 import OpenAI from 'openai';
-import {AIRequestStat, IProvider, ModelInfo} from '../types';
-import {LLMWorkerRequest, OpenAIWorkerRequest, ProviderType} from '../../types';
-import {ErrorMessages} from '../../utils/error-messages';
+import {AIRequestStat, IProvider, ModelInfo, ProviderType} from '../types';
+import {LLMWorkerRequest, OpenAIWorkerRequest} from '../../types';
+import {ErrorMessages} from '../../utils';
 import {ResponseService} from "../../services";
 import {Provider} from "../../db/types";
 
@@ -124,7 +124,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         // @ts-ignore
         const response = await this.client.chat.completions.create(chatRequest);
         const startTime = Date.now();
-        let timeToFirst: number = 0; 
+        let timeToFirst: number = 0;
 
         if (chatRequest.stream) {
             logger.debug('Starting OpenAI chat completions stream', {requestId, model: chatRequest.model});
@@ -135,7 +135,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                     logger.debug(`chunk payload: ${JSON.stringify(chunk)}`);
 
                     if (chunk?.usage) {
-                        chunk.usage.timeToFirstToken = timeToFirst; 
+                        chunk.usage.timeToFirstToken = timeToFirst;
                         chunk.usage.totalProcessingTime = Date.now() - startTime;
                         const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk, fullResponse);
                         await this.onResponseChunk(responseChunk, true);
@@ -152,7 +152,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                     }
 
                     if (choice?.delta?.content) {
-                        if (timeToFirst == 0) timeToFirst = Date.now() - startTime; 
+                        if (timeToFirst == 0) timeToFirst = Date.now() - startTime;
                         const token = choice.delta.content;
                         fullResponse += token;
 

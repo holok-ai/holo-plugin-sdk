@@ -13,7 +13,7 @@ trap cleanup SIGTERM SIGINT
 
 echo "Starting LLM Proxy services..."
 
-export NODE_OPTIONS="--loader ts-node/esm --experimental-specifier-resolution=node"
+export NODE_OPTIONS="--import ./register-ts-node.mjs"
 
 # Start the API server in the background
 echo "Starting API server..."

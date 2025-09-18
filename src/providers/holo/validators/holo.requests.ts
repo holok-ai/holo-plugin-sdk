@@ -11,7 +11,7 @@ import {
     HoloToolCall,
     HoloToolChoice,
     HoloToolFunctionCall
-} from "./types";
+} from "../types";
 
 // ---------- HoloContent validators ----------
 export const HoloContentTextValidator = type({

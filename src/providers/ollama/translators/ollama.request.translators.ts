@@ -1,9 +1,9 @@
 import {HoloRequest, HoloRequestValidator} from "../../holo";
-import {createTranslateFunc, FieldTranslator, TranslateFunc} from "../../translators";
 import {fromHoloMessagesTranslator, toHoloMessagesTranslator} from "./ollama.message.translators";
 import {OllamaChatRequest, OllamaChatRequestValidator} from "../types";
 import {OllamaToolTranslator} from "./ollama.tool.translators";
 import {OllamaOptionsTranslator} from "./ollama.options.translators";
+import {createTranslateFunc, FieldTranslator, TranslateFunc} from "../../types";
 
 // Response format translator
 export const fromHoloResponseFormatTranslator: TranslateFunc<HoloRequest, OllamaChatRequest> =

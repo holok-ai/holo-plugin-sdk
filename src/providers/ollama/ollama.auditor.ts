@@ -1,15 +1,8 @@
 import {injectable} from 'tsyringe';
-import {
-    LLMWorkerRequest,
-    LLMWorkerResponse,
-    OllamaWorkerChatRequest,
-    OllamaWorkerGenerateRequest,
-    ProviderType,
-    RequestType
-} from '../../types';
+import {LLMWorkerRequest, LLMWorkerResponse, OllamaWorkerChatRequest, OllamaWorkerGenerateRequest} from '../../types';
 import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
 import logger from '../../utils/logger';
-import {BaseAuditor} from "../types";
+import {BaseAuditor, ProviderType, RequestType} from "../types";
 
 @injectable()
 export class OllamaAuditor extends BaseAuditor {
@@ -99,7 +92,7 @@ export class OllamaAuditor extends BaseAuditor {
 
         // Extract token usage from metrics or payload
         if (workerResponse.metrics) {
-            llmResponse.usage_raw = workerResponse.metrics; 
+            llmResponse.usage_raw = workerResponse.metrics;
             llmResponse.input_tokens = workerResponse.metrics.inputTokens;
             llmResponse.output_tokens = workerResponse.metrics.outputTokens;
             llmResponse.time_to_first_token = workerResponse.metrics.timeToFirstToken;
@@ -120,11 +113,11 @@ export class OllamaAuditor extends BaseAuditor {
 
             const metrics = {
                 input_tokens: promptTokens,
-                output_tokens: responseTokens, 
-                time_to_first_token: this.calculateTimeToFirstToken(payload), 
+                output_tokens: responseTokens,
+                time_to_first_token: this.calculateTimeToFirstToken(payload),
                 total_processing_time: (payload.total_duration ? Math.round(payload.total_duration / 1000000) : undefined)
-            }; 
-            llmResponse.usage_raw = metrics; 
+            };
+            llmResponse.usage_raw = metrics;
         }
 
         // Set status based on completion

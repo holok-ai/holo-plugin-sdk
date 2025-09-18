@@ -262,9 +262,9 @@ export class QueueService {
         if (!this.isConnected) {
             await this.connect();
         }
-        if(pattern){
+        if (pattern) {
             logger.debug(`Binding queue ${queue} to exchange ${exchange} with pattern ${pattern}`);
-        }else{
+        } else {
             logger.debug(`Binding queue ${queue} to exchange ${exchange} directly`);
 
         }

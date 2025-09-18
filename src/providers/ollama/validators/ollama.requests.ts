@@ -9,7 +9,7 @@ import {
     OllamaSharedChatRequest,
     OllamaTool,
     OllamaToolCall
-} from "./types";
+} from "../types";
 
 export const OllamaImageValidator = type('instanceof', Uint8Array).array().or('string[]');
 

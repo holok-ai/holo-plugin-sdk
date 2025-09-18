@@ -1,6 +1,6 @@
 import {type, type Type} from 'arktype';
-import {HoloFinishReason, HoloMessage, HoloResponse, HoloStreamChunk, HoloStreamingDelta, HoloUsage,} from "./types";
-import {HoloContentValidator, HoloToolCallValidator} from "./holo.request.validators";
+import {HoloFinishReason, HoloMessage, HoloResponse, HoloStreamChunk, HoloStreamingDelta, HoloUsage,} from "../types";
+import {HoloContentValidator, HoloToolCallValidator} from "./holo.requests";
 
 // ---------- Usage validator ----------
 export const HoloUsageValidator = type({
@@ -30,17 +30,17 @@ export const HoloMessageValidator = type({
 
 // ---------- Main Holo Response validator (portable fields only) ----------
 export const HoloResponseValidator = type({
-    // 🟢 Common
+    // Common
     'id?': 'string',
     model: 'string',
     messages: HoloMessageValidator.array(),
 
-    // 🟡 Mapped (functional equivalents)
+    // Mapped (functional equivalents)
     'created?': 'number | Date',
     'finish_reason?': HoloFinishReasonValidator,
     'service_tier?': 'string',
 
-    // 🟠 Usage
+    // Usage
     'usage?': HoloUsageValidator,
 }) satisfies Type<HoloResponse>;
 

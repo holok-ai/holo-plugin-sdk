@@ -1,9 +1,9 @@
-import {AIProviderConfig, AIRequestStat, ModelInfo} from "./types";
-import {ResponseService} from "../services";
-import {LLMWorkerRequest, LLMWorkerResponse, RequestType} from "../types";
-import {ErrorMessages} from "../utils/error-messages";
-import logger from "../utils/logger";
-import {Provider} from "../db/types";
+import {AIProviderConfig, AIRequestStat, ModelInfo, RequestType} from "./index";
+import {ResponseService} from "../../services";
+import {LLMWorkerRequest, LLMWorkerResponse} from "../../types";
+import {ErrorMessages} from "../../utils";
+import logger from "../../utils/logger";
+import {Provider} from "../../db/types";
 
 /**
  * Base interface for LLM providers

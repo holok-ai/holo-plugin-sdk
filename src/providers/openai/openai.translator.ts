@@ -1,8 +1,8 @@
-import {IProviderTranslator} from '../base.translator.interface';
 import {OpenAIChatRequest, HoloRequest, OpenAIResponse, HoloResponse} from "../types";
 import logger from "../../utils/logger";
 import {type} from "arktype";
-import {OpenAIRequestTranslator} from "./translators/openai.request.translators";
+import {OpenAIRequestTranslator} from "./translators";
+import {IProviderTranslator} from "../types";
 
 export class OpenAITranslator implements IProviderTranslator {
     async fromHoloChatRequest(request: HoloRequest): Promise<Partial<OpenAIChatRequest> | type.errors> {

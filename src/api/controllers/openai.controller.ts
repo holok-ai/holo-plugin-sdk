@@ -4,7 +4,7 @@ import {injectable} from "tsyringe";
 import {ResponseService} from "../../services";
 import {ApiResponse, HttpApiRequest} from "../types";
 import logger from "../../utils/logger";
-import {ProviderType, RequestType} from '../../types';
+import {ProviderType, RequestType} from "../../providers/types";
 
 @injectable()
 export class OpenAIController extends BaseController {

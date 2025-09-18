@@ -1,6 +1,6 @@
-import {FieldTranslator, TranslateFunc} from "../../translators";
 import {HoloTool, HoloToolValidator} from "../../holo";
 import {OllamaTool, OllamaToolValidator} from "../types";
+import {FieldTranslator, TranslateFunc} from "../../types";
 
 // Individual translator functions for tools
 export const fromHoloToolTranslator: TranslateFunc<HoloTool, OllamaTool> =

@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../env';
-import { AdminJWTPayload, TokenRefreshRequest, TokenRefreshResponse } from '../types/auth.types';
+import { AdminJWTPayload, TokenRefreshRequest, TokenRefreshResponse } from '../types';
 import logger from '../utils/logger';
 
 export class TokenRefreshService {
@@ -23,8 +23,8 @@ export class TokenRefreshService {
       }
 
       const refreshUrl = `${env.mokuUrl}/api/auth/token/refresh`;
-      
-      logger.debug('Attempting token refresh', { 
+
+      logger.debug('Attempting token refresh', {
         url: refreshUrl,
         originalTokenLength: originalToken.length
       });
@@ -51,7 +51,7 @@ export class TokenRefreshService {
       }
 
       const data = await response.json() as TokenRefreshResponse;
-      
+
       if (!data.accessToken) {
         logger.warn('Token refresh response missing accessToken');
         return null;

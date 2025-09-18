@@ -1,5 +1,5 @@
 import {type, type Type} from 'arktype';
-import {numberOrNull, stringOrNull} from "../types/validator.types";
+import {numberOrNull, stringOrNull} from "../../types";
 import {
     ClaudeCacheCreation,
     ClaudeCitationCharLocation,
@@ -46,7 +46,7 @@ import {
     ClaudeWebSearchToolResultBlock,
     ClaudeWebSearchToolResultBlockContent,
     ClaudeWebSearchToolResultError
-} from "./types";
+} from "../types";
 
 export const ClaudeContainerValidator = type({
     id: 'string',
@@ -244,7 +244,7 @@ export const ClaudeContentBlockValidator = ClaudeTextBlockValidator
     .or(ClaudeMCPToolResultBlockValidator)
     .or(ClaudeContainerUploadBlockValidator) satisfies Type<ClaudeContentBlock>;
 
-export const ClaudeMessageValidator = type({
+export const ClaudeResponseMessageValidator = type({
     id: 'string',
     container: ClaudeContainerValidator.or('null'),
     content: ClaudeContentBlockValidator.array(),
@@ -288,7 +288,7 @@ export const ClaudeRawContentBlockDeltaValidator = ClaudeTextDeltaValidator
     .or(ClaudeSignatureDeltaValidator) satisfies Type<ClaudeRawContentBlockDelta>;
 
 export const ClaudeRawMessageStartEventValidator = type({
-    message: ClaudeMessageValidator,
+    message: ClaudeResponseMessageValidator,
     type: "'message_start'"
 }) satisfies Type<ClaudeRawMessageStartEvent>;
 
@@ -332,4 +332,4 @@ export const ClaudeRawMessageStreamEventValidator =
         .or(ClaudeRawContentBlockStopEventValidator) satisfies Type<ClaudeRawMessageStreamEvent>;
 
 export const ClaudeResponseValidator =
-    ClaudeRawMessageStreamEventValidator.or(ClaudeMessageValidator) satisfies Type<ClaudeResponse>;
+    ClaudeRawMessageStreamEventValidator.or(ClaudeResponseMessageValidator) satisfies Type<ClaudeResponse>;

@@ -1,7 +1,7 @@
-import {FieldTranslator, TranslateFunc} from "../../translators";
 import {OllamaOptions} from "../types";
 import {HoloRequest, HoloRequestValidator} from "../../holo";
-import {OllamaOptionsValidator} from "../ollama.request.validators";
+import {OllamaOptionsValidator} from "../validators";
+import {FieldTranslator, TranslateFunc} from "../../types";
 
 export const fromHoloOptionsFieldsTranslator: TranslateFunc<HoloRequest, OllamaOptions> =
     async (holoRequest: HoloRequest): Promise<Partial<OllamaOptions>> => {

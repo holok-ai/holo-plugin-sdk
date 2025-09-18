@@ -1,9 +1,15 @@
-import {injectable} from 'tsyringe';
-import {IAuditor} from './types';
-import {LLMWorkerRequest, LLMWorkerResponse, ProviderType} from '../types';
-import {LlmRequest, LlmResponse} from '../db/types';
-import {ClaudeAuditor, OllamaAuditor, OpenAIAuditor} from './translators'
-import logger from '../utils/logger';
+import {injectable} from "tsyringe";
+import {IAuditor, ProviderType} from "./types";
+import {OllamaAuditor} from "./ollama";
+import {ClaudeAuditor} from "./claude";
+import {OpenAIAuditor} from "./openai";
+import {LLMWorkerRequest, LLMWorkerResponse} from "../types";
+import {LlmRequest, LlmResponse} from "../db/types";
+import logger from "../utils/logger";
+
+export * from './claude/claude.auditor';
+export * from './ollama/ollama.auditor';
+export * from './openai/openai.auditor';
 
 /**
  * Central registry for managing provider-specific request/response translators.
@@ -30,7 +36,7 @@ import logger from '../utils/logger';
  * ```
  */
 @injectable()
-export class TranslatorRegistry {
+export class AuditorRegistry {
     /**
      * Internal registry mapping providers to their specific translators.
      * Uses Map for O(1) lookup performance and type safety.

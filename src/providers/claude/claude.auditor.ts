@@ -1,7 +1,7 @@
 import {injectable} from 'tsyringe';
-import {ClaudeWorkerRequest, LLMWorkerRequest, LLMWorkerResponse, ProviderType} from '../../types';
+import {ClaudeWorkerRequest, LLMWorkerRequest, LLMWorkerResponse} from '../../types';
 import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
-import {BaseAuditor} from "../types";
+import {BaseAuditor, ProviderType} from "../types";
 
 @injectable()
 export class ClaudeAuditor extends BaseAuditor {
@@ -84,13 +84,13 @@ export class ClaudeAuditor extends BaseAuditor {
         const payload = workerResponse.payload;
 
         if (workerResponse.metrics) {
-            llmResponse.usage_raw = workerResponse.metrics; 
+            llmResponse.usage_raw = workerResponse.metrics;
             llmResponse.input_tokens = workerResponse.metrics.inputTokens;
             llmResponse.output_tokens = workerResponse.metrics.outputTokens;
             llmResponse.time_to_first_token = workerResponse.metrics.timeToFirstToken;
             llmResponse.total_processing_time = workerResponse.metrics.totalProcessingTime;
         } else if (payload.usage) {
-            llmResponse.usage_raw = payload.usage; 
+            llmResponse.usage_raw = payload.usage;
             llmResponse.input_tokens = payload.usage.input_tokens;
             llmResponse.output_tokens = payload.usage.output_tokens;
         }

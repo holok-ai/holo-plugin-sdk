@@ -1,8 +1,7 @@
 import {Request} from 'express';
-import {validateRequest} from "../types/validator.types";
+import {ProviderType, RequestType, validateRequest} from "../types";
 import {ChatRequest, GenerateRequest} from "ollama";
-import {ProviderType, RequestType} from "../../types";
-import {OllamaChatRequestWithDefaults, OllamaGenerateRequestWithDefaults} from "./ollama.request.validators";
+import {OllamaChatRequestWithDefaults, OllamaGenerateRequestWithDefaults} from "./validators";
 
 export class OllamaParser {
     static readonly providerType = ProviderType.OLLAMA;

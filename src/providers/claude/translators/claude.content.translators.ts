@@ -1,4 +1,3 @@
-import {FieldTranslator, Guard, TranslateFunc} from "../../translators";
 import {
     HoloContent,
     HoloContentImage,
@@ -12,7 +11,8 @@ import {
     ClaudeContentBlockParamValidator,
     ClaudeImageBlockParamValidator,
     ClaudeTextBlockParamValidator
-} from "../claude.request.validators";
+} from "../validators";
+import {FieldTranslator, Guard, TranslateFunc} from "../../types";
 
 // Helper function to detect media type from data URI or default
 const detectMediaType = (url: string): 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' => {

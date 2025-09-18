@@ -1,4 +1,4 @@
-import {ProviderType} from "../../types";
+import {ProviderType} from "../../providers/types";
 
 export interface BaseEntity {
     id: string;
@@ -18,24 +18,24 @@ export interface Provider extends BaseEntity {
 }
 
 export interface Evaluator extends BaseEntity {
-      name:             string;
-      description?:     string | null;
-      prompt_id?:       string | null;  // uuid
-      parameters:       Record<string, any>;
-      evaluator_type:   string;
-      enabled:          boolean;
-      available:        boolean;
-      deleted?:         boolean;
-      active?:          boolean;  // Generated column - read-only
+    name: string;
+    description?: string | null;
+    prompt_id?: string | null;  // uuid
+    parameters: Record<string, any>;
+    evaluator_type: string;
+    enabled: boolean;
+    available: boolean;
+    deleted?: boolean;
+    active?: boolean;  // Generated column - read-only
 }
 
 export interface EvaluatorData {
-  id:             string;
-  created_at:     Date; 
-  evaluator_id:   string; 
-  llmresponse_id: string;
-  results:        Record<string, any>;
-  scoring:        Record<string, any>;
+    id: string;
+    created_at: Date;
+    evaluator_id: string;
+    llmresponse_id: string;
+    results: Record<string, any>;
+    scoring: Record<string, any>;
 }
 
 export interface Model extends BaseEntity {
@@ -50,13 +50,13 @@ export interface Model extends BaseEntity {
 
 export interface Application extends BaseEntity {
     name: string;
-    provider_id: string; 
-    model_id: string; 
-    system_prompt: string; 
+    provider_id: string;
+    model_id: string;
+    system_prompt: string;
     url_slug: string;
-    active?: boolean;  
-    organization_id: string; 
-    team_id?: string; 
+    active?: boolean;
+    organization_id: string;
+    team_id?: string;
 }
 
 //Object that corresponds to the database llm_requests table

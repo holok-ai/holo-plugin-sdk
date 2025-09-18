@@ -1,6 +1,6 @@
 import {type, type Type} from 'arktype';
 import {BetaTool} from '@anthropic-ai/sdk/resources/beta/messages/messages';
-import {booleanOrNull, numberOrNull, stringArrayOrNull, stringOrNull, unknownOrNull} from "../types/validator.types";
+import {booleanOrNull, numberOrNull, stringArrayOrNull, stringOrNull, unknownOrNull} from "../../types";
 import {
     ClaudeBase64ImageSource,
     ClaudeBase64PDFSource,
@@ -66,7 +66,7 @@ import {
     ClaudeWebSearchToolResultBlockParam,
     ClaudeWebSearchToolResultBlockParamContent,
     ClaudeWebSearchToolResultErrorCode
-} from "./types";
+} from "../types";
 
 
 // Common nullable type utilities

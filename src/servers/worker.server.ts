@@ -7,8 +7,8 @@ import logger from "../utils/logger";
 import {ProviderService} from "../services";
 import {container, injectable} from "tsyringe";
 import {withStats} from "./mixins/withStats";
-import {AIRequestStat, IProvider} from "../providers/types";
-import {LLMWorkerRequest, RequestType} from '../types';
+import {AIRequestStat, IProvider, RequestType} from "../providers/types";
+import {LLMWorkerRequest} from '../types';
 import {env} from "../env";
 
 @injectable()

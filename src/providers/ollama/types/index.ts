@@ -11,8 +11,8 @@ export {
     OllamaOnlyChatRequestValidator,
     OllamaChatRequestWithDefaults,
     OllamaGenerateRequestWithDefaults
-} from '../ollama.request.validators';
+} from '../validators/ollama.requests';
 
 // Type aliases for consistency
-export * from './request';
-export * from './responses';
+export * from './request.types';
+export * from './response.types';

@@ -21,6 +21,7 @@ RUN mkdir -p /app/logs \
 
 # Copy startup script
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY scripts/register-ts-node.mjs /app/register-ts-node.mjs
 RUN chmod +x /app/docker-entrypoint.sh
 
 # Set environment variables

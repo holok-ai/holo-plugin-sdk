@@ -1,14 +1,13 @@
 import 'reflect-metadata';
-import {LLMWorkerRequest, LLMWorkerResponse} from '../types';
+import {AuditServiceEvent, LLMWorkerRequest, LLMWorkerResponse} from '../types';
 import {LlmRequest, LlmResponse, LlmStatus} from "../db/types";
-import {AuditServiceEvent} from '../types/evaluator.types';
 import {container, injectable} from "tsyringe";
-import {EvaluatorDB, RequestDB, ResponseDB} from "../db";
-import {AppDB} from "../db/app.db";
+import {AppDB, EvaluatorDB, RequestDB, ResponseDB} from "../db";
 import logger from "../utils/logger";
-import {TranslatorRegistry} from '../translators';
 import {QueueService} from "./queue.service";
 import {env} from '../env';
+
+import {AuditorRegistry} from "../providers/auditors";
 
 /**
  * Service for auditing and logging LLM requests and responses
@@ -21,7 +20,7 @@ export class AuditService {
         private evaluatorDB: EvaluatorDB,
         private requestDB: RequestDB,
         private responseDB: ResponseDB,
-        private translatorRegistry: TranslatorRegistry,
+        private translatorRegistry: AuditorRegistry,
         private queueService: QueueService
     ) {
         logger.info('AuditService initialized');

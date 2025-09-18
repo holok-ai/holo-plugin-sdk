@@ -1,7 +1,7 @@
 import {Request} from 'express';
-import {ProviderType, RequestType} from '../../types';
 import {type} from "arktype";
 import logger from "../../utils/logger";
+import {ProviderType, RequestType} from "./index";
 
 export const stringOrNull = type('string | null');
 export const numberOrNull = type('number | null');
