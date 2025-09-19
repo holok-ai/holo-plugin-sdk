@@ -13,14 +13,17 @@ import {StreamFormatter} from './streamFormatter.service';
 
 
 /**
- * Response stream for transforming LLM tokens into SSE
+ * Response stream for transforming LLM tokens into SSE or JSON
  */
 export class ResponseStream extends Transform {
     requestId: string;
+    isStreaming: boolean;
+    accumulatedChunks: any[] = [];
 
-    constructor(requestId: string) {
+    constructor(requestId: string, isStreaming: boolean = true) {
         super({objectMode: true});
         this.requestId = requestId;
+        this.isStreaming = isStreaming;
     }
 
     _transform(chunk: any, _encoding: BufferEncoding, callback: TransformCallback) {
@@ -81,10 +84,11 @@ export class ResponseService {
     /**
      * Create a response stream for a request
      * @param {string} requestId - Request ID
+     * @param {boolean} isStreaming - Whether the response should be streamed
      * @returns {Transform} - Response stream
      */
-    async createResponseStream(requestId: string): Promise<Transform> {
-        const responseStream = new ResponseStream(requestId);
+    async createResponseStream(requestId: string, isStreaming: boolean = true): Promise<Transform> {
+        const responseStream = new ResponseStream(requestId, isStreaming);
 
         // Store the stream in the map
         this.streams.set(requestId, responseStream);
@@ -149,27 +153,34 @@ export class ResponseService {
 
         logger.debug(`LLMWorkerRequest: ${JSON.stringify(workerRequest)}`);
 
-        await this._openResponseStream(req, res, workerRequest, requestId);
+        // Check if request is streaming
+        const isStreaming = payload.stream === true;
+        await this._openResponseStream(req, res, workerRequest, requestId, isStreaming);
     }
 
     /**
-     * Set up Server-Sent Events streaming response and submit request to queue
-     * Configures SSE headers, creates response stream, handles client disconnect, and pipes response
+     * Set up streaming or regular JSON response and submit request to queue
+     * Configures appropriate headers based on streaming mode, creates response stream, handles client disconnect, and pipes response
      * @param {HttpApiRequest} req - HTTP request object
      * @param {Response} res - HTTP response object
      * @param {Object} request - LLM worker request object to send to queue
      * @param {string} requestId - Unique request identifier
+     * @param {boolean} isStreaming - Whether the request should use streaming response
      * @private
      */
-    async _openResponseStream(req: HttpApiRequest, res: Response, request: Object, requestId: string) {
+    async _openResponseStream(req: HttpApiRequest, res: Response, request: Object, requestId: string, isStreaming: boolean = true) {
 
-        // Set up a streaming or regular JSON response
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
+        // Set up appropriate response headers based on streaming mode
+        if (isStreaming) {
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+        } else {
+            res.setHeader('Content-Type', 'application/json');
+        }
 
         // Create a response stream
-        let responseStream = await this.createResponseStream(requestId);
+        let responseStream = await this.createResponseStream(requestId, isStreaming);
 
 
         // Handle client disconnect

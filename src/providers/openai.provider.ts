@@ -118,11 +118,12 @@ export class OpenAIProvider extends AIProvider implements IProvider {
     ): Promise<void> {
         await this.ensureInitialized();
         this.validateModel(chatRequest.model);
-        chatRequest.stream_options = {include_usage: true};
+        
+       
         let fullResponse = '';
         // Pass the request directly to the client since it extends ChatCompletionCreateParams
         // @ts-ignore
-        const response = await this.client.chat.completions.create(chatRequest);
+        const response = await this.client.chat.completions.create(chatRequest, {include_usage: true});
         const startTime = Date.now();
         let timeToFirst: number = 0; 
 
@@ -135,8 +136,8 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                     logger.debug(`chunk payload: ${JSON.stringify(chunk)}`);
 
                     if (chunk?.usage) {
-                        chunk.usage.timeToFirstToken = timeToFirst; 
-                        chunk.usage.totalProcessingTime = Date.now() - startTime;
+                        // chunk.usage.timeToFirstToken = timeToFirst; 
+                        // chunk.usage.totalProcessingTime = Date.now() - startTime;
                         const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk, fullResponse);
                         await this.onResponseChunk(responseChunk, true);
                         break;
@@ -149,6 +150,8 @@ export class OpenAIProvider extends AIProvider implements IProvider {
                             finishReason: choice.finish_reason,
                             fullResponseLength: fullResponse.length
                         });
+                        const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk, fullResponse);
+                        await this.onResponseChunk(responseChunk, true);
                     }
 
                     if (choice?.delta?.content) {
@@ -171,6 +174,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
             }
         } else {
             // For non-streaming, extract the text content
+            logger.debug('Starting OpenAI chat completions non-streaming', {requestId, model: chatRequest.model});
             const message = response as any;
             if (message.choices && message.choices.length > 0) {
                 fullResponse = message.choices[0].message?.content || '';

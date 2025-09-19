@@ -9,5 +9,6 @@ export function createCustomApplicationRoutes(): express.Router {
     const customUrlController: CustomUrlController = container.resolve(CustomUrlController);
 
     apiRouter.post('/:provider/:appId/*', authenticateJWTWithCache, customUrlController.resolveRequest);
+    apiRouter.post('/:provider/:appId/v1/*', authenticateJWTWithCache, customUrlController.resolveRequest);
     return apiRouter;
 }
