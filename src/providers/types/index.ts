@@ -95,7 +95,7 @@ export type ProviderChatRequest =
 
 export enum ProviderType {
     OLLAMA = 'OLLAMA',
-    CLAUDE = 'ANTHROPIC',
+    CLAUDE = 'CLAUDE',
     ANTHROPIC = 'ANTHROPIC',
     OPENAI = 'OPENAI',
     PERPLEXITY = 'PERPLEXITY'
