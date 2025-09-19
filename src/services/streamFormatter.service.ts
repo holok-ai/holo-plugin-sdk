@@ -13,6 +13,14 @@ export class StreamFormatter {
     async formatAndSend(responseChunk: LLMWorkerResponse, res: ResponseStream) {
         try {
             logger.debug("Calling format and send");
+
+            // Handle non-streaming responses
+            if (!res.isStreaming) {
+                this.handleNonStreamingResponse(responseChunk, res);
+                return;
+            }
+
+            // Handle streaming responses
             switch (responseChunk.providerType) {
                 case ProviderType.OLLAMA:
                     this.streamOllama(responseChunk, res);
@@ -54,6 +62,21 @@ export class StreamFormatter {
         }
     }
 
+    handleNonStreamingResponse(responseChunk: LLMWorkerResponse, res: ResponseStream) {
+        try {
+            logger.debug(`handle non streaming response ${JSON.stringify(responseChunk)}`);
+         
+             res.push(JSON.stringify(responseChunk.payload));
+             res.end();
+        } catch (error) {
+            logger.error(`Non-streaming response error: ${(error as Error).message}`, {
+                requestId: responseChunk.requestId,
+                providerType: responseChunk.providerType
+            });
+            throw error;
+        }
+    }
+    
     streamOllama(responseChunk: LLMWorkerResponse, res: ResponseStream) {
         try {
             const chunk = responseChunk.payload as any;
@@ -93,7 +116,7 @@ export class StreamFormatter {
     streamOpenAI(responseChunk: LLMWorkerResponse, res: ResponseStream) {
         try {
             const chunk = responseChunk.payload as ChatCompletionChunk;
-
+            logger.debug(`opeanai stream formatter ${JSON.stringify(responseChunk)}`);
             // OpenAI uses SSE format with data: prefix
             res.push(`data: ${JSON.stringify(chunk)}\n\n`);
 
