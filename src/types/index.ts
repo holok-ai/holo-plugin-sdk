@@ -1,5 +1,4 @@
-export * from './auth.types';
-export * from './cache.types';
+export * from '../admin/types/auth.types';
 export * from './config.types';
 export * from './evaluator.types';
 export * from './evaluator-pr.types';
@@ -27,3 +26,5 @@ export interface AnalysisEvent {
     event_data: any;
     parameters: any;
 }
+
+export type FetchLike = typeof fetch;

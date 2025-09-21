@@ -1,24 +1,25 @@
-import { Request } from 'express';
+import {Request} from 'express';
 
 export interface JWTPayload {
-  organizationId: string;
-  userId: string;
-  email: string;
-  iat?: number;
-  exp?: number;
+    organizationId: string;
+    userId: string;
+    email: string;
+    iat?: number;
+    exp?: number;
 }
 
 export interface AuthenticatedRequest extends Request {
-  user?: JWTPayload;
+    user?: JWTPayload;
 }
+
 export interface AdminJWTPayload extends JWTPayload {
-  urlSlugs: string[];
+    urlSlugs: string[];
 }
 
 export interface TokenRefreshRequest {
-  apiKey: string;
+    apiKey: string;
 }
 
 export interface TokenRefreshResponse {
-  accessToken: string;
+    accessToken: string;
 }

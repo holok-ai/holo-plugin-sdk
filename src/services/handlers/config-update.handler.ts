@@ -1,16 +1,18 @@
 import 'reflect-metadata';
-import { injectable } from 'tsyringe';
-import { MessageHandler } from '../proxy.admin.service';
+import {injectable} from 'tsyringe';
+import {MessageHandler} from '../../admin/services';
 import logger from '../../utils/logger';
-import { ProxyConfig } from '../../types';
-import cacheService from '../cache.service';
+import cacheService from '../../admin/services/cache.service';
+
+
+import {HoloConfig} from "../../cache/types";
 
 @injectable()
 export class ConfigUpdateHandler implements MessageHandler {
-    
-    async handle(message: ProxyConfig): Promise<void> {
-        logger.info(`Processing config update message: ${message.entity_type} with ${message.data.length} applications`);
-        
+
+    async handle(message: HoloConfig): Promise<void> {
+        logger.info(`Processing config update message: ${message.configType} with ${message.data.length} applications`);
+
         try {
             // Validate the config structure
             this.validateConfig(message);
@@ -30,10 +32,10 @@ export class ConfigUpdateHandler implements MessageHandler {
             }
 
             logger.info(`Successfully processed ${message.action} configuration with ${message.data.length} applications`);
-            
+
         } catch (error) {
             logger.error(`Failed to process config update: ${(error as Error).message}`, {
-                entityType: message.entity_type,
+                entityType: message.configType,
                 action: message.action,
                 error: (error as Error).stack
             });
@@ -44,12 +46,12 @@ export class ConfigUpdateHandler implements MessageHandler {
     /**
      * Handle config updates (NEW/UPDATE actions)
      */
-    private async handleConfigUpdate(config: ProxyConfig): Promise<void> {
+    private async handleConfigUpdate(config: HoloConfig): Promise<void> {
         logger.debug(`Updating cache with ${config.data.length} applications`);
 
         // Update cache with new applications
         const success = cacheService.setApplications(config.data);
-        
+
         if (!success) {
             throw new Error('Failed to update application cache');
         }
@@ -65,11 +67,11 @@ export class ConfigUpdateHandler implements MessageHandler {
     /**
      * Handle config deletions (DELETE action)
      */
-    private async handleConfigDelete(config: ProxyConfig): Promise<void> {
+    private async handleConfigDelete(config: HoloConfig): Promise<void> {
         logger.debug(`Removing ${config.data.length} applications from cache`);
 
         let removedCount = 0;
-        
+
         // Remove each application from cache
         config.data.forEach(app => {
             const removed = cacheService.removeApplication(app.urlSlug);
@@ -87,9 +89,9 @@ export class ConfigUpdateHandler implements MessageHandler {
     /**
      * Validate config structure
      */
-    private validateConfig(config: ProxyConfig): void {
-        if (!config.entity_type) {
-            throw new Error('Missing entity_type in config');
+    private validateConfig(config: HoloConfig): void {
+        if (!config.configType) {
+            throw new Error('Missing configType in config');
         }
 
         if (!config.action) {

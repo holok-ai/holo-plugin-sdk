@@ -3,7 +3,7 @@ import express from "express";
 import {createApiRoutes} from "./ollama.routes";
 import {createClaudeRoutes} from "./claude.routes";
 import {createPerplexityRoutes} from "./perplexity.routes";
-import { createCustomApplicationRoutes } from "./custom-url.routes";
+import { createCustomApplicationRoutes } from "./app.routes";
 
 export function createRoutes(): express.Router {
     const router = express.Router();

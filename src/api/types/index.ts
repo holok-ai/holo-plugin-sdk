@@ -1,5 +1,5 @@
 import {Request, Response} from 'express';
-import {JWTPayload} from '../../types/auth.types';
+import {JWTPayload} from '../../admin/types/auth.types';
 
 // Base API types
 export interface HttpApiRequest extends Request {

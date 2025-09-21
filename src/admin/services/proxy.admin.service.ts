@@ -1,12 +1,14 @@
 import 'reflect-metadata';
-import { injectable, inject } from 'tsyringe';
-import { QueueService } from './queue.service';
-import { env } from '../env';
-import logger from '../utils/logger';
-import { ConfigLoader, ConfigLoaderFactory } from './config-loader';
-import { ProxyConfig } from '../types';
+import {inject, injectable} from 'tsyringe';
+import {QueueService} from '../../services';
+import {env} from '../../env';
+import logger from '../../utils/logger';
+import {ConfigLoader, ConfigLoaderFactory} from '../../services/config-loader';
+
+import {HoloConfig} from "../../cache/types";
+
 export interface MessageHandler {
-    handle(message: ProxyConfig): Promise<void>;
+    handle(message: HoloConfig): Promise<void>;
 }
 
 @injectable()
@@ -15,10 +17,11 @@ export class ProxyAdminService {
     private isListening: boolean = false;
     private serverId: string = env.api.apiServerId;
     private configLoader: ConfigLoader | null = null;
-    
+
     constructor(
-        @inject(QueueService) private queueService: QueueService, 
-    ) {}
+        @inject(QueueService) private queueService: QueueService,
+    ) {
+    }
 
     /**
      * Initialize the ProxyAdminService with default handlers and start listening for config events
@@ -50,16 +53,16 @@ export class ProxyAdminService {
      * Register default message handlers
      */
     private async registerDefaultHandlers(): Promise<void> {
-        const { container } = await import('tsyringe');
-        
+        const {container} = await import('tsyringe');
+
         try {
             // Import and register ConfigUpdateHandler
-            const { ConfigUpdateHandler } = await import('./handlers/config-update.handler');
+            const {ConfigUpdateHandler} = await import('../../services/handlers/config-update.handler');
             const configHandler = container.resolve(ConfigUpdateHandler);
             this.registerHandler('APPLICATION', configHandler);
 
             // Import and register JwtInvalidationHandler
-            const { JwtInvalidationHandler } = await import('./handlers/jwt-invalidation.handler');
+            const {JwtInvalidationHandler} = await import('../../services/handlers/jwt-invalidation.handler');
             const jwtHandler = container.resolve(JwtInvalidationHandler);
             this.registerHandler('JWT', jwtHandler);
 
@@ -89,13 +92,13 @@ export class ProxyAdminService {
         logger.debug('Setting up config event listeners...');
 
         // Listen for initial config
-        this.configLoader.on('config:initial', (config: ProxyConfig) => {
+        this.configLoader.on('config:initial', (config: HoloConfig) => {
             logger.info(`ProxyAdminService received initial config with ${config.data.length} applications`);
             this.handleConfigMessage('INITIAL', config);
         });
 
         // Listen for config updates
-        this.configLoader.on('config:updated', (config: ProxyConfig) => {
+        this.configLoader.on('config:updated', (config: HoloConfig) => {
             logger.info(`ProxyAdminService received config update with ${config.data.length} applications`);
             this.handleConfigMessage('UPDATE', config);
         });
@@ -118,24 +121,24 @@ export class ProxyAdminService {
     /**
      * Handle config messages from ConfigLoader events
      */
-    private async handleConfigMessage(eventType: string, config: ProxyConfig): Promise<void> {
+    private async handleConfigMessage(eventType: string, config: HoloConfig): Promise<void> {
         try {
-            logger.debug(`Handling config message of type: ${config.entity_type} from event: ${eventType}`);
+            logger.debug(`Handling config message of type: ${config.configType} from event: ${eventType}`);
 
-            // Find appropriate handler based on entity_type
-            const handler = this.messageHandlers.get(config.entity_type);
+            // Find appropriate handler based on configType
+            const handler = this.messageHandlers.get(config.configType);
             if (!handler) {
-                logger.warn(`No handler registered for config type: ${config.entity_type}`);
+                logger.warn(`No handler registered for config type: ${config.configType}`);
                 return;
             }
 
             // Process config with handler
             await handler.handle(config);
-            logger.debug(`Successfully processed config of type: ${config.entity_type} from event: ${eventType}`);
+            logger.debug(`Successfully processed config of type: ${config.configType} from event: ${eventType}`);
 
         } catch (error) {
             logger.error(`Error processing config message from event ${eventType}: ${(error as Error).message}`, {
-                configType: config.entity_type,
+                configType: config.configType,
                 error: (error as Error).stack
             });
             throw error;

@@ -8,7 +8,7 @@ import {HttpApiRequest} from "../api/types";
 import {Request, Response} from "express";
 import {env} from "../env";
 import {LLMWorkerRequest, LLMWorkerResponse} from '../types';
-import {StreamFormatter} from './streamFormatter.service';
+import {StreamFormatter} from './stream.formatter.service';
 import {OllamaParser} from "../providers/ollama";
 import {ClaudeParser} from "../providers/claude";
 import {OpenAIParser} from "../providers/openai";

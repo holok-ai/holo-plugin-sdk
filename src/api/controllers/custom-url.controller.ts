@@ -48,9 +48,13 @@ export class CustomUrlController extends BaseController {
     }
 
     private getControllerForProvider(provider: ProviderType): any {
-        switch (provider) {
+        logger.debug(`resolving controller for provider: ${provider as ProviderType}`);
+        switch (provider as ProviderType) {
             case ProviderType.OPENAI:
                 return container.resolve(OpenAIController);
+            case ProviderType.ANTHROPIC:
+                logger.debug(`Anthropic is deprecated. Using Claude instead.`);
+                return container.resolve(ClaudeController);
             case ProviderType.CLAUDE:
                 return container.resolve(ClaudeController);
             case ProviderType.OLLAMA:

@@ -1,10 +1,14 @@
-import { injectable, inject } from 'tsyringe';
-import { EventEmitter } from 'events';
-import { ProxyConfig, AnnouncementMessage, AnnouncementType } from '../../types';
-import { ConfigLoader, ConfigLoaderEvents } from './config-loader.interface';
-import { QueueService } from '../queue.service';
-import { env } from '../../env';
+import {inject, injectable} from 'tsyringe';
+import {EventEmitter} from 'events';
+import {AnnouncementMessage, AnnouncementType} from '../../types';
+import {QueueService} from '../../services';
+import {env} from '../../env';
 import logger from '../../utils/logger';
+
+import {ConfigLoader, ConfigLoaderEvents, HoloConfig} from "../types";
+import {HoloConfigValidator} from "../../admin/validators";
+import {ArkErrors} from "arktype";
+import {AdminConfigError} from "../../admin/types";
 
 export interface MqConfigLoaderEvents extends ConfigLoaderEvents {
     'announcement:sent': (serverId: string) => void;
@@ -12,11 +16,11 @@ export interface MqConfigLoaderEvents extends ConfigLoaderEvents {
 
 @injectable()
 export class MqConfigLoader extends EventEmitter implements ConfigLoader {
-    private configLoadPromise: Promise<ProxyConfig> | null = null;
+    private configLoadPromise: Promise<HoloConfig> | null = null;
     private serverId: string;
     private platformCommandRoutingKey: string;
     private announcementRoutingKey: string;
-    private managementQueue: string; 
+    private managementQueue: string;
     private hasReceivedInitial: boolean = false;
     private initialConfigTimeout: NodeJS.Timeout | null = null;
 
@@ -32,7 +36,7 @@ export class MqConfigLoader extends EventEmitter implements ConfigLoader {
         this.setMaxListeners(10); // Allow up to 10 listeners
     }
 
-    async loadConfig(): Promise<ProxyConfig> {
+    async loadConfig(): Promise<HoloConfig> {
         // Ensure we only load config once
         if (this.configLoadPromise) {
             return this.configLoadPromise;
@@ -42,7 +46,7 @@ export class MqConfigLoader extends EventEmitter implements ConfigLoader {
         return this.configLoadPromise;
     }
 
-    private async _loadConfigInternal(): Promise<ProxyConfig> {
+    private async _loadConfigInternal(): Promise<HoloConfig> {
         try {
             logger.info(`MQ Config Loader: Starting configuration load for server: ${this.serverId}`);
 
@@ -59,7 +63,7 @@ export class MqConfigLoader extends EventEmitter implements ConfigLoader {
             const config = await this._waitForInitialConfig();
 
             logger.info(`MQ Config Loader: Successfully loaded configuration with ${config.data.length} applications`);
-            
+
             return config;
 
         } catch (error) {
@@ -71,7 +75,7 @@ export class MqConfigLoader extends EventEmitter implements ConfigLoader {
     /**
      * Wait for initial config with 60-second timeout
      */
-    private async _waitForInitialConfig(): Promise<ProxyConfig> {
+    private async _waitForInitialConfig(): Promise<HoloConfig> {
         return new Promise((resolve, reject) => {
             const timeout = 60000; // 60 seconds
 
@@ -84,7 +88,7 @@ export class MqConfigLoader extends EventEmitter implements ConfigLoader {
             }, timeout);
 
             // Listen for initial config event
-            const handleInitialConfig = (config: ProxyConfig) => {
+            const handleInitialConfig = (config: HoloConfig) => {
                 if (this.initialConfigTimeout) {
                     clearTimeout(this.initialConfigTimeout);
                     this.initialConfigTimeout = null;
@@ -114,7 +118,7 @@ export class MqConfigLoader extends EventEmitter implements ConfigLoader {
 
     private async _setupPlatformInfrastructure(): Promise<void> {
         logger.debug('MQ Config Loader: Setting up platform infrastructure...');
-        
+
         // Ensure queue service is connected
         if (!this.queueService.isConnected) {
             await this.queueService.connect();
@@ -163,7 +167,7 @@ export class MqConfigLoader extends EventEmitter implements ConfigLoader {
      */
     async startConfigUpdateListener(): Promise<void> {
         logger.info(`MQ Config Loader: Starting config update listener on queue: ${this.managementQueue}`);
-        
+
         await this.queueService.consume(
             this.managementQueue,
             async (messageId: string, content: any) => {
@@ -172,19 +176,22 @@ export class MqConfigLoader extends EventEmitter implements ConfigLoader {
 
                     // Check if this is a ProxyConfig message
                     if (this._isProxyConfigMessage(content)) {
-                        const config = content as ProxyConfig;
-                        this._validateConfig(config);
-                        
+                        const config = HoloConfigValidator(content as HoloConfig);
+
+                        if (config instanceof ArkErrors) {
+                            throw new AdminConfigError('Invalid Holo Config', config);
+                        }
+
                         // Update cache
                         // cacheService.setApplications(config.data);
-                        
+
                         logger.info(`MQ Config Loader: Configuration updated with ${config.data.length} applications`);
-                          if(this.hasReceivedInitial){
-                                this.emit('config:updated', config);
-                            }else{
-                                this.hasReceivedInitial = true;
-                                this.emit('config:initial', config);
-                            }
+                        if (this.hasReceivedInitial) {
+                            this.emit('config:updated', config);
+                        } else {
+                            this.hasReceivedInitial = true;
+                            this.emit('config:initial', config);
+                        }
                     } else {
                         logger.debug(`MQ Config Loader: Received non-config message in update listener, ignoring`);
                     }
@@ -194,7 +201,7 @@ export class MqConfigLoader extends EventEmitter implements ConfigLoader {
                 }
             },
             true, // ignore errors for non-config messages
-            { noAck: false }
+            {noAck: false}
         );
     }
 
@@ -208,7 +215,7 @@ export class MqConfigLoader extends EventEmitter implements ConfigLoader {
             this.initialConfigTimeout = null;
             logger.debug('MQ Config Loader: Cleared initial config timeout');
         }
-        
+
         await this.queueService.stop();
         logger.info('MQ Config Loader: Stopped config update listener');
     }
@@ -233,48 +240,5 @@ export class MqConfigLoader extends EventEmitter implements ConfigLoader {
             content.action &&
             Array.isArray(content.data)
         );
-    }
-
-    private _validateConfig(config: any): void {
-        if (!config.entity_type) {
-            throw new Error('Configuration must include entity_type');
-        }
-
-        if (!['APPLICATION', 'JWT_TOKEN'].includes(config.entity_type)) {
-            throw new Error(`Invalid entity_type: ${config.entity_type}. Must be APPLICATION or JWT_TOKEN`);
-        }
-
-        if (!config.action) {
-            throw new Error('Configuration must include action');
-        }
-
-        if (!['NEW', 'UPDATE', 'DELETE'].includes(config.action)) {
-            throw new Error(`Invalid action: ${config.action}. Must be NEW, UPDATE, or DELETE`);
-        }
-
-        if (!Array.isArray(config.data)) {
-            throw new Error('Configuration must include data array');
-        }
-
-        config.data.forEach((app: any, index: number) => {
-            if (!app.urlSlug) {
-                throw new Error(`Application at index ${index} must have a urlSlug`);
-            }
-            if (!app.organizationId) {
-                throw new Error(`Application at index ${index} must have an organizationId`);
-            }
-            if (!app.providerType) {
-                throw new Error(`Application at index ${index} must have a providerType`);
-            }
-            if (!Array.isArray(app.models) || app.models.length === 0) {
-                throw new Error(`Application at index ${index} must have a models array with at least one model`);
-            }
-            
-            app.models.forEach((model: any, modelIndex: number) => {
-                if (!model.name || !model.accessModel) {
-                    throw new Error(`Model at index ${modelIndex} in application ${index} must have both name and accessModel`);
-                }
-            });
-        });
     }
 }

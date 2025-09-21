@@ -37,6 +37,7 @@ export class ProviderService {
                     aiProvider = new OpenAIProvider(provider, this.responseService, serverId);
                     break;
                 case ProviderType.CLAUDE:
+                case ProviderType.ANTHROPIC:
                     aiProvider = new ClaudeProvider(provider, this.responseService, serverId);
                     break;
                 case ProviderType.OLLAMA:
@@ -59,6 +60,6 @@ export class ProviderService {
     }
 
     async matchProvider(key: string): Promise<IProvider | undefined> {
-        return this.aiProviders.get(key);
+        return this.aiProviders.get(key === ProviderType.CLAUDE ? ProviderType.ANTHROPIC : key);
     }
 }

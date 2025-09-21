@@ -11,8 +11,8 @@ import {InitService, ResponseService} from "./services";
 import {createRoutes} from "./api/routes";
 import {env} from "./env";
 import listEndpoints from "express-list-endpoints";
-import {AppDB} from "./db/app.db";
-import {ProxyAdminService} from './services/proxy.admin.service';
+import {AppDB} from "./db";
+import {CacheService, ConfigService, ProxyAdminService, TokenService} from './admin/services';
 
 // Initialize Express app
 const app: Application = express();
@@ -43,6 +43,9 @@ app.get('/health', (_req: Request, res: Response): void => {
 const PORT: number = env.api.port || 3000;
 container.registerSingleton(ResponseService)
 container.registerSingleton(AppDB);
+container.registerSingleton(CacheService);
+container.registerSingleton(ConfigService);
+container.registerSingleton(TokenService);
 container.registerSingleton(ProxyAdminService);
 
 // Initialize app with async components

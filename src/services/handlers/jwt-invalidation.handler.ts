@@ -1,9 +1,11 @@
 import 'reflect-metadata';
 import { injectable } from 'tsyringe';
-import { MessageHandler } from '../proxy.admin.service';
+import { MessageHandler } from '../../admin/services/proxy.admin.service';
 import logger from '../../utils/logger';
-import { ProxyConfig } from '../../types';
-import cacheService from '../cache.service';
+import cacheService from '../../admin/services/cache.service';
+
+
+import {HoloConfig} from "../../admin/types/config.types";
 
 
 interface JWTTokenData {
@@ -17,14 +19,14 @@ interface JWTTokenData {
 export class JwtInvalidationHandler implements MessageHandler {
     // In-memory store of invalidated tokens
     private invalidatedTokens: Set<string> = new Set();
-    
-    async handle(message: ProxyConfig): Promise<void> {
-        logger.info(`Processing JWT invalidation message: ${message.entity_type} action: ${message.action}`);
-        
+
+    async handle(message: HoloConfig): Promise<void> {
+        logger.info(`Processing JWT invalidation message: ${message.configType} action: ${message.action}`);
+
         try {
             // Validate the message
             this.validateJWTMessage(message);
-            
+
             // Handle different actions
             switch (message.action) {
                 case 'DELETE':
@@ -40,10 +42,10 @@ export class JwtInvalidationHandler implements MessageHandler {
             }
 
             logger.info(`Successfully processed JWT ${message.action} with ${message.data.length} tokens`);
-            
+
         } catch (error) {
             logger.error(`Failed to process JWT invalidation: ${(error as Error).message}`, {
-                entityType: message.entity_type,
+                entityType: message.configType,
                 action: message.action,
                 error: (error as Error).stack
             });
@@ -54,9 +56,9 @@ export class JwtInvalidationHandler implements MessageHandler {
     /**
      * Handle token invalidation (DELETE action)
      */
-    private async handleTokenInvalidation(message: ProxyConfig): Promise<void> {
+    private async handleTokenInvalidation(message: HoloConfig): Promise<void> {
         logger.debug(`Invalidating ${message.data.length} JWT tokens`);
-        
+
         let invalidatedCount = 0;
         let cacheRemovedCount = 0;
 
@@ -65,7 +67,7 @@ export class JwtInvalidationHandler implements MessageHandler {
             if (tokenData.token) {
                 this.invalidatedTokens.add(tokenData.token);
                 invalidatedCount++;
-                
+
                 // Remove from cache if it exists
                 if (cacheService.hasToken(tokenData.token)) {
                     cacheService.del('tokens', `token:${tokenData.token}`);
@@ -75,7 +77,7 @@ export class JwtInvalidationHandler implements MessageHandler {
                     logger.debug(`Token not found in cache: ${tokenData.token.substring(0, 20)}...`);
                 }
             }
-            
+
             // If user/organization info is provided, find and invalidate related tokens
             if (tokenData.userId || tokenData.organizationId) {
                 const removedTokens = this.invalidateTokensByUserOrOrg(tokenData);
@@ -100,9 +102,9 @@ export class JwtInvalidationHandler implements MessageHandler {
             if (cachedTokenData && cachedTokenData.urlSlugs) {
                 // Extract token from key (remove 'token:' prefix)
                 const token = key.replace('token:', '');
-                
+
                 // Check if this token should be invalidated
-                const shouldInvalidate = 
+                const shouldInvalidate =
                     (tokenData.userId && this.tokenBelongsToUser(cachedTokenData, tokenData.userId)) ||
                     (tokenData.organizationId && this.tokenBelongsToOrganization(cachedTokenData, tokenData.organizationId));
 
@@ -140,9 +142,9 @@ export class JwtInvalidationHandler implements MessageHandler {
     /**
      * Validate JWT invalidation message
      */
-    private validateJWTMessage(message: ProxyConfig): void {
-        if (!message.entity_type || message.entity_type !== 'JWT_TOKEN') {
-            throw new Error(`Invalid entity_type for JWT handler: ${message.entity_type}`);
+    private validateJWTMessage(message: HoloConfig): void {
+        if (!message.configType || message.configType !== 'JWT_TOKEN') {
+            throw new Error(`Invalid entity_type for JWT handler: ${message.configType}`);
         }
 
         if (!message.action) {
