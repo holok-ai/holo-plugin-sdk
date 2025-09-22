@@ -77,6 +77,8 @@ export class CustomUrlController extends BaseController {
                 switch (cleanPath) {
                     case 'chat/completions':
                         return 'chatCompletions';
+                    case 'v1/chat/completions':
+                        return 'chatCompletions';
                     case 'models':
                         return 'models';
                     default:

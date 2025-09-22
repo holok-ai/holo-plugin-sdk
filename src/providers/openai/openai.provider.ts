@@ -118,10 +118,16 @@ export class OpenAIProvider extends AIProvider implements IProvider {
     ): Promise<void> {
         await this.ensureInitialized();
         this.validateModel(chatRequest.model);
-        chatRequest.stream_options = {include_usage: true};
+        
+       
         let fullResponse = '';
         // Pass the request directly to the client since it extends ChatCompletionCreateParams
         // @ts-ignore
+
+        if(chatRequest.stream){
+            logger.debug("Streaming request seeting stream_options flag");
+            chatRequest.stream_options = {include_usage: true};
+        }
         const response = await this.client.chat.completions.create(chatRequest);
         const startTime = Date.now();
         let timeToFirst: number = 0;
@@ -171,6 +177,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
             }
         } else {
             // For non-streaming, extract the text content
+            logger.debug('Starting OpenAI chat completions non-streaming', {requestId, model: chatRequest.model});
             const message = response as any;
             if (message.choices && message.choices.length > 0) {
                 fullResponse = message.choices[0].message?.content || '';
