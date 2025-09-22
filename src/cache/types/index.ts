@@ -1,5 +1,4 @@
 import NodeCache from "node-cache";
-import {Token} from "./token";
 import {Application} from "./application";
 import {User} from "./user";
 import {Provider} from "./provider";
@@ -22,14 +21,13 @@ type CacheMap = Record<string, NodeCache>
 
 export interface OrgCacheMap extends CacheMap {
     users: NodeCache;
-    tokens: NodeCache;
     providers: NodeCache;
     applications: NodeCache;
 }
 
 export type OrgCacheType = keyof OrgCacheMap;
 
-export type OrgCacheEntity = Application | Token | User | Provider;
+export type OrgCacheEntity = Application | User | Provider;
 
 export type Keyable<T> = {
     [K in keyof T]-?: T[K] extends string | number ? K : never

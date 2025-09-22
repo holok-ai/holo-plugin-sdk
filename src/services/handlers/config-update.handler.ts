@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {MessageHandler} from '../../admin/services';
 import logger from '../../utils/logger';
-import cacheService from '../../admin/services/cache.service';
+import cacheService from '../../admin/services/organization.cache.service';
 
 
 import {HoloConfig} from "../../cache/types";

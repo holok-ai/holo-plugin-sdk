@@ -3,7 +3,7 @@ import path from 'path';
 import {EventEmitter} from 'events';
 import {injectable} from 'tsyringe';
 import logger from '../../utils/logger';
-import cacheService from '../../admin/services/cache.service';
+import cacheService from '../../admin/services/organization.cache.service';
 
 import {ConfigLoader, HoloConfig} from "../types";
 

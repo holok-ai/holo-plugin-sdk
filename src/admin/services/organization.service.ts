@@ -1,22 +1,24 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {CacheService} from "./cache.service";
-import {Organization} from "../../cache/types";
+import {OrganizationCacheService} from "./organization.cache.service";
+import {Application, OrganizationCache, Provider} from "../../cache";
 
 @injectable()
 export class OrganizationService {
     constructor(
-        private cacheService: CacheService,
+        private orgCacheService: OrganizationCacheService,
     ) {
     }
 
-    cacheOrganizations(organizations: Organization[]) {
-        return this.cacheService.setAll("organizations", organizations, "id");
+    withOrganization(orgId: string): OrganizationCache | undefined {
+        return this.orgCacheService.get(orgId);
     }
 
-    getOrganization(id: string): Organization | undefined {
-        return this.cacheService.get("organizations", id);
+    getApplication(orgId: string, appId: string): Application | undefined {
+        return this.orgCacheService.getApplication(orgId, appId);
     }
 
-    getProvider()
+    getProvider(orgId: string, providerId: string): Provider | undefined {
+        return this.orgCacheService.getProvider(orgId, providerId);
+    }
 }

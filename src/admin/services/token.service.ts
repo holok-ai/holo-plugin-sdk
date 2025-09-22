@@ -46,14 +46,14 @@ export class TokenService {
         return p;
     }
 
-    applyConfig(config: JwtTokenConfig) {
-        const conf = JwtTokenConfigValidator.assert(config);
-        switch (conf.action) {
+    applyConfig(c: JwtTokenConfig) {
+        const config = JwtTokenConfigValidator.assert(c);
+        switch (config.action) {
             case HoloConfigAction.DELETE:
-                this.invalidateByCriteria(conf.data);
+                this.invalidateByCriteria(config.data);
                 break;
             default:
-                logger.warn(`Unsupported JwtToken config action: ${conf.action}`);
+                logger.warn(`Unsupported JwtToken config action: ${config.action}`);
         }
     }
 
