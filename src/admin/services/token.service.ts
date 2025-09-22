@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import jwt, {JsonWebTokenError, TokenExpiredError} from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import NodeCache from 'node-cache';
 import {env} from '../../env';
-import {AdminJWTPayload, FetchLike, TokenRefreshRequest, TokenRefreshResponse} from '../../types';
+import {AdminJWTPayload, TokenRefreshRequest, TokenRefreshResponse} from '../types';
 import logger from '../../utils/logger';
 import {HoloConfigAction, JwtTokenConfig, JwtTokenConfigData} from "../types";
 import {JwtTokenConfigValidator} from "../validators";
@@ -13,6 +13,7 @@ export class TokenService {
 
     //TODO: Replace with proper auditing
     private invalidatedTokens: Set<string> = new Set();
+    private readonly _fetch = globalThis.fetch.bind(globalThis);
 
     private cache = new NodeCache({
         stdTTL: 3600,
@@ -23,7 +24,7 @@ export class TokenService {
 
     private readonly inFlight = new Map<string, Promise<string[] | null>>();
 
-    constructor(private readonly _fetch: FetchLike = fetch) {
+    constructor() {
     }
 
     async getUrlSlugs(token: string, useCache = true): Promise<string[] | null> {
@@ -146,8 +147,8 @@ export class TokenService {
         } catch (e) {
             const err = e as Error;
             const kind =
-                e instanceof TokenExpiredError ? 'expired' :
-                    e instanceof JsonWebTokenError ? 'invalid' : 'verify_error';
+                e instanceof jwt.TokenExpiredError ? 'expired' :
+                    e instanceof jwt.JsonWebTokenError ? 'invalid' : 'verify_error';
             logger.warn('Failed to extract urlSlugs from access token', {
                 kind,
                 msg: err.message,

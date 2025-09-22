@@ -18,9 +18,10 @@ export class ConfigService extends EventEmitter {
         private organizationCacheService: OrganizationCacheService
     ) {
         super();
+        this.setMaxListeners(5);
     }
 
-    async processConfig(holoConfig: HoloConfig): Promise<void> {
+    async processConfig(holoConfig: HoloConfig): Promise<boolean> {
 
         logger.info(`Processing config: ${holoConfig.configType} with ${holoConfig.data.length} entries`);
         const config = await this.validateConfig(holoConfig);
@@ -28,7 +29,9 @@ export class ConfigService extends EventEmitter {
         try {
             if (config instanceof ArkErrors) {
                 const msg = `Invalid Holo Config ${JSON.stringify(config.summary, null, 2)}`;
+                logger.error(msg);
                 this.emit('config:error', new AdminConfigError(msg, config));
+                return false;
             } else {
                 if (!this.initialized && holoConfig.action != HoloConfigAction.NEW) {
                     logger.warn(`Config is not initialized, ignoring config ${JSON.stringify(config, null, 2)}`);
@@ -44,16 +47,19 @@ export class ConfigService extends EventEmitter {
                             break;
                     }
 
-                    this.emit(this.initialized ? 'config:update' : 'config:initial', config);
+                    this.emit(this.initialized ? 'config:updated' : 'config:initialized', config);
                     if (!this.initialized) {
                         this.initialized = true;
                     }
+                    return true;
                 }
             }
         } catch (error) {
+            logger.error(`Error processing config: ${(error as Error).message}`);
             this.emit('config:error', error);
+            return false;
         }
-
+        return false;
     }
 
     async validateConfig(config: HoloConfig): Promise<HoloConfig | ArkErrors> {

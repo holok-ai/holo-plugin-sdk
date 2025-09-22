@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import {HoloConfig} from "../../admin/types/config.types";
+import {HoloConfig} from "./config.types";
 
 export interface ConfigLoaderEvents {
     'config:initial': (config: HoloConfig) => void;
@@ -10,5 +10,5 @@ export interface ConfigLoaderEvents {
 }
 
 export interface ConfigLoader extends EventEmitter {
-    loadConfig(): Promise<HoloConfig>;
+    loadConfig(): Promise<void>;
 }

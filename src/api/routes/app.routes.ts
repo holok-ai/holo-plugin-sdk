@@ -12,5 +12,6 @@ export function createCustomApplicationRoutes(): express.Router {
     const customUrlController: CustomUrlController = container.resolve(CustomUrlController);
 
     apiRouter.post('/:provider/:appId/*', makeAuthMiddleware(tokenService, {useCache: true}), customUrlController.resolveRequest);
+    apiRouter.post('/:provider/:appId/v1/*', makeAuthMiddleware(tokenService, {useCache: true}), customUrlController.resolveRequest);
     return apiRouter;
 }

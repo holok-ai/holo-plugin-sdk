@@ -3,8 +3,6 @@ import {Application} from "./application";
 import {User} from "./user";
 import {Provider} from "./provider";
 
-export * from './loader.types';
-export * from '../../admin/types/config.types';
 export {Provider} from "./provider";
 export {Evaluator} from "./evaluator";
 export {Guard} from "./guard";

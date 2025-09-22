@@ -1,15 +1,8 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {
-    Application,
-    HoloConfigAction,
-    Organization,
-    OrganizationCache,
-    OrganizationConfig,
-    Provider,
-    User
-} from "../../cache";
+import {Application, Organization, OrganizationCache, Provider, User} from "../../cache";
 import {OrganizationConfigValidator} from "../validators";
+import {HoloConfigAction, OrganizationConfig} from "../types";
 
 @injectable()
 export class OrganizationCacheService {

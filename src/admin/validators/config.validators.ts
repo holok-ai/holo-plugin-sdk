@@ -14,7 +14,7 @@ export const JwtTokenConfigDataValidator = type({
     'token?': 'string',
     'userId?': 'string',
     'organizationId?': 'string',
-    '[key: string]': 'unknown'
+    '[string]': 'unknown'
 }) satisfies Type<JwtTokenConfigData>;
 
 export const OrganizationConfigValidator = type({

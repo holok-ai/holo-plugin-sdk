@@ -12,7 +12,9 @@ import {createRoutes} from "./api/routes";
 import {env} from "./env";
 import listEndpoints from "express-list-endpoints";
 import {AppDB} from "./db";
-import {OrganizationCacheService, ConfigService, ProxyAdminService, TokenService} from './admin/services';
+import {ConfigService, OrganizationCacheService, TokenService} from './admin/services';
+import {ConfigFileLoader} from "./admin/services/config.file.loader";
+import {ConfigQueueLoader, ConfigQueueLoaderFactory} from "./admin/services/config.queue.loader";
 
 // Initialize Express app
 const app: Application = express();
@@ -42,11 +44,37 @@ app.get('/health', (_req: Request, res: Response): void => {
 // Start server
 const PORT: number = env.api.port || 3000;
 container.registerSingleton(ResponseService)
-container.registerSingleton(AppDB);
-container.registerSingleton(OrganizationCacheService);
-container.registerSingleton(ConfigService);
-container.registerSingleton(TokenService);
-container.registerSingleton(ProxyAdminService);
+    .registerSingleton(AppDB)
+    .registerSingleton(OrganizationCacheService)
+    .registerSingleton(ConfigService)
+    .registerSingleton(TokenService)
+    .registerSingleton(ConfigFileLoader)
+    .registerSingleton(ConfigQueueLoader, ConfigQueueLoaderFactory)
+
+const configService: ConfigService = container.resolve(ConfigService);
+
+async function waitForInitialConfig(timeoutMs: number = 60000) {
+    return new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => {
+
+            reject(new Error(`Timeout: Initial configuration not received within ${timeoutMs / 1000}s`));
+        }, timeoutMs);
+
+        configService.once('config:initialized', () => {
+            clearTimeout(timer);
+            resolve();
+        });
+
+        if (env.api.configMode === 'FILE') {
+            const fileLoader = container.resolve(ConfigFileLoader);
+            fileLoader.loadConfig();
+        } else {
+            const queueLoader = container.resolve(ConfigQueueLoader);
+            queueLoader.loadConfig();
+        }
+    });
+}
+
 
 // Initialize app with async components
 async function initApp(): Promise<void> {
@@ -54,13 +82,21 @@ async function initApp(): Promise<void> {
         // const queueService = container.resolve(QueueService);
         const initService = container.resolve(InitService);
         const responseService: ResponseService = container.resolve(ResponseService);
-        const proxyAdminService: ProxyAdminService = container.resolve(ProxyAdminService);
+
 
         logger.debug(`Creating API Server with id ${env.api.apiServerId}`);
         await initService.setupQueues(env.api.apiServerId);
         await responseService.startLLMResponseConsumer();
-        await proxyAdminService.init();
-        logger.debug("proxy admin service initialized");
+
+        // wait for initial config, or throw error for visibility
+        try {
+            await waitForInitialConfig(env.api.configTimeoutMs);
+            logger.info('Initial configuration received, continuing startup...');
+        } catch (e) {
+            console.error('Startup failed:', (e as Error).message);
+            process.exit(1);
+        }
+
         app.use('/api', createRoutes());
         // Start the HTTP server
         const server = app.listen(PORT, (): void => {
