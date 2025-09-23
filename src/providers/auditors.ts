@@ -11,69 +11,31 @@ export * from './claude/claude.auditor';
 export * from './ollama/ollama.auditor';
 export * from './openai/openai.auditor';
 
-/**
- * Central registry for managing provider-specific request/response translators.
- *
- * This registry implements the Factory pattern to provide appropriate translators
- * for converting between LLMWorkerRequest/Response formats and database formats.
- * It serves as the main entry point for the translation system, handling:
- *
- * - Provider-specific translator lookup and management
- * - Bidirectional translation (request and response)
- * - Extensibility through custom translator registration
- * - Type-safe translation operations with proper error handling
- *
- * The registry is TSyringe injectable and automatically initializes all
- * supported provider translators on construction.
- *
- * @example
- * ```typescript
- * // Translate incoming worker request to database format
- * const dbRequest = registry.translate(workerRequest);
- *
- * // Translate worker response to database format
- * const dbResponse = registry.translateResponse(workerResponse);
- * ```
- */
 @injectable()
 export class AuditorRegistry {
-    /**
-     * Internal registry mapping providers to their specific translators.
-     * Uses Map for O(1) lookup performance and type safety.
-     */
-    private translators = new Map<ProviderType, IAuditor>();
 
-    /**
-     * Initialize the translator registry with all supported provider translators.
-     *
-     * @param ollamaTranslator - Handles Ollama generate/chat request formats
-     * @param claudeTranslator - Handles Claude message format and stream events
-     * @param openaiTranslator - Handles OpenAI chat completions and streaming
-     */
+    private auditors = new Map<ProviderType, IAuditor>();
+
     constructor(
-        private ollamaTranslator: OllamaAuditor,
-        private claudeTranslator: ClaudeAuditor,
-        private openaiTranslator: OpenAIAuditor
+        private ollamaAuditor: OllamaAuditor,
+        private claudeAuditor: ClaudeAuditor,
+        private openaiAuditor: OpenAIAuditor
     ) {
-        this.initializeTranslators();
+        this.initializeAuditors();
     }
 
-    /**
-     * Get translator for a specific provider
-     */
-    getTranslator(provider: ProviderType): IAuditor {
-        const translator = this.translators.get(provider);
-        if (!translator) {
-            throw new Error(`No translator registered for provider: ${provider}`);
+
+    getAuditor(provider: ProviderType): IAuditor {
+        const auditor = this.auditors.get(provider);
+        if (!auditor) {
+            throw new Error(`No auditor registered for provider: ${provider}`);
         }
-        return translator;
+        return auditor;
     }
 
-    /**
-     * Translate LLMWorkerRequest to LlmRequest using appropriate provider translator
-     */
-    translate(workerRequest: LLMWorkerRequest): Omit<LlmRequest, 'id'> {
-        const translator = this.getTranslator(workerRequest.providerType);
+
+    audit(workerRequest: LLMWorkerRequest): Omit<LlmRequest, 'id'> {
+        const auditor = this.getAuditor(workerRequest.providerType);
 
         // Create empty LlmRequest object
         const llmRequest: Omit<LlmRequest, 'id'> = {
@@ -85,10 +47,10 @@ export class AuditorRegistry {
             provider_slug: ''
         };
 
-        // Use translator to populate fields
-        translator.auditRequest(workerRequest, llmRequest);
+        // Use auditor to populate fields
+        auditor.auditRequest(workerRequest, llmRequest);
 
-        logger.debug('Translated LLMWorkerRequest to LlmRequest', {
+        logger.debug('Audited LLMWorkerRequest to LlmRequest', {
             organizationId: workerRequest.organizationId,
             providerType: workerRequest.providerType,
             requestId: workerRequest.requestId,
@@ -98,16 +60,13 @@ export class AuditorRegistry {
         return llmRequest;
     }
 
-    /**
-     * Translate LLMWorkerResponse to LlmResponse using appropriate provider translator
-     */
-    translateResponse(
+    auditResponse(
         workerResponse: LLMWorkerResponse,
         requestContext?: { userId?: string; applicationId?: string }
     ): Omit<LlmResponse, 'id'> {
-        const translator = this.getTranslator(workerResponse.providerType);
+        const auditor = this.getAuditor(workerResponse.providerType);
 
-        // Create empty LlmResponse object
+
         const llmResponse: Omit<LlmResponse, 'id'> = {
             organization_id: '',
             created_at: '',
@@ -120,10 +79,9 @@ export class AuditorRegistry {
             worker_id: ''
         };
 
-        // Use translator to populate fields
-        translator.auditResponse(workerResponse, llmResponse, requestContext);
+        auditor.auditResponse(workerResponse, llmResponse, requestContext);
 
-        logger.debug('Translated LLMWorkerResponse to LlmResponse', {
+        logger.debug('Audited LLMWorkerResponse to LlmResponse', {
             provider: workerResponse.providerType,
             requestId: workerResponse.requestId,
             model: llmResponse.model_slug,
@@ -133,36 +91,29 @@ export class AuditorRegistry {
         return llmResponse;
     }
 
-    /**
-     * Check if a provider has a registered translator
-     */
-    hasTranslator(provider: ProviderType): boolean {
-        return this.translators.has(provider);
+
+    hasAuditor(provider: ProviderType): boolean {
+        return this.auditors.has(provider);
     }
 
-    /**
-     * Get all supported providers
-     */
+
     getSupportedProviders(): ProviderType[] {
-        return Array.from(this.translators.keys());
+        return Array.from(this.auditors.keys());
     }
 
-    private initializeTranslators(): void {
-        this.translators.set(ProviderType.OLLAMA, this.ollamaTranslator);
-        this.translators.set(ProviderType.CLAUDE, this.claudeTranslator);
-        this.translators.set(ProviderType.OPENAI, this.openaiTranslator);
-        this.translators.set(ProviderType.PERPLEXITY, this.openaiTranslator); // Perplexity uses OpenAI format
+    private initializeAuditors(): void {
+        this.auditors.set(ProviderType.OLLAMA, this.ollamaAuditor);
+        this.auditors.set(ProviderType.CLAUDE, this.claudeAuditor);
+        this.auditors.set(ProviderType.OPENAI, this.openaiAuditor);
+        this.auditors.set(ProviderType.PERPLEXITY, this.openaiAuditor); // Perplexity uses OpenAI format
 
-        logger.info('Translator registry initialized', {
+        logger.info('Auditor registry initialized', {
             supportedProviders: this.getSupportedProviders()
         });
     }
 
-    /**
-     * Register a custom translator (for extensibility)
-     */
-    registerTranslator(provider: ProviderType, translator: IAuditor): void {
-        this.translators.set(provider, translator);
-        logger.debug(`Registered custom translator for provider: ${provider}`);
+    registerAuditor(provider: ProviderType, Auditor: IAuditor): void {
+        this.auditors.set(provider, Auditor);
+        logger.debug(`Registered custom auditor for provider: ${provider}`);
     }
 }

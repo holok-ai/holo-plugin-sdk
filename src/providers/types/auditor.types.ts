@@ -56,7 +56,7 @@ export abstract class BaseAuditor implements IAuditor {
         llmRequest.request_id = workerRequest.requestId;
         llmRequest.request_type = workerRequest.type;
         llmRequest.timestamp = new Date(workerRequest.timestamp).toISOString();
-        llmRequest.application_id = workerRequest.applicationId || 'default';
+        llmRequest.application_id = workerRequest.appSlug || 'default';
         llmRequest.provider_slug = workerRequest.providerType;
         llmRequest.organization_id = workerRequest.organizationId;
 

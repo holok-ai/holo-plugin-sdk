@@ -20,7 +20,7 @@ export class AuditService {
         private evaluatorDB: EvaluatorDB,
         private requestDB: RequestDB,
         private responseDB: ResponseDB,
-        private translatorRegistry: AuditorRegistry,
+        private auditRegistry: AuditorRegistry,
         private queueService: QueueService
     ) {
         logger.info('AuditService initialized');
@@ -31,8 +31,6 @@ export class AuditService {
      * Supports both LLMWorkerRequest and direct LlmRequest formats
      * @param {LLMWorkerRequest | Omit<LlmRequest, 'id'>} content - Request data to log
      */
-    async logRequest(content: LLMWorkerRequest): Promise<void>;
-    async logRequest(content: Omit<LlmRequest, 'id'>): Promise<void>;
     async logRequest(content: LLMWorkerRequest | Omit<LlmRequest, 'id'>): Promise<void> {
         const startTime = Date.now();
 
@@ -40,7 +38,7 @@ export class AuditService {
             // Type guard to check if it's an LLMWorkerRequest
             if (this.isLLMWorkerRequest(content)) {
                 logger.debug(`Logging LLMWorkerRequest - requestId: ${content.requestId}, type: ${content.type}, provider: ${content.providerType}`);
-                const mappedRequest = this.translatorRegistry.translate(content);
+                const mappedRequest = this.auditRegistry.audit(content);
                 await this.insertRequest(mappedRequest);
                 logger.info(`Successfully logged LLMWorkerRequest ${content.requestId} in ${Date.now() - startTime}ms`);
             } else {
@@ -116,7 +114,7 @@ export class AuditService {
         try {
             if (this.isLLMWorkerResponse(content)) {
                 logger.debug(`Logging LLMWorkerResponse - requestId: ${content.requestId}, provider: ${content.providerType}`);
-                const mappedResponse = this.translatorRegistry.translateResponse(content, requestContext);
+                const mappedResponse = this.auditRegistry.auditResponse(content, requestContext);
                 const responseId = await this.insertResponse(mappedResponse);
                 if (mappedResponse.status === LlmStatus.SUCCESS && responseId) await this.sendToEvaluatorQ(responseId, mappedResponse.application_id);
                 logger.info(`Successfully logged LLMWorkerResponse ${content.requestId} (${content.providerType}) in ${Date.now() - startTime}ms`);

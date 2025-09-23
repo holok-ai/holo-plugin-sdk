@@ -34,7 +34,7 @@ export const authenticateJWT = (req: HttpApiRequest, res: Response, next: NextFu
         }) as JWTPayload;
 
         // Attach user to request
-        req.user = decoded;
+        req.auth = decoded;
 
         logger.debug(`User authenticated successfully: ${JSON.stringify(decoded)}`);
 
@@ -75,11 +75,10 @@ export const optionalAuth = (req: HttpApiRequest, _res: Response, next: NextFunc
         }) as JWTPayload;
 
         // Attach user to request
-        req.user = decoded;
+        req.auth = decoded;
 
         logger.debug('Optional auth: User authenticated successfully', {
             userId: decoded.userId,
-            email: decoded.email,
             path: req.path,
             method: req.method
         });

@@ -1,9 +1,7 @@
 import {Type, type} from "arktype";
 import {ProviderType} from "../../providers/types";
 import {ModelValidator} from "./model.validator";
-import {SystemPromptValidator} from "./system.prompt.validator";
-import {GuardValidator} from "./guard.validator";
-import {EvaluatorValidator} from "./evaluator.validator";
+import {PromptValidator} from "./prompt.validator";
 import {Application} from "../types";
 
 export const ApplicationValidator = type({
@@ -11,7 +9,7 @@ export const ApplicationValidator = type({
     organizationId: 'string',
     providerType: type.valueOf(ProviderType), // ProviderType from providers/types
     models: ModelValidator.array(),
-    'systemPrompt?': SystemPromptValidator,
-    'guards?': GuardValidator.array(),
-    'evaluators?': EvaluatorValidator.array()
+    'systemPrompt?': PromptValidator,
+    'guards?': PromptValidator.array(),
+    'evaluators?': PromptValidator.array()
 }) satisfies Type<Application>;

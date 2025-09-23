@@ -3,17 +3,12 @@ import {QueueService} from "./queue.service";
 import logger from "../utils/logger";
 import {Transform, TransformCallback} from "node:stream";
 import {container, injectable} from "tsyringe";
-import {v4 as uuidv4} from "uuid";
 import {HttpApiRequest} from "../api/types";
-import {Request, Response} from "express";
+import {Response} from "express";
 import {env} from "../env";
-import {LLMWorkerRequest, LLMWorkerResponse} from '../types';
+import {LLMWorkerRequest, LLMWorkerResponse, WorkerRequest} from '../types';
 import {StreamFormatter} from './stream.formatter.service';
-import {OllamaParser} from "../providers/ollama";
-import {ClaudeParser} from "../providers/claude";
-import {OpenAIParser} from "../providers/openai";
-import {ErrorMessages} from "../utils";
-import {ProviderChatRequest, ProviderType, RequestType} from "../providers/types";
+import {ProviderType, RequestType} from "../providers/types";
 
 
 /**
@@ -137,51 +132,21 @@ export class ResponseService {
      * @param {HttpApiRequest} req - HTTP request object
      * @param {Response} res - HTTP response object
      */
-    async parseAndSendLLMRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest, res: Response) {
-        const payload = await this.parseLLMRequest(req, providerType, type);
-        const requestId = uuidv4();
+    async processRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest, res: Response) {
 
-        const workerRequest: LLMWorkerRequest = {
-            providerType: providerType,
-            sourceId: this.serverId,
-            requestId: requestId,
-            type: type,
-            payload,
-            timestamp: Date.now(),
-            ...(req.user !== undefined && {
-                organizationId: req.user.organizationId,
-                userId: req.user.userId
-            }),
-            ...(req.applicationId !== undefined && {applicationId: req.applicationId})
-        };
 
-        logger.debug(`LLMWorkerRequest: ${JSON.stringify(workerRequest)}`);
+        const workerRequest = await this.parseRequest(providerType, type, req);
 
-        // Check if request is streaming
-        const isStreaming = payload.stream === true;
-        await this._openResponseStream(req, res, workerRequest, requestId, isStreaming);
+
+        await this._openResponseStream(req, res, workerRequest);
     }
 
-    async parseLLMRequest(
-        req: Request,
-        providerType: ProviderType,
-        type: RequestType
-    ): Promise<ProviderChatRequest> {
-        logger.debug('Unified LLM request parser routing', {providerType, type});
+    async parseRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest) {
+        return WorkerRequest.create(providerType, type, req, this.serverId);
+    }
 
-        switch (providerType) {
-            case ProviderType.OLLAMA:
-                return OllamaParser.parseRequest(req, type);
-            case ProviderType.CLAUDE:
-                return ClaudeParser.parseRequest(req, type);
-            case ProviderType.OPENAI:
-                return OpenAIParser.parseRequest(req, type);
-            case ProviderType.PERPLEXITY:
-                return OpenAIParser.parseRequest(req, type);
-            default:
-                logger.error('Unsupported provider in unified parser', {providerType});
-                throw new Error(ErrorMessages.unsupportedProvider(providerType));
-        }
+    async sendRequest(LLMWorkerRequest: LLMWorkerRequest, req: HttpApiRequest, res: Response) {
+        await this._openResponseStream(req, res, LLMWorkerRequest);
     }
 
     /**
@@ -194,8 +159,9 @@ export class ResponseService {
      * @param {boolean} isStreaming - Whether the request should use streaming response
      * @private
      */
-    async _openResponseStream(req: HttpApiRequest, res: Response, request: Object, requestId: string, isStreaming: boolean = true) {
+    async _openResponseStream(req: HttpApiRequest, res: Response, request: LLMWorkerRequest) {
 
+        const {requestId, isStreaming} = request;
         // Set up appropriate response headers based on streaming mode
         if (isStreaming) {
             res.setHeader('Content-Type', 'text/event-stream');

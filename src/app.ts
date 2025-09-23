@@ -158,9 +158,18 @@ async function gracefulShutdown(signal: string): Promise<void> {
     }
 }
 
-// Handle graceful shutdown
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+['SIGBREAK', 'SIGINT', 'SIGTERM'].forEach((signal) => {
+    process.on(signal, () => {
+        logger.info(`Received ${signal}, shutting down worker server...`);
+        gracefulShutdown(signal);
+        process.exit(0);
+    });
+});
+
+process.on("uncaughtException", (err) => {
+    logger.error(`Uncaught exception in worker server: ${err.message}`);
+    logger.error(err.stack);
+});
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error: Error): void => {

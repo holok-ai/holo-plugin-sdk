@@ -18,12 +18,20 @@ export class CustomUrlController extends BaseController {
 
     public resolveRequest = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            const {provider, appId} = req.params;
-            const urlPath = req.params[0]; // This captures the rest of the URL after /:provider/:appId/
-            req.applicationId = appId;
+            const {auth} = req;
+            const provider = auth ? auth.providerType : (req.params.provider?.toUpperCase() as ProviderType);
+
+            if (!auth && provider) {
+                logger.error('No auth provided for custom url request, but providerType in params');
+            }
+            if (!provider) {
+                throw new Error('No providerType provided in params');
+            }
+
+            const urlPath = req.params[0]; // This captures the rest of the URL after /:provider/:appUrlSlug/
 
             // Get the appropriate controller based on provider
-            const controller = this.getControllerForProvider(provider.toUpperCase() as ProviderType);
+            const controller = this.getControllerForProvider(provider);
 
             if (!controller) {
                 logger.error(`no controller resolved for : ${provider}`);
@@ -32,7 +40,7 @@ export class CustomUrlController extends BaseController {
             }
 
             // Route to the appropriate method based on the URL path and provider
-            const method = this.getMethodForPath(urlPath, provider.toUpperCase() as ProviderType);
+            const method = this.getMethodForPath(urlPath, provider);
 
             if (!method || typeof controller[method] !== 'function') {
                 res.status(404).json({error: `Method not found for path: ${urlPath}`});

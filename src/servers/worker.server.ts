@@ -88,6 +88,14 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
 const worker = container.resolve(WorkerServer);
 worker.start();
 
+['SIGBREAK', 'SIGINT', 'SIGTERM'].forEach((signal) => {
+    process.on(signal, () => {
+        logger.info(`Received ${signal}, shutting down worker server...`);
+        worker.shutdown();
+        process.exit(0);
+    });
+});
+
 process.on("uncaughtException", (err) => {
     logger.error(`Uncaught exception in worker server: ${err.message}`);
     logger.error(err.stack);

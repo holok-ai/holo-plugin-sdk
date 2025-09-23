@@ -1,103 +1,102 @@
-import {AllCacheStats, Keyable, Organization, OrgCacheEntity, OrgCacheType} from "./types";
-import NodeCache from "node-cache";
-import logger from "../utils/logger";
+import {Application, Organization, OrgCacheMap, OrgCacheType, Provider} from "./types";
+import {OrganizationValidator} from "./validators";
 
 export class OrganizationCache {
-    private readonly caches: Record<OrgCacheType, NodeCache>
+    private providers = new Map<string, Provider>();
+    private applications = new Map<string, Application>();
     id?: string;
     name?: string;
     slug?: string;
 
     constructor(organization: Organization) {
-        this.caches = {
-            users: new NodeCache({
-                stdTTL: 600,        // 10 minutes
-                checkperiod: 120,   // Check expired keys every 2 minutes
-                useClones: false,   // Better performance, be careful with object mutations
-                maxKeys: 1000       // Prevent memory issues
-            }),
-            providers: new NodeCache({
-                stdTTL: 0,       // Infinite
-                checkperiod: 300,   // Check expired keys every 5 minutes
-                useClones: false,   // Better performance
-                maxKeys: 5000       // Allow more tokens to be cached
-            }),
-            applications: new NodeCache({
-                stdTTL: 0,       // Infinite
-                checkperiod: 300,   // Check expired keys every 5 minutes
-                useClones: false,   // Better performance
-                maxKeys: 5000       // Allow more tokens to be cached
-            })
-        } as const satisfies Record<OrgCacheType, NodeCache>;
-
-        this.setupEventListeners();
         this.init(organization);
     }
 
     init(organization: Organization): void {
-        if (organization !== null) {
-            const {id, name, slug, applications, providers} = organization;
+        const org = OrganizationValidator.assert(organization);
+        const {id, name, slug, applications, providers} = org;
 
-            this.id = id;
-            this.name = name;
-            this.slug = slug;
+        this.id = id;
+        this.name = name;
+        this.slug = slug;
 
-            if (applications?.length > 0) {
-                this.mset('applications', applications, 'urlSlug');
-            }
-            if (providers?.length > 0) {
-                this.mset('providers', providers, 'name');
-            }
+        if (applications?.length > 0) {
+            this.mset('applications', applications, 'urlSlug');
+        }
+        if (providers?.length > 0) {
+            this.mset('providers', providers, 'name');
         }
     }
 
-    private setupEventListeners(): void {
-        (Object.keys(this.caches) as OrgCacheType[]).forEach((k) => {
-            const cache = this.caches[k];
-            cache.on('set', (key: string, value: any) => {
-                logger.debug(`[${k}] Cache SET: ${key} value: ${value}`);
-            });
-
-            cache.on('expired', (key: string) => {
-                logger.debug(`[${k}] Cache EXPIRED: ${key}`);
-            });
-
-            cache.on('del', (key: string) => {
-                logger.debug(`[${k}] Cache DELETE: ${key}`);
-            });
-        });
+    getAll<K extends OrgCacheType>(bucket: K): OrgCacheMap[K][] {
+        return this.mapOf(bucket).values().toArray() as unknown as OrgCacheMap[K][];
     }
 
-    // Generic cache operations
-    get<T = any>(cacheType: OrgCacheType, key: string): T | undefined {
-        return this.caches[cacheType].get<T>(key);
+    // ----- Generic operations -----
+    get<K extends OrgCacheType>(bucket: K, key: string): OrgCacheMap[K] | undefined {
+        return this.mapOf(bucket).get(key) as OrgCacheMap[K] | undefined;
     }
 
-    set<T = any>(cacheType: OrgCacheType, key: string, value: T): boolean {
-        return this.caches[cacheType].set(key, value) ?? false;
+    set<K extends OrgCacheType>(bucket: K, key: string, value: OrgCacheMap[K]): void {
+        this.mapOf(bucket).set(key, value as any);
     }
 
-    mset<T extends OrgCacheEntity, K extends Keyable<T>>(cacheType: OrgCacheType, values: readonly T[], keyField: K): boolean {
-        if (!values?.length) return true;
-        const batch = new Array<{ key: string, val: OrgCacheEntity }>(values.length);
+    mset<K extends OrgCacheType, T extends OrgCacheMap[K], F extends keyof T & string>(
+        bucket: K,
+        values: readonly T[],
+        keyField: F
+    ): void {
+        const m = this.mapOf(bucket);
         for (let i = 0; i < values.length; i++) {
-            const val = values[i]!;
-            batch[i] = {key: String(val[keyField]), val}
+            const v = values[i]!;
+            m.set(String(v[keyField]), v as any);
         }
-        return this.caches[cacheType].mset(batch);
     }
 
-    del(cacheType: OrgCacheType, key: string | string[]): number {
-        return this.caches[cacheType].del(key);
+    del(bucket: OrgCacheType, key: string | string[]): boolean {
+        if (Array.isArray(key)) {
+            return this.mdel(bucket, key).success;
+        }
+        return this.mapOf(bucket).delete(key);
     }
 
-    // Stats for monitoring
-    getStats(): AllCacheStats {
-        const stats = {} as AllCacheStats;
-        (Object.keys(this.caches) as OrgCacheType[]).forEach((k) => {
-            const cache = this.caches[k];
-            stats[k] = {...cache.getStats(), keys: cache.keys().length};
-        });
-        return stats;
+    mdel(bucket: OrgCacheType, keys: string[]): { success: boolean; failed: string[] } {
+        const failed: string[] = [];
+        const m = this.mapOf(bucket);
+        for (const key of keys) if (!m.delete(key)) failed.push(key);
+        return {success: failed.length === 0, failed};
+    }
+
+    clear(bucket: OrgCacheType): void {
+        this.mapOf(bucket).clear();
+    }
+
+    has(bucket: OrgCacheType, key: string): boolean {
+        return this.mapOf(bucket).has(key);
+    }
+
+    // ----- Admin / monitoring -----
+    getStats() {
+        return {
+            applications: {size: this.applications.size},
+            providers: {size: this.providers.size},
+        };
+    }
+
+    snapshot() {
+        return {
+            applications: Object.fromEntries(this.applications),
+            providers: Object.fromEntries(this.providers),
+        };
+    }
+
+    // ----- Helpers -----
+    private mapOf(bucket: OrgCacheType): Map<string, unknown> {
+        switch (bucket) {
+            case 'applications':
+                return this.applications as unknown as Map<string, Application>;
+            case 'providers':
+                return this.providers as unknown as Map<string, Provider>;
+        }
     }
 }

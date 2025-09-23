@@ -51,6 +51,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             }
 
             const response = await this.client!.models.list();
+            logger.debug(`Claude models: ${JSON.stringify(response.data)}`);
             const modelList = response.data.map(model => ({
                 id: model.id,
                 name: model.display_name,

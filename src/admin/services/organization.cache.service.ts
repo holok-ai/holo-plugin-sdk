@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {Application, Organization, OrganizationCache, Provider, User} from "../../cache";
+import {Application, Organization, OrganizationCache, Provider} from "../../cache";
 import {OrganizationConfigValidator} from "../validators";
 import {HoloConfigAction, OrganizationConfig} from "../types";
 
@@ -24,7 +24,7 @@ export class OrganizationCacheService {
         }
     }
 
-    get(id: string) {
+    get(id: string): OrganizationCache | undefined {
         return this.orgCaches.get(id);
     }
 
@@ -49,27 +49,27 @@ export class OrganizationCacheService {
         }
     }
 
-    getApplication(orgId: string, appId: string): Application | undefined {
-        return this.get(orgId)?.get<Application>('application', appId);
+    getApplication(orgId: string, urlSlug: string): Application | undefined {
+        return this.get(orgId)?.get('applications', urlSlug);
+    }
+
+    getAllApplications(orgId: string): Application[] | undefined {
+        return this.get(orgId)?.getAll('applications');
     }
 
     getProvider(orgId: string, providerId: string): Provider | undefined {
-        return this.get(orgId)?.get<Provider>('provider', providerId);
+        return this.get(orgId)?.get('providers', providerId);
     }
 
-    getUser(orgId: string, userId: string): User | undefined {
-        return this.get(orgId)?.get<User>('user', userId);
+    getAllProviders(orgId: string): Provider[] | undefined {
+        return this.get(orgId)?.getAll('providers');
     }
 
     delApplication(orgId: string, appId: string | string[]) {
-        return this.get(orgId)?.del('application', appId);
+        return this.get(orgId)?.del('applications', appId);
     }
 
     delProvider(orgId: string, providerId: string | string[]) {
-        return this.get(orgId)?.del('provider', providerId);
-    }
-
-    delUser(orgId: string, userId: string | string[]) {
-        return this.get(orgId)?.del('user', userId);
+        return this.get(orgId)?.del('providers', providerId);
     }
 }

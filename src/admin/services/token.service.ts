@@ -3,9 +3,15 @@ import {injectable} from 'tsyringe';
 import jwt from 'jsonwebtoken';
 import NodeCache from 'node-cache';
 import {env} from '../../env';
-import {AdminJWTPayload, TokenRefreshRequest, TokenRefreshResponse} from '../types';
+import {
+    HoloConfigAction,
+    JWTPayload,
+    JwtTokenConfig,
+    JwtTokenConfigData,
+    TokenRefreshRequest,
+    TokenRefreshResponse
+} from '../types';
 import logger from '../../utils/logger';
-import {HoloConfigAction, JwtTokenConfig, JwtTokenConfigData} from "../types";
 import {JwtTokenConfigValidator} from "../validators";
 
 @injectable()
@@ -27,16 +33,18 @@ export class TokenService {
     constructor() {
     }
 
-    async getUrlSlugs(token: string, useCache = true): Promise<string[] | null> {
+    async getAppSlugs(token: string, useCache = true): Promise<string[] | null> {
         if (useCache) {
             const hit = this.cache.get<string[]>(token);
+            logger.debug(`Cache hit: ${!!hit}`);
             if (hit) return hit;
         }
 
         const existing = this.inFlight.get(token);
         if (existing) return existing;
 
-        const p = this.refreshAndVerify(token)
+        const p = this.refreshToken(token)
+            .then((accessToken) => accessToken ? this.extractAppSlugs(accessToken) : [])
             .then((slugs) => {
                 if (slugs?.length) this.cache.set(token, slugs); // TTL falls back to stdTTL
                 return slugs;
@@ -66,8 +74,8 @@ export class TokenService {
                 this.invalidate(token);
             }
             for (const token of this.cache.keys()) {
-                const decoded = this.decodeToken(token);
-                if (userId === filter?.userId || decoded?.organizationId === organizationId) {
+                const auth = this.decodeToken(token);
+                if (userId === auth?.userId || organizationId === auth?.organizationId) {
                     this.invalidate(token);
                 }
             }
@@ -80,14 +88,14 @@ export class TokenService {
         this.inFlight.delete(token);
     }
 
-    decodeToken(token: string): AdminJWTPayload {
+    decodeToken(token: string): JWTPayload {
         return jwt.verify(token, env.jwtConfig.secret, {
             algorithms: [env.jwtConfig.algorithm],
             clockTolerance: 5,
-        }) as AdminJWTPayload;
+        }) as JWTPayload;
     }
 
-    private async refreshAndVerify(originalToken: string): Promise<string[] | null> {
+    async refreshToken(originalToken: string): Promise<string | null> {
         if (!env.mokuUrl) {
             logger.error('MOKU_URL not configured for token refresh');
             return null;
@@ -117,39 +125,40 @@ export class TokenService {
                 return null;
             }
 
-            return this.extractUrlSlugs(data.accessToken);
+            return data.accessToken
         } catch (e) {
             logger.error('Token refresh error', {name: (e as Error).name, error: (e as Error).message});
             return null;
         }
     }
 
-    private extractUrlSlugs(accessToken: string): string[] | null {
+    private extractAppSlugs(accessToken: string): string[] | null {
         try {
-            const decoded = this.decodeToken(accessToken);
-            const slugs = decoded?.urlSlugs;
+            const auth = this.decodeToken(accessToken);
+
+            const slugs = auth?.appSlugs;
             if (!Array.isArray(slugs)) {
-                logger.warn('Invalid JWT structure: missing or invalid urlSlugs', {
-                    hasUrlSlugs: !!slugs,
-                    urlSlugsType: typeof slugs,
+                logger.warn('Invalid JWT structure: missing or invalid appSlugs', {
+                    hasAppSlugs: !!slugs,
+                    appSlugsType: typeof slugs,
                 });
                 return null;
             }
 
             // Optional: align cache TTL to access token exp if present
-            if (typeof decoded.exp === 'number') {
-                const ttl = Math.max(1, decoded.exp - Math.floor(Date.now() / 1000));
+            if (typeof auth.exp === 'number') {
+                const ttl = Math.max(1, auth.exp - Math.floor(Date.now() / 1000));
                 this.cache.set(accessToken, slugs, ttl);
             }
 
-            logger.debug('Extracted urlSlugs', {urlSlugsCount: slugs.length});
+            logger.debug('Extracted appSlugs', {appSlugsCount: slugs.length});
             return slugs;
         } catch (e) {
             const err = e as Error;
             const kind =
                 e instanceof jwt.TokenExpiredError ? 'expired' :
                     e instanceof jwt.JsonWebTokenError ? 'invalid' : 'verify_error';
-            logger.warn('Failed to extract urlSlugs from access token', {
+            logger.warn('Failed to extract appSlugs from access token', {
                 kind,
                 msg: err.message,
                 tokenLen: accessToken.length

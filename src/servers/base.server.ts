@@ -17,13 +17,13 @@ export class BaseServer implements IAppServer {
         // logger.debug(`Server (${this.id}) Config: ${JSON.stringify(env, null, 2)}`)
     }
 
-    private async init() {
+    async init() {
         await this.onInit();
         this.initialized = true;
         logger.info(`Server (${this.id}) started successfully.`);
     }
 
-    private async shutdown() {
+    async shutdown() {
         await this.onShutdown();
         logger.info('Server shutdown gracefully.');
         process.exit(0);

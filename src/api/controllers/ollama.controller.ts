@@ -14,7 +14,7 @@ export default class OllamaController extends BaseController {
 
     public generate = async (req: HttpApiRequest, res: Response): Promise<void> => {
         try {
-            await this.responseService.parseAndSendLLMRequest(ProviderType.OLLAMA, RequestType.GENERATE, req, res);
+            await this.responseService.processRequest(ProviderType.OLLAMA, RequestType.GENERATE, req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to generate text');
         }
@@ -23,7 +23,7 @@ export default class OllamaController extends BaseController {
     public chat = async (req: HttpApiRequest, res: Response): Promise<void> => {
         try {
             if (!this.hasRequiredFields(req.body, ['model', 'messages'], res)) return;
-            await this.responseService.parseAndSendLLMRequest(ProviderType.OLLAMA, RequestType.CHAT, req, res);
+            await this.responseService.processRequest(ProviderType.OLLAMA, RequestType.CHAT, req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to complete chat');
         }

@@ -1,19 +1,13 @@
-import {Request} from 'express';
+import {ProviderType} from "../../providers/types";
 
 export interface JWTPayload {
     organizationId: string;
-    userId: string;
-    email: string;
+    userId?: string;
+    appSlugs?: string[];
+    appSlug?: string;
+    providerType?: ProviderType;
     iat?: number;
     exp?: number;
-}
-
-export interface AuthenticatedRequest extends Request {
-    user?: JWTPayload;
-}
-
-export interface AdminJWTPayload extends JWTPayload {
-    urlSlugs: string[];
 }
 
 export interface TokenRefreshRequest {
@@ -22,4 +16,11 @@ export interface TokenRefreshRequest {
 
 export interface TokenRefreshResponse {
     accessToken: string;
+}
+
+export interface Auth {
+    organizationId: string;
+    userId?: string;
+    urlSlugs?: string[];
+    urlSlug?: string;
 }
