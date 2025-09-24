@@ -1,22 +1,22 @@
 import {injectable} from 'tsyringe';
-import {LLMWorkerRequest, LLMWorkerResponse, OllamaWorkerChatRequest, OllamaWorkerGenerateRequest} from '../../types';
+import {LLMWorkerRequest, LLMWorkerResponse} from '../../types';
 import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
 import logger from '../../utils/logger';
-import {BaseAuditor, ProviderType, RequestType} from "../types";
+import {BaseAuditor, OllamaChatRequest, OllamaGenerateRequest, ProviderType, RequestType} from "../types";
 
 @injectable()
 export class OllamaAuditor extends BaseAuditor {
     readonly provider = ProviderType.OLLAMA;
 
     protected toHoloRequest(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as OllamaWorkerChatRequest | OllamaWorkerGenerateRequest;
+        const payload = workerRequest.payload as OllamaChatRequest | OllamaGenerateRequest;
 
         // Set model
         llmRequest.model_slug = payload.model;
 
         // Set prompt/message content based on request type
         if (workerRequest.type === RequestType.CHAT) {
-            const chatPayload = payload as OllamaWorkerChatRequest;
+            const chatPayload = payload as OllamaChatRequest;
             const userPrompt = this.extractUserPromptFromMessages(chatPayload.messages);
             const systemPrompt = this.extractSystemPromptFromMessages(chatPayload.messages);
             if (userPrompt !== undefined) {
@@ -26,7 +26,7 @@ export class OllamaAuditor extends BaseAuditor {
                 llmRequest.system_prompt = systemPrompt;
             }
         } else if (workerRequest.type === RequestType.GENERATE) {
-            const generatePayload = payload as OllamaWorkerGenerateRequest;
+            const generatePayload = payload as OllamaGenerateRequest;
             if (generatePayload.prompt !== undefined) {
                 llmRequest.user_prompt = generatePayload.prompt;
             }
@@ -37,7 +37,7 @@ export class OllamaAuditor extends BaseAuditor {
     }
 
     protected mapProviderPayload(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as OllamaWorkerChatRequest | OllamaWorkerGenerateRequest;
+        const payload = workerRequest.payload as OllamaChatRequest | OllamaGenerateRequest;
         // Set options
         if (payload.options !== undefined) {
             llmRequest.options = payload.options;

@@ -1,14 +1,14 @@
 import {injectable} from 'tsyringe';
-import {LLMWorkerRequest, LLMWorkerResponse, OpenAIWorkerRequest} from '../../types';
+import {LLMWorkerRequest, LLMWorkerResponse} from '../../types';
 import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
-import {BaseAuditor, ProviderType} from "../types";
+import {BaseAuditor, OpenAIChatRequest, ProviderType} from "../types";
 
 @injectable()
 export class OpenAIAuditor extends BaseAuditor {
     readonly provider = ProviderType.OPENAI;
 
     protected toHoloRequest(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as OpenAIWorkerRequest;
+        const payload = workerRequest.payload as OpenAIChatRequest;
 
         // Set model
         llmRequest.model_slug = payload.model;
@@ -27,7 +27,7 @@ export class OpenAIAuditor extends BaseAuditor {
     }
 
     protected mapProviderPayload(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as OpenAIWorkerRequest;
+        const payload = workerRequest.payload as OpenAIChatRequest;
         // Set options (OpenAI-specific parameters)
         const options: Record<string, any> = {};
         if (payload.max_tokens !== undefined) options.max_tokens = payload.max_tokens;

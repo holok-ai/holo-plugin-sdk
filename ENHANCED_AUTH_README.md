@@ -23,10 +23,11 @@ MOKU_URL=https://your-admin-service.com
 ## Usage
 
 ### For routes that require caching authentication:
-```typescript
-import { authenticateJWTWithCache } from '../middleware/enhanced-auth.middleware';
 
-router.post('/:provider/:appId/*', authenticateJWTWithCache, controller.method);
+```typescript
+import {authenticateJWTWithCache} from '../middleware/enhanced-auth.middleware';
+
+router.post('/:provider/:appUrlSlug/*', authenticateJWTWithCache, controller.method);
 ```
 
 ### For optional authentication:

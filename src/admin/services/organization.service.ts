@@ -18,8 +18,8 @@ export class OrganizationService {
         return this.orgCacheService.getApplication(orgId, appId);
     }
 
-    getProvider(orgId: string, providerId: string): Provider | undefined {
-        return this.orgCacheService.getProvider(orgId, providerId);
+    getProvider(orgId: string, providerName: string): Provider | undefined {
+        return this.orgCacheService.getProvider(orgId, providerName);
     }
 
     getModels(orgId: string, urlSlug: string): Model[] | undefined {

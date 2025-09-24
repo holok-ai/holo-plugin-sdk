@@ -1,14 +1,16 @@
-import {ArkErrors, Type, type} from "arktype";
+import {ArkErrors, Type} from "arktype";
 import logger from "../../utils/logger";
-import {ClaudeChatRequest} from "../claude";
-import {OllamaChatRequest} from "../ollama";
-import {OpenAIChatRequest} from "../openai";
-import {HoloRequest} from "../holo";
+import {HoloMessage, HoloRequest} from "../holo";
+import {ProviderChatRequest, ProviderMessage} from "./index";
 
 export interface IProviderTranslator {
-    toHoloChatRequest(request: ClaudeChatRequest | OllamaChatRequest | OpenAIChatRequest): Promise<Partial<HoloRequest> | type.errors>;
+    toHoloRequest(request: ProviderChatRequest): Promise<Partial<HoloRequest> | ArkErrors>;
 
-    fromHoloChatRequest(request: HoloRequest): Promise<Partial<ClaudeChatRequest> | Partial<OllamaChatRequest> | Partial<OpenAIChatRequest> | type.errors>;
+    fromHoloRequest(request: HoloRequest): Promise<Partial<ProviderChatRequest> | ArkErrors>;
+
+    toHoloMessages(messages: ProviderMessage[]): Promise<Partial<HoloMessage>[]>;
+
+    fromHoloMessages(messages: HoloMessage[]): Promise<Partial<ProviderMessage>[]>;
 }
 
 export interface IFieldTranslator<THolo, TProvider> {

@@ -1,8 +1,8 @@
 import {AIProvider} from '../types/ai.provider';
 import logger from '../../utils/logger';
 import OpenAI from 'openai';
-import {AIRequestStat, IProvider, ModelInfo, ProviderType} from '../types';
-import {LLMWorkerRequest, OpenAIWorkerRequest} from '../../types';
+import {AIRequestStat, IProvider, ModelInfo, OpenAIChatRequest, ProviderType} from '../types';
+import {LLMWorkerRequest} from '../../types';
 import {ErrorMessages} from '../../utils';
 import {ResponseService} from "../../services";
 import {Provider} from "../../db/types";
@@ -102,7 +102,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         });
 
         const {sourceId, requestId, payload, type} = request;
-        const openaiPayload = payload as OpenAIWorkerRequest;
+        const openaiPayload = payload as OpenAIChatRequest;
 
         // OpenAI uses a unified chat completions API, so both generate and chat go through the same method
         return await this.wrapWithStats(type, this._openaiChatCompletions.bind(this), sourceId, requestId, openaiPayload);
@@ -114,17 +114,17 @@ export class OpenAIProvider extends AIProvider implements IProvider {
     async _openaiChatCompletions(
         sourceId: string,
         requestId: string,
-        chatRequest: OpenAIWorkerRequest
+        chatRequest: OpenAIChatRequest
     ): Promise<void> {
         await this.ensureInitialized();
         this.validateModel(chatRequest.model);
-        
-       
+
+
         let fullResponse = '';
         // Pass the request directly to the client since it extends ChatCompletionCreateParams
         // @ts-ignore
 
-        if(chatRequest.stream){
+        if (chatRequest.stream) {
             logger.debug("Streaming request seeting stream_options flag");
             chatRequest.stream_options = {include_usage: true};
         }

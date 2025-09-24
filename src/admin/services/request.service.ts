@@ -25,13 +25,12 @@ export class RequestService {
 
         //put service in here
         const {auth} = req;
-        if (auth && auth.appSlug) {
-            const result = await this.guardService.guard(providerType, type, workerRequest, auth);
+        const result = await this.guardService.guard(providerType, type, workerRequest, auth);
 
-            if (!result.passed) {
-                res.status(401).send(result);
-                return;
-            }
+        if (!result.passed) {
+            await this.responseService.setStreamingHeaders(res, workerRequest.isStreaming);
+            res.send(JSON.stringify(result));
+            return;
         }
         await this.responseService.sendRequest(req, res, workerRequest);
     }

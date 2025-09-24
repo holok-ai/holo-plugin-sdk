@@ -644,7 +644,7 @@ export class NewProvider extends AIProvider implements IProvider {
 
 #### Step 5: Update Stream Formatter
 
-6. **Add Stream Formatting** (`src/services/streamFormatter.service.ts`):
+6. **Add Stream Formatting** (`src/services/stream.formatter.service.ts`):
 ```typescript
 // Add your provider case to the formatAndSend method
 async formatAndSend(responseChunk: LLMWorkerResponse, res: ResponseStream) {

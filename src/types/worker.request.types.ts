@@ -1,8 +1,11 @@
-import {MessageCreateParamsBase} from '@anthropic-ai/sdk/resources/beta/messages/messages';
-import {ChatRequest, GenerateRequest} from 'ollama';
-import {ChatCompletionCreateParamsBase} from 'openai/resources/chat/completions/completions';
-
-import {ProviderType, RequestType} from "../providers/types";
+import {
+    ClaudeChatRequest,
+    OllamaChatRequest,
+    OllamaGenerateRequest,
+    OpenAIChatRequest,
+    ProviderType,
+    RequestType
+} from "../providers/types";
 import {v4 as uuidv4} from "uuid";
 import {HttpApiRequest} from "../api/types";
 import logger from "../utils/logger";
@@ -98,22 +101,9 @@ export interface LLMWorkerResponse {
     };
 }
 
-// Extended Ollama request types with additional queue metadata
-export interface OllamaWorkerGenerateRequest extends GenerateRequest {
-}
-
-export interface OllamaWorkerChatRequest extends ChatRequest {
-}
-
-export interface ClaudeWorkerRequest extends MessageCreateParamsBase {
-}
-
-export interface OpenAIWorkerRequest extends ChatCompletionCreateParamsBase {
-}
-
 // Union type for all LLM Specific Requests
 export type LLMPayloadTypes =
-    OllamaWorkerChatRequest
-    | OllamaWorkerGenerateRequest
-    | MessageCreateParamsBase
-    | OpenAIWorkerRequest;
+    OllamaChatRequest
+    | OllamaGenerateRequest
+    | ClaudeChatRequest
+    | OpenAIChatRequest;

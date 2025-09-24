@@ -6,7 +6,7 @@ This checklist outlines the recommended code modifications for cleaning up dead 
 
 ### 1. Fix Critical Bugs
 - [x] **`claude.provider.ts:22`** - Fix error message: "Claude API key is required" (currently says "OpenAI API key is required")
-- [x] **`streamFormatter.service.ts:33`** - Fix typo: `responseChunnk` → `responseChunk`
+- [x] **`stream.formatter.service.ts:33`** - Fix typo: `responseChunnk` → `responseChunk`
 
 ### 2. Remove Dead Code
 - [x] **Ollama Provider**: Remove legacy methods

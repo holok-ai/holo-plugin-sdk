@@ -163,7 +163,7 @@ Check which SDK packages are already installed and their versions:
 
 1. `src/types/worker.request.types.ts` - Import SDK types and update interfaces
 2. `src/translators/types/index.ts` - Update translator interface
-3. `src/translators/providers/*.translator.ts` - Update all provider translators
+3. `src/translators/providers/*.auditors.ts` - Update all provider translators
 4. `src/providers/*.provider.ts` - Ensure typed response creation
 5. `package.json` - Verify SDK dependencies are available
 

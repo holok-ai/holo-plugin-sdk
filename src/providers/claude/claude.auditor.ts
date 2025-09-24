@@ -1,14 +1,14 @@
 import {injectable} from 'tsyringe';
-import {ClaudeWorkerRequest, LLMWorkerRequest, LLMWorkerResponse} from '../../types';
+import {LLMWorkerRequest, LLMWorkerResponse} from '../../types';
 import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
-import {BaseAuditor, ProviderType} from "../types";
+import {BaseAuditor, ClaudeChatRequest, ProviderType} from "../types";
 
 @injectable()
 export class ClaudeAuditor extends BaseAuditor {
     readonly provider = ProviderType.CLAUDE;
 
     protected toHoloRequest(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as ClaudeWorkerRequest;
+        const payload = workerRequest.payload as ClaudeChatRequest;
 
         llmRequest.model_slug = payload.model;
 
@@ -25,7 +25,7 @@ export class ClaudeAuditor extends BaseAuditor {
     }
 
     protected mapProviderPayload(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as ClaudeWorkerRequest;
+        const payload = workerRequest.payload as ClaudeChatRequest;
         const options: Record<string, any> = {};
 
         if (payload.max_tokens !== undefined) options.max_tokens = payload.max_tokens;

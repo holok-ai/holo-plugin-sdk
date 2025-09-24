@@ -123,10 +123,7 @@ export class ResponseService {
         return this.streams.size;
     }
 
-    async sendRequest(req: HttpApiRequest, res: Response, request: LLMWorkerRequest) {
-
-        const {requestId, isStreaming} = request;
-        // Set up appropriate response headers based on streaming mode
+    async setStreamingHeaders(res: Response, isStreaming: boolean) {
         if (isStreaming) {
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
@@ -134,6 +131,12 @@ export class ResponseService {
         } else {
             res.setHeader('Content-Type', 'application/json');
         }
+    }
+
+    async sendRequest(req: HttpApiRequest, res: Response, request: LLMWorkerRequest) {
+
+        const {requestId, isStreaming} = request;
+        await this.setStreamingHeaders(res, isStreaming);
 
         // Create a response stream
         let responseStream = await this.createResponseStream(requestId, isStreaming);

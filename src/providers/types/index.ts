@@ -1,7 +1,7 @@
 import {LLMWorkerRequest, LLMWorkerResponse} from '../../types';
-import {OllamaChatRequest} from "../ollama";
-import {OpenAIChatRequest} from "../openai";
-import {ClaudeChatRequest} from "../claude";
+import {OllamaChatRequest, OllamaMessage} from "../ollama";
+import {OpenAIChatRequest, OpenAIRequestMessage} from "../openai";
+import {ClaudeChatRequest, ClaudeRequestMessage} from "../claude";
 
 export * from '../types/auditor.types';
 export * from '../types/validator.types';
@@ -92,6 +92,12 @@ export type ProviderChatRequest =
     ClaudeChatRequest
     | OllamaChatRequest
     | OpenAIChatRequest;
+
+export type ProviderMessage =
+    ClaudeRequestMessage
+    | OllamaMessage
+    | OpenAIRequestMessage
+
 
 export enum ProviderType {
     OLLAMA = 'OLLAMA',

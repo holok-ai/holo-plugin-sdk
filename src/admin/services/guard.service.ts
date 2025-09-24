@@ -1,20 +1,22 @@
 import 'reflect-metadata';
 import {OrganizationService} from "./organization.service";
 import {injectable} from 'tsyringe';
-import {
-    ClaudeChatRequest,
-    ClaudeMessageTranslator,
-    ClaudeRequestTranslator,
-    ClaudeResponseMessage,
-    ClaudeTextBlock
-} from '../../providers/claude';
+import {ClaudeResponseMessage, ClaudeTextBlock} from '../../providers/claude';
 import {GuardResult, GuardResultSchema, JWTPayload} from "../types";
-import {LLMWorkerRequest, WorkerRequest} from "../../types";
-import {HoloRequest, HoloRequestValidator} from "../../providers/holo";
-import {ProviderType, RequestType} from "../../providers/types";
+import {LLMPayloadTypes, LLMWorkerRequest, WorkerRequest} from "../../types";
+import {HoloContentText, HoloRequest, HoloRequestValidator} from "../../providers/holo";
+import {
+    OllamaGenerateRequest,
+    ProviderChatRequest,
+    ProviderMessage,
+    ProviderType,
+    RequestType
+} from "../../providers/types";
 import {env} from "../../env";
 import {ResponseService} from "../../services";
 import logger from "../../utils/logger";
+import {HoloTranslater} from "../../providers/translators";
+import {ArkErrors} from "arktype";
 
 
 @injectable()
@@ -23,45 +25,87 @@ export class GuardService {
 
     constructor(
         private organizationService: OrganizationService,
-        private responseService: ResponseService
+        private responseService: ResponseService,
+        private holoTranslator: HoloTranslater
     ) {
 
     }
 
-    async guard(providerType: ProviderType, type: RequestType, workerRequest: LLMWorkerRequest, auth: JWTPayload) {
-
-        if (!auth || !auth.appSlug) {
+    async guard(providerType: ProviderType, type: RequestType, workerRequest: LLMWorkerRequest, auth: JWTPayload | undefined) {
+        // if no slug or auth
+        if (!auth?.appSlug) {
             return {passed: true};
         }
 
-        const holoMessages = await ClaudeMessageTranslator.toHoloArray((workerRequest.payload as ClaudeChatRequest).messages);
+        let lastMessage = '';
+        if (type === RequestType.GENERATE && providerType === ProviderType.OLLAMA) {
+
+            lastMessage = (workerRequest.payload as OllamaGenerateRequest).prompt;
+        } else {
+            const lastHoloMessage = (await this.holoTranslator.toHoloMessages((workerRequest.payload as ProviderChatRequest).messages as ProviderMessage[], providerType)).pop();
+            if (!lastHoloMessage || !lastHoloMessage.content || !lastHoloMessage.content.length) {
+                logger.warn(`No message to guard`);
+                return {passed: true};
+            }
+            const content = lastHoloMessage.content
+            if (Array.isArray(content)) {
+                for (let i = 0; i < content.length; i++) {
+                    if (content[i].type === 'text') {
+                        lastMessage += '\n\n' + (content[i] as HoloContentText).text;
+                    }
+                }
+            } else {
+                lastMessage = content;
+            }
+        }
+
+        if (!lastMessage.length) {
+            logger.warn(`No message to guard`);
+            return {passed: true};
+        }
+
         const guards = this.organizationService.getGuards(auth.organizationId, auth.appSlug);
 
         if (guards) {
             try {
                 const results = await Promise.all(
                     guards.map(async (guard) => {
-                        const holoRequest: HoloRequest = HoloRequestValidator.assert({
-                            model: guard.modelName,
-                            messages: [
-                                {role: 'user', content: guard.userPrompt},
-                                ...holoMessages
-                            ],
-                            response_format: {
-                                type: 'json_schema',
-                                schema: GuardResultSchema,
-                                strict: true
-                            },
-                            stream: false,
-                            ...(guard.systemPrompt && {system: guard.systemPrompt})
-                        });
+                        try {
+                            const provider = this.organizationService.getProvider(auth.organizationId, guard.providerName);
+                            if (!provider) {
+                                logger.warn(`Guard Provider ${guard.providerName} not found`);
+                                //TODO: More robust error handling
+                                return {passed: true}
+                            }
+                            const holoRequest: HoloRequest = HoloRequestValidator.assert({
+                                model: guard.modelName,
+                                messages: [
+                                    {role: 'user', content: guard.userPrompt + '\n\n' + lastMessage},
+                                ],
+                                response_format: {
+                                    type: 'json_schema',
+                                    schema: GuardResultSchema,
+                                    strict: true
+                                },
+                                stream: false,
+                                ...(guard.systemPrompt && {system: guard.systemPrompt})
+                            });
 
-                        const payload = await ClaudeRequestTranslator.fromHolo(holoRequest) as ClaudeChatRequest;
-                        const guardRequest = await WorkerRequest.create(providerType, type, payload, this.serverId, auth);
+                            const payload = await this.holoTranslator.fromHoloRequest(holoRequest, provider.type);
+                            if (payload instanceof ArkErrors) {
+                                logger.warn(`Guard translation failed: ${JSON.stringify(payload.summary, null, 2)}`);
+                                return {passed: true}
+                            }
 
-                        const response = await this.responseService.submitRequest(guardRequest);
-                        const resultMessage = JSON.parse(response as string) as ClaudeResponseMessage
-                        return JSON.parse((resultMessage.content[0] as ClaudeTextBlock).text);
+                            const guardRequest = await WorkerRequest.create(providerType, type, payload as LLMPayloadTypes, this.serverId, auth);
+
+                            const response = await this.responseService.submitRequest(guardRequest);
+                            const resultMessage = JSON.parse(response as string) as ClaudeResponseMessage
+                            return JSON.parse((resultMessage.content[0] as ClaudeTextBlock).text);
+                        } catch (e) {
+                            logger.error(`Failed to process guard: ${(e as Error).message}`);
+                            return {passed: true, errors: [e as Error]};
+                        }
                     })
                 );
 
