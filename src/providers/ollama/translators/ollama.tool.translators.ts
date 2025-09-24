@@ -71,5 +71,8 @@ export const OllamaToolTranslator = new FieldTranslator<HoloTool, OllamaTool>(
     HoloToolValidator,
     OllamaToolValidator,
     [fromHoloToolTranslator],
-    [toHoloToolTranslator]
+    [toHoloToolTranslator],
+    {
+        name: 'OllamaToolTranslator'
+    }
 );

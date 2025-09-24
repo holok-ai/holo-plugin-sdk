@@ -10,6 +10,7 @@ import {OllamaParser} from "../providers/ollama";
 import {ClaudeParser} from "../providers/claude";
 import {OpenAIParser} from "../providers/openai";
 import {ErrorMessages} from "../utils";
+import {JWTPayload} from "../admin/types";
 
 export interface LLMWorkerRequest {
     organizationId?: string;
@@ -23,10 +24,12 @@ export interface LLMWorkerRequest {
     payload: LLMPayloadTypes;
     timestamp: number;
     isStreaming: boolean;
+    systemPrompt?: string;
+    options?: Record<string, any>;
 }
 
 export class WorkerRequest {
-    static async create(
+    static async fromRequest(
         providerType: ProviderType,
         type: RequestType,
         req: HttpApiRequest,
@@ -34,6 +37,16 @@ export class WorkerRequest {
     ): Promise<LLMWorkerRequest> {
         const payload = await this.parseLLMRequest(req, providerType, type);
         const {auth} = req;
+        return this.create(providerType, type, payload, sourceId, auth);
+    }
+
+    static async create(
+        providerType: ProviderType,
+        type: RequestType,
+        payload: LLMPayloadTypes,
+        sourceId: string,
+        auth?: JWTPayload,
+    ) {
         const workerRequest: LLMWorkerRequest = {
             providerType,
             sourceId,
@@ -44,8 +57,6 @@ export class WorkerRequest {
             timestamp: Date.now(),
             ...(auth !== undefined && auth)
         };
-
-        logger.debug(`LLMWorkerRequest created: ${JSON.stringify(workerRequest)}`);
         return workerRequest;
     }
 

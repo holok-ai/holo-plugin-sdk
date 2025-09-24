@@ -16,7 +16,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.57.0",
+    "@anthropic-ai/sdk": "^0.63.1",
     "@prisma/client": "^6.14.0",
     "amqplib": "^0.10.3",
     "arktype": "^2.1.22",

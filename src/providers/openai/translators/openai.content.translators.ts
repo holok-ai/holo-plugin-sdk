@@ -41,14 +41,20 @@ export const OpenAITextContentTranslator = new FieldTranslator<HoloContentText, 
     HoloContentTextValidator,
     OpenAIChatCompletionContentPartTextValidator,
     [fromHoloTextContentTranslator],
-    [toHoloTextContentTranslator]
+    [toHoloTextContentTranslator],
+    {
+        name: 'OpenAITextContentTranslator'
+    }
 );
 
 export const OpenAIImageContentTranslator = new FieldTranslator<HoloContentImage, OpenAIChatCompletionContentPartImage>(
     HoloContentImageValidator,
     OpenAIChatCompletionContentPartImageValidator,
     [fromHoloImageContentTranslator],
-    [toHoloImageContentTranslator]
+    [toHoloImageContentTranslator],
+    {
+        name: 'OpenAIImageContentTranslator'
+    }
 );
 
 export const fromHoloContentTranslator: TranslateFunc<HoloContent, OpenAIChatCompletionContentPart> =
@@ -79,5 +85,8 @@ export const OpenAIContentTranslator = new FieldTranslator<HoloContent, OpenAICh
     HoloContentValidator,
     OpenAIChatCompletionContentPartValidator,
     [fromHoloContentTranslator],
-    [toHoloContentTranslator]
+    [toHoloContentTranslator],
+    {
+        name: 'OpenAIContentTranslator'
+    }
 );

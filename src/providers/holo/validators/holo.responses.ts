@@ -23,7 +23,7 @@ export const HoloFinishReasonValidator = type("'stop'|'length'|'tool_calls'|'con
 
 // ---------- Message validator ----------
 export const HoloMessageValidator = type({
-    role: "'assistant'|'tool'",
+    role: "'user'|'assistant'|'tool'",
     content: HoloContentValidator.array().or('string'),
     'tool_calls?': HoloToolCallValidator.array()
 }) satisfies Type<HoloMessage>;

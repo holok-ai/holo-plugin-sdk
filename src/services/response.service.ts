@@ -6,9 +6,8 @@ import {container, injectable} from "tsyringe";
 import {HttpApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
-import {LLMWorkerRequest, LLMWorkerResponse, WorkerRequest} from '../types';
+import {LLMWorkerRequest, LLMWorkerResponse} from '../types';
 import {StreamFormatter} from './stream.formatter.service';
-import {ProviderType, RequestType} from "../providers/types";
 
 
 /**
@@ -33,12 +32,13 @@ export class ResponseStream extends Transform {
 @injectable()
 export class ResponseService {
     private serverId: string = env.api.apiServerId;
-    private streams: Map<string, ResponseStream>;
+    private readonly streams: Map<string, ResponseStream>;
     private readonly responseQueue = env.queue.responseQueue;
     private readonly requestExchange = env.queue.requestExchange;
 
     constructor(
-        private queueService: QueueService, private streamFormatter: StreamFormatter) {
+        private queueService: QueueService,
+        private streamFormatter: StreamFormatter) {
         this.streams = new Map<string, ResponseStream>();
     }
 
@@ -72,12 +72,11 @@ export class ResponseService {
         const openResponseStream = this.streams.get(requestId);
 
         if (openResponseStream) {
-            this.streamFormatter.formatAndSend(content, openResponseStream);
+            await this.streamFormatter.formatAndSend(content, openResponseStream);
         } else {
             logger.warn(`Received response for unknown request: ${requestId}`);
             logger.warn(this.streams);
         }
-
     }
 
     /**
@@ -124,42 +123,7 @@ export class ResponseService {
         return this.streams.size;
     }
 
-    /**
-     * Parse HTTP request into LLM worker request and initiate streaming response
-     * Handles the complete request lifecycle: parsing, validation, queue submission, and stream setup
-     * @param {ProviderType} providerType - LLM provider (ollama, claude, openai)
-     * @param {RequestType} type - Request type (generate or chat)
-     * @param {HttpApiRequest} req - HTTP request object
-     * @param {Response} res - HTTP response object
-     */
-    async processRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest, res: Response) {
-
-
-        const workerRequest = await this.parseRequest(providerType, type, req);
-
-
-        await this._openResponseStream(req, res, workerRequest);
-    }
-
-    async parseRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest) {
-        return WorkerRequest.create(providerType, type, req, this.serverId);
-    }
-
-    async sendRequest(LLMWorkerRequest: LLMWorkerRequest, req: HttpApiRequest, res: Response) {
-        await this._openResponseStream(req, res, LLMWorkerRequest);
-    }
-
-    /**
-     * Set up streaming or regular JSON response and submit request to queue
-     * Configures appropriate headers based on streaming mode, creates response stream, handles client disconnect, and pipes response
-     * @param {HttpApiRequest} req - HTTP request object
-     * @param {Response} res - HTTP response object
-     * @param {Object} request - LLM worker request object to send to queue
-     * @param {string} requestId - Unique request identifier
-     * @param {boolean} isStreaming - Whether the request should use streaming response
-     * @private
-     */
-    async _openResponseStream(req: HttpApiRequest, res: Response, request: LLMWorkerRequest) {
+    async sendRequest(req: HttpApiRequest, res: Response, request: LLMWorkerRequest) {
 
         const {requestId, isStreaming} = request;
         // Set up appropriate response headers based on streaming mode
@@ -192,6 +156,32 @@ export class ResponseService {
         // Then start the streaming response AFTER the request has been queued
         // Pipe the response stream to the client
         responseStream.pipe(res);
+    }
+
+    async submitRequest<T = unknown>(request: LLMWorkerRequest, timeoutMs = 60000) {
+        logger.debug(`Submitting request: ${JSON.stringify(request)}`);
+        const {requestId, isStreaming} = request;
+
+        const stream = await this.createResponseStream(requestId, isStreaming);
+
+        await this.queueService.sendToExchange(
+            this.requestExchange,
+            '',
+            request,
+            {correlationId: requestId}
+        );
+
+        return new Promise<T>((resolve, reject) => {
+            stream.once('data', (data) => resolve(data as T));
+            const to = setTimeout(() => {
+                stream.removeListener('end', () => logger.debug(`Removing end listener for responseStream ${requestId}`));
+                stream.removeListener('error', () => logger.debug(`Removing error listener for responseStream ${requestId}`));
+                reject(new Error(`Response timed out after ${timeoutMs}ms (requestId=${requestId})`));
+            }, timeoutMs);
+
+            stream.once('end', () => clearTimeout(to));
+            stream.once('error', () => clearTimeout(to));
+        })
     }
 
     /**

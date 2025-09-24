@@ -36,6 +36,7 @@ export class ConfigService extends EventEmitter {
                 if (!this.initialized && holoConfig.action != HoloConfigAction.NEW) {
                     logger.warn(`Config is not initialized, ignoring config ${JSON.stringify(config, null, 2)}`);
                 } else {
+                    // logger.debug(`Processing config: ${JSON.stringify(config, null, 2)}`);
                     switch (config.configType) {
                         case HoloConfigType.JWT_TOKEN:
                             this.tokenService.applyConfig(config);
@@ -44,6 +45,7 @@ export class ConfigService extends EventEmitter {
                             this.organizationCacheService.applyConfig(config);
                             break;
                         case HoloConfigType.APPLICATION:
+                            this.organizationCacheService.applyApplicationConfig(config);
                             break;
                     }
 

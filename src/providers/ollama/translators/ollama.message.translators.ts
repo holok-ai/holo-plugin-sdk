@@ -1,7 +1,7 @@
 import {HoloContent, HoloMessage, HoloMessageValidator, HoloRequest} from "../../holo";
 import {OllamaChatRequest, OllamaMessage, OllamaMessageValidator} from "../types";
 import {isUint8Array, uint8ToDataUrl} from "../../../utils";
-import {FieldTranslator, Guard, TranslateFunc} from "../../types";
+import {FieldTranslator, TranslatorGuard, TranslateFunc} from "../../types";
 
 // Individual message translator functions
 export const fromHoloMessageTranslator: TranslateFunc<HoloMessage, OllamaMessage> =
@@ -97,9 +97,9 @@ export const toHoloMessageTranslator: TranslateFunc<OllamaMessage, HoloMessage> 
     };
 
 // Guards for message validation
-export const portableMessageOnlyGuard = new Guard<HoloMessage>(
+export const portableMessageOnlyGuard = new TranslatorGuard<HoloMessage>(
     "portableMessageOnly",
-    (m) => m.role === "user" || m.role === "assistant" || m.role === "tool"
+    async (m) => m.role === "user" || m.role === "assistant" || m.role === "tool"
 );
 
 // Individual message translator
@@ -108,7 +108,10 @@ export const OllamaMessageTranslator = new FieldTranslator<HoloMessage, OllamaMe
     OllamaMessageValidator,
     [fromHoloMessageTranslator],
     [toHoloMessageTranslator],
-    [portableMessageOnlyGuard]
+    {
+        fromHoloGuards: [portableMessageOnlyGuard],
+        name: 'OllamaMessageTranslator'
+    }
 );
 
 // HoloRequest.messages[] -> OllamaChatRequest.messages[] (prepend system if present)

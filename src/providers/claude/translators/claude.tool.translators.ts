@@ -2,7 +2,8 @@ import {HoloTool, HoloToolChoice, HoloToolChoiceValidator, HoloToolValidator} fr
 import {ClaudeTool, ClaudeToolChoice, ClaudeToolUnion} from "../types";
 import {ClaudeToolChoiceValidator, ClaudeToolUnionValidator, ClaudeToolValidator} from "../validators";
 import {ArkErrors} from "arktype";
-import {FieldTranslator, Guard, TranslateFunc} from "../../types";
+import {FieldTranslator, TranslateFunc, TranslatorGuard} from "../../types";
+import logger from "../../../utils/logger";
 
 const defaultToolInputSchema: ClaudeTool["input_schema"] = {
     type: "object",
@@ -18,9 +19,17 @@ export const fromToolParametersTranslator: TranslateFunc<HoloTool, ClaudeToolUni
     }
 });
 
-export const customToolOnlyGuard = new Guard<ClaudeToolUnion>(
+export const customToolOnlyGuard = new TranslatorGuard<ClaudeToolUnion>(
     "allowOnlyCustomTool",
-    (tool) => !(ClaudeToolValidator(tool) instanceof ArkErrors) // pass if it IS a custom tool
+    async (tool) => {
+        try {
+            return !(ClaudeToolValidator(tool) instanceof ArkErrors);
+        } catch (e) {
+            logger.error(`customToolOnlyGuard validation error:`, e);
+            return false; // Fail the guard if validation throws
+        }
+
+    } // pass if it IS a custom tool
 );
 
 
@@ -33,8 +42,10 @@ export const ClaudeToolTranslator = new FieldTranslator<HoloTool, ClaudeToolUnio
     ClaudeToolUnionValidator,
     [fromToolParametersTranslator],
     [toToolParameterTranslator],
-    [],
-    [customToolOnlyGuard]
+    {
+        toHoloGuards: [customToolOnlyGuard],
+        name: 'ClaudeToolTranslator'
+    }
 )
 
 
@@ -58,5 +69,8 @@ export const ClaudeToolChoiceTranslator = new FieldTranslator<HoloToolChoice, Cl
     HoloToolChoiceValidator,
     ClaudeToolChoiceValidator,
     [fromHoloToolChoiceTranslator],
-    [toHoloToolChoiceTranslator]
+    [toHoloToolChoiceTranslator],
+    {
+        name: 'ClaudeToolChoiceTranslator'
+    }
 );

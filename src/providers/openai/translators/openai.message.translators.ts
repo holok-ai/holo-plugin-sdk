@@ -1,11 +1,11 @@
 import {
     FieldTranslator,
-    Guard,
     HoloMessage,
     HoloRequest,
     OpenAIChatRequest,
     OpenAIRequestMessage,
-    TranslateFunc
+    TranslateFunc,
+    TranslatorGuard
 } from "../../types";
 import {OpenAIContentTranslator} from "./index";
 import {HoloMessageValidator} from "../../holo";
@@ -100,9 +100,9 @@ export const toHoloMessageTranslator: TranslateFunc<OpenAIRequestMessage, HoloMe
         return baseMessage;
     };
 
-export const portableMessageOnlyGuard = new Guard<HoloMessage>(
+export const portableMessageOnlyGuard = new TranslatorGuard<HoloMessage>(
     "portableMessageOnly",
-    (message) => {
+    async (message) => {
         return message.role === 'user' || message.role === 'assistant' || message.role === 'tool';
     }
 );
@@ -112,7 +112,10 @@ export const OpenAIMessageTranslator = new FieldTranslator<HoloMessage, OpenAIRe
     {} as any,
     [fromHoloMessageContentTranslator],
     [toHoloMessageTranslator],
-    [portableMessageOnlyGuard]
+    {
+        fromHoloGuards: [portableMessageOnlyGuard],
+        name: 'OpenAIMessageTranslator'
+    }
 );
 
 export const fromHoloMessagesWithSystemTranslator: TranslateFunc<HoloRequest, OpenAIChatRequest> =

@@ -32,7 +32,6 @@ export class BaseServer implements IAppServer {
     private async handleError(error: Error) {
         logger.error(`Server error: ${(error as Error).message}`);
         await this.onError(error);
-        process.exit(1);
     }
 
     async start() {

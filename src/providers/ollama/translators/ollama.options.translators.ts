@@ -34,5 +34,8 @@ export const OllamaOptionsTranslator = new FieldTranslator<HoloRequest, OllamaOp
     HoloRequestValidator,
     OllamaOptionsValidator,
     [fromHoloOptionsFieldsTranslator],
-    [toHoloOptionsFieldsTranslator]
+    [toHoloOptionsFieldsTranslator],
+    {
+        name: 'OllamaOptionsTranslator'
+    }
 );

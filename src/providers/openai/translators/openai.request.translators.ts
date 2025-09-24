@@ -105,15 +105,18 @@ export const OpenAIRequestTranslator = new FieldTranslator<HoloRequest, OpenAICh
         fromHoloStopSequencesTranslator,
         fromHoloResponseFormatTranslator,
         fromHoloMessagesWithSystemTranslator,
-        createTranslateFunc(OpenAIToolChoiceTranslator.fromHolo, 'tool_choice'),
-        createTranslateFunc(OpenAIToolTranslator.fromHoloArray, 'tools')
+        createTranslateFunc(OpenAIToolChoiceTranslator.fromHolo, 'tool_choice', 'tool_choice', 'OpenAIToolChoiceTranslator.fromHolo'),
+        createTranslateFunc(OpenAIToolTranslator.fromHoloArray, 'tools', 'tools', 'OpenAIToolTranslator.fromHoloArray')
     ],
     [
         toHoloStopSequencesTranslator,
         toHoloMetadataTranslator,
         toHoloResponseFormatTranslator,
         toHoloMessagesWithSystemTranslator,
-        createTranslateFunc(OpenAIToolChoiceTranslator.toHolo, 'tool_choice'),
-        createTranslateFunc(OpenAIToolTranslator.toHoloArray, 'tools')
-    ]
+        createTranslateFunc(OpenAIToolChoiceTranslator.toHolo, 'tool_choice', 'tool_choice', 'OpenAIToolChoiceTranslator.toHolo'),
+        createTranslateFunc(OpenAIToolTranslator.toHoloArray, 'tools', 'tools', 'OpenAIToolTranslator.toHoloArray')
+    ],
+    {
+        name: 'OpenAIRequestTranslator'
+    }
 );

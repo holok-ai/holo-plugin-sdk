@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {Application, Organization, OrganizationCache, Provider} from "../../cache";
-import {OrganizationConfigValidator} from "../validators";
-import {HoloConfigAction, OrganizationConfig} from "../types";
+import {ApplicationConfigValidator, OrganizationConfigValidator} from "../validators";
+import {ApplicationConfig, HoloConfigAction, OrganizationConfig} from "../types";
 
 @injectable()
 export class OrganizationCacheService {
@@ -24,6 +24,11 @@ export class OrganizationCacheService {
         }
     }
 
+    applyApplicationConfig(c: ApplicationConfig) {
+        const config = ApplicationConfigValidator.assert(c);
+        this.setApplications(config.data)
+    }
+
     get(id: string): OrganizationCache | undefined {
         return this.orgCaches.get(id);
     }
@@ -42,10 +47,18 @@ export class OrganizationCacheService {
         }
     }
 
-    setOrganizations(organizations: Organization[]) {
+    setOrganizations(organizations: readonly Organization[]) {
         // as organizations and configurations scale, this is most performant
         for (let i = 0; i < organizations.length; i++) {
             this.set(organizations[i]);
+        }
+    }
+
+    setApplications(applications: readonly Application[]) {
+        for (let i = 0; i < applications.length; i++) {
+            const {organizationId} = applications[i];
+            const orgCache = this.get(organizationId);
+            orgCache?.set('applications', 'urlSlug', applications[i]);
         }
     }
 
@@ -57,19 +70,19 @@ export class OrganizationCacheService {
         return this.get(orgId)?.getAll('applications');
     }
 
-    getProvider(orgId: string, providerId: string): Provider | undefined {
-        return this.get(orgId)?.get('providers', providerId);
+    getProvider(orgId: string, providerName: string): Provider | undefined {
+        return this.get(orgId)?.get('providers', providerName);
     }
 
     getAllProviders(orgId: string): Provider[] | undefined {
         return this.get(orgId)?.getAll('providers');
     }
 
-    delApplication(orgId: string, appId: string | string[]) {
-        return this.get(orgId)?.del('applications', appId);
+    delApplication(orgId: string, urlSlug: string) {
+        return this.get(orgId)?.del('applications', urlSlug);
     }
 
-    delProvider(orgId: string, providerId: string | string[]) {
-        return this.get(orgId)?.del('providers', providerId);
+    delProvider(orgId: string, providerName: string) {
+        return this.get(orgId)?.del('providers', providerName);
     }
 }

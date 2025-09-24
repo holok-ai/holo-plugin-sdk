@@ -63,8 +63,8 @@ export const OllamaRequestTranslator = new FieldTranslator<HoloRequest, OllamaCh
     [
         fromHoloResponseFormatTranslator,
         fromHoloMessagesTranslator,
-        createTranslateFunc(OllamaOptionsTranslator.fromHolo, null, 'options'),
-        createTranslateFunc(OllamaToolTranslator.fromHoloArray, 'tools')
+        createTranslateFunc(OllamaOptionsTranslator.fromHolo, null, 'options', 'OllamaOptionsTranslator.fromHolo'),
+        createTranslateFunc(OllamaToolTranslator.fromHoloArray, 'tools', 'tools', 'OllamaToolTranslator.fromHoloArray')
     ],
     [
         // Reverse translators (Ollama -> Holo) - filter out system message since we extract it separately
@@ -80,9 +80,12 @@ export const OllamaRequestTranslator = new FieldTranslator<HoloRequest, OllamaCh
 
             return await toHoloMessagesTranslator({...ollamaRequest, messages: nonSystemMessages});
         },
-        createTranslateFunc(OllamaOptionsTranslator.toHolo, 'options', null),
-        createTranslateFunc(OllamaToolTranslator.toHoloArray, 'tools'),
+        createTranslateFunc(OllamaOptionsTranslator.toHolo, 'options', null, 'OllamaOptionsTranslator.toHolo'),
+        createTranslateFunc(OllamaToolTranslator.toHoloArray, 'tools', 'tools', 'OllamaToolTranslator.toHoloArray'),
         toHoloResponseFormatTranslator,
         toHoloSystemTranslator,
-    ]
+    ],
+    {
+        name: 'OllamaRequestTranslator'
+    }
 );

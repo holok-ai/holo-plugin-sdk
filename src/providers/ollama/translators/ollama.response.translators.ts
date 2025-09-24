@@ -188,7 +188,7 @@ export const OllamaResponseTranslator = new FieldTranslator<HoloResponse, Ollama
             if (!holoResponse.usage) return {};
             return await fromHoloUsageTranslator(holoResponse.usage);
         },
-        createTranslateFunc(fromHoloFinishReasonTranslator, 'finish_reason', 'done_reason'),
+        createTranslateFunc(fromHoloFinishReasonTranslator, 'finish_reason', 'done_reason', 'fromHoloFinishReasonTranslator'),
         fromHoloMessagesTranslator
     ],
     [
@@ -196,7 +196,10 @@ export const OllamaResponseTranslator = new FieldTranslator<HoloResponse, Ollama
             const usage = await toHoloUsageTranslator(ollamaResponse);
             return Object.keys(usage).length > 0 ? {usage} : {};
         },
-        createTranslateFunc(toHoloFinishReasonTranslator, 'done_reason', 'finish_reason'),
+        createTranslateFunc(toHoloFinishReasonTranslator, 'done_reason', 'finish_reason', 'toHoloFinishReasonTranslator'),
         toHoloMessagesTranslator
-    ]
+    ],
+    {
+        name: 'OllamaResponseTranslator'
+    }
 );

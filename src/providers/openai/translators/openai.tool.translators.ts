@@ -39,7 +39,10 @@ export const OpenAIToolTranslator = new FieldTranslator<HoloTool, OpenAIChatComp
     HoloToolValidator,
     ChatCompletionToolValidator,
     [fromHoloToolTranslator],
-    [toHoloToolTranslator]
+    [toHoloToolTranslator],
+    {
+        name: 'OpenAIToolTranslator'
+    }
 );
 
 export const fromHoloToolChoiceTranslator: TranslateFunc<HoloToolChoice, OpenAIChatCompletionToolChoiceOption> = async (choice: HoloToolChoice): Promise<Partial<OpenAIChatCompletionToolChoiceOption>> => {
@@ -67,5 +70,8 @@ export const OpenAIToolChoiceTranslator = new FieldTranslator<HoloToolChoice, Op
     HoloToolChoiceValidator,
     ChatCompletionToolChoiceOptionValidator,
     [fromHoloToolChoiceTranslator],
-    [toHoloToolChoiceTranslator]
+    [toHoloToolChoiceTranslator],
+    {
+        name: 'OpenAIToolChoiceTranslator'
+    }
 );

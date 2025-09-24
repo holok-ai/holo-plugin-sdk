@@ -1,30 +1,31 @@
 import {ClaudeChatRequest, createTranslateFunc, FieldTranslator, HoloRequest, TranslateFunc} from "../../types";
 import {HoloRequestValidator} from "../../holo";
-import {ClaudeChatRequestValidator} from "../validators";
+import {ClaudeChatRequestValidator, defaultClaudeChatRequestValues} from "../validators";
 import {fromHoloMessagesTranslator, toHoloMessagesTranslator} from "./claude.message.translators";
 import {ClaudeToolChoiceTranslator, ClaudeToolTranslator} from "./claude.tool.translators";
 
-export const fromHoloServiceTierTranslator: TranslateFunc<HoloRequest, ClaudeChatRequest> = async (source: HoloRequest) => {
-    if (!source.service_tier) return {};
+export const fromHoloSimpleFields: TranslateFunc<HoloRequest, ClaudeChatRequest> = async (source: HoloRequest) => {
+    const {service_tier, metadata, response_format} = source;
+    let {system} = source;
 
-    // Map all non-'auto' service tiers to 'standard_only' for Claude
-    const serviceTierValue = typeof source.service_tier === 'object' ?
-        (source.service_tier as any)?.service_tier : source.service_tier;
+    if (response_format) {
+        system = system || '';
+        if (response_format?.type === 'json_schema') {
+            system += `You must respond with valid JSON that matches this exact schema: ${JSON.stringify(response_format.schema)}`;
+            if (response_format.strict) {
+                system += ' You must strictly adhere to this schema with no additional properties.';
+            }
+        } else if (response_format?.type === 'json_object') {
+            system += 'You must respond with a valid JSON object.';
+        }
+    }
 
-    const service_tier = serviceTierValue === 'auto' ? 'auto' : 'standard_only';
-    return {service_tier};
-};
-
-export const fromHoloMetadataTranslator: TranslateFunc<HoloRequest, ClaudeChatRequest> = async (source: HoloRequest) => {
-    if (!source.metadata) return {};
-
-    // Direct metadata translation
-    const claudeMetadata = {
-        user_id: source.metadata.user_id || null
-    };
-
-    return {metadata: claudeMetadata};
-};
+    return {
+        ...(service_tier && {service_tier: service_tier === 'auto' ? 'auto' : 'standard_only'}),
+        ...(metadata && metadata.user_id && {metadata: {user_id: metadata.user_id}}),
+        ...(system && {system})
+    }
+}
 
 // Note: Reverse translators for service_tier and metadata are not needed
 // because they get copied automatically in the spread operation
@@ -33,16 +34,20 @@ export const ClaudeRequestTranslator = new FieldTranslator<HoloRequest, ClaudeCh
     HoloRequestValidator,
     ClaudeChatRequestValidator,
     [
-        fromHoloServiceTierTranslator,
-        fromHoloMetadataTranslator,
+        fromHoloSimpleFields,
         fromHoloMessagesTranslator,
-        createTranslateFunc(ClaudeToolChoiceTranslator.fromHolo, 'tool_choice'),
-        createTranslateFunc(ClaudeToolTranslator.fromHoloArray, 'tools')
+        createTranslateFunc(ClaudeToolChoiceTranslator.fromHolo, 'tool_choice', 'tool_choice', 'ClaudeToolChoiceTranslator.fromHolo'),
+        createTranslateFunc(ClaudeToolTranslator.fromHoloArray, 'tools', 'tools', 'ClaudeToolTranslator.fromHoloArray')
     ],
     [
         //service_tier and metadata are copied over in the spread operation
         toHoloMessagesTranslator,
-        createTranslateFunc(ClaudeToolChoiceTranslator.toHolo, 'tool_choice'),
-        createTranslateFunc(ClaudeToolTranslator.toHoloArray, 'tools')
-    ]
+        createTranslateFunc(ClaudeToolChoiceTranslator.toHolo, 'tool_choice', 'tool_choice', 'ClaudeToolChoiceTranslator.toHolo'),
+        createTranslateFunc(ClaudeToolTranslator.toHoloArray, 'tools', 'tools', 'ClaudeToolTranslator.toHoloArray')
+    ],
+    {
+        skipValidation: false,
+        name: 'ClaudeRequestTranslator',
+        defaultFromHoloValues: defaultClaudeChatRequestValues
+    }
 );

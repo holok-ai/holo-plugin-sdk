@@ -479,7 +479,7 @@ export const ClaudeToolUnionValidator = ClaudeToolValidator
 export const ClaudeMessageValidator = type({
     content: type('string').or(ClaudeContentBlockParamValidator.array()),
     role: "'user'|'assistant'"
-}) satisfies Type<ClaudeRequestMessage>;
+}).brand('ClaudeMessageValidator') satisfies Type<ClaudeRequestMessage>;
 
 const ClaudeRequestMCPServerToolConfigurationValidator = type({
     'allowed_tools?': stringArrayOrNull,
@@ -561,16 +561,11 @@ export const ClaudeOnlyRequestValidator = type({
 export const ClaudeChatRequestValidator = type.merge(
     ClaudeSharedRequestValidator,
     ClaudeOnlyRequestValidator
-) satisfies Type<ClaudeChatRequest>;
+).brand('ClaudeChatRequestValidator') satisfies Type<ClaudeChatRequest>;
 
-const claudeMessageDefault: Partial<ClaudeChatRequest> = {
+export const defaultClaudeChatRequestValues: Partial<ClaudeChatRequest> = {
     max_tokens: 4096,
     stream: false
 };
 
-export const ClaudeChatRequestWithDefaults = ClaudeChatRequestValidator.pipe((data) => {
-    return {
-        ...claudeMessageDefault,
-        ...data
-    }
-})
+export const ClaudeChatRequestWithDefaults = ClaudeChatRequestValidator.pipe((val) => ({...defaultClaudeChatRequestValues, ...val}));

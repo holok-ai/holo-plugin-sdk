@@ -1,17 +1,17 @@
 import 'reflect-metadata';
 import {BaseController} from "./base.controller";
 import {injectable} from "tsyringe";
-import {ResponseService} from "../../services";
 import {ApiResponse, AuthenticatedRequest, HttpApiRequest} from "../types";
 import {ProviderType, RequestType} from "../../providers/types";
 import {OrganizationService} from "../../admin/services/organization.service";
 import {Model} from "../../cache";
+import {RequestService} from "../../admin/services/request.service";
 
 @injectable()
 export class ClaudeController extends BaseController {
 
     constructor(
-        private responseService: ResponseService,
+        private requestService: RequestService,
         private organizationService: OrganizationService
     ) {
         super();
@@ -19,7 +19,7 @@ export class ClaudeController extends BaseController {
 
     public messages = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            await this.responseService.processRequest(ProviderType.CLAUDE, RequestType.CHAT, req, res);
+            await this.requestService.processRequest(ProviderType.CLAUDE, RequestType.CHAT, req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to complete chat');
         }

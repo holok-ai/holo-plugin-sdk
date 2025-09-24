@@ -1,14 +1,57 @@
-import {Application, Organization, OrgCacheMap, OrgCacheType, Provider} from "./types";
+import {Application, Keyable, Organization, OrgCacheMap, OrgCacheType, Provider} from "./types";
 import {OrganizationValidator} from "./validators";
+
+const SEP = '\x1F';
+const ixKey = (field: string, value: string) => `${field}${SEP}${value}`;
+
+export interface CacheFieldIndex<T> {
+    field: Keyable<T>;
+    multi?: boolean;
+    name?: string;
+}
+
+export function createCacheIndex<T>(def: CacheFieldIndex<T>): CacheIndex<T> {
+    const {field, name, ...rest} = def;
+    return {
+        name: name || field,
+        fn: (val: T) => val[field] as string,
+        ...rest
+    }
+}
+
+
+export interface CacheIndex<T> {
+    name: string;
+    multi?: boolean;
+    fn: (val: T) => string;
+}
 
 export class OrganizationCache {
     private providers = new Map<string, Provider>();
     private applications = new Map<string, Application>();
+
+    private providersIdx = new Map<string, Set<string>>();
+    private applicationsIdx = new Map<string, Set<string>>();
+
+    private providersIdxDefs: CacheIndex<Provider>[] = [createCacheIndex({field: 'id'})];
+    private applicationsIdxDefs: CacheIndex<Application>[] = [createCacheIndex({field: 'providerType'})];
+
+
+    private readonly caches = new Map<OrgCacheType, Map<String, Provider | Application>>
+    private readonly indexes = new Map<OrgCacheType, Map<string, string | Set<string>>>();
+    private readonly indexDefs = new Map<OrgCacheType, CacheIndex<Application>[] | CacheIndex<Provider>[]>();
+
     id?: string;
     name?: string;
     slug?: string;
 
     constructor(organization: Organization) {
+        this.caches.set('applications', this.applications);
+        this.caches.set('providers', this.providers);
+        this.indexes.set('applications', this.applicationsIdx);
+        this.indexes.set('providers', this.providersIdx);
+        this.indexDefs.set('applications', this.applicationsIdxDefs);
+        this.indexDefs.set('providers', this.providersIdxDefs);
         this.init(organization);
     }
 
@@ -28,51 +71,75 @@ export class OrganizationCache {
         }
     }
 
-    getAll<K extends OrgCacheType>(bucket: K): OrgCacheMap[K][] {
-        return this.mapOf(bucket).values().toArray() as unknown as OrgCacheMap[K][];
+    find<K extends OrgCacheType>(cacheType: K, field: string, value: string): OrgCacheMap[K] | OrgCacheMap[K][] | undefined {
+        const cache = this.cacheOf(cacheType);
+        const idx = this.indexOf(cacheType);
+        const idxKey = ixKey(field, value);
+        const ids = idx.get(idxKey);
+
+        if (ids) {
+            if (ids instanceof Set) {
+                const results: OrgCacheMap[K][] = [];
+                for (const id of ids) {
+                    const result = cache.get(id) as OrgCacheMap[K] | undefined;
+                    if (result) results.push(result);
+                }
+                return results;
+            } else {
+                return cache.get(ids) as OrgCacheMap[K] | undefined;
+            }
+        }
+        return undefined;
+    }
+
+    getAll<K extends OrgCacheType>(cacheType: K): OrgCacheMap[K][] {
+        return this.cacheOf(cacheType).values().toArray() as unknown as OrgCacheMap[K][];
     }
 
     // ----- Generic operations -----
-    get<K extends OrgCacheType>(bucket: K, key: string): OrgCacheMap[K] | undefined {
-        return this.mapOf(bucket).get(key) as OrgCacheMap[K] | undefined;
+    get<K extends OrgCacheType>(cacheType: K, key: string): OrgCacheMap[K] | undefined {
+        return this.cacheOf(cacheType).get(key) as OrgCacheMap[K] | undefined;
     }
 
-    set<K extends OrgCacheType>(bucket: K, key: string, value: OrgCacheMap[K]): void {
-        this.mapOf(bucket).set(key, value as any);
+    set<K extends OrgCacheType>(cacheType: K, key: string, value: OrgCacheMap[K]): void {
+        const m = this.cacheOf(cacheType);
+        const prev = m.get(key) as OrgCacheMap[K] | undefined;
+        if (prev) this.removeFromIndexes(cacheType, key, prev);
+        m.set(key, value as any);
+        this.addToIndexes(cacheType, key, value);
     }
 
     mset<K extends OrgCacheType, T extends OrgCacheMap[K], F extends keyof T & string>(
-        bucket: K,
+        cacheType: K,
         values: readonly T[],
         keyField: F
     ): void {
-        const m = this.mapOf(bucket);
         for (let i = 0; i < values.length; i++) {
             const v = values[i]!;
-            m.set(String(v[keyField]), v as any);
+            this.set(cacheType, String(v[keyField]), v);
         }
     }
 
-    del(bucket: OrgCacheType, key: string | string[]): boolean {
-        if (Array.isArray(key)) {
-            return this.mdel(bucket, key).success;
-        }
-        return this.mapOf(bucket).delete(key);
+    del(cacheType: OrgCacheType, key: string): boolean {
+        const m = this.cacheOf(cacheType);
+        const existing = m.get(key) as OrgCacheMap[typeof cacheType] | undefined;
+        if (!existing) return false;
+        this.removeFromIndexes(cacheType, key, existing);
+        return m.delete(key);
     }
 
-    mdel(bucket: OrgCacheType, keys: string[]): { success: boolean; failed: string[] } {
+    mdel(cacheType: OrgCacheType, keys: readonly string[]): { success: boolean; failed: string[] } {
         const failed: string[] = [];
-        const m = this.mapOf(bucket);
-        for (const key of keys) if (!m.delete(key)) failed.push(key);
+        for (const key of keys) if (this.del(cacheType, key)) failed.push(key);
         return {success: failed.length === 0, failed};
     }
 
-    clear(bucket: OrgCacheType): void {
-        this.mapOf(bucket).clear();
+    clear(cacheType: OrgCacheType): void {
+        this.cacheOf(cacheType).clear();
     }
 
-    has(bucket: OrgCacheType, key: string): boolean {
-        return this.mapOf(bucket).has(key);
+    has(cacheType: OrgCacheType, key: string): boolean {
+        return this.cacheOf(cacheType).has(key);
     }
 
     // ----- Admin / monitoring -----
@@ -90,13 +157,62 @@ export class OrganizationCache {
         };
     }
 
-    // ----- Helpers -----
-    private mapOf(bucket: OrgCacheType): Map<string, unknown> {
-        switch (bucket) {
-            case 'applications':
-                return this.applications as unknown as Map<string, Application>;
-            case 'providers':
-                return this.providers as unknown as Map<string, Provider>;
+    private addToIndexes(cacheType: OrgCacheType, key: string, value: OrgCacheMap[typeof cacheType]): void {
+        const idx = this.indexOf(cacheType);
+
+        for (const def of this.defsOf(cacheType)) {
+            let {name, fn, multi} = def;
+
+            const val = fn(value);
+            const idxKey = ixKey(name, val);
+            if (!multi) {
+                idx.set(idxKey, key)
+            } else {
+                let set = idx.get(key);
+                if (!set) {
+                    set = new Set<string>();
+                    idx.set(key, set);
+                } else if (!(set instanceof Set)) {
+                    set = new Set<string>([set as string]);
+                }
+                set.add(key);
+            }
         }
+    }
+
+    private removeFromIndexes(cacheType: OrgCacheType, key: string, value: OrgCacheMap[typeof cacheType]): void {
+        const idx = this.indexOf(cacheType);
+        for (const def of this.defsOf(cacheType)) {
+            let {name, fn, multi} = def;
+
+            const val = fn(value);
+            const idxKey = ixKey(name, val);
+            if (!multi) {
+                idx.delete(idxKey)
+            } else {
+                let set = idx.get(key);
+                if (set) {
+                    if (set instanceof Set) {
+                        set.delete(key);
+                        if (set.size === 0) {
+                            idx.delete(key);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ----- Helpers -----
+    private cacheOf(cacheType: OrgCacheType): Map<string, Provider | Application> {
+        return this.caches.get(cacheType) as Map<string, Provider | Application>;
+    }
+
+    private indexOf(cacheType: OrgCacheType): Map<string, string | Set<string>> {
+        return this.indexes.get(cacheType) as Map<string, string | Set<string>>;
+    }
+
+    private defsOf(cacheType: OrgCacheType): CacheIndex<Application | Provider>[] {
+        return this.indexDefs.get(cacheType) as CacheIndex<Application | Provider>[];
     }
 }

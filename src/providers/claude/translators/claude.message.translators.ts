@@ -3,20 +3,25 @@ import {ClaudeChatRequest, ClaudeRequestMessage} from "../types";
 import {ClaudeMessageValidator} from "../validators";
 import {ClaudeContentTranslator} from "./claude.content.translators";
 import {createStableId} from "../util/stable-id";
-import {FieldTranslator, Guard, TranslateFunc} from "../../types";
+import {FieldTranslator, TranslateFunc, TranslatorGuard} from "../../types";
+import logger from "../../../utils/logger";
 
-// Individual FieldTranslators for different aspects of messages
 export const ClaudeMessageRoleTranslator = new FieldTranslator<HoloMessage, ClaudeRequestMessage>(
     HoloMessageValidator,
     ClaudeMessageValidator,
-    [async (holoMessage: HoloMessage): Promise<Partial<ClaudeRequestMessage>> => ({
-        // Claude only accepts 'user' | 'assistant' - tool messages become user messages
-        role: holoMessage.role === 'assistant' ? 'assistant' : 'user'
-    })],
+    [async (holoMessage: HoloMessage): Promise<Partial<ClaudeRequestMessage>> => {
+        return {
+            // Claude only accepts 'user' | 'assistant' - tool messages become user messages
+            role: holoMessage.role === 'assistant' ? 'assistant' : 'user'
+        }
+    }],
     [async (claudeMessage: ClaudeRequestMessage): Promise<Partial<HoloMessage>> => ({
         // Holo supports 'tool', but Claude never emits it; keep only 'assistant'|'user'
         role: claudeMessage.role === 'assistant' ? 'assistant' : 'user'
-    })]
+    })],
+    {
+        name: 'ClaudeMessageRoleTranslator'
+    }
 );
 
 export const fromHoloMessageContentTranslator: TranslateFunc<HoloMessage, ClaudeRequestMessage> =
@@ -165,17 +170,17 @@ export const toHoloMessageArrayTranslator = async (
 };
 
 // Guards for message validation
-export const portableMessageOnlyGuard = new Guard<HoloMessage>(
+export const portableMessageOnlyGuard = new TranslatorGuard<HoloMessage>(
     "portableMessageOnly",
-    (message) => {
+    async (message) => {
         // Only allow user, assistant, and tool roles (portable)
         return message.role === 'user' || message.role === 'assistant' || message.role === 'tool';
     }
 );
 
-export const claudeCompatibleMessageGuard = new Guard<ClaudeRequestMessage>(
+export const claudeCompatibleMessageGuard = new TranslatorGuard<ClaudeRequestMessage>(
     "claudeCompatibleMessage",
-    (message) => {
+    async (message) => {
         // Only allow user and assistant roles (Claude doesn't support 'tool' role messages directly)
         return message.role === 'user' || message.role === 'assistant';
     }
@@ -187,8 +192,9 @@ export const ClaudeMessageTranslator = new FieldTranslator<HoloMessage, ClaudeRe
     ClaudeMessageValidator,
     [
         // Role translation
-        async (holoMessage: HoloMessage): Promise<Partial<ClaudeRequestMessage>> =>
-            await ClaudeMessageRoleTranslator.fromHolo(holoMessage),
+        async (holoMessage: HoloMessage): Promise<Partial<ClaudeRequestMessage>> => {
+            return await ClaudeMessageRoleTranslator.fromHolo(holoMessage);
+        },
         // Content translation (handles ordering and accumulation)
         fromHoloMessageContentTranslator
     ],
@@ -199,24 +205,32 @@ export const ClaudeMessageTranslator = new FieldTranslator<HoloMessage, ClaudeRe
             return holoMessages.length > 0 ? holoMessages[0] : {};
         }
     ],
-    [portableMessageOnlyGuard],
-    [claudeCompatibleMessageGuard]
+    {
+        fromHoloGuards: [portableMessageOnlyGuard],
+        toHoloGuards: [claudeCompatibleMessageGuard],
+        name: 'ClaudeMessageTranslator'
+    }
 );
 
 // Messages array translator for HoloRequest.messages[] -> ClaudeChatRequest.messages[]
 export const fromHoloMessagesTranslator: TranslateFunc<HoloRequest, ClaudeChatRequest> =
     async (holoRequest: HoloRequest): Promise<Partial<ClaudeChatRequest>> => {
-        if (!holoRequest.messages || holoRequest.messages.length === 0) return {};
+        const messages = holoRequest.messages;
+        if (!messages || messages.length === 0) return {};
 
         const claudeMessages = await Promise.all(
-            holoRequest.messages.map(async (message) =>
-                await ClaudeMessageTranslator.fromHolo(message)
-            )
+            messages.map(async (message) => {
+                try {
+                    return await ClaudeMessageTranslator.fromHolo(message);
+                } catch (e) {
+                    logger.error(`[fromHoloMessagesTranslator] Error translating Holo message: ${(e as Error).message}`);
+                    return {};
+                }
+            })
         );
 
         // Filter out any failed translations
         const validMessages = claudeMessages.filter(msg => Object.keys(msg).length > 0) as ClaudeRequestMessage[];
-
         return {messages: validMessages};
     };
 

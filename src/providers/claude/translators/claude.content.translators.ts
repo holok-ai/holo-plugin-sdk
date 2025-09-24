@@ -12,7 +12,7 @@ import {
     ClaudeImageBlockParamValidator,
     ClaudeTextBlockParamValidator
 } from "../validators";
-import {FieldTranslator, Guard, TranslateFunc} from "../../types";
+import {FieldTranslator, TranslateFunc, TranslatorGuard} from "../../types";
 
 // Helper function to detect media type from data URI or default
 const detectMediaType = (url: string): 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' => {
@@ -86,14 +86,20 @@ export const ClaudeTextContentTranslator = new FieldTranslator<HoloContentText, 
     HoloContentTextValidator,
     ClaudeTextBlockParamValidator,
     [fromHoloTextContentTranslator],
-    [toHoloTextContentTranslator]
+    [toHoloTextContentTranslator],
+    {
+        name: 'ClaudeTextContentTranslator'
+    }
 );
 
 export const ClaudeImageContentTranslator = new FieldTranslator<HoloContentImage, ClaudeImageBlockParam>(
     HoloContentImageValidator,
     ClaudeImageBlockParamValidator,
     [fromHoloImageContentTranslator],
-    [toHoloImageContentTranslator]
+    [toHoloImageContentTranslator],
+    {
+        name: 'ClaudeImageContentTranslator'
+    }
 );
 
 // Orchestrating translator functions that delegate to specialized translators
@@ -124,9 +130,9 @@ export const toHoloContentTranslator: TranslateFunc<ClaudeContentBlockParam, Hol
     };
 
 
-export const portableContentOnlyGuard = new Guard<ClaudeContentBlockParam>(
+export const portableContentOnlyGuard = new TranslatorGuard<ClaudeContentBlockParam>(
     "portableContentOnly",
-    (content) => {
+    async (content) => {
         return content.type === 'text' || content.type === 'image';
     }
 );
@@ -137,6 +143,8 @@ export const ClaudeContentTranslator = new FieldTranslator<HoloContent, ClaudeCo
     ClaudeContentBlockParamValidator,  // Output validator (Claude content union)
     [fromHoloContentTranslator],       // Holo → Claude transformer
     [toHoloContentTranslator],         // Claude → Holo transformer
-    [],                               // Pre-transform guards for Holo → Claude
-    [portableContentOnlyGuard]        // Pre-transform guards for Claude → Holo (filters non-portable)
+    {
+        toHoloGuards: [portableContentOnlyGuard],  // Pre-transform guards for Claude → Holo (filters non-portable)
+        name: 'ClaudeContentTranslator'
+    }
 );

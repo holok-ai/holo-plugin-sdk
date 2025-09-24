@@ -61,6 +61,7 @@ export const ClaudeCacheCreationValidator = type({
 }) satisfies Type<ClaudeCacheCreation>;
 
 export const ClaudeServerToolUsageValidator = type({
+    web_fetch_requests: 'number',
     web_search_requests: 'number'
 }) satisfies Type<ClaudeServerToolUsage>;
 
@@ -87,6 +88,7 @@ export const ClaudeCitationCharLocationValidator = type({
     document_index: 'number',
     document_title: stringOrNull,
     end_char_index: 'number',
+    file_id: stringOrNull,
     start_char_index: 'number',
     type: "'char_location'"
 }) satisfies Type<ClaudeCitationCharLocation>;
@@ -96,6 +98,7 @@ export const ClaudeCitationPageLocationValidator = type({
     document_index: 'number',
     document_title: stringOrNull,
     end_page_number: 'number',
+    file_id: stringOrNull,
     start_page_number: 'number',
     type: "'page_location'"
 }) satisfies Type<ClaudeCitationPageLocation>;
@@ -105,6 +108,7 @@ export const ClaudeCitationContentBlockLocationValidator = type({
     document_index: 'number',
     document_title: stringOrNull,
     end_block_index: 'number',
+    file_id: stringOrNull,
     start_block_index: 'number',
     type: "'content_block_location'"
 }) satisfies Type<ClaudeCitationContentBlockLocation>;
