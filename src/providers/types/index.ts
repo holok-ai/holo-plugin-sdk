@@ -1,7 +1,7 @@
 import {LLMWorkerRequest, LLMWorkerResponse} from '../../types';
-import {OllamaChatRequest, OllamaMessage} from "../ollama";
-import {OpenAIChatRequest, OpenAIRequestMessage} from "../openai";
-import {ClaudeChatRequest, ClaudeRequestMessage} from "../claude";
+import {OllamaChatRequest, OllamaMessage, OllamaResponse} from "../ollama";
+import {OpenAIChatRequest, OpenAIRequestMessage, OpenAIResponse} from "../openai";
+import {ClaudeChatRequest, ClaudeRequestMessage, ClaudeResponse} from "../claude";
 
 export * from '../types/auditor.types';
 export * from '../types/validator.types';
@@ -88,6 +88,11 @@ export interface AIRequestStat {
     error: number;
 }
 
+export type ProviderResponse =
+    ClaudeResponse
+    | OllamaResponse
+    | OpenAIResponse;
+
 export type ProviderChatRequest =
     ClaudeChatRequest
     | OllamaChatRequest
@@ -102,7 +107,7 @@ export type ProviderMessage =
 export enum ProviderType {
     OLLAMA = 'OLLAMA',
     CLAUDE = 'CLAUDE',
-    ANTHROPIC = 'ANTHROPIC',
+    ANTHROPIC = 'CLAUDE',
     OPENAI = 'OPENAI',
     PERPLEXITY = 'PERPLEXITY'
 }
