@@ -2,12 +2,13 @@ import {ProviderRequest, ProviderType, RequestType} from "../providers/types";
 import {HttpApiRequest} from "../api/types";
 import {JWTPayload} from "../admin/types";
 import {v4 as uuidv4} from "uuid";
-import {OllamaParser} from "../providers/ollama";
-import {ClaudeParser} from "../providers/claude";
-import {OpenAIParser} from "../providers/openai";
 import logger from "../utils/logger";
 import {ErrorMessages} from "../utils";
 import {LLMWorkerRequest} from "./index";
+import {OllamaChatRequestWithDefaults, OllamaGenerateRequestWithDefaults} from "../providers/ollama/validators";
+import {ClaudeChatRequestWithDefaults} from "../providers/claude/validators";
+import {OpenAIChatRequestValidator} from "../providers/openai/validators";
+import {ArkErrors} from "arktype";
 
 export class WorkerRequestFactory {
     static fromRequest(
@@ -54,16 +55,24 @@ export class WorkerRequestFactory {
         providerType: ProviderType,
         type: RequestType
     ): ProviderRequest {
-        logger.info(`parsing request: ${JSON.stringify(req.body, null, 2)}`)
+        const {body} = req;
+        logger.info(`parsing request: ${JSON.stringify(body, null, 2)}`)
+        let request: ProviderRequest | ArkErrors;
         switch (providerType) {
             case ProviderType.OLLAMA:
-                return OllamaParser.parseRequest(req, type);
+                if (type === RequestType.CHAT) {
+                    request = OllamaChatRequestWithDefaults(body);
+                } else {
+                    request = OllamaGenerateRequestWithDefaults(body);
+                }
+                break;
             case ProviderType.CLAUDE:
-                return ClaudeParser.parseRequest(req, type);
+                request = ClaudeChatRequestWithDefaults(body);
+                break;
             case ProviderType.OPENAI:
-                return OpenAIParser.parseRequest(req, type);
             case ProviderType.PERPLEXITY:
-                return OpenAIParser.parseRequest(req, type);
+                request = OpenAIChatRequestValidator(body);
+                break;
             default:
                 logger.error('Unsupported provider in WorkerRequest unified parser.', {providerType}, {
                     className: 'WorkerRequestFactory',
@@ -71,5 +80,15 @@ export class WorkerRequestFactory {
                 });
                 throw new Error(ErrorMessages.unsupportedProvider(providerType));
         }
+
+        if (request instanceof ArkErrors) {
+            logger.error(`${providerType} request validation failed`, {
+                errors: request.summary,
+                input: req
+            });
+            throw new Error(`Invalid ${providerType} request: ${request.summary}`);
+        }
+
+        return request;
     }
 }

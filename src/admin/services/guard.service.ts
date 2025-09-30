@@ -28,6 +28,7 @@ export class GuardService extends ClassLogger {
     }
 
     async guard(providerType: ProviderType, type: RequestType, workerRequest: LLMWorkerRequest, auth: JWTPayload | undefined) {
+        const logger = this.mlog(this.guard);
         // if no slug or auth
         if (!auth?.appSlug) {
             return;
@@ -39,7 +40,7 @@ export class GuardService extends ClassLogger {
         } else {
             const lastHoloMessage = (await this.holoTranslator.toHoloMessages((workerRequest.payload as ProviderChatRequest).messages as ProviderMessage[], providerType)).pop();
             if (!lastHoloMessage || !lastHoloMessage.content || !lastHoloMessage.content.length) {
-                this.log.warn(`No message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
+                logger.warn(`No message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
                 return;
             }
             const content = lastHoloMessage.content
@@ -55,7 +56,7 @@ export class GuardService extends ClassLogger {
         }
 
         if (!lastMessage.length) {
-            this.log.warn(`No message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
+            logger.warn(`No message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
             return;
         }
 
@@ -69,12 +70,12 @@ export class GuardService extends ClassLogger {
                     guards.map(async (guard) => {
                         try {
                             const provider = this.organizationService.getProvider(auth.organizationId, guard.providerName);
-                            this.log.info(`Guard Provider: ${guard.providerName}: ${provider?.type}`, {
+                            logger.info(`Guard Provider: ${guard.providerName}: ${provider?.type}`, {
                                 methodName: 'guard',
                                 requestId: workerRequest.requestId
                             });
                             if (!provider) {
-                                this.log.warn(`Guard Provider ${guard.providerName} not found`, {
+                                logger.warn(`Guard Provider ${guard.providerName} not found`, {
                                     methodName: 'guard',
                                     requestId: workerRequest.requestId
                                 });
@@ -98,7 +99,7 @@ export class GuardService extends ClassLogger {
 
                             const payload = await this.holoTranslator.fromHoloRequest(holoRequest, provider.type);
                             if (payload instanceof ArkErrors) {
-                                this.log.warn(`Guard translation failed: ${JSON.stringify(payload.summary, null, 2)}`, {
+                                logger.warn(`Guard translation failed: ${JSON.stringify(payload.summary, null, 2)}`, {
                                     methodName: 'guard',
                                     requestId: workerRequest.requestId
                                 });
@@ -112,7 +113,7 @@ export class GuardService extends ClassLogger {
                             const resultMessage = JSON.parse(response as string) as ClaudeResponseMessage
                             return JSON.parse((resultMessage.content[0] as ClaudeTextBlock).text);
                         } catch (e) {
-                            this.log.error(`Failed to process guard: ${(e as Error).message}`, {
+                            logger.error(`Failed to process guard: ${(e as Error).message}`, {
                                 methodName: 'guard',
                                 requestId: workerRequest.requestId
                             });
@@ -133,7 +134,7 @@ export class GuardService extends ClassLogger {
                     {passed: true}
                 );
             } catch (e) {
-                this.log.error(`Failed to process guard: ${(e as Error).message}`, {
+                logger.error(`Failed to process guard: ${(e as Error).message}`, {
                     methodName: 'guard',
                     requestId: workerRequest.requestId
                 });

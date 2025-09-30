@@ -568,4 +568,6 @@ export const defaultClaudeChatRequestValues: Partial<ClaudeChatRequest> = {
     stream: false
 };
 
-export const ClaudeChatRequestWithDefaults = ClaudeChatRequestValidator.pipe((val) => ({...defaultClaudeChatRequestValues, ...val}));
+export const ClaudeChatRequestWithDefaults =
+    ClaudeChatRequestValidator.pipe((val) =>
+        ({...defaultClaudeChatRequestValues, ...val}));
