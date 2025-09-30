@@ -1,8 +1,11 @@
 import 'reflect-metadata';
 import {injectable} from "tsyringe";
-import {ClaudeChatRequest, ClaudeRequestMessage, HoloMessage, HoloRequest, IProviderTranslator,} from "../types";
+import {IProviderTranslator,} from "../types";
 import logger from "../../utils/logger";
 import {ClaudeMessageTranslator, ClaudeRequestTranslator} from "./translators";
+import {ClaudeResponseTranslator} from "./translators/claude.response.translators";
+import {ClaudeChatRequest, ClaudeRequestMessage, ClaudeResponse} from "./types";
+import {HoloMessage, HoloRequest, HoloResponse} from "../holo";
 
 
 @injectable()
@@ -26,5 +29,9 @@ export class ClaudeTranslator implements IProviderTranslator {
 
     async toHoloMessages(messages: ClaudeRequestMessage[]): Promise<Partial<HoloMessage>[]> {
         return ClaudeMessageTranslator.toHoloArray(messages);
+    }
+
+    async toHoloResponse(message: ClaudeResponse): Promise<Partial<HoloResponse>> {
+        return ClaudeResponseTranslator.toHolo(message);
     }
 }

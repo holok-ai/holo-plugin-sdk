@@ -1,12 +1,18 @@
 import 'reflect-metadata';
 import {injectable} from "tsyringe";
-import {HoloMessage, HoloRequest, IProviderTranslator, OpenAIChatRequest, OpenAIRequestMessage} from "../types";
+import {IProviderTranslator, ProviderResponse} from "../types";
 import {type} from "arktype";
 import {OpenAIMessageTranslator, OpenAIRequestTranslator} from "./translators";
+import {OpenAIChatRequest, OpenAIRequestMessage} from "./types";
+import {HoloMessage, HoloRequest, HoloResponse} from "../holo";
 
 @injectable()
 export class OpenAITranslator implements IProviderTranslator {
     constructor() {
+    }
+
+    toHoloResponse(_response: ProviderResponse): Promise<Partial<HoloResponse>> {
+        throw new Error('Method not implemented.');
     }
 
     async fromHoloRequest(request: HoloRequest): Promise<Partial<OpenAIChatRequest> | type.errors> {

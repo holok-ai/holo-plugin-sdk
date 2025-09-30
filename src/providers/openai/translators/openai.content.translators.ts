@@ -1,4 +1,12 @@
-import {FieldTranslator, HoloContent, HoloContentImage, HoloContentText, TranslateFunc,} from "../../types";
+import {FieldTranslator, TranslateFunc,} from "../../types";
+import {
+    HoloContent,
+    HoloContentImage,
+    HoloContentImageValidator,
+    HoloContentText,
+    HoloContentTextValidator,
+    HoloContentValidator
+} from "../../holo";
 import {
     OpenAIChatCompletionContentPartImageValidator,
     OpenAIChatCompletionContentPartTextValidator,
@@ -9,7 +17,6 @@ import {
     OpenAIChatCompletionContentPartImage,
     OpenAIChatCompletionContentPartText
 } from "../types";
-import {HoloContentImageValidator, HoloContentTextValidator, HoloContentValidator} from "../../holo";
 
 export const fromHoloTextContentTranslator: TranslateFunc<HoloContentText, OpenAIChatCompletionContentPartText> =
     async (holoText: HoloContentText): Promise<Partial<OpenAIChatCompletionContentPartText>> => ({

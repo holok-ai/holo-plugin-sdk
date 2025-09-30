@@ -1,78 +1,65 @@
+import 'reflect-metadata';
 import {HoloTool, HoloToolValidator} from "../../holo";
-import {OllamaTool, OllamaToolValidator} from "../types";
-import {FieldTranslator, TranslateFunc} from "../../types";
+import {OllamaTool} from "../types";
+import {OllamaToolValidator} from "../validators";
+import {BaseTranslator} from "../../base.translator";
+import {injectable} from 'tsyringe';
+import {pickDefined} from "../../../utils";
 
-// Individual translator functions for tools
-export const fromHoloToolTranslator: TranslateFunc<HoloTool, OllamaTool> =
-    async (holoTool: HoloTool): Promise<Partial<OllamaTool>> => {
-        // Ollama expects proper JSON Schema format
-        const parameters = holoTool.parameters || {};
+@injectable()
+export class OllamaToolTranslator extends BaseTranslator<HoloTool, OllamaTool> {
+    protected holoValidator = HoloToolValidator;
+    protected providerValidator = OllamaToolValidator;
+    protected holoDefaults: Partial<HoloTool> = {};
+    protected providerDefaults: Partial<OllamaTool> = {};
 
-        // If parameters is already a proper JSON Schema, use it directly
-        // Otherwise, wrap it in a JSON Schema structure
-        let jsonSchemaParameters;
-        if (typeof parameters === 'object' && parameters !== null && 'type' in parameters) {
-            // Already looks like JSON Schema
-            jsonSchemaParameters = parameters;
-        } else {
-            // Convert Record<string, unknown> to JSON Schema format
-            jsonSchemaParameters = {
-                type: 'object',
-                properties: parameters,
-                required: [] // Default to no required fields
-            };
-        }
-
-        const result: Partial<OllamaTool> = {
-            type: 'function',
-            function: {
-                name: holoTool.name,
-                parameters: jsonSchemaParameters
-            }
-        };
-
-        // Only add description if it exists
-        if (holoTool.description) {
-            result.function!.description = holoTool.description;
-        }
-
-        return result;
-    };
-
-export const toHoloToolTranslator: TranslateFunc<OllamaTool, HoloTool> =
-    async (ollamaTool: OllamaTool): Promise<Partial<HoloTool>> => {
-        // Extract parameters from JSON Schema format
-        let parameters = ollamaTool.function.parameters;
-
-        // If it's a JSON Schema object with properties, extract just the properties
-        if (parameters && typeof parameters === 'object' && 'properties' in parameters) {
-            parameters = (parameters as any).properties || {};
-        }
-
-        const result: Partial<HoloTool> = {
-            name: ollamaTool.function.name || ''
-        };
-
-        // Only add description if it exists
-        if (ollamaTool.function.description) {
-            result.description = ollamaTool.function.description;
-        }
-
-        // Only add parameters if they exist and are valid
-        if (parameters && typeof parameters === 'object') {
-            result.parameters = parameters as Record<string, unknown>;
-        }
-
-        return result;
-    };
-
-// Individual tool translator
-export const OllamaToolTranslator = new FieldTranslator<HoloTool, OllamaTool>(
-    HoloToolValidator,
-    OllamaToolValidator,
-    [fromHoloToolTranslator],
-    [toHoloToolTranslator],
-    {
-        name: 'OllamaToolTranslator'
+    constructor() {
+        super();
     }
-);
+
+    private createJsonSchemaParameters(
+        parameters: Record<string, unknown> | undefined
+    ): Record<string, unknown> {
+        if (!parameters || Object.keys(parameters).length === 0) {
+            return {type: "object", properties: {}, required: [] as string[]};
+        }
+        if (typeof parameters === "object" && "type" in parameters) {
+            return parameters as Record<string, unknown>;
+        }
+        return {type: "object", properties: parameters, required: [] as string[]};
+    }
+
+    private extractParametersFromSchema(
+        parameters: unknown
+    ): Record<string, unknown> | undefined {
+        if (!parameters || typeof parameters !== "object") return undefined;
+        // If JSON Schema object with properties, return properties; else pass object through
+        // (mirrors original behavior)
+        return "properties" in (parameters as any)
+            ? ((parameters as any).properties ?? {})
+            : (parameters as Record<string, unknown>);
+    }
+
+    protected async toHoloImpl(source: OllamaTool): Promise<Partial<HoloTool>> {
+        const fn = source.function;
+
+        // Guard + normalize
+        const name = (fn?.name ?? "").toString();
+        const description = typeof fn?.description === "string" ? fn.description : undefined;
+        const parameters = this.extractParametersFromSchema(fn?.parameters);
+
+        return pickDefined({name, description, parameters}) as Partial<HoloTool>;
+    }
+
+    protected async fromHoloImpl(source: HoloTool): Promise<Partial<OllamaTool>> {
+        const parameters = this.createJsonSchemaParameters(source.parameters);
+        return pickDefined({
+            type: "function" as const,                 // what you emit
+            function: pickDefined({
+                name: source.name,
+                description: source.description,
+                parameters,                              // normalized for downstream
+            }),
+        });
+    }
+}

@@ -1,7 +1,9 @@
+import 'reflect-metadata';
 import winston from 'winston';
 import fs from 'fs';
 import path from 'path';
 import {env} from "../env";
+import {container, InjectionToken} from "tsyringe";
 
 // Ensure logs directory exists
 const logDir = env.logDir;
@@ -41,11 +43,12 @@ export function createLoggerFormat(serverId: string) {
     return winston.format.combine(
         winston.format.timestamp({format: 'YYYY-MM-DD HH:mm:ss:ms'}),
         winston.format.colorize({all: true}),
-        winston.format.printf(
-            (info: winston.Logform.TransformableInfo) => {
-                return `${info.timestamp} ${info.level}: [${serverId}] ${info.message}`;
-            }
-        )
+        winston.format.printf((info) => {
+            const cls = info.className ? `[${info.className}]` : '';
+            const mth = info.methodName ? `[${info.methodName}]` : '';
+            const requestId = info.requestId ? `[RequestId: ${info.requestId}]` : '';
+            return `${info.timestamp} ${info.level}: [${serverId}]${cls}${mth}${requestId} ${info.message}`;
+        })
     );
 }
 
@@ -97,5 +100,11 @@ export function createLoggerOptions(serverId: string) {
 const logger = winston.createLogger(
     createLoggerOptions(env.id)
 );
+
+export const LoggerFactoryToken: InjectionToken<(cls: Function) => winston.Logger> = 'LoggerFactory';
+
+container.register(LoggerFactoryToken, {
+    useFactory: () => (cls: Function) => logger.child({className: cls.name})
+});
 
 export default logger;

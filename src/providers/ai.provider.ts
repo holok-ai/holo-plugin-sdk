@@ -1,15 +1,16 @@
-import {AIProviderConfig, AIRequestStat, ModelInfo, RequestType} from "./index";
-import {ResponseService} from "../../services";
-import {LLMWorkerRequest, LLMWorkerResponse} from "../../types";
-import {ErrorMessages} from "../../utils";
-import logger from "../../utils/logger";
-import {Provider} from "../../db/types";
+import {AIProviderConfig, AIRequestStat, ModelInfo, ProviderRequest, RequestType} from "./types";
+import {ResponseService} from "../services";
+import {LLMWorkerRequest, LLMWorkerResponse} from "../types";
+import {ErrorMessages} from "../utils";
+import {Provider} from "../db/types";
+import {ProviderRequestValidator} from "./validators";
+import {ClassLogger} from "../types/class.logger";
 
 /**
  * Base interface for LLM providers
  * All LLM implementations must implement these methods
  */
-export abstract class AIProvider {
+export abstract class AIProvider extends ClassLogger {
     protected models: Record<string, ModelInfo> | null = null;
 
     //workerId is passed in via provider service
@@ -17,6 +18,7 @@ export abstract class AIProvider {
         protected provider: Provider,
         protected responseService: ResponseService,
         protected workerId: string) {
+        super();
     }
 
     /**
@@ -31,10 +33,18 @@ export abstract class AIProvider {
     abstract getModels(): Promise<ModelInfo[]>;
 
 
+    async processRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
+        const {sourceId, requestId, payload, type} = request;
+        ProviderRequestValidator.assert(payload);
+
+        return this.handleLLMRequest(sourceId, requestId, payload, type);
+    }
+
+
     /**
      * Handle LLMWorkerRequest - unified interface for all providers
      */
-    abstract handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat>;
+    abstract handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat>;
 
     /**
      * Wraps provider method calls with statistics tracking, error handling, and logging.
@@ -50,6 +60,7 @@ export abstract class AIProvider {
         method: (...args: T) => Promise<void>,
         ...args: T
     ): Promise<AIRequestStat> {
+        const logger = this.mlog(this.wrapWithStats);
         const startTime = Date.now();
         let success = 0;
         let error = 0;
@@ -167,6 +178,7 @@ export abstract class AIProvider {
      * @returns Promise that resolves when the chunk has been sent to the response service
      */
     async onResponseChunk(responseChunk: LLMWorkerResponse, auditEnabled?: boolean) {
+        const logger = this.mlog(this.onResponseChunk);
         logger.info(`auditEnabled ${auditEnabled}`);
         // Default to false if not provided
         const auditEnabledValue = auditEnabled ?? false;

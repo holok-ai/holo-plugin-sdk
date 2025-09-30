@@ -1,26 +1,22 @@
 import 'reflect-metadata';
 import {OrganizationService} from "./organization.service";
 import {injectable} from 'tsyringe';
-import {ClaudeResponseMessage, ClaudeTextBlock} from '../../providers/claude';
 import {GuardResult, GuardResultSchema, JWTPayload} from "../types";
-import {LLMPayloadTypes, LLMWorkerRequest, WorkerRequest} from "../../types";
+import {LLMWorkerRequest} from "../../types";
 import {HoloContentText, HoloRequest, HoloRequestValidator} from "../../providers/holo";
-import {
-    OllamaGenerateRequest,
-    ProviderChatRequest,
-    ProviderMessage,
-    ProviderType,
-    RequestType
-} from "../../providers/types";
+import {ProviderChatRequest, ProviderMessage, ProviderRequest, ProviderType, RequestType} from "../../providers/types";
 import {env} from "../../env";
 import {ResponseService} from "../../services";
-import logger from "../../utils/logger";
 import {HoloTranslater} from "../../providers/translators";
 import {ArkErrors} from "arktype";
+import {ClassLogger} from "../../types/class.logger";
+import {OllamaGenerateRequest} from "../../providers/ollama/types";
+import {WorkerRequestFactory} from "../../types/worker.request.factory";
+import {ClaudeResponseMessage, ClaudeTextBlock} from "../../providers/claude/types";
 
 
 @injectable()
-export class GuardService {
+export class GuardService extends ClassLogger {
     private serverId: string = env.api.apiServerId;
 
     constructor(
@@ -28,24 +24,23 @@ export class GuardService {
         private responseService: ResponseService,
         private holoTranslator: HoloTranslater
     ) {
-
+        super();
     }
 
     async guard(providerType: ProviderType, type: RequestType, workerRequest: LLMWorkerRequest, auth: JWTPayload | undefined) {
         // if no slug or auth
         if (!auth?.appSlug) {
-            return {passed: true};
+            return;
         }
 
         let lastMessage = '';
         if (type === RequestType.GENERATE && providerType === ProviderType.OLLAMA) {
-
             lastMessage = (workerRequest.payload as OllamaGenerateRequest).prompt;
         } else {
             const lastHoloMessage = (await this.holoTranslator.toHoloMessages((workerRequest.payload as ProviderChatRequest).messages as ProviderMessage[], providerType)).pop();
             if (!lastHoloMessage || !lastHoloMessage.content || !lastHoloMessage.content.length) {
-                logger.warn(`No message to guard`);
-                return {passed: true};
+                this.log.warn(`No message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
+                return;
             }
             const content = lastHoloMessage.content
             if (Array.isArray(content)) {
@@ -60,24 +55,34 @@ export class GuardService {
         }
 
         if (!lastMessage.length) {
-            logger.warn(`No message to guard`);
-            return {passed: true};
+            this.log.warn(`No message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
+            return;
         }
 
         const guards = this.organizationService.getGuards(auth.organizationId, auth.appSlug);
 
         if (guards) {
             try {
+                //set guards onto request for auditing
+                workerRequest.guards = guards;
                 const results = await Promise.all(
                     guards.map(async (guard) => {
                         try {
                             const provider = this.organizationService.getProvider(auth.organizationId, guard.providerName);
+                            this.log.info(`Guard Provider: ${guard.providerName}: ${provider?.type}`, {
+                                methodName: 'guard',
+                                requestId: workerRequest.requestId
+                            });
                             if (!provider) {
-                                logger.warn(`Guard Provider ${guard.providerName} not found`);
+                                this.log.warn(`Guard Provider ${guard.providerName} not found`, {
+                                    methodName: 'guard',
+                                    requestId: workerRequest.requestId
+                                });
                                 //TODO: More robust error handling
                                 return {passed: true}
                             }
                             const holoRequest: HoloRequest = HoloRequestValidator.assert({
+                                request_type: 'generate',
                                 model: guard.modelName,
                                 messages: [
                                     {role: 'user', content: guard.userPrompt + '\n\n' + lastMessage},
@@ -93,23 +98,30 @@ export class GuardService {
 
                             const payload = await this.holoTranslator.fromHoloRequest(holoRequest, provider.type);
                             if (payload instanceof ArkErrors) {
-                                logger.warn(`Guard translation failed: ${JSON.stringify(payload.summary, null, 2)}`);
+                                this.log.warn(`Guard translation failed: ${JSON.stringify(payload.summary, null, 2)}`, {
+                                    methodName: 'guard',
+                                    requestId: workerRequest.requestId
+                                });
                                 return {passed: true}
                             }
 
-                            const guardRequest = await WorkerRequest.create(providerType, type, payload as LLMPayloadTypes, this.serverId, auth);
+                            const guardRequest = WorkerRequestFactory.create(provider.type, RequestType.GENERATE, payload as ProviderRequest, this.serverId, auth);
 
-                            const response = await this.responseService.submitRequest(guardRequest);
+                            const response = await this.responseService.streamRequestOnce(guardRequest);
+
                             const resultMessage = JSON.parse(response as string) as ClaudeResponseMessage
                             return JSON.parse((resultMessage.content[0] as ClaudeTextBlock).text);
                         } catch (e) {
-                            logger.error(`Failed to process guard: ${(e as Error).message}`);
+                            this.log.error(`Failed to process guard: ${(e as Error).message}`, {
+                                methodName: 'guard',
+                                requestId: workerRequest.requestId
+                            });
                             return {passed: true, errors: [e as Error]};
                         }
                     })
                 );
 
-                return results.reduce<GuardResult>(
+                return workerRequest.guardResults = results.reduce<GuardResult>(
                     (acc, r: GuardResult) => {
                         acc.passed = acc.passed && r.passed;
                         if (!acc.passed && !r.passed && r.errors.length) {
@@ -121,8 +133,11 @@ export class GuardService {
                     {passed: true}
                 );
             } catch (e) {
-                logger.error(`Failed to process guard: ${(e as Error).message}`);
-                return {passed: false, errors: [e as Error]};
+                this.log.error(`Failed to process guard: ${(e as Error).message}`, {
+                    methodName: 'guard',
+                    requestId: workerRequest.requestId
+                });
+                return {passed: false, errors: [(e as Error).message]};
             }
         }
         return {passed: true};

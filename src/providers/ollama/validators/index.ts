@@ -1,2 +1,2 @@
-export * from './ollama.requests';
-export * from './ollama.responses';
+export * from './ollama.request.validators';
+export * from './ollama.response.validators';

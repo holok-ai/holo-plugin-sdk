@@ -1,4 +1,6 @@
 // ---------- HoloContent (portable only) ----------
+import {RequestType} from "../../types";
+
 export interface HoloContentText {
     type: 'text';
     text: string;
@@ -81,6 +83,7 @@ export interface HoloRequestMetadata {
 // ---------- Holo Request (portable chat surface) ----------
 export interface HoloRequest {
     // 🟢 COMMON (All Providers)
+    request_type?: RequestType;           // CAN be set, but default is chat, so set to generate if using ollama
     model: string;                        // Required
     messages?: HoloMessage[];
     temperature?: number;                 // 0.0–2.0 (provider-dependent caps)

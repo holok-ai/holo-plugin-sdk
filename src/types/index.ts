@@ -17,14 +17,3 @@ export interface AnnouncementMessage {
     serverId: string;
     timestamp: string;
 }
-
-export interface AnalysisEvent {
-    id: string;
-    created_at: Date;
-    user_id: string | null;
-    event_source: 'claude' | 'azurepr' | 'github' | null;
-    event_data: any;
-    parameters: any;
-}
-
-export type FetchLike = typeof fetch;

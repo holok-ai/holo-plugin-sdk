@@ -1,17 +1,17 @@
-import {AIProvider} from '../types/ai.provider';
+import {AIProvider} from '../ai.provider';
 import logger from '../../utils/logger';
 import OpenAI from 'openai';
-import {AIRequestStat, IProvider, ModelInfo, OpenAIChatRequest, ProviderType} from '../types';
-import {LLMWorkerRequest} from '../../types';
+import {AIRequestStat, IProvider, ModelInfo, ProviderRequest, ProviderType, RequestType} from '../types';
 import {ErrorMessages} from '../../utils';
 import {ResponseService} from "../../services";
 import {Provider} from "../../db/types";
+import {OpenAIChatRequest} from "./types";
 
 /**
  * OpenAI provider for connecting to OpenAI API
  */
 export class OpenAIProvider extends AIProvider implements IProvider {
-    private readonly client: OpenAI;
+    protected readonly client: OpenAI;
 
     constructor(
         protected provider: Provider,
@@ -78,30 +78,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
     /**
      * Handle LLMWorkerRequest - unified interface
      */
-    async handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
-        logger.debug('OpenAI provider handling LLM request', {
-            requestId: request.requestId,
-            sourceId: request.sourceId,
-            type: request.type,
-            provider: request.providerType
-        });
-
-        // Validate this is for OpenAI
-        if (request.providerType !== ProviderType.OPENAI) {
-            logger.error('Provider validation failed for OpenAI', {
-                expected: ProviderType.OPENAI,
-                received: request.providerType,
-                requestId: request.requestId
-            });
-            throw new Error(ErrorMessages.invalidProvider(request.providerType, ProviderType.OPENAI));
-        }
-
-        logger.debug('Provider validation successful for OpenAI', {
-            requestId: request.requestId,
-            type: request.type
-        });
-
-        const {sourceId, requestId, payload, type} = request;
+    async handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat> {
         const openaiPayload = payload as OpenAIChatRequest;
 
         // OpenAI uses a unified chat completions API, so both generate and chat go through the same method

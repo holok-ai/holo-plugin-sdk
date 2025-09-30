@@ -12,6 +12,7 @@ import {
     HoloToolChoice,
     HoloToolFunctionCall
 } from "../types";
+import {RequestType} from "../../types";
 
 // ---------- HoloContent validators ----------
 export const HoloContentTextValidator = type({
@@ -91,6 +92,7 @@ export const HoloRequestMetadataValidator = type({
 // ---------- Main Holo Request validator (portable fields only) ----------
 export const HoloRequestValidator = type({
     // 🟢 COMMON (All Providers)
+    'request_type?': type.valueOf(RequestType), // default to chat (so if it's not set), otherwise generate
     model: 'string', // Required
     'messages?': HoloRequestMessageValidator.array(),
     'temperature?': 'number',
@@ -113,7 +115,7 @@ export const HoloRequestValidator = type({
 }) satisfies Type<HoloRequest>;
 
 // Default values for Holo request
-const HoloRequestDefaults: Partial<HoloRequest> = {
+export const HoloRequestDefaults: Partial<HoloRequest> = {
     stream: false,
     temperature: 1.0,
     top_p: 1.0,

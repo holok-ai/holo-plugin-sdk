@@ -1,20 +1,19 @@
-import AIProvider from "../types/ai.provider";
+import AIProvider from "../ai.provider";
 import {Ollama} from "ollama";
 import {
     AIRequestStat,
     IProvider,
     ModelInfo,
-    OllamaChatRequest,
-    OllamaGenerateRequest,
     OllamaProviderConfig,
+    ProviderRequest,
     ProviderType,
     RequestType
 } from "../types";
-import {LLMWorkerRequest} from "../../types";
 import {ErrorMessages} from "../../utils";
-import logger from "../../utils/logger";
 import {ResponseService} from "../../services";
 import {Provider} from "../../db/types";
+import {OllamaChatRequestValidator, OllamaGenerateRequestValidator} from "./validators";
+import {OllamaChatRequest, OllamaGenerateRequest} from "./types";
 
 export class OllamaProvider extends AIProvider implements IProvider {
     private readonly client: Ollama = new Ollama();
@@ -31,9 +30,9 @@ export class OllamaProvider extends AIProvider implements IProvider {
         try {
             await this.getModels();
 
-            logger.info('Ollama provider initialized');
+            this.log.info('Ollama provider initialized');
         } catch (error) {
-            logger.error(`Failed to initialize Ollama provider: ${(error as Error).message}`);
+            this.log.error(`Failed to initialize Ollama provider: ${(error as Error).message}`);
             throw error;
         }
     }
@@ -61,10 +60,10 @@ export class OllamaProvider extends AIProvider implements IProvider {
                 return acc;
             }, {} as Record<string, ModelInfo>);
 
-            logger.debug(`Ollama models: ${JSON.stringify(Object.keys(this.models))}`);
+            this.log.debug(`Ollama models: ${JSON.stringify(Object.keys(this.models))}`);
             return modelList;
         } catch (error) {
-            logger.error(`Error fetching Ollama models: ${(error as Error).stack}`);
+            this.log.error(`Error fetching Ollama models: ${(error as Error).stack}`);
             throw error;
         }
     }
@@ -73,36 +72,12 @@ export class OllamaProvider extends AIProvider implements IProvider {
     /**
      * Handle LLMWorkerRequest - unified interface
      */
-    async handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
-        logger.debug('Ollama provider handling LLM request', {
-            requestId: request.requestId,
-            sourceId: request.sourceId,
-            type: request.type,
-            provider: request.providerType
-        });
-
-        // Validate this is for Ollama
-        if (request.providerType !== ProviderType.OLLAMA) {
-            logger.error('Provider validation failed for Ollama', {
-                expected: ProviderType.OLLAMA,
-                received: request.providerType,
-                requestId: request.requestId
-            });
-            throw new Error(ErrorMessages.invalidProvider(request.providerType, ProviderType.OLLAMA));
-        }
-
-        logger.debug('Provider validation successful for Ollama', {
-            requestId: request.requestId,
-            type: request.type
-        });
-
-        const {sourceId, requestId, payload, type} = request;
-
+    async handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat> {
         if (type === RequestType.GENERATE) {
-            const generatePayload = payload as OllamaGenerateRequest;
+            const generatePayload = OllamaGenerateRequestValidator.assert(payload);
             return await this.wrapWithStats(RequestType.GENERATE, this._ollamaGenerate.bind(this), sourceId, requestId, generatePayload);
         } else if (type === RequestType.CHAT) {
-            const chatPayload = payload as OllamaChatRequest;
+            const chatPayload = OllamaChatRequestValidator.assert(payload);
             return await this.wrapWithStats(RequestType.CHAT, this._ollamaChat.bind(this), sourceId, requestId, chatPayload);
         } else {
             throw new Error(ErrorMessages.unsupportedRequestType(type));
@@ -126,14 +101,14 @@ export class OllamaProvider extends AIProvider implements IProvider {
         const response = await this.client.chat(chatRequest);
 
         if (chatRequest.stream) {
-            logger.debug('Starting Ollama chat stream', {requestId, model: chatRequest.model});
+            this.log.debug('Starting Ollama chat stream', {requestId, model: chatRequest.model});
 
             try {
                 for await (const chunk of response) {
                     // TODO: Simplify stream completion logic - consider extracting to a shared method
                     // The chunk.done pattern is repeated across generate and chat methods
                     if (chunk.done) {
-                        logger.debug('Ollama chat stream completed', {
+                        this.log.debug('Ollama chat stream completed', {
                             requestId,
                             fullResponseLength: fullResponse.length
                         });
@@ -151,7 +126,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
                     }
                 }
             } catch (error) {
-                logger.error('Ollama chat stream error', {
+                this.log.error('Ollama chat stream error', {
                     requestId,
                     error: (error as Error).message,
                     partialResponseLength: fullResponse.length
@@ -176,14 +151,15 @@ export class OllamaProvider extends AIProvider implements IProvider {
 
         // @ts-ignore
         const response = await this.client.generate(generateRequest);
+
         if (generateRequest.stream) {
-            logger.debug('Starting Ollama generate stream', {requestId, model: generateRequest.model});
+            this.log.debug('Starting Ollama generate stream', {requestId, model: generateRequest.model});
 
             try {
                 // Use Ollama streaming API
                 for await (const chunk of response) {
                     if (chunk.done) {
-                        logger.debug('Ollama generate stream completed', {
+                        this.log.debug('Ollama generate stream completed', {
                             requestId,
                             fullResponseLength: fullResponse.length
                         });
@@ -201,7 +177,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
                     }
                 }
             } catch (error) {
-                logger.error('Ollama generate stream error', {
+                this.log.error('Ollama generate stream error', {
                     requestId,
                     error: (error as Error).message,
                     partialResponseLength: fullResponse.length
@@ -214,7 +190,7 @@ export class OllamaProvider extends AIProvider implements IProvider {
             await this.onResponseChunk(responseChunk, true);
         }
 
-        logger.info(`Generated response with Ollama model ${generateRequest.model}, length: ${fullResponse.length}`);
+        this.log.info(`Generated response with Ollama model ${generateRequest.model}, length: ${fullResponse.length}`);
     }
 
 

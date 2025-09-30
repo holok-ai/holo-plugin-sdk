@@ -1,41 +1,33 @@
+import 'reflect-metadata';
 import {OllamaOptions} from "../types";
 import {HoloRequest, HoloRequestValidator} from "../../holo";
 import {OllamaOptionsValidator} from "../validators";
-import {FieldTranslator, TranslateFunc} from "../../types";
+import {BaseTranslator} from "../../base.translator";
+import {injectable} from 'tsyringe';
+import {pickDefined} from "../../../utils";
 
-export const fromHoloOptionsFieldsTranslator: TranslateFunc<HoloRequest, OllamaOptions> =
-    async (holoRequest: HoloRequest): Promise<Partial<OllamaOptions>> => {
-        const result: any = {};
-        if (holoRequest.max_tokens !== undefined) {
-            result.num_predict = holoRequest.max_tokens;
-        }
+@injectable()
+export class OllamaOptionsTranslator extends BaseTranslator<HoloRequest, OllamaOptions> {
+    protected holoValidator = HoloRequestValidator;
+    protected providerValidator = OllamaOptionsValidator;
+    protected holoDefaults: Partial<HoloRequest> = {};
+    protected providerDefaults: Partial<OllamaOptions> = {};
 
-        if (holoRequest.stop_sequences?.length) {
-            result.stop = holoRequest.stop_sequences;
-        }
-
-        return result;
-    };
-export const toHoloOptionsFieldsTranslator: TranslateFunc<OllamaOptions, HoloRequest> =
-    async (options: OllamaOptions): Promise<Partial<HoloRequest>> => {
-        const result: Partial<HoloRequest> = {};
-
-        if (options.num_predict !== undefined) {
-            result.max_tokens = options.num_predict;
-        }
-
-        if (Array.isArray(options.stop) && options.stop.length) {
-            result.stop_sequences = options.stop;
-        }
-
-        return result;
-    };
-export const OllamaOptionsTranslator = new FieldTranslator<HoloRequest, OllamaOptions>(
-    HoloRequestValidator,
-    OllamaOptionsValidator,
-    [fromHoloOptionsFieldsTranslator],
-    [toHoloOptionsFieldsTranslator],
-    {
-        name: 'OllamaOptionsTranslator'
+    constructor() {
+        super();
     }
-);
+
+    protected async fromHoloImpl(source: HoloRequest): Promise<Partial<OllamaOptions>> {
+        return pickDefined({
+            num_predict: source.max_tokens,
+            stop: source.stop_sequences?.length ? source.stop_sequences : undefined
+        }) as Partial<OllamaOptions>;
+    }
+
+    protected async toHoloImpl(source: OllamaOptions): Promise<Partial<HoloRequest>> {
+        return pickDefined({
+            max_tokens: source.num_predict,
+            stop_sequences: Array.isArray(source.stop) && source.stop.length ? source.stop : undefined
+        }) as Partial<HoloRequest>;
+    }
+}

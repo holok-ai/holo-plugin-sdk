@@ -1,7 +1,8 @@
 import {injectable} from 'tsyringe';
 import {LLMWorkerRequest, LLMWorkerResponse} from '../../types';
 import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
-import {BaseAuditor, OpenAIChatRequest, ProviderType} from "../types";
+import {BaseAuditor, ProviderType} from "../types";
+import {OpenAIChatRequest} from "./types";
 
 @injectable()
 export class OpenAIAuditor extends BaseAuditor {

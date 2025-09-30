@@ -95,7 +95,7 @@ export const OllamaSharedChatRequestValidator = type({
 // Fields unique to Ollama
 export const OllamaOnlyChatRequestValidator = type({
     'keep_alive?': 'string | number',
-    'options?': OllamaOptionsValidator, // Ollama-specific configuration
+    'options?': OllamaOptionsValidator.partial(), // Ollama-specific configuration
 }) satisfies Type<OllamaOnlyChatRequest>;
 
 export const OllamaSharedGenerateRequestValidator = type({
@@ -106,7 +106,7 @@ export const OllamaSharedGenerateRequestValidator = type({
 
 export const OllamaOnlyGenerateRequestValidator = type({
     'keep_alive?': 'string | number',
-    'options?': OllamaOptionsValidator, // Ollama-specific configuration
+    'options?': OllamaOptionsValidator.partial(), // Ollama-specific configuration
     prompt: 'string', // Generate mode
     'suffix?': 'string', // Generate mode
     'system?': 'string', // Generate mode

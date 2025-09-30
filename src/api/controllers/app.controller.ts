@@ -10,7 +10,7 @@ import logger from '../../utils/logger';
 import {ProviderType} from "../../providers/types";
 
 @injectable()
-export class CustomUrlController extends BaseController {
+export class AppController extends BaseController {
 
     constructor() {
         super();
@@ -60,9 +60,6 @@ export class CustomUrlController extends BaseController {
         switch (provider as ProviderType) {
             case ProviderType.OPENAI:
                 return container.resolve(OpenAIController);
-            case ProviderType.ANTHROPIC:
-                logger.debug(`Anthropic is deprecated. Using Claude instead.`);
-                return container.resolve(ClaudeController);
             case ProviderType.CLAUDE:
                 return container.resolve(ClaudeController);
             case ProviderType.OLLAMA:

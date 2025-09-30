@@ -1,6 +1,7 @@
 import {Request} from 'express';
-import {OpenAIChatRequest, ProviderType, RequestType, validateRequest} from "../types";
+import {ProviderType, RequestType, validateRequest} from "../types";
 import {OpenAIChatRequestValidator} from "./validators";
+import {OpenAIChatRequest} from "./types";
 
 
 export class OpenAIParser {

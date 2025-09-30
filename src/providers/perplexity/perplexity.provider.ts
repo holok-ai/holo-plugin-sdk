@@ -1,19 +1,15 @@
-import {AIProvider} from '../types/ai.provider';
-import logger from '../../utils/logger';
 import OpenAI from 'openai';
-import {AIRequestStat, IProvider, ModelInfo, OpenAIChatRequest, ProviderType} from '../types';
-import {LLMWorkerRequest} from '../../types';
+import {IProvider, ModelInfo} from '../types';
 import {ErrorMessages} from '../../utils';
-import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
-import {Stream} from "openai/streaming";
 import {ResponseService} from "../../services";
 import {Provider} from "../../db/types";
+import {OpenAIProvider} from "../openai";
 
 /**
- * OpenAI provider for connecting to OpenAI API
+ * Perplexity provider for connecting to OpenAI API
  */
-export class PerplexityProvider extends AIProvider implements IProvider {
-    private readonly client: OpenAI;
+export class PerplexityProvider extends OpenAIProvider implements IProvider {
+    protected readonly client: OpenAI;
 
     constructor(
         protected provider: Provider,
@@ -30,24 +26,6 @@ export class PerplexityProvider extends AIProvider implements IProvider {
         });
     }
 
-    /**
-     * Initialize the provider
-     */
-    async init(): Promise<void> {
-        try {
-            // Initialize the client
-            await this.getModels();
-
-            logger.info('Perplexity provider initialized');
-        } catch (error) {
-            logger.error(`Failed to initialize Perplexity provider: ${(error as Error).message}`);
-            throw error;
-        }
-    }
-
-    /**
-     * Get available models
-     */
     async getModels(): Promise<ModelInfo[]> {
         try {
             const modelList = [
@@ -69,106 +47,11 @@ export class PerplexityProvider extends AIProvider implements IProvider {
                 return acc;
             }, {} as Record<string, ModelInfo>);
 
-            logger.debug(`Perplexity models: ${Object.keys(this.models)}`);
+            this.log.debug(`Perplexity models: ${Object.keys(this.models)}`);
             return modelList;
         } catch (error) {
-            logger.error(`Error fetching Perplexity models: ${(error as Error).message}`);
+            this.log.error(`Error fetching Perplexity models: ${(error as Error).message}`);
             throw error;
-        }
-    }
-
-
-    /**
-     * Handle LLMWorkerRequest - unified interface
-     */
-    async handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
-        logger.debug('Perplexity provider handling LLM request', {
-            requestId: request.requestId,
-            sourceId: request.sourceId,
-            type: request.type,
-            provider: request.providerType
-        });
-
-        // Validate this is for OpenAI
-        if (request.providerType !== ProviderType.PERPLEXITY) {
-            logger.error('Provider validation failed for Perplexity', {
-                expected: ProviderType.OPENAI,
-                received: request.providerType,
-                requestId: request.requestId
-            });
-            throw new Error(ErrorMessages.invalidProvider(request.providerType, ProviderType.OPENAI));
-        }
-
-        logger.debug('Provider validation successful for Perplexity', {
-            requestId: request.requestId,
-            type: request.type
-        });
-
-        const {sourceId, requestId, payload, type} = request;
-        const openaiPayload = payload as OpenAIChatRequest;
-
-        // OpenAI uses a unified chat completions API, so both generate and chat go through the same method
-        return await this.wrapWithStats(type, this._perplexityChatCompletions.bind(this), sourceId, requestId, openaiPayload);
-    }
-
-    /**
-     * OpenAI chat completions using OpenAIWorkerRequest object
-     */
-    async _perplexityChatCompletions(
-        sourceId: string,
-        requestId: string,
-        chatRequest: OpenAIChatRequest
-    ): Promise<void> {
-        await this.ensureInitialized();
-        this.validateModel(chatRequest.model);
-
-        let fullResponse = '';
-        // Pass the request directly to the client since it extends ChatCompletionCreateParams
-        const response = await this.client.chat.completions.create(chatRequest);
-
-        if (chatRequest.stream) {
-            logger.debug('Starting Perplexity chat completions stream', {requestId, model: chatRequest.model});
-
-            try {
-                for await (const chunk of (response as Stream<ChatCompletionChunk>)) {
-                    const choice = chunk.choices?.[0];
-
-                    if (choice?.finish_reason) {
-                        logger.debug('Perplexity chat completions stream completed', {
-                            requestId,
-                            finishReason: choice.finish_reason,
-                            fullResponseLength: fullResponse.length
-                        });
-                        const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk, fullResponse);
-                        await this.onResponseChunk(responseChunk);
-                        break;
-                    }
-
-                    if (choice?.delta?.content) {
-                        const token = choice.delta.content;
-                        fullResponse += token;
-
-                        const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk);
-                        await this.onResponseChunk(responseChunk);
-                    }
-                }
-            } catch (error) {
-                logger.error('Perplexity chat completions stream error', {
-                    requestId,
-                    error: (error as Error).message,
-                    partialResponseLength: fullResponse.length
-                });
-                throw error;
-            }
-        } else {
-            // For non-streaming, extract the text content
-            const message = response as any;
-            if (message.choices && message.choices.length > 0) {
-                fullResponse = message.choices[0].message?.content || '';
-            }
-
-            const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, response, fullResponse);
-            await this.onResponseChunk(responseChunk);
         }
     }
 }

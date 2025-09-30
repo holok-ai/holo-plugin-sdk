@@ -3,7 +3,7 @@ import {Evaluator, EvaluatorData, LlmResponse, Prompt, Provider} from '../../db/
 import {OllamaProvider} from '../../providers';
 import {EvaluatorDB} from '../../db';
 import logger from '../../utils/logger';
-import {OllamaChatRequest} from "../../providers/ollama";
+import {OllamaChatRequest} from "../../providers/ollama/types";
 
 export class PromptEvaluator implements IEvaluator {
     evaluatorId: string;

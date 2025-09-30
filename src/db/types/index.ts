@@ -129,7 +129,6 @@ export interface Prompt extends BaseEntity {
     frequency_penalty?: number;
     stop_sequences: string[];
     model?: string;
-    anthropic_version?: string;
     safety_settings?: Record<string, any>;
     grok_settings?: Record<string, any>;
     tags: string[];

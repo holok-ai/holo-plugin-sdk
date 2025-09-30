@@ -1,12 +1,12 @@
 import {Request} from 'express';
 import {ProviderType, RequestType, validateRequest} from "../types";
-import {ChatRequest, GenerateRequest} from "ollama";
 import {OllamaChatRequestWithDefaults, OllamaGenerateRequestWithDefaults} from "./validators";
+import {OllamaChatRequest, OllamaGenerateRequest} from "./types";
 
 export class OllamaParser {
     static readonly providerType = ProviderType.OLLAMA;
 
-    static parseRequest(req: Request, requestType: RequestType): ChatRequest | GenerateRequest {
+    static parseRequest(req: Request, requestType: RequestType): OllamaChatRequest | OllamaGenerateRequest {
         return validateRequest(
             req,
             requestType,

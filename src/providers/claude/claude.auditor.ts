@@ -1,7 +1,8 @@
 import {injectable} from 'tsyringe';
 import {LLMWorkerRequest, LLMWorkerResponse} from '../../types';
 import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
-import {BaseAuditor, ClaudeChatRequest, ProviderType} from "../types";
+import {BaseAuditor, ProviderType} from "../types";
+import {ClaudeChatRequest} from "./types";
 
 @injectable()
 export class ClaudeAuditor extends BaseAuditor {

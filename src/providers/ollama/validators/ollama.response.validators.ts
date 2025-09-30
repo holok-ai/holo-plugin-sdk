@@ -6,7 +6,6 @@ import {
     OllamaErrorResponse,
     OllamaGenerateResponse,
     OllamaListResponse,
-    OllamaMessageValidator,
     OllamaModelDetails,
     OllamaModelResponse,
     OllamaOnlyResponse,
@@ -15,6 +14,7 @@ import {
     OllamaShowResponse,
     OllamaStatusResponse
 } from "../types";
+import {OllamaMessageValidator} from "./ollama.request.validators";
 
 
 export const OllamaGenerateResponseValidator = type({

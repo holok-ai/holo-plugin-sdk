@@ -1,141 +1,121 @@
-import {HoloContent, HoloMessage, HoloMessageValidator, HoloRequest} from "../../holo";
-import {OllamaChatRequest, OllamaMessage, OllamaMessageValidator} from "../types";
-import {isUint8Array, uint8ToDataUrl} from "../../../utils";
-import {FieldTranslator, TranslatorGuard, TranslateFunc} from "../../types";
+import 'reflect-metadata';
+import {HoloContent, HoloMessage, HoloMessageValidator} from "../../holo";
+import {OllamaMessage} from "../types";
+import {isUint8Array, pickDefined, uint8ToDataUrl} from "../../../utils";
+import {OllamaMessageValidator} from "../validators";
+import {BaseTranslator} from "../../base.translator";
+import {injectable} from 'tsyringe';
 
-// Individual message translator functions
-export const fromHoloMessageTranslator: TranslateFunc<HoloMessage, OllamaMessage> =
-    async (holoMessage): Promise<Partial<OllamaMessage>> => {
-        const out: Partial<OllamaMessage> = {role: holoMessage.role as OllamaMessage["role"]};
+@injectable()
+export class OllamaMessageTranslator extends BaseTranslator<HoloMessage, OllamaMessage> {
+    protected holoValidator = HoloMessageValidator;
+    protected providerValidator = OllamaMessageValidator;
+    protected holoDefaults: Partial<HoloMessage> = {};
+    protected providerDefaults: Partial<OllamaMessage> = {};
 
-        // content → string (+ images[])
-        if (typeof holoMessage.content === "string") {
-            out.content = holoMessage.content;
-        } else if (Array.isArray(holoMessage.content)) {
-            const textParts: string[] = [];
-            const images: string[] = [];
+    constructor() {
+        super();
+    }
 
-            for (const part of holoMessage.content) {
-                if (part.type === "text") textParts.push(part.text);
-                else if (part.type === "image") images.push(part.url);
+    private extractContentAndImages(content: string | HoloContent[]): Partial<OllamaMessage> {
+        if (typeof content === "string") {
+            const text = content.trim();
+            return text ? {content: text} : {};
+        }
+
+        let hasText = false;
+        const texts: string[] = [];
+        const images: string[] = [];
+
+        for (const part of content) {
+            if (part.type === "text") {
+                const t = part.text.trim();
+                if (t) {
+                    hasText = true;
+                    texts.push(t);
+                }
+            } else if (part.type === "image") {
+                images.push(part.url);
             }
-
-            out.content = textParts.length ? textParts.join("\n") : "";
-            if (images.length) out.images = images;
-        } else {
-            out.content = "";
         }
 
-        if (holoMessage.tool_calls?.length) {
-            out.tool_calls = holoMessage.tool_calls.map((tc) => ({
-                function: {
-                    name: tc.function.name,
-                    arguments: tc.function.arguments ?? {},
-                },
-            }));
-        }
+        return pickDefined({
+            content: hasText ? texts.join("\n") : undefined,
+            images: images.length ? images : undefined,
+        }) as Partial<OllamaMessage>;
+    }
 
-        return out;
-    };
-
-export const toHoloMessageTranslator: TranslateFunc<OllamaMessage, HoloMessage> =
-    async (ollamaMessage): Promise<Partial<HoloMessage>> => {
-        const role: HoloMessage["role"] =
-            ollamaMessage.role === "assistant" || ollamaMessage.role === "user" || ollamaMessage.role === "tool"
-                ? ollamaMessage.role
-                : "user";
-
+    private buildHoloContent(content?: string, images?: (string | Uint8Array)[]): string | HoloContent[] {
         const contentParts: HoloContent[] = [];
 
-        if (ollamaMessage.content) {
-            contentParts.push({type: "text", text: String(ollamaMessage.content)});
+        if (content) {
+            contentParts.push({type: "text", text: String(content)});
         }
 
-        if (Array.isArray(ollamaMessage.images) && ollamaMessage.images.length) {
-            for (const img of ollamaMessage.images) {
+        if (Array.isArray(images) && images.length) {
+            for (const img of images) {
                 if (typeof img === "string") {
                     contentParts.push({type: "image", url: img});
                 } else if (isUint8Array(img)) {
-                    // preserve image via data URL
                     contentParts.push({type: "image", url: uint8ToDataUrl(img)});
                 }
             }
         }
 
-        const holoOut: Partial<HoloMessage> = {role};
-
-        if (!contentParts.length) {
-            holoOut.content = ""; // keep schema happy
-        } else if (contentParts.length === 1 && contentParts[0].type === "text") {
-            holoOut.content = contentParts[0].text;
-        } else {
-            holoOut.content = contentParts;
+        if (!contentParts.length) return "";
+        if (contentParts.length === 1 && contentParts[0].type === "text") {
+            return contentParts[0].text;
         }
-
-        if (ollamaMessage.tool_calls?.length) {
-            holoOut.tool_calls = ollamaMessage.tool_calls.map((tc, idx) => {
-                const args = tc.function?.arguments;
-                let parsed: unknown = args;
-                if (typeof args === "string") {
-                    try {
-                        parsed = JSON.parse(args);
-                    } catch { /* keep as string */
-                    }
-                }
-                return {
-                    id: `${tc.function?.name ?? "call"}#${idx}`,
-                    type: "function" as const,
-                    function: {
-                        name: tc.function.name,
-                        arguments: parsed as any,
-                    },
-                };
-            });
-        }
-
-        return holoOut;
-    };
-
-// Guards for message validation
-export const portableMessageOnlyGuard = new TranslatorGuard<HoloMessage>(
-    "portableMessageOnly",
-    async (m) => m.role === "user" || m.role === "assistant" || m.role === "tool"
-);
-
-// Individual message translator
-export const OllamaMessageTranslator = new FieldTranslator<HoloMessage, OllamaMessage>(
-    HoloMessageValidator,
-    OllamaMessageValidator,
-    [fromHoloMessageTranslator],
-    [toHoloMessageTranslator],
-    {
-        fromHoloGuards: [portableMessageOnlyGuard],
-        name: 'OllamaMessageTranslator'
+        return contentParts;
     }
-);
 
-// HoloRequest.messages[] -> OllamaChatRequest.messages[] (prepend system if present)
-export const fromHoloMessagesTranslator: TranslateFunc<HoloRequest, OllamaChatRequest> =
-    async (holoReq) => {
-        const translated = await OllamaMessageTranslator.fromHoloArray(holoReq.messages ?? []);
-        const messages: OllamaMessage[] = [...translated];
+    protected async fromHoloImpl(source: HoloMessage): Promise<Partial<OllamaMessage>> {
+        const {content, images} = this.extractContentAndImages(source.content);
 
-        if (holoReq.system) {
-            messages.unshift({role: "system", content: holoReq.system});
-        }
+        const tool_calls = source.tool_calls?.flatMap(tc => {
+            const name = tc.function?.name;
+            if (!name) return [];
+            return [{
+                function: {
+                    name,
+                    arguments: tc.function.arguments ?? {},
+                },
+            }];
+        });
 
-        return messages.length ? {messages} : {};
-    };
+        return pickDefined({
+            role: source.role as OllamaMessage["role"],
+            content,
+            images,
+            tool_calls,
+        }) as Partial<OllamaMessage>;
+    }
 
-export const toHoloMessagesTranslator: TranslateFunc<OllamaChatRequest, HoloRequest> =
-    async (ollamaReq) => {
-        if (!ollamaReq.messages?.length) return {};
+    protected async toHoloImpl(target: OllamaMessage): Promise<Partial<HoloMessage>> {
+        const role: HoloMessage["role"] =
+            target.role === "assistant" || target.role === "user" || target.role === "tool"
+                ? target.role
+                : "user";
 
-        const nonSystem = ollamaReq.messages.filter((m) => m.role !== "system");
-        if (!nonSystem.length) return {messages: []};
+        const content = this.buildHoloContent(target.content, target.images);
 
-        const holoMsgs = await Promise.all(nonSystem.map((m) => OllamaMessageTranslator.toHolo(m)));
-        const valid = holoMsgs.filter((m) => Object.keys(m).length) as HoloMessage[];
+        const tool_calls = target.tool_calls?.flatMap((tc, idx) => {
+            const name = tc.function?.name;
+            if (!name) return [];
+            return [{
+                id: `${name}#${idx}`,
+                type: "function" as const,
+                function: {
+                    name,
+                    arguments: (tc.function?.arguments as Record<string, unknown>) ?? {},
+                },
+            }];
+        });
 
-        return {messages: valid};
-    };
+        return pickDefined({
+            role,
+            content,
+            tool_calls,
+        }) as Partial<HoloMessage>;
+    }
+}

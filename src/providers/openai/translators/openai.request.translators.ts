@@ -1,8 +1,9 @@
-import {createTranslateFunc, FieldTranslator, HoloRequest, OpenAIChatRequest, TranslateFunc} from "../../types";
+import {createTranslateFunc, FieldTranslator, TranslateFunc} from "../../types";
 import {OpenAIChatRequestValidator} from "../validators";
-import {HoloRequestValidator} from "../../holo";
+import {HoloRequest, HoloRequestValidator} from "../../holo";
 import {fromHoloMessagesWithSystemTranslator, toHoloMessagesWithSystemTranslator} from "./openai.message.translators";
 import {OpenAIToolChoiceTranslator, OpenAIToolTranslator} from "./openai.tool.translators";
+import {OpenAIChatRequest} from "../types";
 
 export const fromHoloServiceTierTranslator: TranslateFunc<HoloRequest, OpenAIChatRequest> = async (source: HoloRequest) => {
     if (!source.service_tier) return {};
