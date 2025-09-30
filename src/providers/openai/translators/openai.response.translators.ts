@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {HoloFinishReason, HoloMessage, HoloResponse, HoloResponseValidator} from "../../holo";
-import {OpenAIResponse, OpenAIChatCompletion} from "../types";
+import {OpenAIChatCompletion, OpenAIResponse} from "../types";
 import {OpenAIResponseMessageTranslator} from "./openai.response.message.translators";
 import {OpenAIUsageTranslator} from "./openai.usage.translators";
 import {OpenAIChatCompletionValidator} from "../validators";
@@ -24,95 +24,100 @@ export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenA
 
     private mapFinishReasonFromHolo(reason?: HoloFinishReason | null): OpenAIChatCompletion["choices"][0]["finish_reason"] {
         switch (reason) {
-            case 'stop': return 'stop';
-            case 'length': return 'length';
+            case 'stop':
+                return 'stop';
+            case 'length':
+                return 'length';
             case 'tool_calls':
-            case 'function_call': return 'tool_calls';
-            case 'content_filter': return 'content_filter';
-            default: return 'stop'; // Default to 'stop' instead of null
+            case 'function_call':
+                return 'tool_calls';
+            case 'content_filter':
+                return 'content_filter';
+            default:
+                return 'stop'; // Default to 'stop' instead of null
         }
     }
 
     private mapFinishReasonToHolo(reason?: string | null): HoloFinishReason | null {
         switch (reason) {
-            case 'stop': return 'stop';
-            case 'length': return 'length';
-            case 'tool_calls': return 'tool_calls';
-            case 'function_call': return 'function_call';
-            case 'content_filter': return 'content_filter';
-            default: return null;
+            case 'stop':
+                return 'stop';
+            case 'length':
+                return 'length';
+            case 'tool_calls':
+                return 'tool_calls';
+            case 'function_call':
+                return 'function_call';
+            case 'content_filter':
+                return 'content_filter';
+            default:
+                return null;
         }
     }
 
     protected async fromHoloImpl(source: HoloResponse): Promise<Partial<OpenAIResponse>> {
-        // For OpenAI, we work with the full response format
-        // Streaming chunks are handled separately in streaming contexts
-        const messageResult = source.messages?.length 
-            ? await this.responseMessageTranslator.fromHolo(source.messages[0])
-            : {
-                role: 'assistant' as const,
-                content: ''
-            };
+        // Build message (let the message translator decide content null vs empty)
+        const message =
+            source.messages?.length
+                ? await this.responseMessageTranslator.fromHolo(source.messages[0])
+                : undefined;
 
-        const usageResult = source.usage 
+        const usage = source.usage
             ? await this.usageTranslator.fromHolo(source.usage)
             : undefined;
 
-        // Create a choice object
-        const choice = {
+        // Choice
+        const choice: OpenAIChatCompletion["choices"][number] = pickDefined({
             index: 0,
-            message: messageResult,
+            message, // omit if undefined
             finish_reason: this.mapFinishReasonFromHolo(source.finish_reason),
-            logprobs: null
-        };
+            // logprobs: undefined  // omit unless you actually have it
+        }) as any;
 
-        // Directly construct the result to match OpenAI response structure
-        const result: any = {
-            id: source.id || '',
+        // Only include choices if we have a message
+        const choices = message ? [choice] : undefined;
+
+        const createdSec =
+            typeof source.created === 'number'
+                ? Math.floor(source.created / 1000)
+                : Math.floor(Date.now() / 1000);
+
+        // If we ended up without a message/choices and no id/model, return {}
+        return pickDefined({
+            id: source.id,                         // omit if undefined
             object: 'chat.completion',
-            created: source.created ? Math.floor((source.created as number) / 1000) : Math.floor(Date.now() / 1000),
-            model: source.model || '',
-            choices: [choice],
-            usage: usageResult,
-            system_fingerprint: null,
-            service_tier: null,
-        };
-
-        return pickDefined(result);
+            created: createdSec,
+            model: source.model,
+            choices,
+            usage                                  // omit if undefined
+        }) as Partial<OpenAIResponse>;
     }
 
     protected async toHoloImpl(source: OpenAIResponse): Promise<Partial<HoloResponse>> {
-        // Handle streaming vs non-streaming responses
         if ('choices' in source && source.choices?.length) {
-            // Non-streaming response
             const completion = source as OpenAIChatCompletion;
             const choice = completion.choices[0];
-            
-            if (!choice?.message) {
-                return {};
-            }
 
-            // Convert OpenAI message back to Holo message using message translator
+            if (!choice?.message) return {};
+
             const holoMessage = await this.responseMessageTranslator.toHolo(choice.message);
-            const messages = Object.keys(holoMessage).length ? [holoMessage as HoloMessage] : [];
+            const messages = Object.keys(holoMessage).length ? [holoMessage as HoloMessage] : undefined;
 
-            // Convert usage back to Holo if present
-            const usage = completion.usage 
+            const usage = completion.usage
                 ? await this.usageTranslator.toHolo(completion.usage)
                 : undefined;
 
             return pickDefined({
                 id: completion.id,
                 model: completion.model,
-                messages,
+                messages, // omit if undefined
                 finish_reason: this.mapFinishReasonToHolo(choice.finish_reason),
                 created: completion.created ? completion.created * 1000 : Date.now(),
-                usage
+                usage,    // omit if undefined
             }) as Partial<HoloResponse>;
-        } else {
-            // Streaming chunk - for now, return minimal response
-            // Streaming events are typically handled in streaming contexts
-            return {};
         }
+
+        // Streaming handled elsewhere
+        return {};
     }
 }

@@ -7,15 +7,7 @@ import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
 import {OpenAIRequestMessageValidator} from "../validators";
 import {createStableId} from "../../utils/stable-id";
-
-function safeParse(json?: string): Record<string, unknown> {
-    if (!json) return {};
-    try {
-        return JSON.parse(json);
-    } catch {
-        return {};
-    }
-}
+import {safeParse} from "../../utils/safe.parse";
 
 @injectable()
 export class OpenAIMessageTranslator extends BaseTranslator<HoloMessage, OpenAIRequestMessage> {
@@ -93,7 +85,7 @@ export class OpenAIMessageTranslator extends BaseTranslator<HoloMessage, OpenAIR
                 openaiMessage.content.map(async (part) => {
                     if ((part as any).type === 'refusal') {
                         // Normalize refusal into text
-                        return { type: 'text', text: (part as any).refusal };
+                        return {type: 'text', text: (part as any).refusal};
                     }
                     // Delegate standard parts (text, image, etc.)
                     return this.contentTranslator.toHolo(part as any);
