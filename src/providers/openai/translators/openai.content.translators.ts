@@ -1,4 +1,4 @@
-import {FieldTranslator, TranslateFunc,} from "../../types";
+import 'reflect-metadata';
 import {
     HoloContent,
     HoloContentImage,
@@ -17,83 +17,96 @@ import {
     OpenAIChatCompletionContentPartImage,
     OpenAIChatCompletionContentPartText
 } from "../types";
+import {BaseTranslator} from "../../base.translator";
+import {injectable} from 'tsyringe';
 
-export const fromHoloTextContentTranslator: TranslateFunc<HoloContentText, OpenAIChatCompletionContentPartText> =
-    async (holoText: HoloContentText): Promise<Partial<OpenAIChatCompletionContentPartText>> => ({
-        type: 'text',
-        text: holoText.text
-    });
+@injectable()
+export class OpenAITextContentTranslator extends BaseTranslator<HoloContentText, OpenAIChatCompletionContentPartText> {
+    protected holoValidator = HoloContentTextValidator;
+    protected providerValidator = OpenAIChatCompletionContentPartTextValidator;
+    protected holoDefaults: Partial<HoloContentText> = {};
+    protected providerDefaults: Partial<OpenAIChatCompletionContentPartText> = {};
 
-export const fromHoloImageContentTranslator: TranslateFunc<HoloContentImage, OpenAIChatCompletionContentPartImage> =
-    async (holoImage: HoloContentImage): Promise<Partial<OpenAIChatCompletionContentPartImage>> => ({
-        type: 'image_url',
-        image_url: {
-            url: holoImage.url
-        }
-    });
-
-export const toHoloTextContentTranslator: TranslateFunc<OpenAIChatCompletionContentPartText, HoloContentText> =
-    async (openaiText: OpenAIChatCompletionContentPartText): Promise<Partial<HoloContentText>> => ({
-        type: 'text',
-        text: openaiText.text
-    });
-
-export const toHoloImageContentTranslator: TranslateFunc<OpenAIChatCompletionContentPartImage, HoloContentImage> =
-    async (openaiImage: OpenAIChatCompletionContentPartImage): Promise<Partial<HoloContentImage>> => ({
-        type: 'image',
-        url: openaiImage.image_url.url
-    });
-
-export const OpenAITextContentTranslator = new FieldTranslator<HoloContentText, OpenAIChatCompletionContentPartText>(
-    HoloContentTextValidator,
-    OpenAIChatCompletionContentPartTextValidator,
-    [fromHoloTextContentTranslator],
-    [toHoloTextContentTranslator],
-    {
-        name: 'OpenAITextContentTranslator'
+    constructor() {
+        super();
     }
-);
 
-export const OpenAIImageContentTranslator = new FieldTranslator<HoloContentImage, OpenAIChatCompletionContentPartImage>(
-    HoloContentImageValidator,
-    OpenAIChatCompletionContentPartImageValidator,
-    [fromHoloImageContentTranslator],
-    [toHoloImageContentTranslator],
-    {
-        name: 'OpenAIImageContentTranslator'
+    protected async fromHoloImpl(source: HoloContentText): Promise<Partial<OpenAIChatCompletionContentPartText>> {
+        return {
+            type: 'text',
+            text: source.text
+        };
     }
-);
 
-export const fromHoloContentTranslator: TranslateFunc<HoloContent, OpenAIChatCompletionContentPart> =
-    async (holoContent: HoloContent): Promise<Partial<OpenAIChatCompletionContentPart>> => {
-        switch (holoContent.type) {
+    protected async toHoloImpl(source: OpenAIChatCompletionContentPartText): Promise<Partial<HoloContentText>> {
+        return {
+            type: 'text',
+            text: source.text
+        };
+    }
+}
+
+@injectable()
+export class OpenAIImageContentTranslator extends BaseTranslator<HoloContentImage, OpenAIChatCompletionContentPartImage> {
+    protected holoValidator = HoloContentImageValidator;
+    protected providerValidator = OpenAIChatCompletionContentPartImageValidator;
+    protected holoDefaults: Partial<HoloContentImage> = {};
+    protected providerDefaults: Partial<OpenAIChatCompletionContentPartImage> = {};
+
+    constructor() {
+        super();
+    }
+
+    protected async fromHoloImpl(source: HoloContentImage): Promise<Partial<OpenAIChatCompletionContentPartImage>> {
+        return {
+            type: 'image_url',
+            image_url: {
+                url: source.url
+            }
+        };
+    }
+
+    protected async toHoloImpl(source: OpenAIChatCompletionContentPartImage): Promise<Partial<HoloContentImage>> {
+        return {
+            type: 'image',
+            url: source.image_url.url
+        };
+    }
+}
+
+@injectable()
+export class OpenAIContentTranslator extends BaseTranslator<HoloContent, OpenAIChatCompletionContentPart> {
+    protected holoValidator = HoloContentValidator;
+    protected providerValidator = OpenAIChatCompletionContentPartValidator;
+    protected holoDefaults: Partial<HoloContent> = {};
+    protected providerDefaults: Partial<OpenAIChatCompletionContentPart> = {};
+
+    constructor(
+        private readonly textContentTranslator: OpenAITextContentTranslator,
+        private readonly imageContentTranslator: OpenAIImageContentTranslator
+    ) {
+        super();
+    }
+
+    protected async fromHoloImpl(source: HoloContent): Promise<Partial<OpenAIChatCompletionContentPart>> {
+        switch (source.type) {
             case 'text':
-                return await OpenAITextContentTranslator.fromHolo(holoContent);
+                return await this.textContentTranslator.fromHolo(source);
             case 'image':
-                return await OpenAIImageContentTranslator.fromHolo(holoContent);
+                return await this.imageContentTranslator.fromHolo(source);
             default:
                 return {};
         }
-    };
-
-export const toHoloContentTranslator: TranslateFunc<OpenAIChatCompletionContentPart, HoloContent> =
-    async (openaiContent: OpenAIChatCompletionContentPart): Promise<Partial<HoloContent>> => {
-        switch (openaiContent.type) {
-            case 'text':
-                return await OpenAITextContentTranslator.toHolo(openaiContent as OpenAIChatCompletionContentPartText);
-            case 'image_url':
-                return await OpenAIImageContentTranslator.toHolo(openaiContent as OpenAIChatCompletionContentPartImage);
-            default:
-                return {};
-        }
-    };
-
-export const OpenAIContentTranslator = new FieldTranslator<HoloContent, OpenAIChatCompletionContentPart>(
-    HoloContentValidator,
-    OpenAIChatCompletionContentPartValidator,
-    [fromHoloContentTranslator],
-    [toHoloContentTranslator],
-    {
-        name: 'OpenAIContentTranslator'
     }
-);
+
+    protected async toHoloImpl(source: OpenAIChatCompletionContentPart): Promise<Partial<HoloContent>> {
+        switch (source.type) {
+            case 'text':
+                return await this.textContentTranslator.toHolo(source as OpenAIChatCompletionContentPartText);
+            case 'image_url':
+                return await this.imageContentTranslator.toHolo(source as OpenAIChatCompletionContentPartImage);
+            default:
+                return {};
+        }
+    }
+}

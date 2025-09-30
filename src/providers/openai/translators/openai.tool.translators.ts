@@ -1,77 +1,72 @@
+import 'reflect-metadata';
 import {HoloTool, HoloToolChoice, HoloToolChoiceValidator, HoloToolValidator} from "../../holo";
-import {type} from "arktype";
 import {OpenAIChatCompletionTool, OpenAIChatCompletionToolChoiceOption} from "../types";
-import {FieldTranslator, TranslateFunc} from "../../types";
+import {ChatCompletionToolValidator, ChatCompletionToolChoiceOptionValidator} from "../validators";
+import {BaseTranslator} from "../../base.translator";
+import {injectable} from 'tsyringe';
+import {pickDefined} from "../../../utils";
 
-const ChatCompletionToolValidator = type({
-    function: type({
-        name: 'string',
-        'description?': 'string',
-        'parameters?': 'Record<string, unknown>',
-        'strict?': 'boolean|null'
-    }),
-    type: "'function'"
-});
+@injectable()
+export class OpenAIToolTranslator extends BaseTranslator<HoloTool, OpenAIChatCompletionTool> {
+    protected holoValidator = HoloToolValidator;
+    protected providerValidator = ChatCompletionToolValidator;
+    protected holoDefaults: Partial<HoloTool> = {};
+    protected providerDefaults: Partial<OpenAIChatCompletionTool> = {};
 
-const ChatCompletionToolChoiceOptionValidator = type("'none'|'auto'|'required'").or(type({
-    function: type({
-        name: 'string'
-    }),
-    type: "'function'"
-}));
-
-export const fromHoloToolTranslator: TranslateFunc<HoloTool, OpenAIChatCompletionTool> = async (holoTool: HoloTool): Promise<Partial<OpenAIChatCompletionTool>> => ({
-    type: 'function',
-    function: {
-        name: holoTool.name,
-        ...(holoTool.description && {description: holoTool.description}),
-        ...(holoTool.parameters && {parameters: holoTool.parameters})
+    constructor() {
+        super();
     }
-});
 
-export const toHoloToolTranslator: TranslateFunc<OpenAIChatCompletionTool, HoloTool> = async (openaiTool: OpenAIChatCompletionTool): Promise<Partial<HoloTool>> => ({
-    name: openaiTool.function.name,
-    ...(openaiTool.function.description && {description: openaiTool.function.description}),
-    ...(openaiTool.function.parameters && {parameters: openaiTool.function.parameters})
-});
-
-export const OpenAIToolTranslator = new FieldTranslator<HoloTool, OpenAIChatCompletionTool>(
-    HoloToolValidator,
-    ChatCompletionToolValidator,
-    [fromHoloToolTranslator],
-    [toHoloToolTranslator],
-    {
-        name: 'OpenAIToolTranslator'
-    }
-);
-
-export const fromHoloToolChoiceTranslator: TranslateFunc<HoloToolChoice, OpenAIChatCompletionToolChoiceOption> = async (choice: HoloToolChoice): Promise<Partial<OpenAIChatCompletionToolChoiceOption>> => {
-    if (choice.type === "specific") {
+    protected async fromHoloImpl(source: HoloTool): Promise<Partial<OpenAIChatCompletionTool>> {
         return {
-            type: "function",
-            function: {name: choice.name}
-        };
-    }
-    return choice.type;
-};
-
-export const toHoloToolChoiceTranslator: TranslateFunc<OpenAIChatCompletionToolChoiceOption, HoloToolChoice> = async (choice: OpenAIChatCompletionToolChoiceOption): Promise<Partial<HoloToolChoice>> => {
-    if (typeof choice === 'object' && choice.type === "function") {
-        return {
-            type: "specific",
-            name: choice.function.name
+            type: 'function' as const,
+            function: {
+                name: source.name, // Required field
+                ...pickDefined({
+                    description: source.description,
+                    parameters: source.parameters,
+                })
+            }
         };
     }
 
-    return {type: choice as 'auto' | 'none' | 'required'};
-};
-
-export const OpenAIToolChoiceTranslator = new FieldTranslator<HoloToolChoice, OpenAIChatCompletionToolChoiceOption>(
-    HoloToolChoiceValidator,
-    ChatCompletionToolChoiceOptionValidator,
-    [fromHoloToolChoiceTranslator],
-    [toHoloToolChoiceTranslator],
-    {
-        name: 'OpenAIToolChoiceTranslator'
+    protected async toHoloImpl(source: OpenAIChatCompletionTool): Promise<Partial<HoloTool>> {
+        return pickDefined({
+            name: source.function.name,
+            description: source.function.description,
+            parameters: source.function.parameters,
+        });
     }
-);
+}
+
+@injectable()
+export class OpenAIToolChoiceTranslator extends BaseTranslator<HoloToolChoice, OpenAIChatCompletionToolChoiceOption> {
+    protected holoValidator = HoloToolChoiceValidator;
+    protected providerValidator = ChatCompletionToolChoiceOptionValidator;
+    protected holoDefaults: Partial<HoloToolChoice> = {};
+    protected providerDefaults: Partial<OpenAIChatCompletionToolChoiceOption> = {};
+
+    constructor() {
+        super();
+    }
+
+    protected async fromHoloImpl(source: HoloToolChoice): Promise<Partial<OpenAIChatCompletionToolChoiceOption>> {
+        if (source.type === "specific") {
+            return {
+                type: "function",
+                function: { name: source.name }
+            };
+        }
+        return source.type as any; // 'auto' | 'none' | 'required'
+    }
+
+    protected async toHoloImpl(source: OpenAIChatCompletionToolChoiceOption): Promise<Partial<HoloToolChoice>> {
+        if (typeof source === 'object' && source.type === "function") {
+            return {
+                type: "specific",
+                name: source.function.name
+            };
+        }
+        return { type: source as 'auto' | 'none' | 'required' };
+    }
+}

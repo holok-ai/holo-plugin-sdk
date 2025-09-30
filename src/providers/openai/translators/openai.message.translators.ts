@@ -1,172 +1,149 @@
-import {FieldTranslator, TranslateFunc, TranslatorGuard} from "../../types";
-import {OpenAIContentTranslator} from "./index";
-import {HoloMessage, HoloMessageValidator, HoloRequest} from "../../holo";
-import {OpenAIChatRequest, OpenAIRequestMessage} from "../types";
+import 'reflect-metadata';
+import {OpenAIContentTranslator} from "./openai.content.translators";
+import {HoloMessage, HoloMessageValidator} from "../../holo";
+import {OpenAIRequestMessage} from "../types";
+import {BaseTranslator} from "../../base.translator";
+import {injectable} from 'tsyringe';
+import {pickDefined} from "../../../utils";
+import {OpenAIRequestMessageValidator} from "../validators";
+import {createStableId} from "../../utils/stable-id";
 
-export const fromHoloMessageContentTranslator: TranslateFunc<HoloMessage, OpenAIRequestMessage> =
-    async (holoMessage: HoloMessage): Promise<Partial<OpenAIRequestMessage>> => {
-        let content: any;
+function safeParse(json?: string): Record<string, unknown> {
+    if (!json) return {};
+    try {
+        return JSON.parse(json);
+    } catch {
+        return {};
+    }
+}
+
+@injectable()
+export class OpenAIMessageTranslator extends BaseTranslator<HoloMessage, OpenAIRequestMessage> {
+    protected holoValidator = HoloMessageValidator;
+    protected providerValidator = OpenAIRequestMessageValidator;
+    protected holoDefaults: Partial<HoloMessage> = {};
+    protected providerDefaults: Partial<OpenAIRequestMessage> = {};
+
+    constructor(private readonly contentTranslator: OpenAIContentTranslator) {
+        super();
+    }
+
+    public async flattenText(parts: OpenAIRequestMessage["content"]): Promise<string> {
+        if (!Array.isArray(parts)) return typeof parts === 'string' ? parts : '';
+        const holoBlocks = await this.contentTranslator.toHoloArray(parts as any[]);
+        return holoBlocks.filter(b => (b as any).type === 'text').map(b => (b as any).text).join('\n');
+    }
+
+    protected async fromHoloImpl(holoMessage: HoloMessage): Promise<Partial<OpenAIRequestMessage>> {
+        let content: OpenAIRequestMessage["content"] | undefined;
 
         if (typeof holoMessage.content === 'string') {
             content = holoMessage.content;
         } else if (Array.isArray(holoMessage.content)) {
-            const contentParts = await OpenAIContentTranslator.fromHoloArray(holoMessage.content);
-            content = contentParts.length > 0 ? contentParts : holoMessage.content;
+            const parts = await this.contentTranslator.fromHoloArray(holoMessage.content);
+            content = parts.length > 0 ? parts : undefined; // keep undefined if empty
         }
 
+        switch (holoMessage.role) {
+            case 'assistant': {
+                const tool_calls =
+                    holoMessage.tool_calls?.map((tc, i) => ({
+                        id: tc.id ?? createStableId(`fn:${tc.function.name}#${i}`, tc.function.arguments),
+                        type: 'function' as const,
+                        function: {
+                            name: tc.function.name,
+                            arguments: JSON.stringify(tc.function.arguments ?? {})
+                        }
+                    }));
 
-        if (holoMessage.role === 'assistant') {
-            const assistantMessage: any = {
-                role: 'assistant',
-                content
-            };
+                return pickDefined({
+                    role: 'assistant' as const,
+                    content,
+                    ...(tool_calls && tool_calls.length ? {tool_calls} : {})
+                }) as Partial<OpenAIRequestMessage>;
+            }
 
-            if (holoMessage.tool_calls && holoMessage.tool_calls.length > 0) {
-                assistantMessage.tool_calls = holoMessage.tool_calls.map(tc => ({
-                    id: tc.id || `call_${Math.random().toString(36).substr(2, 9)}`,
+            case 'tool': {
+                return pickDefined({
+                    role: 'tool' as const,
+                    content: typeof content === 'string' ? content : JSON.stringify(content ?? ''),
+                    tool_call_id: holoMessage.tool_call_id
+                }) as Partial<OpenAIRequestMessage>;
+            }
+
+            default: { // 'user'
+                return pickDefined({
+                    role: 'user' as const,
+                    content,
+                    name: holoMessage.name
+                }) as Partial<OpenAIRequestMessage>;
+            }
+        }
+    }
+
+    protected async toHoloImpl(openaiMessage: OpenAIRequestMessage): Promise<Partial<HoloMessage>> {
+        if (openaiMessage.role === 'system') return {};
+
+        let content: HoloMessage["content"] | undefined;
+        if (typeof openaiMessage.content === 'string') {
+            content = openaiMessage.content;
+        } else if (Array.isArray(openaiMessage.content)) {
+            // Map parts, including 'refusal' → text
+            const mapped = await Promise.all(
+                openaiMessage.content.map(async (part) => {
+                    if ((part as any).type === 'refusal') {
+                        // Normalize refusal into text
+                        return { type: 'text', text: (part as any).refusal };
+                    }
+                    // Delegate standard parts (text, image, etc.)
+                    return this.contentTranslator.toHolo(part as any);
+                })
+            );
+
+            // Drop empties and collapse to string if single text
+            const nonEmpty = mapped.filter(obj => Object.keys(obj ?? {}).length > 0);
+            if (nonEmpty.length === 1 && (nonEmpty[0] as any).type === 'text') {
+                content = (nonEmpty[0] as any).text;
+            } else if (nonEmpty.length > 0) {
+                content = nonEmpty as unknown as HoloMessage["content"];
+            } else {
+                content = undefined;
+            }
+        }
+
+        switch (openaiMessage.role) {
+            case 'assistant': {
+                const tool_calls = openaiMessage.tool_calls?.map(tc => ({
+                    id: tc.id,
                     type: 'function' as const,
                     function: {
                         name: tc.function.name,
-                        arguments: JSON.stringify(tc.function.arguments)
+                        arguments: safeParse(tc.function.arguments)
                     }
                 }));
+
+                return pickDefined({
+                    role: 'assistant' as const,
+                    content,
+                    ...(tool_calls && tool_calls.length ? {tool_calls} : {})
+                }) as Partial<HoloMessage>;
             }
 
-            return assistantMessage;
-        }
+            case 'tool': {
+                return pickDefined({
+                    role: 'tool' as const,
+                    content,
+                    tool_call_id: openaiMessage.tool_call_id
+                }) as Partial<HoloMessage>;
+            }
 
-        if (holoMessage.role === 'tool') {
-            return {
-                role: 'tool',
-                content: typeof content === 'string' ? content : JSON.stringify(content),
-                tool_call_id: holoMessage.tool_call_id || ''
-            };
-        }
-
-        return {
-            role: 'user',
-            content,
-            ...(holoMessage.name && {name: holoMessage.name})
-        };
-    };
-
-export const toHoloMessageTranslator: TranslateFunc<OpenAIRequestMessage, HoloMessage> =
-    async (openaiMessage: OpenAIRequestMessage): Promise<Partial<HoloMessage>> => {
-        const baseMessage: Partial<HoloMessage> = {
-            role: openaiMessage.role as 'user' | 'assistant' | 'tool'
-        };
-
-        if (openaiMessage.role === 'system') {
-            return {};
-        }
-
-        if (typeof openaiMessage.content === 'string') {
-            baseMessage.content = openaiMessage.content;
-        } else if (Array.isArray(openaiMessage.content)) {
-            const holoContent = await OpenAIContentTranslator.toHoloArray(openaiMessage.content as any[]);
-            if (holoContent.length === 1 && holoContent[0]?.type === 'text') {
-                baseMessage.content = (holoContent[0] as any).text;
-            } else {
-                baseMessage.content = holoContent;
+            default: { // 'user'
+                return pickDefined({
+                    role: 'user' as const,
+                    content,
+                    name: openaiMessage.name
+                }) as Partial<HoloMessage>;
             }
         }
-
-        if (openaiMessage.role === 'assistant' && 'tool_calls' in openaiMessage && openaiMessage.tool_calls) {
-            baseMessage.tool_calls = openaiMessage.tool_calls.map(tc => ({
-                id: tc.id,
-                type: 'function' as const,
-                function: {
-                    name: tc.function.name,
-                    arguments: JSON.parse(tc.function.arguments || '{}')
-                }
-            }));
-        }
-
-        if (openaiMessage.role === 'tool') {
-            baseMessage.tool_call_id = (openaiMessage as any).tool_call_id;
-        }
-
-        if ('name' in openaiMessage && openaiMessage.name) {
-            baseMessage.name = openaiMessage.name;
-        }
-
-        return baseMessage;
-    };
-
-export const portableMessageOnlyGuard = new TranslatorGuard<HoloMessage>(
-    "portableMessageOnly",
-    async (message) => {
-        return message.role === 'user' || message.role === 'assistant' || message.role === 'tool';
     }
-);
-
-export const OpenAIMessageTranslator = new FieldTranslator<HoloMessage, OpenAIRequestMessage>(
-    HoloMessageValidator,
-    {} as any,
-    [fromHoloMessageContentTranslator],
-    [toHoloMessageTranslator],
-    {
-        fromHoloGuards: [portableMessageOnlyGuard],
-        name: 'OpenAIMessageTranslator'
-    }
-);
-
-export const fromHoloMessagesWithSystemTranslator: TranslateFunc<HoloRequest, OpenAIChatRequest> =
-    async (holoRequest: HoloRequest): Promise<Partial<OpenAIChatRequest>> => {
-        const messages: OpenAIRequestMessage[] = [];
-
-        if (holoRequest.system) {
-            messages.push({
-                role: 'system',
-                content: holoRequest.system
-            });
-        }
-
-        if (holoRequest.messages && holoRequest.messages.length > 0) {
-            const openaiMessages = await Promise.all(
-                holoRequest.messages.map(async (message) =>
-                    await OpenAIMessageTranslator.fromHolo(message)
-                )
-            );
-
-            const validMessages = openaiMessages.filter(msg => Object.keys(msg).length > 0) as OpenAIRequestMessage[];
-            messages.push(...validMessages);
-        }
-
-        return {messages};
-    };
-
-export const toHoloMessagesWithSystemTranslator: TranslateFunc<OpenAIChatRequest, HoloRequest> =
-    async (openaiRequest: OpenAIChatRequest): Promise<Partial<HoloRequest>> => {
-        if (!openaiRequest.messages || openaiRequest.messages.length === 0) {
-            return {};
-        }
-
-        let system: string | undefined;
-        const regularMessages: OpenAIRequestMessage[] = [];
-
-        for (const message of openaiRequest.messages) {
-            if (message.role === 'system') {
-                if (!system && typeof message.content === 'string') {
-                    system = message.content;
-                }
-            } else {
-                regularMessages.push(message);
-            }
-        }
-
-        const holoMessages = await Promise.all(
-            regularMessages.map(async (message) =>
-                await OpenAIMessageTranslator.toHolo(message)
-            )
-        );
-
-        const validMessages = holoMessages.filter(msg => Object.keys(msg).length > 0) as HoloMessage[];
-
-        const result: Partial<HoloRequest> = {messages: validMessages};
-        if (system) {
-            result.system = system;
-        }
-
-        return result;
-    };
+}

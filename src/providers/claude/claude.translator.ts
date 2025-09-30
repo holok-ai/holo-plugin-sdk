@@ -10,28 +10,32 @@ import {HoloMessage, HoloRequest, HoloResponse} from "../holo";
 
 @injectable()
 export class ClaudeTranslator implements IProviderTranslator {
-    constructor() {
+    constructor(
+        private readonly requestTranslator: ClaudeRequestTranslator,
+        private readonly messageTranslator: ClaudeMessageTranslator,
+        private readonly responseTranslator: ClaudeResponseTranslator
+    ) {
     }
 
     async fromHoloRequest(request: HoloRequest): Promise<Partial<ClaudeChatRequest>> {
         logger.debug('translating holo request to claude request', request);
-        return ClaudeRequestTranslator.fromHolo(request);
+        return this.requestTranslator.fromHolo(request);
     }
 
     async toHoloRequest(request: ClaudeChatRequest): Promise<Partial<HoloRequest>> {
         logger.debug('translating claude request to holo request', request);
-        return ClaudeRequestTranslator.toHolo(request);
+        return this.requestTranslator.toHolo(request);
     }
 
     async fromHoloMessages(messages: HoloMessage[]): Promise<Partial<ClaudeRequestMessage>[]> {
-        return ClaudeMessageTranslator.fromHoloArray(messages);
+        return this.messageTranslator.fromHoloArray(messages);
     }
 
     async toHoloMessages(messages: ClaudeRequestMessage[]): Promise<Partial<HoloMessage>[]> {
-        return ClaudeMessageTranslator.toHoloArray(messages);
+        return this.messageTranslator.toHoloArray(messages);
     }
 
     async toHoloResponse(message: ClaudeResponse): Promise<Partial<HoloResponse>> {
-        return ClaudeResponseTranslator.toHolo(message);
+        return this.responseTranslator.toHolo(message);
     }
 }

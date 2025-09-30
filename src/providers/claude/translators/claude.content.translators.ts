@@ -1,150 +1,67 @@
-import {
-    HoloContent,
-    HoloContentImage,
-    HoloContentImageValidator,
-    HoloContentText,
-    HoloContentTextValidator,
-    HoloContentValidator
-} from "../../holo";
-import {ClaudeContentBlockParam, ClaudeImageBlockParam, ClaudeTextBlockParam} from "../types";
-import {
-    ClaudeContentBlockParamValidator,
-    ClaudeImageBlockParamValidator,
-    ClaudeTextBlockParamValidator
-} from "../validators";
-import {FieldTranslator, TranslateFunc, TranslatorGuard} from "../../types";
+import 'reflect-metadata';
+import {HoloContent, HoloContentValidator} from "../../holo";
+import {ClaudeContentBlockParam} from "../types";
+import {ClaudeContentBlockParamValidator} from "../validators";
+import {BaseTranslator} from "../../base.translator";
+import {injectable} from 'tsyringe';
 
-// Helper function to detect media type from data URI or default
-const detectMediaType = (url: string): 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' => {
-    if (url.startsWith('data:image/')) {
-        const match = url.match(/^data:image\/([^;]+)/);
-        return match ? `image/${match[1]}` as 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp' : 'image/png';
+type ImageMime = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
+
+function parseDataUrl(u: string): { media: ImageMime; data: string } | null {
+    if (!u.startsWith('data:image/')) return null;
+    const comma = u.indexOf(',');
+    if (comma < 0) return null;
+
+    const header = u.slice(0, comma);
+    const data = u.slice(comma + 1);
+    const subtype = header.slice('data:image/'.length).split(';', 1)[0].toLowerCase();
+    const media: ImageMime =
+        subtype === 'jpeg' || subtype === 'jpg' ? 'image/jpeg' :
+            subtype === 'png' ? 'image/png' :
+                subtype === 'gif' ? 'image/gif' :
+                    subtype === 'webp' ? 'image/webp' : 'image/png';
+
+    return {media, data};
+}
+
+@injectable()
+export class ClaudeContentTranslator extends BaseTranslator<HoloContent, ClaudeContentBlockParam> {
+    protected holoValidator = HoloContentValidator;
+    protected providerValidator = ClaudeContentBlockParamValidator;
+    protected holoDefaults: Partial<HoloContent> = {};
+    protected providerDefaults: Partial<ClaudeContentBlockParam> = {};
+
+    constructor() {
+        super();
     }
-    return 'image/png'; // Default
-};
 
-// Individual specialized translators
-export const fromHoloTextContentTranslator: TranslateFunc<HoloContentText, ClaudeTextBlockParam> =
-    async (holoText: HoloContentText): Promise<Partial<ClaudeTextBlockParam>> => ({
-        type: 'text',
-        text: holoText.text
-    });
-
-export const fromHoloImageContentTranslator: TranslateFunc<HoloContentImage, ClaudeImageBlockParam> =
-    async (holoImage: HoloContentImage): Promise<Partial<ClaudeImageBlockParam>> => {
-        if (holoImage.url.startsWith('data:')) {
-            // Data URI - convert to Claude base64 format
-            const [_header, data] = holoImage.url.split(',');
-            const mediaType = detectMediaType(holoImage.url);
-            return {
-                type: 'image',
-                source: {
-                    type: 'base64',
-                    data: data,
-                    media_type: mediaType
-                }
-            };
-        } else {
-            // HTTPS URL - convert to Claude URL format
-            return {
-                type: 'image',
-                source: {
-                    type: 'url',
-                    url: holoImage.url
-                }
-            };
+    protected async fromHoloImpl(source: HoloContent): Promise<Partial<ClaudeContentBlockParam>> {
+        if (source.type === 'text') {
+            return {type: 'text', text: source.text};
         }
-    };
 
-export const toHoloTextContentTranslator: TranslateFunc<ClaudeTextBlockParam, HoloContentText> =
-    async (claudeText: ClaudeTextBlockParam): Promise<Partial<HoloContentText>> => ({
-        type: 'text',
-        text: claudeText.text
-    });
-
-export const toHoloImageContentTranslator: TranslateFunc<ClaudeImageBlockParam, HoloContentImage> =
-    async (claudeImage: ClaudeImageBlockParam): Promise<Partial<HoloContentImage>> => {
-        const {source} = claudeImage;
-        if (source.type === 'base64' && source.data && source.media_type) {
-            return {
-                type: 'image',
-                url: `data:${source.media_type};base64,${source.data}`,
-                mime: source.media_type
-            };
-        } else if (source.type === 'url' && source.url) {
-            return {
-                type: 'image',
-                url: source.url
-            };
+        const parsed = parseDataUrl(source.url);
+        if (parsed) {
+            return {type: 'image', source: {type: 'base64', data: parsed.data, media_type: parsed.media}};
         }
-        // Ignore unsupported image sources - return empty object
+        return {type: 'image', source: {type: 'url', url: source.url}};
+    }
+
+    protected async toHoloImpl(source: ClaudeContentBlockParam): Promise<Partial<HoloContent>> {
+        if (source.type === 'text') {
+            return {type: 'text', text: source.text};
+        }
+
+        if (source.type === 'image') {
+            const s = source.source;
+            if (s.type === 'base64') {
+                return {type: 'image', url: `data:${s.media_type};base64,${s.data}`, mime: s.media_type};
+            }
+            if (s.type === 'url') {
+                return {type: 'image', url: s.url};
+            }
+        }
+
         return {};
-    };
-
-// Individual specialized content translators
-export const ClaudeTextContentTranslator = new FieldTranslator<HoloContentText, ClaudeTextBlockParam>(
-    HoloContentTextValidator,
-    ClaudeTextBlockParamValidator,
-    [fromHoloTextContentTranslator],
-    [toHoloTextContentTranslator],
-    {
-        name: 'ClaudeTextContentTranslator'
     }
-);
-
-export const ClaudeImageContentTranslator = new FieldTranslator<HoloContentImage, ClaudeImageBlockParam>(
-    HoloContentImageValidator,
-    ClaudeImageBlockParamValidator,
-    [fromHoloImageContentTranslator],
-    [toHoloImageContentTranslator],
-    {
-        name: 'ClaudeImageContentTranslator'
-    }
-);
-
-// Orchestrating translator functions that delegate to specialized translators
-export const fromHoloContentTranslator: TranslateFunc<HoloContent, ClaudeContentBlockParam> =
-    async (holoContent: HoloContent): Promise<Partial<ClaudeContentBlockParam>> => {
-        switch (holoContent.type) {
-            case 'text':
-                return await ClaudeTextContentTranslator.fromHolo(holoContent);
-            case 'image':
-                return await ClaudeImageContentTranslator.fromHolo(holoContent);
-            default:
-                // Ignore unsupported content types - return empty object
-                return {};
-        }
-    };
-
-export const toHoloContentTranslator: TranslateFunc<ClaudeContentBlockParam, HoloContent> =
-    async (claudeContent: ClaudeContentBlockParam): Promise<Partial<HoloContent>> => {
-        switch (claudeContent.type) {
-            case 'text':
-                return await ClaudeTextContentTranslator.toHolo(claudeContent as ClaudeTextBlockParam);
-            case 'image':
-                return await ClaudeImageContentTranslator.toHolo(claudeContent as ClaudeImageBlockParam);
-            default:
-                // Ignore non-portable content types - return empty object
-                return {};
-        }
-    };
-
-
-export const portableContentOnlyGuard = new TranslatorGuard<ClaudeContentBlockParam>(
-    "portableContentOnly",
-    async (content) => {
-        return content.type === 'text' || content.type === 'image';
-    }
-);
-
-// Single unified content translator
-export const ClaudeContentTranslator = new FieldTranslator<HoloContent, ClaudeContentBlockParam>(
-    HoloContentValidator,              // Input validator (HoloContent union)
-    ClaudeContentBlockParamValidator,  // Output validator (Claude content union)
-    [fromHoloContentTranslator],       // Holo → Claude transformer
-    [toHoloContentTranslator],         // Claude → Holo transformer
-    {
-        toHoloGuards: [portableContentOnlyGuard],  // Pre-transform guards for Claude → Holo (filters non-portable)
-        name: 'ClaudeContentTranslator'
-    }
-);
+}

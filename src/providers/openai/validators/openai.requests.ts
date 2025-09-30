@@ -33,6 +33,7 @@ import {
     OpenAIOnlyChatRequest,
     OpenAIReasoningEffort,
     OpenAIRequestMessage,
+    OpenAIResponseFormat,
     OpenAIResponseFormatJSONObject,
     OpenAIResponseFormatJSONSchema,
     OpenAIResponseFormatJSONSchemaJSONSchema,
@@ -175,27 +176,27 @@ const ChatCompletionToolMessageParamValidator = type({
 }) satisfies Type<ChatCompletionToolMessageParam>;
 
 
-const OpenAIRequestMessageValidator = ChatCompletionDeveloperMessageParamValidator
+export const OpenAIRequestMessageValidator = ChatCompletionDeveloperMessageParamValidator
     .or(ChatCompletionSystemMessageParamValidator)
     .or(ChatCompletionUserMessageParamValidator)
     .or(ChatCompletionAssistantMessageParamValidator)
     .or(ChatCompletionToolMessageParamValidator) satisfies Type<OpenAIRequestMessage>;
 
-const ChatCompletionToolValidator = type({
+export const ChatCompletionToolValidator = type({
     function: OpenAIFunctionDefinitionValidator,
     type: "'function'"
 }) satisfies Type<ChatCompletionTool>;
 
-const ChatCompletionNamedToolChoiceFunctionValidator = type({
+export const ChatCompletionNamedToolChoiceFunctionValidator = type({
     name: 'string'
 }) satisfies Type<ChatCompletionNamedToolChoice.Function>;
 
-const ChatCompletionNamedToolChoiceValidator = type({
+export const ChatCompletionNamedToolChoiceValidator = type({
     function: ChatCompletionNamedToolChoiceFunctionValidator,
     type: "'function'"
 }) satisfies Type<ChatCompletionNamedToolChoice>;
 
-const ChatCompletionToolChoiceOptionValidator = type("'none'|'auto'|'required'").or(ChatCompletionNamedToolChoiceValidator) satisfies Type<ChatCompletionToolChoiceOption>;
+export const ChatCompletionToolChoiceOptionValidator = type("'none'|'auto'|'required'").or(ChatCompletionNamedToolChoiceValidator) satisfies Type<ChatCompletionToolChoiceOption>;
 
 export const OpenAIChatCompletionPredictionContentValidator = type({
     content: type('string').or(OpenAIChatCompletionContentPartTextValidator.array()),
@@ -219,6 +220,11 @@ export const OpenAIWebSearchOptionsValidator = type({
     }).or('null')
 }) satisfies Type<ChatCompletionCreateParams.WebSearchOptions>;
 
+export const OpenAIResponseFormatValidator =
+    OpenAIResponseFormatTextValidator
+        .or(OpenAIResponseFormatJSONSchemaValidator)
+        .or(OpenAIResponseFormatJSONObjectValidator) satisfies Type<OpenAIResponseFormat
+    >;
 
 // Common fields that exist across all providers
 export const OpenAISharedRequestValidator = type({
@@ -230,7 +236,7 @@ export const OpenAISharedRequestValidator = type({
     'tools?': ChatCompletionToolValidator.array(),
     'tool_choice?': ChatCompletionToolChoiceOptionValidator,
     'metadata?': OpenAIMetadataValidator.or('null'),
-    'response_format?': OpenAIResponseFormatTextValidator.or(OpenAIResponseFormatJSONSchemaValidator).or(OpenAIResponseFormatJSONObjectValidator),
+    'response_format?': OpenAIResponseFormatValidator,
     'service_tier?': "'auto'|'default'|'flex'|'scale'|'priority'|null",
     'max_completion_tokens?': numberOrNull,
     'max_tokens?': numberOrNull,

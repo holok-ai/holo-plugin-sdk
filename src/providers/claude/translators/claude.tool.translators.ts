@@ -1,76 +1,65 @@
+import 'reflect-metadata';
 import {HoloTool, HoloToolChoice, HoloToolChoiceValidator, HoloToolValidator} from "../../holo";
 import {ClaudeTool, ClaudeToolChoice, ClaudeToolUnion} from "../types";
-import {ClaudeToolChoiceValidator, ClaudeToolUnionValidator, ClaudeToolValidator} from "../validators";
-import {ArkErrors} from "arktype";
-import {FieldTranslator, TranslateFunc, TranslatorGuard} from "../../types";
-import logger from "../../../utils/logger";
+import {ClaudeToolChoiceValidator, ClaudeToolUnionValidator} from "../validators";
+import {BaseTranslator} from "../../base.translator";
+import {injectable} from 'tsyringe';
+import {pickDefined} from "../../../utils";
 
-const defaultToolInputSchema: ClaudeTool["input_schema"] = {
-    type: "object",
-    properties: {},
-    required: [] as string[],
-};
+@injectable()
+export class ClaudeToolTranslator extends BaseTranslator<HoloTool, ClaudeToolUnion> {
+    protected holoValidator = HoloToolValidator;
+    protected providerValidator = ClaudeToolUnionValidator;
+    protected holoDefaults: Partial<HoloTool> = {};
+    protected providerDefaults: Partial<ClaudeToolUnion> = {};
 
-export const fromToolParametersTranslator: TranslateFunc<HoloTool, ClaudeToolUnion> = async (holoTool: HoloTool): Promise<Partial<ClaudeToolUnion>> => ({
-    type: 'custom',
-    input_schema: {
-        type: 'object',
-        ...(holoTool.parameters ?? defaultToolInputSchema)
+    constructor() {
+        super();
     }
-});
 
-export const customToolOnlyGuard = new TranslatorGuard<ClaudeToolUnion>(
-    "allowOnlyCustomTool",
-    async (tool) => {
-        try {
-            return !(ClaudeToolValidator(tool) instanceof ArkErrors);
-        } catch (e) {
-            logger.error(`customToolOnlyGuard validation error:`, e);
-            return false; // Fail the guard if validation throws
+    protected async fromHoloImpl(source: HoloTool): Promise<Partial<ClaudeToolUnion>> {
+        return pickDefined({
+            type: "custom" as const,
+            name: source.name,
+            description: source.description,
+            input_schema: source.parameters ?? {type: "object", properties: {}, required: []}
+        }) as Partial<ClaudeToolUnion>;
+    }
+
+    protected async toHoloImpl(source: ClaudeToolUnion): Promise<Partial<HoloTool>> {
+        if (source.type !== "custom") return {};
+
+        const tool = source as ClaudeTool;
+        return pickDefined({
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.input_schema
+        }) as Partial<HoloTool>;
+    }
+}
+
+@injectable()
+export class ClaudeToolChoiceTranslator extends BaseTranslator<HoloToolChoice, ClaudeToolChoice> {
+    protected holoValidator = HoloToolChoiceValidator;
+    protected providerValidator = ClaudeToolChoiceValidator;
+    protected holoDefaults: Partial<HoloToolChoice> = {};
+    protected providerDefaults: Partial<ClaudeToolChoice> = {};
+
+    constructor() {
+        super();
+    }
+
+    protected async fromHoloImpl(source: HoloToolChoice): Promise<Partial<ClaudeToolChoice>> {
+        if (source.type === "specific") {
+            return pickDefined({type: "tool" as const, name: source.name});
         }
-
-    } // pass if it IS a custom tool
-);
-
-
-export const toToolParameterTranslator = async (tool: ClaudeToolUnion): Promise<Partial<HoloTool>> => ({
-    parameters: (tool as ClaudeTool).input_schema
-});
-
-export const ClaudeToolTranslator = new FieldTranslator<HoloTool, ClaudeToolUnion>(
-    HoloToolValidator,
-    ClaudeToolUnionValidator,
-    [fromToolParametersTranslator],
-    [toToolParameterTranslator],
-    {
-        toHoloGuards: [customToolOnlyGuard],
-        name: 'ClaudeToolTranslator'
-    }
-)
-
-
-export const fromHoloToolChoiceTranslator = async (choice: HoloToolChoice): Promise<Partial<ClaudeToolChoice>> => {
-    if (choice.type === "specific") {
-        return {type: "tool", name: choice.name};
-    }
-    return {type: choice.type === "required" ? "any" : choice.type};
-};
-
-// ClaudeToolChoice → HoloToolChoice
-export const toHoloToolChoiceTranslator = async (tc: ClaudeToolChoice): Promise<HoloToolChoice> => {
-    if (tc.type === "tool") {
-        return {type: "specific", name: tc.name};
+        return {type: source.type === "required" ? "any" : source.type};
     }
 
-    return {type: tc.type === "any" ? "required" : tc.type};
-};
-
-export const ClaudeToolChoiceTranslator = new FieldTranslator<HoloToolChoice, ClaudeToolChoice>(
-    HoloToolChoiceValidator,
-    ClaudeToolChoiceValidator,
-    [fromHoloToolChoiceTranslator],
-    [toHoloToolChoiceTranslator],
-    {
-        name: 'ClaudeToolChoiceTranslator'
+    protected async toHoloImpl(source: ClaudeToolChoice): Promise<Partial<HoloToolChoice>> {
+        if (source.type === "tool") {
+            return pickDefined({type: "specific" as const, name: (source as any).name});
+        }
+        return {type: source.type === "any" ? "required" : source.type};
     }
-);
+}
