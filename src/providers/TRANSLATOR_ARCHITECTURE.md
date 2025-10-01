@@ -1,205 +1,346 @@
 # Translator Architecture
 
-This document explains the sophisticated chain-of-translators pattern used throughout the provider translation system to convert between Holo (portable) types and provider-specific types.
+This document explains the translation architecture used throughout the provider translation system to convert between Holo (portable) types and provider-specific types.
 
 ## 🏗️ **Core Architecture**
 
-The translation system uses a formal pipeline architecture with multiple components working together:
+All translations use the `BaseStreamTranslator` class which provides:
+
+1. **Stateless Translation** - No state tracking between calls
+2. **Bidirectional Translation** - Both `toHolo` and `fromHolo` directions
+3. **Validator Integration** - Input/output validation with ArkType
+4. **providerDefaults** - Orchestrator-injected defaults for model/id/metadata
+
+This unified architecture works for both streaming and non-streaming translations.
+
+---
+
+## 🌊 **BaseStreamTranslator Architecture**
+
+All translators extend `BaseStreamTranslator<HoloType, ProviderType>` for consistent, stateless translation.
 
 ### **Key Components**
 
 | Component | Purpose | Example |
 |-----------|---------|---------|
-| `FieldTranslator<TSource, TTarget>` | Main translation orchestrator for a specific field/object type | `ClaudeToolTranslator` |
-| `TranslateFunc<TSource, TTarget>` | Individual field transformation functions | `fromToolParametersTranslator` |
-| `Guard<T>` | Validation/filtering mechanism with business logic | `customToolOnlyGuard` |
-| **Validators** | Input/output validation using arktype | `HoloToolValidator`, `ClaudeToolUnionValidator` |
+| `BaseStreamTranslator<HoloType, ProviderType>` | Base class for all translations | `OpenAIMessageStopTranslator` |
+| `toHoloManyImpl()` | Provider → Holo transformation (returns array) | Convert OpenAI chunk to Holo events |
+| `fromHoloManyImpl()` | Holo → Provider transformation (returns array) | Convert Holo event to OpenAI chunks |
+| **Validators** | Input/output validation using ArkType | `HoloStreamChunkValidator`, `OpenAIChatCompletionChunkValidator` |
+| **providerDefaults** | Orchestrator-injected defaults | `{ model: 'gpt-4', id: uuidv4() }` |
 
-## 🔧 **Translation Chain Structure**
+### **Base Class Structure**
 
 ```typescript
-export const ClaudeToolTranslator = new FieldTranslator<HoloTool, ClaudeToolUnion>(
-    HoloToolValidator,              // Input validator (arktype)
-    ClaudeToolUnionValidator,       // Output validator (arktype)
-    [fromToolParametersTranslator], // Holo → Claude transformers (array)
-    [toToolParameterTranslator],    // Claude → Holo transformers (array)
-    [],                            // Pre-transform guards for Holo -> Claude (array)
-    [customToolOnlyGuard]          // Pre-transform guards Claude -> Holo (array)
-)
+@injectable()
+export class ProviderEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ProviderEventType> {
+    protected holoValidator = HoloStreamChunkValidator;
+    protected providerValidator = ProviderEventValidator;
+    protected holoDefaults: Partial<HoloStreamChunk> = {};
+    protected providerDefaults: Partial<ProviderEventType> = {};
+
+    constructor() {
+        super();
+    }
+
+    protected async toHoloManyImpl(source: ProviderEventType): Promise<Partial<HoloStreamChunk>[]> {
+        // Provider → Holo (stateless)
+        // Returns array to support per-choice emission
+    }
+
+    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<ProviderEventType>[]> {
+        // Holo → Provider (stateless)
+        // Fast pass-through check for same-provider streaming
+    }
+}
 ```
 
-### **Constructor Parameters**
+---
 
-1. **Input Validator** - Validates source data before transformation
-2. **Output Validator** - Validates target data after transformation  
-3. **Forward Transformers** - Array of functions for Source → Target
-4. **Reverse Transformers** - Array of functions for Target → Source
-5. **Pre-Guards** - Validation before transformation
-6. **Post-Guards** - Validation after transformation
+## 🎯 **Key Principles**
 
-## 🎯 **Individual Transformation Functions**
+1. **Stateless Translators** - No state tracking between calls
+2. **1:1 Event Mapping** - Each provider event maps to exactly one Holo event
+3. **Lossless Round-Tripping** - Preserve raw events in `provider_delta`
+4. **Per-Choice Emission** - Support multi-choice streams (n>1)
+5. **Bidirectional by Design** - Always implement both `toHolo` and `fromHolo`
 
-### **Function Signature**
+---
+
+## 📋 **Translator Types**
+
+### **For Streaming**
+
+| Translator Type | Purpose | Example |
+|----------------|---------|---------|
+| **Message Start** | First chunk with role | `OpenAIMessageStartTranslator` |
+| **Content Delta** | Incremental text content | `OpenAIContentDeltaTranslator` |
+| **Message Delta** | Tool calls, usage, metadata | `OpenAIMessageDeltaTranslator` |
+| **Message Stop** | Finish reason and completion | `OpenAIMessageStopTranslator` |
+| **Orchestrator** | Routes events to sub-translators | `OpenAIStreamTranslator` |
+
+### **For Request/Response**
+
+| Translator Type | Purpose | Example |
+|----------------|---------|---------|
+| **Request** | Translate request objects | `ClaudeRequestTranslator` |
+| **Response** | Translate response objects | `ClaudeResponseTranslator` |
+| **Message** | Translate message arrays | `OpenAIMessageTranslator` |
+| **Tool** | Translate tool definitions | `ClaudeToolTranslator` |
+
+---
+
+## 🎨 **Key Patterns**
+
+### **1. Per-Choice Event Emission**
+
+For multi-choice support (n>1), emit one event per choice:
+
 ```typescript
-type TranslateFunc<TSource, TTarget> = 
-    (source: TSource) => Promise<Partial<TTarget>>
+protected async toHoloManyImpl(source: ProviderChunk): Promise<Partial<HoloStreamChunk>[]> {
+    const results: Partial<HoloStreamChunk>[] = [];
+
+    // Emit one event per choice
+    for (const choice of source.choices) {
+        if (!choice.finish_reason) continue;
+
+        const choiceIndex = Number.isInteger(choice.index) && choice.index >= 0
+            ? choice.index : 0;
+
+        results.push(pickDefined({
+            id: source.id,
+            model: source.model,
+            created: source.created * 1000, // sec → ms
+            delta: {
+                provider: 'openai' as const,
+                type: 'message_stop' as const,
+                choice: choiceIndex,
+                delta: {},
+                provider_delta: source // Full raw chunk
+            },
+            finish_reason: this.mapFinishReason(choice.finish_reason)
+        }));
+    }
+
+    return results;
+}
 ```
 
-### **Example Implementations**
+### **2. Fast Pass-Through**
 
-**Holo → Claude (Forward):**
+For same-provider streaming, validate and pass through directly:
+
 ```typescript
-export const fromToolParametersTranslator: TranslateFunc<HoloTool, ClaudeToolUnion> = 
-    async (holoTool: HoloTool): Promise<Partial<ClaudeToolUnion>> => ({
-        type: 'custom',  // Set required Claude field
-        input_schema: {
-            type: 'object',
-            ...(holoTool.parameters ?? defaultToolInputSchema)
+protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<ProviderChunk>[]> {
+    const d = source.delta;
+    if (!d || d.type !== 'expected_type') return [];
+
+    // Fast pass-through if we already have a provider chunk
+    if (d.provider === 'openai' && d.provider_delta) {
+        const validated = this.providerValidator(d.provider_delta);
+        if (!(validated instanceof ArkErrors)) {
+            return [validated];
+        }
+    }
+
+    // Otherwise reconstruct chunk...
+}
+```
+
+### **3. providerDefaults Usage**
+
+Orchestrator injects defaults before translation:
+
+```typescript
+// Orchestrator sets defaults
+translator.providerDefaults = {
+    id: uuidv4(),
+    model: 'gpt-4',
+    system_fingerprint: 'fp_123',
+    service_tier: 'default'
+};
+
+// Translator uses defaults when reconstructing
+const id = source.id || this.providerDefaults.id || uuidv4();
+const model = source.model || this.providerDefaults.model;
+
+if (!model) {
+    const logger = this.mlog(this.fromHoloManyImpl);
+    logger.warn('Translator: model missing; orchestrator should supply via providerDefaults');
+}
+```
+
+### **4. Timestamp Conversion**
+
+Always convert between provider units and Holo milliseconds:
+
+```typescript
+// Provider → Holo (sec → ms for OpenAI/Ollama)
+created: source.created * 1000
+
+// Holo → Provider (ms → sec)
+created: source.created
+    ? Math.floor(source.created / 1000)
+    : Math.floor(Date.now() / 1000)
+```
+
+### **5. Streaming JSON Parsing**
+
+For tool call arguments that stream as JSON fragments:
+
+```typescript
+// Parse tool call arguments with safeParse
+const rawArgs = tc.function?.arguments;
+const parsedArgs = safeParse(rawArgs);
+const isPartialJson = rawArgs && Object.keys(parsedArgs).length === 0;
+
+if (!isPartialJson) {
+    // Emit complete tool call with parsed arguments
+    results.push({
+        delta: {
+            type: 'message_delta',
+            delta: {
+                tool_calls: [{
+                    id: tc.id,
+                    type: 'function',
+                    function: {
+                        name: tc.function?.name,
+                        arguments: parsedArgs // Parsed object
+                    }
+                }]
+            },
+            provider_delta: source
         }
     });
-```
-
-**Claude → Holo (Reverse):**
-```typescript
-export const toToolParameterTranslator = 
-    async (tool: ClaudeToolUnion): Promise<Partial<HoloTool>> => ({
-        parameters: (tool as ClaudeTool).input_schema
+} else {
+    // Emit shell event for partial JSON
+    results.push({
+        delta: {
+            type: 'message_delta',
+            delta: {}, // Empty delta
+            provider_delta: source // Full chunk for accumulation
+        }
     });
+}
 ```
 
-### **Key Patterns**
+---
 
-1. **Async-First** - All functions return `Promise<Partial<T>>`
-2. **Partial Results** - Each function contributes part of the target object
-3. **Focused Responsibility** - Each function handles one specific transformation
-4. **Composable** - Multiple functions combine via array composition
-
-## 🛡️ **Guard System**
-
-Guards provide validation and business logic enforcement:
-
-```typescript
-export const customToolOnlyGuard = new Guard<ClaudeToolUnion>(
-    "allowOnlyCustomTool",
-    (tool) => !(ClaudeToolValidator(tool) instanceof ArkErrors)
-);
-```
-
-### **Guard Structure**
-- **Name** - Identifier for debugging/logging
-- **Validation Function** - Returns `true` if valid, `false` if should be rejected
-- **Type Parameter** - Specifies what type the guard validates
-
-## 🔗 **Chain Integration Pattern**
-
-Multiple `FieldTranslator`s are orchestrated together in request/response translators:
-
-```typescript
-// Conceptual structure (actual implementation may vary)
-export const ClaudeRequestTranslator = new RequestTranslator([
-    ClaudeToolTranslator,         // Handle tools[] field
-    ClaudeToolChoiceTranslator,   // Handle tool_choice field  
-    ClaudeMessageTranslator,      // Handle messages[] field
-    ClaudeContentTranslator,      // Handle message content
-    // ... other field translators
-]);
-```
-
-## 🎨 **Design Patterns Used**
-
-### **1. Bidirectional Translation**
-- Single `FieldTranslator` handles both directions (Source ↔ Target)
-- Separate transformer arrays for each direction
-- Symmetric validation on both ends
-
-### **2. Pipeline Composition**
-```
-Input → [Pre-Guards] → [Transformers] → [Post-Guards] → [Validator] → Output
-```
-
-### **3. Partial Object Merging**
-- Each transformer returns `Partial<Target>`
-- Results are merged using spread syntax
-- Allows multiple transformers to contribute different fields
-
-### **4. Type Safety + Runtime Validation**
-- **Compile-time**: TypeScript generics ensure type correctness
-- **Runtime**: arktype validators catch type mismatches
-- **Business Logic**: Guards enforce domain-specific rules
-
-## 💡 **Benefits**
+## 💡 **Design Benefits**
 
 | Benefit | Description |
 |---------|-------------|
-| **Modularity** | Each field translator is independent and testable |
+| **Modularity** | Each translator is independent and testable |
 | **Validation** | Built-in input/output validation with meaningful error messages |
-| **Extensibility** | Easy to add new transformations or guards without changing existing code |
+| **Extensibility** | Easy to add new translators without changing existing code |
 | **Consistency** | Uniform interface across all translators |
-| **Error Handling** | Guards and validators provide multiple layers of error catching |
 | **Type Safety** | Full TypeScript support with runtime validation |
-| **Composability** | Complex translations built from simple, focused functions |
+| **Lossless** | Full raw chunks preserved in `provider_delta` |
+| **Stateless** | No instance state - easy to reason about and test |
+
+---
 
 ## 📝 **Implementation Guidelines**
 
-### **When Creating New Translators**
+### **Always**
 
-1. **Define clear interfaces** - Use specific types, not `any`
-2. **Single responsibility** - Each `TranslateFunc` should handle one transformation
-3. **Async by default** - Even simple transformations should return `Promise<Partial<T>>`
-4. **Validate inputs/outputs** - Always use arktype validators
-5. **Use guards for business logic** - Don't mix validation with transformation
-6. **Provide defaults** - Handle missing/undefined values gracefully
+1. **Stateless** - No instance variables tracking state between calls
+2. **Preserve `provider_delta`** - Store full raw chunk (not lean subsets)
+3. **Validate choice index** - Use `Number.isInteger()` checks
+4. **Convert timestamps** - Match provider's time units ↔ Holo ms
+5. **Support per-choice** - Emit one event per choice when applicable
+6. **Use `pickDefined()`** - Clean undefined optional fields
+7. **Add logging** - Use `this.mlog(methodName)` for debugging
+8. **Fast pass-through** - Validate `provider_delta` for same-provider streaming
 
-### **Example Template**
+### **Never**
+
+1. **Trim whitespace** - Content is semantically meaningful
+2. **Fabricate defaults** - Use `providerDefaults` or return `null`
+3. **Set `done` flag** - Let orchestrator decide
+4. **Create lean `provider_delta`** - Always store full source
+5. **Invent finish_reason defaults** - Return `null` for unknown
+6. **Skip partial data** - Emit shell events with `provider_delta`
+7. **Use `as any`** - Let validators enforce contracts
+
+---
+
+## 🔍 **Testing**
+
+### **Testing Translators**
 
 ```typescript
-// Individual transformer
-export const fromHoloFieldTranslator: TranslateFunc<HoloType, ProviderType> = 
-    async (holo: HoloType): Promise<Partial<ProviderType>> => ({
-        providerField: transformValue(holo.holoField)
-    });
+test('OpenAIMessageStopTranslator toHolo', async () => {
+    const chunk: OpenAIChatCompletionChunk = {
+        id: 'chatcmpl-123',
+        object: 'chat.completion.chunk',
+        created: 1234567890,
+        model: 'gpt-4',
+        choices: [{
+            index: 0,
+            delta: {},
+            finish_reason: 'stop'
+        }]
+    };
 
-// Reverse transformer  
-export const toHoloFieldTranslator: TranslateFunc<ProviderType, HoloType> = 
-    async (provider: ProviderType): Promise<Partial<HoloType>> => ({
-        holoField: reverseTransformValue(provider.providerField)
-    });
+    const translator = new OpenAIMessageStopTranslator();
+    const result = await translator.toHoloMany(chunk);
 
-// Field translator
-export const ProviderFieldTranslator = new FieldTranslator<HoloType, ProviderType>(
-    HoloTypeValidator,
-    ProviderTypeValidator,
-    [fromHoloFieldTranslator],
-    [toHoloFieldTranslator],
-    [], // pre-guards
-    []  // post-guards
-);
-```
-
-## 🔍 **Debugging and Testing**
-
-### **Testing Individual Transformers**
-```typescript
-test('fromHoloFieldTranslator', async () => {
-    const result = await fromHoloFieldTranslator(mockHoloInput);
-    expect(result).toEqual(expectedPartialOutput);
+    expect(result).toHaveLength(1);
+    expect(result[0].delta?.type).toBe('message_stop');
+    expect(result[0].delta?.choice).toBe(0);
+    expect(result[0].finish_reason).toBe('stop');
+    expect(result[0].created).toBe(1234567890000); // ms
+    expect(result[0].delta?.provider_delta).toEqual(chunk);
 });
 ```
 
-### **Testing Full Translator**
+### **Testing Round-Trip**
+
 ```typescript
-test('ProviderFieldTranslator forward', async () => {
-    const result = await ProviderFieldTranslator.translateForward(mockHoloInput);
-    expect(result).toEqual(expectedProviderOutput);
+test('OpenAI round-trip fidelity', async () => {
+    const original: OpenAIChatCompletionChunk = /* ... */;
+
+    // Provider → Holo
+    const holoEvents = await translator.toHoloMany(original);
+
+    // Holo → Provider (with pass-through)
+    const reconstructed = await translator.fromHoloMany(holoEvents[0]);
+
+    expect(reconstructed[0]).toEqual(original);
 });
 ```
 
-### **Guard Testing**
+### **Testing Multi-Choice**
+
 ```typescript
-test('customGuard validation', () => {
-    expect(customGuard.validate(validInput)).toBe(true);
-    expect(customGuard.validate(invalidInput)).toBe(false);
+test('Multi-choice emission (n>1)', async () => {
+    const chunk: OpenAIChatCompletionChunk = {
+        id: 'chatcmpl-123',
+        choices: [
+            { index: 0, delta: { role: 'assistant' }, finish_reason: null },
+            { index: 1, delta: { role: 'assistant' }, finish_reason: null }
+        ],
+        /* ... */
+    };
+
+    const result = await translator.toHoloMany(chunk);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].delta?.choice).toBe(0);
+    expect(result[1].delta?.choice).toBe(1);
 });
 ```
 
-This architecture provides a robust, extensible foundation for all provider translations while maintaining type safety and clear separation of concerns.
+---
+
+## 📚 **Documentation Structure**
+
+For detailed implementation guidance, see:
+
+- **[TRANSLATOR_METHODOLOGY.md](./TRANSLATOR_METHODOLOGY.md)** - Step-by-step guide for implementing stream translators
+- **Provider STREAM_RESPONSE.md** - Provider-specific streaming event documentation
+
+---
+
+This unified `BaseStreamTranslator` architecture provides a robust, extensible foundation for all provider translations while maintaining type safety, statelessness, and clear separation of concerns.

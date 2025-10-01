@@ -1,5 +1,5 @@
 import {type, type Type} from 'arktype';
-import {HoloFinishReason, HoloMessage, HoloResponse, HoloStreamChunk, HoloStreamingDelta, HoloUsage,} from "../types";
+import {HoloFinishReason, HoloMessage, HoloResponse, HoloStreamChunk, HoloStreamingDelta, HoloUsage, HoloProviderDelta} from "../types";
 import {HoloContentValidator, HoloToolCallValidator} from "./holo.requests";
 import {OpenAIChatCompletionChunkValidator} from "../../openai/validators";
 import {
@@ -10,6 +10,7 @@ import {
     ClaudeRawMessageStartEventValidator,
     ClaudeRawMessageStopEventValidator
 } from "../../claude/validators";
+import {OllamaChatResponseValidator, OllamaGenerateResponseValidator} from "../../ollama/validators";
 
 // ---------- Usage validator ----------
 export const HoloUsageValidator = type({
@@ -60,7 +61,9 @@ export const HoloProviderDeltaValidator = ClaudeRawMessageStartEventValidator
     .or(ClaudeRawContentBlockStartEventValidator)
     .or(ClaudeRawContentBlockDeltaEventValidator)
     .or(ClaudeRawContentBlockStopEventValidator)
-    .or(OpenAIChatCompletionChunkValidator);
+    .or(OpenAIChatCompletionChunkValidator)
+    .or(OllamaChatResponseValidator.partial())
+    .or(OllamaGenerateResponseValidator.partial()) satisfies Type<HoloProviderDelta>;
 
 export const HoloStreamingDeltaValidator = type({
     provider: "'claude'|'openai'|'ollama'",
@@ -76,7 +79,6 @@ export const HoloStreamChunkValidator = type({
     'id?': 'string',
     'model?': 'string',
     'created?': 'number',
-    'object?': 'string',
     'delta?': HoloStreamingDeltaValidator,
     'done?': 'boolean',
     'finish_reason?': HoloFinishReasonValidator,

@@ -9,6 +9,7 @@ import {
     ClaudeRawMessageStopEvent
 } from "../../claude/types";
 import {OpenAIChatCompletionChunk} from "../../openai/types";
+import {OllamaChatResponse, OllamaGenerateResponse} from "../../ollama/types";
 
 // ---------- Usage & Performance (portable superset) ----------
 export interface HoloUsage {
@@ -61,7 +62,9 @@ export type HoloProviderDelta =
     | ClaudeRawContentBlockStartEvent
     | ClaudeRawContentBlockDeltaEvent
     | ClaudeRawContentBlockStopEvent
-    | OpenAIChatCompletionChunk;
+    | OpenAIChatCompletionChunk
+    | Partial<OllamaChatResponse>
+    | Partial<OllamaGenerateResponse>;
 
 // ---------- StreamingDeltaType (TS) ----------
 export type HoloStreamingDeltaType =
