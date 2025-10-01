@@ -24,7 +24,7 @@ export abstract class BaseTranslator<THolo, TProvider> extends ClassLogger {
 
     async translate<TSource, TTarget>(source: TSource, options: TranslateOptions): Promise<Partial<TTarget>> {
         const {fromHolo = true, validateTarget = false, failQuietly = true} = options;
-        const methodName = `${this.__className}.${fromHolo ? 'fromHolo' : 'toHolo'}`;
+        const methodName = `${fromHolo ? 'fromHolo' : 'toHolo'}`;
         const sValidator = fromHolo ? this.holoValidator : this.providerValidator;
         const tValidator = fromHolo ? this.providerValidator : this.holoValidator;
         const defaults = fromHolo ? this.providerDefaults : this.holoDefaults;

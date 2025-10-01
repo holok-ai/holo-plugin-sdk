@@ -1,6 +1,14 @@
 import 'reflect-metadata';
-import {HoloMessage, HoloRequest, HoloRequestValidator, HoloResponseFormat, HoloTool, HoloToolChoice} from "../../holo";
-import {ClaudeChatRequestValidator} from "../validators";
+import {
+    HoloMessage,
+    HoloRequest,
+    HoloRequestDefaults,
+    HoloRequestValidator,
+    HoloResponseFormat,
+    HoloTool,
+    HoloToolChoice
+} from "../../holo";
+import {ClaudeChatRequestValidator, ClaudeChatRequestDefaults} from "../validators";
 import {ClaudeMessageTranslator} from "./claude.message.translators";
 import {ClaudeToolChoiceTranslator, ClaudeToolTranslator} from "./claude.tool.translators";
 import {ClaudeChatRequest, ClaudeRequestMessage, ClaudeTool, ClaudeToolChoice} from "../types";
@@ -12,8 +20,8 @@ import {pickDefined} from "../../../utils";
 export class ClaudeRequestTranslator extends BaseTranslator<HoloRequest, ClaudeChatRequest> {
     protected holoValidator = HoloRequestValidator;
     protected providerValidator = ClaudeChatRequestValidator;
-    protected holoDefaults: Partial<HoloRequest> = {};
-    protected providerDefaults: Partial<ClaudeChatRequest> = {};
+    protected holoDefaults: Partial<HoloRequest> = HoloRequestDefaults;
+    protected providerDefaults: Partial<ClaudeChatRequest> = ClaudeChatRequestDefaults;
 
     constructor(
         private readonly messageTranslator: ClaudeMessageTranslator,

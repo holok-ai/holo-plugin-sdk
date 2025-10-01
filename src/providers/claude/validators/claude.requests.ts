@@ -563,11 +563,11 @@ export const ClaudeChatRequestValidator = type.merge(
     ClaudeOnlyRequestValidator
 ).brand('ClaudeChatRequestValidator') satisfies Type<ClaudeChatRequest>;
 
-export const defaultClaudeChatRequestValues: Partial<ClaudeChatRequest> = {
+export const ClaudeChatRequestDefaults: Partial<ClaudeChatRequest> = {
     max_tokens: 4096,
     stream: false
 };
 
 export const ClaudeChatRequestWithDefaults =
     ClaudeChatRequestValidator.pipe((val) =>
-        ({...defaultClaudeChatRequestValues, ...val}));
+        ({...ClaudeChatRequestDefaults, ...val}));

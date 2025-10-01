@@ -5,6 +5,8 @@ import {ErrorMessages} from "../utils";
 import {Provider} from "../db/types";
 import {ProviderRequestValidator} from "./validators";
 import {ClassLogger} from "../types/class.logger";
+import {env} from "../env";
+import {WorkerResponseFactory} from "../types/worker.response.factory";
 
 /**
  * Base interface for LLM providers
@@ -103,7 +105,7 @@ export abstract class AIProvider extends ClassLogger {
             sourceId: sourceId,
             requestId: requestId,
             providerType: this.provider.type as any, // Provider will be set by concrete implementation
-            workerId: process.env.WORKER_ID || 'unknown',
+            workerId: env.worker.serverId || 'unknown',
             payload: {
                 type: 'error',
                 error: {
@@ -158,15 +160,15 @@ export abstract class AIProvider extends ClassLogger {
         payload: any,
         fullResponse?: string
     ): LLMWorkerResponse {
-        return {
-            organizationId: this.provider.organization_id,
+        return WorkerResponseFactory.create(
             sourceId,
             requestId,
             providerType,
-            workerId: process.env.WORKER_ID || 'unknown',
             payload,
-            ...(fullResponse !== undefined && {fullResponse})
-        };
+            this.provider.organization_id,
+            fullResponse,
+            env.worker.serverId || 'unknown'
+        );
     }
 
     /**

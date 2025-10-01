@@ -1,5 +1,14 @@
 // ---------- HoloContent (portable response content) ----------
 import {HoloMessage} from "./requests";
+import {
+    ClaudeRawContentBlockDeltaEvent,
+    ClaudeRawContentBlockStartEvent,
+    ClaudeRawContentBlockStopEvent,
+    ClaudeRawMessageDeltaEvent,
+    ClaudeRawMessageStartEvent,
+    ClaudeRawMessageStopEvent
+} from "../../claude/types";
+import {OpenAIChatCompletionChunk} from "../../openai/types";
 
 // ---------- Usage & Performance (portable superset) ----------
 export interface HoloUsage {
@@ -43,25 +52,40 @@ export interface HoloResponse {
 }
 
 // ---------- Streaming (normalized) ----------
+
+// Union (TS)
+export type HoloProviderDelta =
+    | ClaudeRawMessageStartEvent
+    | ClaudeRawMessageDeltaEvent
+    | ClaudeRawMessageStopEvent
+    | ClaudeRawContentBlockStartEvent
+    | ClaudeRawContentBlockDeltaEvent
+    | ClaudeRawContentBlockStopEvent
+    | OpenAIChatCompletionChunk;
+
+// ---------- StreamingDeltaType (TS) ----------
+export type HoloStreamingDeltaType =
+    | 'message_start'
+    | 'content_delta'
+    | 'message_delta'
+    | 'message_stop';
+
 export interface HoloStreamingDelta {
     provider: 'claude' | 'openai' | 'ollama';
-    type: 'message_start' | 'content_delta' | 'message_delta' | 'message_stop';
-    index?: number;                 // when applicable (e.g., content block index)
-    delta: Partial<HoloMessage>;    // role/content/tool_calls/etc.
-    usage?: HoloUsage | null;       // often present on the final event
+    type: HoloStreamingDeltaType;
+    index?: number;    // Claude content block idx or OpenAI tool_calls idx
+    choice?: number;   // OpenAI multi-choice
+    delta: Partial<HoloMessage>;
+    usage?: HoloUsage | null;
+    provider_delta?: HoloProviderDelta | undefined;
 }
 
 export interface HoloStreamChunk {
     id?: string;
-    model: string;
-
-    // Streaming payload
+    model?: string;
+    created?: number;     // epoch ms
     delta?: HoloStreamingDelta;
-
-    // Final markers (streaming only)
     done?: boolean;
     finish_reason?: HoloFinishReason;
-
-    // Usage (often only on the last chunk)
     usage?: HoloUsage;
 }

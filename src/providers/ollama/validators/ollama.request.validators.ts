@@ -126,25 +126,25 @@ export const OllamaChatRequestValidator = type.merge(
     OllamaOnlyChatRequestValidator
 ) satisfies Type<OllamaChatRequest>;
 
-const ollamaGenerateDefault: Partial<GenerateRequest> = {
+export const OllamaGenerateRequestDefaults: Partial<GenerateRequest> = {
     stream: false
 };
 
-const ollamaChatDefault: Partial<OllamaChatRequest> = {
+export const OllamaChatRequestDefaults: Partial<OllamaChatRequest> = {
     stream: true,
     messages: []
 };
 
 export const OllamaGenerateRequestWithDefaults = OllamaGenerateRequestValidator.pipe((data) => {
     return {
-        ...ollamaGenerateDefault,
+        ...OllamaGenerateRequestDefaults,
         ...data
     };
 });
 
 export const OllamaChatRequestWithDefaults = OllamaChatRequestValidator.pipe((data) => {
     return {
-        ...ollamaChatDefault,
+        ...OllamaChatRequestDefaults,
         ...data
     };
 });

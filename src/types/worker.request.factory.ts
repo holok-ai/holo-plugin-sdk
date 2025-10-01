@@ -61,17 +61,17 @@ export class WorkerRequestFactory {
         switch (providerType) {
             case ProviderType.OLLAMA:
                 if (type === RequestType.CHAT) {
-                    request = OllamaChatRequestWithDefaults(body);
+                    request = OllamaChatRequestWithDefaults.assert(body);
                 } else {
-                    request = OllamaGenerateRequestWithDefaults(body);
+                    request = OllamaGenerateRequestWithDefaults.assert(body);
                 }
                 break;
             case ProviderType.CLAUDE:
-                request = ClaudeChatRequestWithDefaults(body);
+                request = ClaudeChatRequestWithDefaults.assert(body);
                 break;
             case ProviderType.OPENAI:
             case ProviderType.PERPLEXITY:
-                request = OpenAIChatRequestValidator(body);
+                request = OpenAIChatRequestValidator.assert(body);
                 break;
             default:
                 logger.error('Unsupported provider in WorkerRequest unified parser.', {providerType}, {

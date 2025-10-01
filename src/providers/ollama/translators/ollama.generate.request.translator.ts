@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import {BaseTranslator} from "../../base.translator";
 import {HoloMessage, HoloRequest, HoloRequestDefaults, HoloRequestValidator, isImage, isText} from "../../holo";
 import {OllamaGenerateRequest} from "../types";
-import {OllamaGenerateRequestValidator} from "../validators";
+import {OllamaGenerateRequestDefaults, OllamaGenerateRequestValidator} from "../validators";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
 
@@ -11,7 +11,7 @@ export class OllamaGenerateRequestTranslator extends BaseTranslator<HoloRequest,
 
     protected holoDefaults = HoloRequestDefaults;
     protected holoValidator = HoloRequestValidator;
-    protected providerDefaults: any;
+    protected providerDefaults = OllamaGenerateRequestDefaults;
     protected providerValidator = OllamaGenerateRequestValidator;
 
     constructor() {
