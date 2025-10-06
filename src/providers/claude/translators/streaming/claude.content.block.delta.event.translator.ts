@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {ArkErrors} from 'arktype';
 import {BaseStreamTranslator} from '../../../base.stream.translator';
@@ -37,7 +38,7 @@ export class ClaudeContentBlockDeltaEventTranslator extends BaseStreamTranslator
 
         // 2) Tool arg fragments → pass-through raw Claude event(s) from provider_delta
         // Only process if provider is Claude to avoid mixing provider events
-        if (d.type === 'message_delta' && d.provider === 'claude' && d.provider_delta) {
+        if (d.type === 'message_delta' && d.provider === ProviderType.CLAUDE && d.provider_delta) {
             const rawList = Array.isArray(d.provider_delta) ? d.provider_delta : [d.provider_delta];
 
             for (const raw of rawList) {
@@ -61,7 +62,7 @@ export class ClaudeContentBlockDeltaEventTranslator extends BaseStreamTranslator
         if (source.delta.type === 'text_delta' && source.delta.text) {
             out.push({
                 delta: {
-                    provider: 'claude' as const,
+                    provider: ProviderType.CLAUDE,
                     type: 'content_delta' as const,
                     index: source.index,
                     delta: {
@@ -78,7 +79,7 @@ export class ClaudeContentBlockDeltaEventTranslator extends BaseStreamTranslator
             // Tool argument fragments - downstream accumulation required
             out.push({
                 delta: {
-                    provider: 'claude' as const,
+                    provider: ProviderType.CLAUDE,
                     type: 'message_delta' as const,
                     index: source.index,
                     delta: {

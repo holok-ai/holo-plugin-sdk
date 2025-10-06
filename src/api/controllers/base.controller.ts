@@ -9,7 +9,8 @@ export abstract class BaseController extends ClassLogger {
         message: string = 'Internal server error',
         statusCode: number = 500
     ): void {
-        this.log.error(`${message}: ${JSON.stringify(error.message, null, 2)}`, {
+        const logger = this.mlog(this.handleError);
+        logger.error(`${message}: ${JSON.stringify(error.message, null, 2)}`, {
             methodName: 'handleError'
         });
         res.status(statusCode).json({

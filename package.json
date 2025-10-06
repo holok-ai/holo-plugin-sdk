@@ -6,6 +6,9 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node --import ./scripts/register-ts-node.mjs src/app.ts",
+    "start-worker": "node --import ./scripts/register-ts-node.mjs src/servers/worker.server.ts",
+    "start-audit": "node --import ./scripts/register-ts-node.mjs src/servers/audit.server.ts",
+    "start-analysis": "node --import ./scripts/register-ts-node.mjs src/servers/analysis.server.ts",
     "dev": "nodemon src/app.js",
     "api:dev": "nodemon --exec \"node --import ./scripts/register-ts-node.mjs\" src/app.ts",
     "worker:dev": "nodemon --exec \"node --import ./scripts/register-ts-node.mjs\" src/servers/worker.server.ts",

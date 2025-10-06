@@ -1,12 +1,12 @@
-import AIProvider from "../ai.provider";
-import {AIRequestStat, IProvider, ModelInfo, ProviderRequest, ProviderType, RequestType} from "../types";
+import {AIProvider} from "../ai.provider";
+import {AIRequestStat, ModelInfo, ProviderRequest, ProviderType, RequestType} from "../types";
 import {ErrorMessages} from "../../utils";
 import {Anthropic} from "@anthropic-ai/sdk/client";
 import {ResponseService} from "../../services";
 import {Message, MessageCreateParamsBase, MessageStreamEvent} from "@anthropic-ai/sdk/resources/messages";
 import {Provider} from "../../db/types";
 
-export class ClaudeProvider extends AIProvider implements IProvider {
+export class ClaudeProvider extends AIProvider {
     protected readonly client: Anthropic;
 
     constructor(
@@ -29,12 +29,14 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             throw new Error(ErrorMessages.apiKeyRequired('Claude'));
         }
 
+        const logger = this.mlog(this.init);
+
         try {
             await this.getModels();
 
-            this.log.info('Claude provider initialized');
+            logger.info('Claude provider initialized');
         } catch (error) {
-            this.log.error(`Failed to initialize Claude provider: ${(error as Error).message}`);
+            logger.error(`Failed to initialize Claude provider: ${(error as Error).message}`);
             throw error;
         }
     }
@@ -43,13 +45,14 @@ export class ClaudeProvider extends AIProvider implements IProvider {
      * Get available models
      */
     async getModels(): Promise<ModelInfo[]> {
+        const logger = this.mlog(this.getModels);
         try {
             if (!this.client) {
                 await this.init();
             }
 
             const response = await this.client!.models.list();
-            this.log.debug(`Claude models: ${JSON.stringify(response.data)}`);
+            logger.debug(`Claude models: ${JSON.stringify(response.data)}`);
             const modelList = response.data.map(model => ({
                 id: model.id,
                 name: model.display_name,
@@ -62,10 +65,10 @@ export class ClaudeProvider extends AIProvider implements IProvider {
                 return acc;
             }, {} as Record<string, ModelInfo>);
 
-            this.log.debug(`Claude models: ${JSON.stringify(Object.keys(this.models))}`);
+            logger.debug(`Claude models: ${JSON.stringify(Object.keys(this.models))}`);
             return modelList;
         } catch (error) {
-            this.log.error(`Error fetching Claude models: ${(error as Error).message}`);
+            logger.error(`Error fetching Claude models: ${(error as Error).message}`);
             throw error;
         }
     }
@@ -75,7 +78,8 @@ export class ClaudeProvider extends AIProvider implements IProvider {
      * Handle LLMWorkerRequest - unified interface
      */
     async handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat> {
-        this.log.debug('Provider validation successful for Claude', {
+        const logger = this.mlog(this.handleLLMRequest);
+        logger.debug('Provider validation successful for Claude', {
             requestId,
             type
         });
@@ -96,6 +100,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
     ): Promise<void> {
         await this.ensureInitialized();
         this.validateModel(messageRequest.model);
+        const logger = this.mlog(this._claudeMessages);
         let fullResponse = '';
         // Pass the request directly to the client since it extends MessageCreateParamsBase
         // @ts-ignore
@@ -107,13 +112,13 @@ export class ClaudeProvider extends AIProvider implements IProvider {
             totalProcessingTime: 9
         };
         if (messageRequest.stream) {
-            this.log.debug('Starting Claude messages stream', {requestId, model: messageRequest.model});
+            logger.debug('Starting Claude messages stream', {requestId, model: messageRequest.model});
 
             try {
                 this.client.messages
                     .stream(messageRequest)
                     .on('streamEvent', (event: MessageStreamEvent, snapshot: Message) => {
-                        this.log.info(`Claude Event: ${JSON.stringify(event)}`);
+                        logger.info(`Claude Event: ${JSON.stringify(event)}`);
                         if (event.type === 'message_start') {
                             metrics.timeToFirstToken = Date.now() - startTime;
                         }
@@ -122,21 +127,21 @@ export class ClaudeProvider extends AIProvider implements IProvider {
 
                         // Log completion when stream ends
                         if (event.type === 'message_stop') {
-                            this.log.debug('Claude messages stream completed', {requestId, messageId: snapshot.id});
+                            logger.debug('Claude messages stream completed', {requestId, messageId: snapshot.id});
                         }
                     })
                     .on('text', (textDelta: string) => {
                         fullResponse += textDelta;
                     })
                     .on('error', (error) => {
-                        this.log.error('Claude messages stream error', {
+                        logger.error('Claude messages stream error', {
                             requestId,
                             error: error.message
                         });
                         throw error;
                     })
                     .on('finalMessage', (message: Message) => {
-                        this.log.info(`claude final message: ${JSON.stringify(message)}`);
+                        logger.info(`claude final message: ${JSON.stringify(message)}`);
                         const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.CLAUDE, message, fullResponse);
                         metrics.inputTokens = message.usage.input_tokens;
                         metrics.outputTokens = message.usage.output_tokens;
@@ -146,7 +151,7 @@ export class ClaudeProvider extends AIProvider implements IProvider {
                     })
                 ;
             } catch (error) {
-                this.log.error('Claude messages stream initialization error', {
+                logger.error('Claude messages stream initialization error', {
                     requestId,
                     error: (error as Error).message
                 });

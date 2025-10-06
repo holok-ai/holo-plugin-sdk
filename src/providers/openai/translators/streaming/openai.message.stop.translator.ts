@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {ArkErrors} from 'arktype';
 import {v4 as uuidv4} from 'uuid';
@@ -33,7 +34,7 @@ export class OpenAIMessageStopTranslator extends BaseStreamTranslator<HoloStream
                 model: source.model,
                 created: source.created * 1000, // sec → ms
                 delta: {
-                    provider: 'openai' as const,
+                    provider: ProviderType.OPENAI,
                     type: 'message_stop' as const,
                     choice: choiceIndex,
                     delta: {},
@@ -53,7 +54,7 @@ export class OpenAIMessageStopTranslator extends BaseStreamTranslator<HoloStream
         if (!d || d.type !== 'message_stop') return [];
 
         // Fast pass-through if we already have an OpenAI chunk
-        if (d.provider === 'openai' && d.provider_delta) {
+        if (d.provider === 'OPENAI' && d.provider_delta) {
             const validated = this.providerValidator(d.provider_delta);
             if (!(validated instanceof ArkErrors)) {
                 return [validated];

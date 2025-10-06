@@ -3,6 +3,7 @@ import {injectable} from 'tsyringe';
 import {Application, Organization, OrganizationCache, Provider} from "../../cache";
 import {ApplicationConfigValidator, OrganizationConfigValidator} from "../validators";
 import {ApplicationConfig, HoloConfigAction, OrganizationConfig} from "../types";
+import {ProviderType} from "../../providers/types";
 
 @injectable()
 export class OrganizationCacheService {
@@ -27,6 +28,16 @@ export class OrganizationCacheService {
     applyApplicationConfig(c: ApplicationConfig) {
         const config = ApplicationConfigValidator.assert(c);
         this.setApplications(config.data)
+    }
+
+    /** @deprecated **/
+    getFirstProviderOfType(providerType: ProviderType): Provider | undefined {
+        return this.getFirst()?.getAll('providers')?.find(p => p.type === providerType);
+    }
+
+    /** @deprecated **/
+    getFirst(): OrganizationCache | undefined {
+        return this.orgCaches.entries().next().value?.[1];
     }
 
     get(id: string): OrganizationCache | undefined {

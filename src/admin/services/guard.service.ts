@@ -2,16 +2,15 @@ import 'reflect-metadata';
 import {OrganizationService} from "./organization.service";
 import {injectable} from 'tsyringe';
 import {GuardResult, GuardResultSchema, JWTPayload} from "../types";
-import {LLMWorkerRequest} from "../../types";
+import {LLMWorkerRequest, WorkerRequestFactory} from "../../types";
 import {HoloContentText, HoloRequest, HoloRequestValidator} from "../../providers/holo";
 import {ProviderChatRequest, ProviderMessage, ProviderRequest, ProviderType, RequestType} from "../../providers/types";
 import {env} from "../../env";
 import {ResponseService} from "../../services";
-import {HoloTranslater} from "../../providers/translators";
+import {HoloTranslater} from "../../providers/holo/holo.translator";
 import {ArkErrors} from "arktype";
 import {ClassLogger} from "../../types/class.logger";
 import {OllamaGenerateRequest} from "../../providers/ollama/types";
-import {WorkerRequestFactory} from "../../types/worker.request.factory";
 import {ClaudeResponseMessage, ClaudeTextBlock} from "../../providers/claude/types";
 
 
@@ -106,7 +105,7 @@ export class GuardService extends ClassLogger {
                                 return {passed: true}
                             }
 
-                            const guardRequest = WorkerRequestFactory.create(provider.type, RequestType.GENERATE, payload as ProviderRequest, this.serverId, auth);
+                            const guardRequest = WorkerRequestFactory.create(provider.type, provider.name, RequestType.GENERATE, payload as ProviderRequest, this.serverId, auth);
 
                             const response = await this.responseService.streamRequestOnce(guardRequest);
 
@@ -122,7 +121,7 @@ export class GuardService extends ClassLogger {
                     })
                 );
 
-                return workerRequest.guardResults = results.reduce<GuardResult>(
+                return workerRequest.guardResult = results.reduce<GuardResult>(
                     (acc, r: GuardResult) => {
                         acc.passed = acc.passed && r.passed;
                         if (!acc.passed && !r.passed && r.errors.length) {
@@ -142,5 +141,48 @@ export class GuardService extends ClassLogger {
             }
         }
         return {passed: true};
+    }
+
+    /**
+     * Checks guard results on a worker request and sends error response if guards failed.
+     * Returns true if request should proceed to provider, false if guards failed.
+     */
+    async processGuardResult(request: LLMWorkerRequest, workerId: string): Promise<boolean> {
+        const logger = this.mlog(this.processGuardResult);
+
+        // If no guard results or guards passed, proceed
+        if (!request.guardResult || request.guardResult.passed) {
+            return true;
+        }
+
+        // Guards failed - generate error response
+        logger.warn(`Guard validation failed for request ${request.requestId}`, {
+            providerType: request.providerType,
+            errors: request.guardResult.errors
+        });
+
+        try {
+            // Extract errors - only GuardResultFail has errors property
+            const errors = request.guardResult?.passed === false
+                ? request.guardResult.errors
+                : ['Guard validation failed'];
+
+            // Send guard error response using unified method
+            await this.responseService.sendError(request, {
+                errorType: 'guard',
+                errors,
+                workerId,
+                auditEnabled: true
+            });
+
+            return false; // Do not proceed to provider
+        } catch (error) {
+            logger.error(`Failed to send guard failure response: ${(error as Error).message}`, {
+                requestId: request.requestId,
+                error
+            });
+            // Still block the request even if we fail to send error response
+            return false;
+        }
     }
 }

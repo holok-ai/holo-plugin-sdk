@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import {BaseController} from "./base.controller";
 import {injectable} from "tsyringe";
 import {ApiResponse, HttpApiRequest} from "../types";
-import logger from "../../utils/logger";
 import {ProviderType, RequestType} from "../../providers/types";
 import {RequestService} from "../../admin/services/request.service";
 
@@ -14,6 +13,7 @@ export class PerplexityController extends BaseController {
     }
 
     public chatCompletions = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+        const logger = this.mlog(this.chatCompletions);
         try {
             await this.requestService.processRequest(ProviderType.PERPLEXITY, RequestType.CHAT, req, res);
         } catch (error) {

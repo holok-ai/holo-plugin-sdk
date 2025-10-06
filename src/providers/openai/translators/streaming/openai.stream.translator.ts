@@ -9,6 +9,7 @@ import {OpenAIMessageStartTranslator} from './openai.message.start.translator';
 import {OpenAIContentDeltaTranslator} from './openai.content.delta.translator';
 import {OpenAIMessageDeltaTranslator} from './openai.message.delta.translator';
 import {OpenAIMessageStopTranslator} from './openai.message.stop.translator';
+import {ProviderType} from '../../../types';
 
 @injectable()
 export class OpenAIStreamTranslator extends BaseStreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {
@@ -61,7 +62,7 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator<HoloStreamChunk
         if (!d) return [];
 
         // Fast pass-through for OpenAI→OpenAI streaming
-        if (d.provider === 'openai' && d.provider_delta) {
+        if (d.provider === ProviderType.OPENAI && d.provider_delta) {
             const validated = this.providerValidator(d.provider_delta);
             if (!(validated instanceof ArkErrors)) {
                 return [validated];

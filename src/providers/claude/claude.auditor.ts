@@ -66,7 +66,6 @@ export class ClaudeAuditor extends BaseAuditor {
         llmResponse: Omit<LlmResponse, 'id'>
     ): void {
         const payload = workerResponse.payload;
-
         llmResponse.model_slug = payload.model || 'unknown';
 
         if (workerResponse.fullResponse) {

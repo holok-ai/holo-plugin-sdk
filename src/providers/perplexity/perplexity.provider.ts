@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import {IProvider, ModelInfo} from '../types';
+import {ModelInfo} from '../types';
 import {ErrorMessages} from '../../utils';
 import {ResponseService} from "../../services";
 import {Provider} from "../../db/types";
@@ -8,7 +8,7 @@ import {OpenAIProvider} from "../openai";
 /**
  * Perplexity provider for connecting to OpenAI API
  */
-export class PerplexityProvider extends OpenAIProvider implements IProvider {
+export class PerplexityProvider extends OpenAIProvider {
     protected readonly client: OpenAI;
 
     constructor(

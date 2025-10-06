@@ -5,3 +5,4 @@ export * from './openai.response.translators';
 export * from './openai.response.message.translators';
 export * from './openai.tool.translators';
 export * from './openai.usage.translators';
+export * from './streaming/openai.stream.translator';

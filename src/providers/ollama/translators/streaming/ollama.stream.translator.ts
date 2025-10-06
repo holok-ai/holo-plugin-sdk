@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {ArkErrors} from 'arktype';
 import {BaseStreamTranslator} from '../../../base.stream.translator';
@@ -60,7 +61,7 @@ export class OllamaStreamTranslator extends BaseStreamTranslator<HoloStreamChunk
         if (!d) return [];
 
         // Fast pass-through for Ollama→Ollama streaming
-        if (d.provider === 'ollama' && d.provider_delta) {
+        if (d.provider === ProviderType.OLLAMA && d.provider_delta) {
             const validated = this.providerValidator(d.provider_delta);
             if (!(validated instanceof ArkErrors)) {
                 return [validated];

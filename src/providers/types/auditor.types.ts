@@ -1,6 +1,6 @@
 import {LLMWorkerRequest, LLMWorkerResponse} from "../../types";
 import {LlmRequest, LlmResponse, LlmStatus} from "../../db/types";
-import {ProviderType} from "./index";
+import {ProviderType, ProviderResponse} from "./provider.types";
 
 
 export interface IAuditor {
@@ -29,9 +29,24 @@ export abstract class BaseAuditor implements IAuditor {
         llmResponse: Omit<LlmResponse, 'id'>,
         requestContext?: { userId?: string; applicationId?: string }
     ): void {
-        this.setCommonResponseFields(workerResponse, llmResponse, requestContext);
-        this.mapResponseToHolo(workerResponse, llmResponse);
-        this.collectResponseMetrics(workerResponse, llmResponse);
+        // If payload is an array, audit each chunk separately
+        if (Array.isArray(workerResponse.payload)) {
+            for (const chunk of workerResponse.payload) {
+                const chunkResponse: LLMWorkerResponse = {
+                    ...workerResponse,
+                    payload: chunk
+                };
+                this.auditResponse(chunkResponse, llmResponse, requestContext);
+            }
+            return;
+        }
+
+        // At this point, TypeScript knows payload is a single ProviderResponse
+        const singleResponse = workerResponse as LLMWorkerResponse & { payload: ProviderResponse };
+
+        this.setCommonResponseFields(singleResponse, llmResponse, requestContext);
+        this.mapResponseToHolo(singleResponse, llmResponse);
+        this.collectResponseMetrics(singleResponse, llmResponse);
     }
 
     protected abstract toHoloRequest(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
@@ -40,12 +55,12 @@ export abstract class BaseAuditor implements IAuditor {
 
 
     protected abstract mapResponseToHolo(
-        workerResponse: LLMWorkerResponse,
+        workerResponse: LLMWorkerResponse & { payload: ProviderResponse },
         llmResponse: Omit<LlmResponse, 'id'>
     ): void;
 
     protected abstract collectResponseMetrics(
-        workerResponse: LLMWorkerResponse,
+        workerResponse: LLMWorkerResponse & { payload: ProviderResponse },
         llmResponse: Omit<LlmResponse, 'id'>
     ): void;
 

@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {ArkErrors} from 'arktype';
 import {v4 as uuidv4} from 'uuid';
@@ -32,31 +33,6 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                     const parsedArgs = safeParse(rawArgs);
                     const toolCallIndex = tc.index ?? 0;
 
-                    // Build a lean per-tool-call provider_delta
-                    const leanProviderDelta = pickDefined({
-                        id: source.id,
-                        model: source.model,
-                        created: source.created,
-                        object: 'chat.completion.chunk' as const,
-                        choices: [{
-                            index: choice.index,
-                            delta: {
-                                tool_calls: [pickDefined({
-                                    index: toolCallIndex,
-                                    id: tc.id,
-                                    type: tc.type || 'function' as const,
-                                    function: pickDefined({
-                                        name: tc.function?.name,
-                                        arguments: rawArgs // Keep raw fragment for replay/accumulation
-                                    })
-                                })]
-                            },
-                            finish_reason: null
-                        }],
-                        system_fingerprint: source.system_fingerprint,
-                        service_tier: source.service_tier
-                    });
-
                     // Emit shell when partial JSON; full tool_calls when complete
                     const isPartialJson = rawArgs && Object.keys(parsedArgs).length === 0;
 
@@ -65,7 +41,7 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                         model: source.model,
                         created: source.created * 1000, // sec -> ms
                         delta: {
-                            provider: 'openai' as const,
+                            provider: ProviderType.OPENAI,
                             type: 'message_delta' as const,
                             choice: choice.index,
                             index: toolCallIndex,
@@ -81,7 +57,8 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                                         })
                                     })]
                                 },
-                            provider_delta: leanProviderDelta
+                            // Store full source chunk for lossless round-trips
+                            provider_delta: source
                         }
                     }) as Partial<HoloStreamChunk>);
                 }
@@ -102,7 +79,7 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                     model: source.model,
                     created: source.created * 1000,
                     delta: {
-                        provider: 'openai' as const,
+                        provider: ProviderType.OPENAI,
                         type: 'message_delta' as const,
                         // Omit choice - usage applies to entire completion
                         delta: {},
@@ -121,7 +98,7 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
         if (!d || d.type !== 'message_delta') return [];
         
         // Fast pass-through for OpenAI→OpenAI streaming
-        if (d.provider === 'openai' && d.provider_delta) {
+        if (d.provider === 'OPENAI' && d.provider_delta) {
             const validated = this.providerValidator(d.provider_delta);
             if (!(validated instanceof ArkErrors)) {
                 return [validated];

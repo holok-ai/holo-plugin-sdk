@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {BaseStreamTranslator} from '../../../base.stream.translator';
 import {HoloStreamChunk, HoloStreamChunkValidator, HoloFinishReason} from '../../../holo';
@@ -25,7 +26,7 @@ export class OllamaMessageStopTranslator extends BaseStreamTranslator<HoloStream
         
         return [pickDefined({
             delta: {
-                provider: 'ollama' as const,
+                provider: ProviderType.OLLAMA,
                 type: 'message_stop' as const,
                 delta: {},
                 provider_delta: source

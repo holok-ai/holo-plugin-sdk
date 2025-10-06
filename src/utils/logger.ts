@@ -101,10 +101,10 @@ const logger = winston.createLogger(
     createLoggerOptions(env.id)
 );
 
-export const LoggerFactoryToken: InjectionToken<(cls: Function) => winston.Logger> = 'LoggerFactory';
+export const LoggerFactoryToken: InjectionToken<(cls: Function | string) => winston.Logger> = 'LoggerFactory';
 
 container.register(LoggerFactoryToken, {
-    useFactory: () => (cls: Function) => logger.child({className: cls.name})
+    useFactory: () => (cls: Function | string) => logger.child({className: (cls as Function).name ?? cls})
 });
 
 export default logger;

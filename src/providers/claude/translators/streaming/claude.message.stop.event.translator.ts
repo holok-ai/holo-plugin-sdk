@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {HoloStreamChunk} from '../../../holo';
 import {ClaudeRawMessageStopEvent} from '../../types';
@@ -41,7 +42,7 @@ export class ClaudeMessageStopEventTranslator extends BaseStreamTranslator<HoloS
     protected async toHoloManyImpl(source: ClaudeRawMessageStopEvent): Promise<Partial<HoloStreamChunk>[]> {
         return [{
             delta: {
-                provider: 'claude' as const,
+                provider: ProviderType.CLAUDE,
                 type: 'message_stop' as const,
                 delta: {},
                 provider_delta: source, // carry raw event for lossless round-trip

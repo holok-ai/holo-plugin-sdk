@@ -1,6 +1,8 @@
-import {OllamaChatRequestValidator, OllamaGenerateRequestValidator} from "./ollama/validators";
-import {ClaudeChatRequestValidator} from "./claude/validators";
-import {OpenAIChatRequestValidator} from "./openai/validators";
+import {OllamaRequestValidator, OllamaResponseValidator} from "./ollama/validators";
+import {ClaudeChatRequestValidator, ClaudeResponseValidator} from "./claude/validators";
+import {OpenAIChatRequestValidator, OpenAIResponseValidator} from "./openai/validators";
+import {ProviderRequest, ProviderResponse} from "./types";
+import {type} from "arktype";
 
 export * from './claude/validators';
 export * from './holo/validators';
@@ -8,5 +10,12 @@ export * from './ollama/validators';
 export * from './openai/validators';
 
 
-export const ProviderRequestValidator = OllamaChatRequestValidator.or(OllamaGenerateRequestValidator).or(ClaudeChatRequestValidator).or(OpenAIChatRequestValidator);
+export const ProviderRequestValidator =
+    OllamaRequestValidator
+        .or(ClaudeChatRequestValidator)
+        .or(OpenAIChatRequestValidator) satisfies type<ProviderRequest>;
 
+export const ProviderResponseValidator =
+    OllamaResponseValidator
+        .or(ClaudeResponseValidator)
+        .or(OpenAIResponseValidator) satisfies type<ProviderResponse>;

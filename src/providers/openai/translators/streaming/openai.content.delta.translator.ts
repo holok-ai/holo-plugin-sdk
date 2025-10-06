@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {ArkErrors} from 'arktype';
 import {BaseStreamTranslator} from '../../../base.stream.translator';
@@ -36,26 +37,14 @@ export class OpenAIContentDeltaTranslator extends BaseStreamTranslator<HoloStrea
                 model: source.model,
                 created: source.created * 1000, // sec -> ms
                 delta: {
-                    provider: 'openai' as const,
+                    provider: ProviderType.OPENAI,
                     type: 'content_delta' as const,
                     choice: choiceIndex,
                     delta: {
                         content: content
                     },
-                    // Lean provider_delta: store only per-choice data
-                    provider_delta: pickDefined({
-                        id: source.id,
-                        model: source.model,
-                        created: source.created,
-                        choices: [{
-                            index: choice.index,
-                            delta: { content },
-                            finish_reason: null
-                        }],
-                        object: 'chat.completion.chunk',
-                        system_fingerprint: source.system_fingerprint,
-                        service_tier: source.service_tier
-                    })
+                    // Store full source chunk for lossless round-trips
+                    provider_delta: source
                 }
             }) as Partial<HoloStreamChunk>);
         }
@@ -68,7 +57,7 @@ export class OpenAIContentDeltaTranslator extends BaseStreamTranslator<HoloStrea
         if (!d || d.type !== 'content_delta') return [];
 
         // Fast pass-through for OpenAI→OpenAI streaming
-        if (d.provider === 'openai' && d.provider_delta) {
+        if (d.provider === 'OPENAI' && d.provider_delta) {
             const validated = this.providerValidator(d.provider_delta);
             if (!(validated instanceof ArkErrors)) {
                 return [validated];

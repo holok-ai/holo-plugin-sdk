@@ -19,6 +19,7 @@ export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
 
         constructor(...args: any[]) {
             super(...args);
+            this.id = args[0];
             this.adminCommandQueue = env.queue.adminCommandQueue;
             this.adminExchange = env.queue.adminExchange;
             this.adminService = container.resolve(AdminService);

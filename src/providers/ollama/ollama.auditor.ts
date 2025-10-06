@@ -3,7 +3,7 @@ import {LLMWorkerRequest, LLMWorkerResponse} from '../../types';
 import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
 import logger from '../../utils/logger';
 import {BaseAuditor, ProviderType, RequestType} from "../types";
-import {OllamaChatRequest, OllamaGenerateRequest} from './types';
+import {OllamaChatRequest, OllamaGenerateRequest} from "./types";
 
 @injectable()
 export class OllamaAuditor extends BaseAuditor {

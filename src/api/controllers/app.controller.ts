@@ -17,6 +17,7 @@ export class AppController extends BaseController {
     }
 
     public resolveRequest = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+        const logger = this.mlog(this.resolveRequest);
         try {
             const {auth} = req;
             const provider = auth ? auth.providerType : (req.params.provider?.toUpperCase() as ProviderType);

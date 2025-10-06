@@ -1,7 +1,6 @@
 import {AIProvider} from '../ai.provider';
-import logger from '../../utils/logger';
 import OpenAI from 'openai';
-import {AIRequestStat, IProvider, ModelInfo, ProviderRequest, ProviderType, RequestType} from '../types';
+import {AIRequestStat, ModelInfo, ProviderRequest, ProviderType, RequestType} from '../types';
 import {ErrorMessages} from '../../utils';
 import {ResponseService} from "../../services";
 import {Provider} from "../../db/types";
@@ -10,7 +9,7 @@ import {OpenAIChatRequest} from "./types";
 /**
  * OpenAI provider for connecting to OpenAI API
  */
-export class OpenAIProvider extends AIProvider implements IProvider {
+export class OpenAIProvider extends AIProvider {
     protected readonly client: OpenAI;
 
     constructor(
@@ -24,7 +23,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
 
         this.client = new OpenAI({
             apiKey: this.config.apiKey,
-            logger: logger,
+            logger: this.log,
             logLevel: 'debug',
         });
     }
@@ -33,6 +32,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
      * Initialize the provider
      */
     async init(): Promise<void> {
+        const logger = this.mlog(this.init);
         try {
             // Initialize the client
             await this.getModels();
@@ -48,6 +48,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
      * Get available models
      */
     async getModels(): Promise<ModelInfo[]> {
+        const logger = this.mlog(this.getModels);
         try {
             if (!this.client) {
                 await this.init();
@@ -93,6 +94,7 @@ export class OpenAIProvider extends AIProvider implements IProvider {
         requestId: string,
         chatRequest: OpenAIChatRequest
     ): Promise<void> {
+        const logger = this.mlog(this._openaiChatCompletions);
         await this.ensureInitialized();
         this.validateModel(chatRequest.model);
 

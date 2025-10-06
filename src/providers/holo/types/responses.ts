@@ -1,5 +1,6 @@
 // ---------- HoloContent (portable response content) ----------
 import {HoloMessage} from "./requests";
+import {StreamingProviderType} from "../../types";
 import {
     ClaudeRawContentBlockDeltaEvent,
     ClaudeRawContentBlockStartEvent,
@@ -74,7 +75,7 @@ export type HoloStreamingDeltaType =
     | 'message_stop';
 
 export interface HoloStreamingDelta {
-    provider: 'claude' | 'openai' | 'ollama';
+    provider: StreamingProviderType;
     type: HoloStreamingDeltaType;
     index?: number;    // Claude content block idx or OpenAI tool_calls idx
     choice?: number;   // OpenAI multi-choice

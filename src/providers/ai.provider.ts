@@ -1,18 +1,34 @@
 import {AIProviderConfig, AIRequestStat, ModelInfo, ProviderRequest, RequestType} from "./types";
 import {ResponseService} from "../services";
-import {LLMWorkerRequest, LLMWorkerResponse} from "../types";
+import {LLMWorkerRequest, LLMWorkerResponse, WorkerResponseFactory} from "../types";
 import {ErrorMessages} from "../utils";
 import {Provider} from "../db/types";
 import {ProviderRequestValidator} from "./validators";
 import {ClassLogger} from "../types/class.logger";
 import {env} from "../env";
-import {WorkerResponseFactory} from "../types/worker.response.factory";
+
+
+export interface IProvider {
+    name: string;
+    config: AIProviderConfig;
+
+    init(): Promise<void>;
+
+    getModels(): Promise<ModelInfo[]>;
+
+    processRequest(request: LLMWorkerRequest): Promise<AIRequestStat>;
+
+    handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat>;
+
+    onResponseChunk(responseChunk: LLMWorkerResponse): Promise<void>;
+}
+
 
 /**
  * Base interface for LLM providers
  * All LLM implementations must implement these methods
  */
-export abstract class AIProvider extends ClassLogger {
+export abstract class AIProvider extends ClassLogger implements IProvider {
     protected models: Record<string, ModelInfo> | null = null;
 
     //workerId is passed in via provider service
@@ -100,21 +116,7 @@ export abstract class AIProvider extends ClassLogger {
      * @param error - The error that occurred during processing
      */
     async onError(sourceId: string, requestId: string, error: Error) {
-        const errorResponse: LLMWorkerResponse = {
-            organizationId: this.provider.organization_id,
-            sourceId: sourceId,
-            requestId: requestId,
-            providerType: this.provider.type as any, // Provider will be set by concrete implementation
-            workerId: env.worker.serverId || 'unknown',
-            payload: {
-                type: 'error',
-                error: {
-                    message: error.message
-                },
-                requestId
-            }
-        };
-        await this.onResponseChunk(errorResponse);
+        await this.responseService.sendErrorResponse(this.provider.organization_id, this.provider.type, this.provider.name, this.workerId, sourceId, requestId, error);
     }
 
     /**
@@ -167,7 +169,8 @@ export abstract class AIProvider extends ClassLogger {
             payload,
             this.provider.organization_id,
             fullResponse,
-            env.worker.serverId || 'unknown'
+            env.worker.serverId || 'unknown',
+            this.provider.name
         );
     }
 

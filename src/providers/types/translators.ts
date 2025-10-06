@@ -1,5 +1,5 @@
 import {ArkErrors} from "arktype";
-import {HoloMessage, HoloRequest, HoloResponse} from "../holo";
+import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "../holo";
 import {ProviderChatRequest, ProviderMessage, ProviderResponse} from "./index";
 
 export interface IProviderTranslator {
@@ -12,4 +12,8 @@ export interface IProviderTranslator {
     fromHoloMessages(messages: HoloMessage[]): Promise<Partial<ProviderMessage>[]>;
 
     toHoloResponse(response: ProviderResponse): Promise<Partial<HoloResponse>>;
+
+    fromHoloResponse(response: HoloResponse): Promise<Partial<ProviderResponse>>;
+
+    fromHoloStreamChunks(chunks: HoloStreamChunk[]): Promise<unknown>;
 }

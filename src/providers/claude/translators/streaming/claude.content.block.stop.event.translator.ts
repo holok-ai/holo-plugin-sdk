@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {BaseStreamTranslator} from '../../../base.stream.translator';
 import {HoloStreamChunk, HoloStreamChunkValidator} from '../../../holo';
@@ -21,7 +22,7 @@ export class ClaudeContentBlockStopEventTranslator extends BaseStreamTranslator<
         return [{
             // id/model typically carried by orchestrator from message_start
             delta: {
-                provider: 'claude' as const,
+                provider: ProviderType.CLAUDE,
                 type: 'message_delta' as const,
                 index: source.index, // which block just stopped
                 delta: {},           // no content change
@@ -37,7 +38,7 @@ export class ClaudeContentBlockStopEventTranslator extends BaseStreamTranslator<
         const pd = delta?.provider_delta;
 
         // Only pass through if it's a valid Claude stop event
-        if (delta?.provider === 'claude' && pd) {
+        if (delta?.provider === ProviderType.CLAUDE && pd) {
             const validated = this.providerValidator(pd);
             if (!(validated instanceof ArkErrors) && validated.type === 'content_block_stop') {
                 return [validated];

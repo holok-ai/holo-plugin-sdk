@@ -126,6 +126,10 @@ export const OllamaChatRequestValidator = type.merge(
     OllamaOnlyChatRequestValidator
 ) satisfies Type<OllamaChatRequest>;
 
+
+export const OllamaRequestValidator = OllamaGenerateRequestValidator.or(OllamaChatRequestValidator);
+
+
 export const OllamaGenerateRequestDefaults: Partial<GenerateRequest> = {
     stream: false
 };

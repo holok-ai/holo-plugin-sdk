@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {BaseStreamTranslator} from '../../../base.stream.translator';
 import {HoloStreamChunk, HoloStreamChunkValidator} from '../../../holo';
@@ -34,7 +35,7 @@ export class OllamaContentDeltaTranslator extends BaseStreamTranslator<HoloStrea
         if (typeof content === 'string' && content.length > 0) {
             return [{
                 delta: {
-                    provider: 'ollama' as const,
+                    provider: ProviderType.OLLAMA,
                     type: 'content_delta' as const,
                     delta: {
                         content: content

@@ -11,6 +11,7 @@ import {
     ClaudeRawMessageStopEventValidator
 } from "../../claude/validators";
 import {OllamaChatResponseValidator, OllamaGenerateResponseValidator} from "../../ollama/validators";
+import {ProviderType} from "../../types";
 
 // ---------- Usage validator ----------
 export const HoloUsageValidator = type({
@@ -66,7 +67,7 @@ export const HoloProviderDeltaValidator = ClaudeRawMessageStartEventValidator
     .or(OllamaGenerateResponseValidator.partial()) satisfies Type<HoloProviderDelta>;
 
 export const HoloStreamingDeltaValidator = type({
-    provider: "'claude'|'openai'|'ollama'",
+    provider: type.enumerated(ProviderType.CLAUDE, ProviderType.OPENAI, ProviderType.OLLAMA),
     type: "'message_start'|'content_delta'|'message_delta'|'message_stop'",
     'index?': 'number',
     'choice?': 'number',

@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {ArkErrors} from 'arktype';
 import {BaseStreamTranslator} from '../../../base.stream.translator';
@@ -32,7 +33,7 @@ export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
             
             return [pickDefined({
                 delta: {
-                    provider: 'ollama' as const,
+                    provider: ProviderType.OLLAMA,
                     type: 'message_delta' as const,
                     delta: {
                         tool_calls: toolCalls
@@ -59,7 +60,7 @@ export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
 
         return [pickDefined({
             delta: {
-                provider: 'ollama' as const,
+                provider: ProviderType.OLLAMA,
                 type: 'message_delta' as const,
                 delta: hasToolCalls ? { tool_calls: toolCalls } : {},
                 usage: hasUsage ? usage : undefined,
@@ -74,7 +75,7 @@ export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
         if (!d || d.type !== 'message_delta') return [];
 
         // Fast pass-through for Ollama→Ollama streaming
-        if (d.provider === 'ollama' && d.provider_delta) {
+        if (d.provider === ProviderType.OLLAMA && d.provider_delta) {
             const validated = this.providerValidator(d.provider_delta);
             if (!(validated instanceof ArkErrors)) {
                 return [validated];

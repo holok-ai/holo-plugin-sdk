@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {ArkErrors} from 'arktype';
 import {BaseStreamTranslator} from '../../../base.stream.translator';
@@ -56,7 +57,8 @@ export class ClaudeStreamTranslator extends BaseStreamTranslator<HoloStreamChunk
 
         // Fast pass-through for Claude→Claude streaming
         // If we already have a validated Claude event, just return it
-        if (d.provider === 'claude' && d.provider_delta) {
+        const hasClaudeProviderDelta = d.provider === ProviderType.CLAUDE && d.provider_delta;
+        if (hasClaudeProviderDelta) {
             const validated = this.providerValidator(d.provider_delta);
             if (!(validated instanceof ArkErrors)) {
                 // It's already a valid Claude event, pass it through
@@ -64,12 +66,33 @@ export class ClaudeStreamTranslator extends BaseStreamTranslator<HoloStreamChunk
             }
         }
 
+        // Detect cross-provider translation (OpenAI/Ollama → Claude)
+        // Native Claude streams have provider_delta populated with raw Claude events
+        // Cross-provider translations don't have provider_delta (only normalized Holo data)
+        // Note: d.provider is always CLAUDE when translating TO Claude (set by factory)
+        const isCrossProviderTranslation = !d.provider_delta;
+
         // Route based on delta type for efficiency
         switch (d.type) {
             case 'message_start':
-                // Only message_start translator handles this
-                return this.messageStartTranslator.fromHoloMany(source);
-                
+                // For non-Claude sources, synthesize content_block_start after message_start
+                const messageStartResults: Partial<ClaudeRawMessageStreamEvent>[] =
+                    await this.messageStartTranslator.fromHoloMany(source);
+
+                if (isCrossProviderTranslation) {
+                    // Synthesize content_block_start[0] for text content
+                    messageStartResults.push({
+                        type: 'content_block_start',
+                        index: 0,
+                        content_block: {
+                            type: 'text',
+                            text: ''
+                        }
+                    } as Partial<ClaudeRawMessageStreamEvent>);
+                }
+
+                return messageStartResults;
+
             case 'message_delta':
                 // Message delta can produce multiple event types:
                 // - message_delta (for finish_reason/usage)
@@ -96,13 +119,19 @@ export class ClaudeStreamTranslator extends BaseStreamTranslator<HoloStreamChunk
                 return this.contentBlockDeltaTranslator.fromHoloMany(source);
                 
             case 'message_stop':
-                // Message stop produces message_stop (and potentially content_block_stop if needed)
+                // For non-Claude sources, synthesize content_block_stop before message_stop
                 const stopResults: Partial<ClaudeRawMessageStreamEvent>[] = [];
-                
-                // Content block stops would be synthesized at a higher layer if needed
-                // For now, just handle message stop
+
+                if (isCrossProviderTranslation) {
+                    // Synthesize content_block_stop[0] to close the text content block
+                    stopResults.push({
+                        type: 'content_block_stop',
+                        index: 0
+                    } as Partial<ClaudeRawMessageStreamEvent>);
+                }
+
                 stopResults.push(...await this.messageStopTranslator.fromHoloMany(source));
-                
+
                 return stopResults;
                 
             default:

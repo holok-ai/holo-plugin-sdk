@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {v4 as uuidv4} from 'uuid';
 import {BaseStreamTranslator} from '../../../base.stream.translator';
@@ -59,7 +60,7 @@ export class ClaudeMessageStartEventTranslator extends BaseStreamTranslator<Holo
             id: source.message.id,
             model: source.message.model,
             delta: {
-                provider: 'claude' as const,
+                provider: ProviderType.CLAUDE,
                 type: 'message_start' as const,
                 choice: 0,  // Claude is always single-choice
                 delta: {

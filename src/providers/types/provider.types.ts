@@ -1,22 +1,6 @@
 import {OllamaChatRequest, OllamaGenerateRequest, OllamaMessage, OllamaResponse} from "../ollama/types";
 import {OpenAIChatRequest, OpenAIRequestMessage, OpenAIResponse} from "../openai/types";
-import {LLMWorkerRequest, LLMWorkerResponse} from "../../types";
 import {ClaudeChatRequest, ClaudeRequestMessage, ClaudeResponse} from "../claude/types";
-
-export interface IProvider {
-    name: string;
-    config: AIProviderConfig;
-
-    init(): Promise<void>;
-
-    getModels(): Promise<ModelInfo[]>;
-
-    processRequest(request: LLMWorkerRequest): Promise<AIRequestStat>;
-
-    handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat>;
-
-    onResponseChunk(responseChunk: LLMWorkerResponse): Promise<void>;
-}
 
 export interface AIProviderConfig {
     baseUrl?: string
@@ -90,3 +74,6 @@ export enum ProviderType {
     OPENAI = 'OPENAI',
     PERPLEXITY = 'PERPLEXITY'
 }
+
+// Streaming-capable providers (subset of ProviderType)
+export type StreamingProviderType = ProviderType.OLLAMA | ProviderType.CLAUDE | ProviderType.OPENAI;

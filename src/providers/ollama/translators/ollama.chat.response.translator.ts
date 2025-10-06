@@ -7,8 +7,12 @@ import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
 import {OllamaMessageTranslator} from "./ollama.message.translators";
 
+/**
+ * Translator for Ollama Chat API responses.
+ * Uses `message: OllamaMessage` (no `context` field).
+ */
 @injectable()
-export class OllamaResponseTranslator extends BaseTranslator<HoloResponse, OllamaChatResponse> {
+export class OllamaChatResponseTranslator extends BaseTranslator<HoloResponse, OllamaChatResponse> {
     protected holoValidator = HoloResponseValidator;
     protected providerValidator = OllamaChatResponseValidator;
     protected holoDefaults: Partial<HoloResponse> = {};

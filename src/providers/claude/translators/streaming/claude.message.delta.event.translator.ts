@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {BaseStreamTranslator} from '../../../base.stream.translator';
 import {HoloStreamChunk} from '../../../holo';
@@ -60,7 +61,7 @@ export class ClaudeMessageDeltaEventTranslator extends BaseStreamTranslator<Holo
 
         const chunk: Partial<HoloStreamChunk> = pickDefined({
             delta: {
-                provider: 'claude' as const,
+                provider: ProviderType.CLAUDE,
                 type: 'message_delta' as const,
                 choice: 0,
                 delta: {},  // Semantic no-op; finish_reason/usage carry the meaning

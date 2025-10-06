@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {ArkErrors} from 'arktype';
 import {v4 as uuidv4} from 'uuid';
@@ -33,26 +34,14 @@ export class OpenAIMessageStartTranslator extends BaseStreamTranslator<HoloStrea
                 model: source.model,
                 created: source.created * 1000, // sec → ms
                 delta: {
-                    provider: 'openai' as const,
+                    provider: ProviderType.OPENAI,
                     type: 'message_start' as const,
                     choice: choiceIndex,
                     delta: {
                         role: roleChoice.delta!.role // 'assistant' etc.
                     },
-                    // Lean provider_delta for lossless replay
-                    provider_delta: pickDefined({
-                        id: source.id,
-                        model: source.model,
-                        created: source.created,
-                        object: 'chat.completion.chunk' as const,
-                        choices: [{
-                            index: choiceIndex,
-                            delta: {role: roleChoice.delta!.role},
-                            finish_reason: null
-                        }],
-                        system_fingerprint: source.system_fingerprint,
-                        service_tier: source.service_tier
-                    })
+                    // Store full source chunk for lossless round-trips
+                    provider_delta: source
                 }
             }) as Partial<HoloStreamChunk>;
         });
@@ -64,7 +53,7 @@ export class OpenAIMessageStartTranslator extends BaseStreamTranslator<HoloStrea
         if (!d || d.type !== 'message_start') return [];
 
         // Fast pass-through if we already carry an OpenAI chunk
-        if (d.provider === 'openai' && d.provider_delta) {
+        if (d.provider === 'OPENAI' && d.provider_delta) {
             const validated = this.providerValidator(d.provider_delta);
             if (!(validated instanceof ArkErrors)) {
                 return [validated];

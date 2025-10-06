@@ -4,18 +4,24 @@ import {IProviderTranslator} from "../types";
 import {
     OpenAIMessageTranslator,
     OpenAIRequestTranslator,
-    OpenAIResponseTranslator
+    OpenAIResponseTranslator,
+    OpenAIStreamTranslator
 } from "./translators";
 import {OpenAIChatRequest, OpenAIRequestMessage, OpenAIResponse} from "./types";
-import {HoloMessage, HoloRequest, HoloResponse} from "../holo";
+import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "../holo";
 
 @injectable()
 export class OpenAITranslator implements IProviderTranslator {
     constructor(
         private readonly responseTranslator: OpenAIResponseTranslator,
         private readonly requestTranslator: OpenAIRequestTranslator,
-        private readonly messageTranslator: OpenAIMessageTranslator
+        private readonly messageTranslator: OpenAIMessageTranslator,
+        private readonly streamTranslator: OpenAIStreamTranslator
     ) {
+    }
+
+    async fromHoloResponse(response: HoloResponse): Promise<Partial<OpenAIResponse>> {
+        return this.responseTranslator.fromHolo(response);
     }
 
     async toHoloResponse(response: OpenAIResponse): Promise<Partial<HoloResponse>> {
@@ -36,5 +42,9 @@ export class OpenAITranslator implements IProviderTranslator {
 
     async toHoloMessages(messages: OpenAIRequestMessage[]): Promise<Partial<HoloMessage>[]> {
         return this.messageTranslator.toHoloArray(messages);
+    }
+
+    async fromHoloStreamChunks(chunks: HoloStreamChunk[]): Promise<unknown> {
+        return this.streamTranslator.fromHoloManyArray(chunks);
     }
 }

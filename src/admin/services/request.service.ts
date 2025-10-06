@@ -7,7 +7,8 @@ import {ResponseService} from "../../services";
 import {env} from "../../env";
 import {GuardService} from "./guard.service";
 import {ClassLogger} from "../../types/class.logger";
-import {WorkerRequestFactory} from "../../types/worker.request.factory";
+import {WorkerRequestFactory} from "../../types";
+import {OrganizationService} from "./organization.service";
 
 
 @injectable()
@@ -16,33 +17,50 @@ export class RequestService extends ClassLogger {
 
     constructor(
         private readonly responseService: ResponseService,
-        private readonly guardService: GuardService
+        private readonly guardService: GuardService,
+        private organizationService: OrganizationService,
     ) {
         super();
     }
 
     async processRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest, res: Response) {
+        const logger = this.mlog(this.processRequest);
+        const errors: string[] = [];
         // LLM specific worker request (from API)
-        const workerRequest = await this.parseRequest(providerType, type, req);
-        this.log.info(`Processing request: ${providerType} ${type}`, {
-            methodName: 'processRequest',
-            requestId: workerRequest.requestId
-        });
+        const {auth, body} = req;
+        const provider = (auth?.organizationId === undefined || auth?.appSlug === undefined) ?
+            this.organizationService.getFirstProviderByType(providerType) :
+            this.organizationService.getProviderByModel(auth?.organizationId, auth?.appSlug, body.model);
 
-        //put service in here
-        const {auth} = req;
-        await this.guardService.guard(providerType, type, workerRequest, auth);
+        const workerRequest = await this.parseRequest(providerType, provider?.name, type, req);
 
-        this.log.info(`Request guarded: ${providerType} ${type}`);
+        if (!provider) {
+            logger.error(`Provider not found for ${providerType} ${type}, auth: ${JSON.stringify(auth, null, 2)}`,
+                {requestId: workerRequest.requestId});
+            errors.push(`An error occurred while trying to process your request. Please contact your administrator and refer to ${workerRequest.requestId}.`)
+            workerRequest.errors = errors;
+        }
+
+        if (provider) {
+            logger.info(`Processing request: ${providerType} ${type}`, {
+                methodName: 'processRequest',
+                requestId: workerRequest.requestId
+            });
+
+
+            await this.guardService.guard(providerType, type, workerRequest, auth);
+            logger.info(`Request guarded: ${providerType} ${type}`);
+        }
+
         await this.responseService.sendRequest(req, res, workerRequest);
 
-        this.log.info(`Request processed: ${providerType} ${type}`, {
+        logger.info(`Request processed: ${providerType} ${type}`, {
             methodName: 'processRequest',
             requestId: workerRequest.requestId
         });
     }
 
-    async parseRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest) {
-        return WorkerRequestFactory.fromRequest(providerType, type, req, this.serverId);
+    async parseRequest(providerType: ProviderType, providerName: string | undefined, type: RequestType, req: HttpApiRequest) {
+        return WorkerRequestFactory.fromRequest(providerType, providerName, type, req, this.serverId);
     }
 }

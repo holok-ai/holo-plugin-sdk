@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import logger from '../utils/logger';
+import {ClassLogger} from "../types/class.logger";
 
 export interface IAppServer {
     onError(error: Error): Promise<void>;
@@ -9,32 +9,38 @@ export interface IAppServer {
     onShutdown(): Promise<void>;
 }
 
-export class BaseServer implements IAppServer {
+export class BaseServer extends ClassLogger implements IAppServer {
 
     protected initialized = false;
 
     constructor(readonly id: string) {
+        super();
         // logger.debug(`Server (${this.id}) Config: ${JSON.stringify(env, null, 2)}`)
+        this.__className = `${this.constructor.name}-${this.id}`;
     }
 
     async init() {
+        const logger = this.mlog(this.init);
         await this.onInit();
         this.initialized = true;
         logger.info(`Server (${this.id}) started successfully.`);
     }
 
     async shutdown() {
+        const logger = this.mlog(this.shutdown);
         await this.onShutdown();
         logger.info('Server shutdown gracefully.');
         process.exit(0);
     }
 
     private async handleError(error: Error) {
+        const logger = this.mlog(this.handleError);
         logger.error(`Server error: ${(error as Error).message}`);
         await this.onError(error);
     }
 
     async start() {
+        const logger = this.mlog(this.start);
         try {
             await this.init();
 

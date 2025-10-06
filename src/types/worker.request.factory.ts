@@ -3,27 +3,30 @@ import {HttpApiRequest} from "../api/types";
 import {JWTPayload} from "../admin/types";
 import {v4 as uuidv4} from "uuid";
 import logger from "../utils/logger";
-import {ErrorMessages} from "../utils";
-import {LLMWorkerRequest} from "./index";
+import {ErrorMessages, pickDefined} from "../utils";
+import {LLMWorkerRequest, LLMWorkerRequestValidator} from "./index";
 import {OllamaChatRequestWithDefaults, OllamaGenerateRequestWithDefaults} from "../providers/ollama/validators";
 import {ClaudeChatRequestWithDefaults} from "../providers/claude/validators";
 import {OpenAIChatRequestValidator} from "../providers/openai/validators";
 import {ArkErrors} from "arktype";
 
 export class WorkerRequestFactory {
+    static logger = logger.child({className: 'WorkerRequestFactory'});
     static fromRequest(
         providerType: ProviderType,
+        providerName: string | undefined,
         type: RequestType,
         req: HttpApiRequest,
         sourceId: string
     ): LLMWorkerRequest {
         const payload = this.parseLLMRequest(req, providerType, type);
         const {auth} = req;
-        return this.create(providerType, type, payload, sourceId, auth);
+        return this.create(providerType, providerName, type, payload, sourceId, auth);
     }
 
     static create(
         providerType: ProviderType,
+        providerName: string | undefined,
         type: RequestType,
         payload: ProviderRequest,
         sourceId: string,
@@ -36,8 +39,9 @@ export class WorkerRequestFactory {
             sanitizedAuth = rest || {};
         }
 
-        const workerRequest: LLMWorkerRequest = {
+        return LLMWorkerRequestValidator.brand('LLMWorkerRequestValidator').assert(pickDefined({
             providerType,
+            providerName,
             sourceId,
             requestId: uuidv4(),
             type,
@@ -46,8 +50,7 @@ export class WorkerRequestFactory {
             timestamp: Date.now(),
             ...sanitizedAuth
 
-        };
-        return workerRequest;
+        }));
     }
 
     static parseLLMRequest(
@@ -56,7 +59,7 @@ export class WorkerRequestFactory {
         type: RequestType
     ): ProviderRequest {
         const {body} = req;
-        logger.info(`parsing request: ${JSON.stringify(body, null, 2)}`)
+        // this.logger.info(`parsing request: ${JSON.stringify(body, null, 2)}`)
         let request: ProviderRequest | ArkErrors;
         switch (providerType) {
             case ProviderType.OLLAMA:

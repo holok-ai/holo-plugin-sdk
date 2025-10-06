@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {BaseStreamTranslator} from '../../../base.stream.translator';
 import {HoloStreamChunk, HoloStreamChunkValidator} from '../../../holo';
@@ -59,7 +60,7 @@ export class ClaudeContentBlockStartEventTranslator extends BaseStreamTranslator
             // id and model are not available on content_block_start events
             // The streaming orchestrator would need to maintain these from message_start
             delta: {
-                provider: 'claude' as const,
+                provider: ProviderType.CLAUDE,
                 type: 'message_delta' as const,
                 index: source.index,
                 delta: {

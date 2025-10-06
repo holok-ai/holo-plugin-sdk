@@ -93,7 +93,7 @@ export class OrganizationCache {
     }
 
     getAll<K extends OrgCacheType>(cacheType: K): OrgCacheMap[K][] {
-        return this.cacheOf(cacheType).values().toArray() as unknown as OrgCacheMap[K][];
+        return Array.from(this.cacheOf(cacheType).values()) as unknown as OrgCacheMap[K][];
     }
 
     // ----- Generic operations -----
