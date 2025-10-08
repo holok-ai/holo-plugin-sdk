@@ -94,8 +94,9 @@ export const OllamaShowResponseValidator = type({
     details: OllamaModelDetailsValidator,
     messages: OllamaMessageValidator.array(),
     modified_at: 'Date',
-    model_info: type('instanceof', Map<string, any>),
-    'projector_info?': type('instanceof', Map<string, any>)
+    model_info: type('instanceof', Map<string, unknown>),
+    capabilities: 'string[]',
+    'projector_info?': type('instanceof', Map<string, unknown>)
 }) satisfies Type<OllamaShowResponse>;
 
 export const OllamaListResponseValidator = type({

@@ -8,6 +8,8 @@ import type {
     ChatCompletionContentPartRefusal,
     ChatCompletionContentPartText,
     ChatCompletionCreateParamsBase,
+    ChatCompletionCustomTool,
+    ChatCompletionFunctionTool,
     ChatCompletionMessageParam,
     ChatCompletionPredictionContent,
     ChatCompletionStreamOptions,
@@ -43,6 +45,9 @@ export type OpenAIChatCompletionContentPart = ChatCompletionContentPart;
 export type OpenAIChatCompletionContentPartFile = ChatCompletionContentPart.File;
 export type OpenAIChatCompletionContentPartFileFile = ChatCompletionContentPart.File.File;
 export type OpenAIChatCompletionAudioParam = ChatCompletionAudioParam;
+export type OpenAIChatCompletionFunctionTool = ChatCompletionFunctionTool;
+export type OpenAIChatCompletionCustomTool = ChatCompletionCustomTool;
+export type OpenAIChatCompletionCustomToolCustom = ChatCompletionCustomTool.Custom;
 export type OpenAIChatCompletionTool = ChatCompletionTool;
 export type OpenAIChatCompletionToolChoiceOption = ChatCompletionToolChoiceOption;
 export type OpenAIChatCompletionPredictionContent = ChatCompletionPredictionContent;

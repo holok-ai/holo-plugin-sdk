@@ -31,11 +31,16 @@ export class OpenAIToolTranslator extends BaseTranslator<HoloTool, OpenAIChatCom
     }
 
     protected async toHoloImpl(source: OpenAIChatCompletionTool): Promise<Partial<HoloTool>> {
-        return pickDefined({
-            name: source.function.name,
-            description: source.function.description,
-            parameters: source.function.parameters,
-        });
+        // Handle union type: only process function tools
+        if (source.type === 'function') {
+            return pickDefined({
+                name: source.function.name,
+                description: source.function.description,
+                parameters: source.function.parameters,
+            });
+        }
+        // Custom tools not supported in Holo - return empty object
+        return {};
     }
 }
 

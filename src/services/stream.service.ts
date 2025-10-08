@@ -1,13 +1,16 @@
 import 'reflect-metadata';
-import {injectable} from 'tsyringe';
+import {container, injectable} from 'tsyringe';
 import {Transform} from "node:stream";
 import {ResponseStream} from "./response.service";
 import {LLMWorkerResponse} from "../types";
 import {ProviderType} from "../providers/types";
 import {ErrorMessages} from "../utils";
-import {MessageStreamEvent} from "@anthropic-ai/sdk/resources/messages";
-import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 import {ClassLogger} from "../types/class.logger";
+import {HoloResponseFactory} from "../providers/holo/holo.response.factory";
+import {HoloTranslater} from "../providers/holo/holo.translator";
+import {OllamaResponse} from "../providers/ollama/types";
+import {ClaudeResponse} from "../providers/claude/types";
+import {OpenAIResponse} from "../providers/openai/types";
 
 
 @injectable()
@@ -20,68 +23,63 @@ export class StreamService extends ClassLogger {
     }
 
     async createResponseStream(requestId: string, isStreaming: boolean = true): Promise<Transform> {
-        let methodName = 'createResponseStream';
+        const logger = this.mlog(this.createResponseStream);
         const responseStream = new ResponseStream(requestId, isStreaming);
 
         // Store the stream in the map
         this.streams.set(requestId, responseStream);
         // Set up auto-cleanup on stream end or error
         responseStream.on('end', () => {
-            this.log.debug(`Stream ended for request ${requestId}`, {methodName});
+            logger.debug(`Stream ended for request ${requestId}`);
             this.removeStream(requestId)
         });
         responseStream.on('error', () => {
-            this.log.error(`Stream error for request ${requestId}`);
+            logger.error(`Stream error for request ${requestId}`);
             this.removeStream(requestId)
         });
 
-        this.log.info(`Created response stream for request ${requestId}, active streams: ${this.activeStreamCount}`);
+        logger.info(`Created response stream for request ${requestId}, active streams: ${this.activeStreamCount}`);
         return responseStream;
     }
 
     async streamData(data: LLMWorkerResponse, res: ResponseStream) {
-        let methodName = 'formatAndSend';
-        const {requestId, providerType, sourceId} = data;
-        try {
+        const logger = this.mlog(this.streamData);
+        const {requestId, providerType, sourceId, payload, fullResponse} = data;
+        if (!(providerType in ProviderType)) {
+            logger.error(`No stream formatter for provider: ${providerType}`);
+            throw new Error(ErrorMessages.unsupportedProvider(providerType));
+        }
 
+        try {
             // Handle streaming responses
-            switch (data.providerType) {
+            switch (providerType) {
                 case ProviderType.OLLAMA:
-                    this.streamOllama(data, res);
+                    this.streamOllama(payload, res);
                     break;
                 case ProviderType.CLAUDE:
-                    this.streamClaude(data, res);
+                    this.streamClaude(payload, res);
                     break;
                 case ProviderType.OPENAI:
-                    this.streamOpenAI(data, res);
+                    this.streamOpenAI(payload, res, fullResponse);
                     break;
                 case ProviderType.PERPLEXITY:
-                    this.streamOpenAI(data, res);
+                    this.streamOpenAI(payload, res, fullResponse);
                     break;
-                default:
-                    this.log.error(`No stream formatter for provider: ${data.providerType}`, {
-                        methodName,
-                        requestId
-                    });
-                    // noinspection ExceptionCaughtLocallyJS
-                    throw new Error(ErrorMessages.unsupportedProvider(data.providerType));
             }
         } catch (error) {
-            this.log.error(`StreamFormatter error: ${(error as Error).message}`, {
+            logger.error(`${providerType} streaming error: ${(error as Error).message}`, {
                 requestId,
                 providerType,
                 sourceId
-            }, {methodName});
+            });
 
             try {
                 if (!res.destroyed) {
-                    res.push(`data: {"error":"Stream formatting error"}
-
-`);
+                    res.push(`data: {"error":"Stream formatting error"}\n\n`);
                     res.end();
                 }
             } catch (closeError) {
-                this.log.error(`Failed to close response stream: ${(closeError as Error).message}`, {methodName});
+                logger.error(`Failed to close response stream: ${(closeError as Error).message}`);
             }
 
             throw error;
@@ -94,10 +92,10 @@ export class StreamService extends ClassLogger {
     }
 
     removeStream(requestId: string) {
-        let methodName = 'removeStream';
+        const logger = this.mlog(this.removeStream);
         if (this.streams.has(requestId)) {
             this.streams.delete(requestId);
-            this.log.info(`Removed response stream for request ${requestId}, active streams: ${this.activeStreamCount}`, {methodName});
+            logger.info(`Removed response stream for request ${requestId}, active streams: ${this.activeStreamCount}`);
         }
     }
 
@@ -113,65 +111,91 @@ export class StreamService extends ClassLogger {
         return this.streams;
     }
 
+    async injectStatusMessage(
+        requestId: string,
+        model: string,
+        message: string,
+        providerType: ProviderType,
+        isChatMode: boolean = true
+    ): Promise<void> {
+        const logger = this.mlog(this.injectStatusMessage);
+        const stream = this.streams.get(requestId);
 
-    streamOllama(responseChunk: LLMWorkerResponse, res: ResponseStream) {
-        let methodName = 'streamOllama';
+        if (!stream || stream.destroyed) {
+            logger.warn(`Cannot inject status: stream not found or destroyed`, {requestId});
+            return;
+        }
+
+        if (!isChatMode) {
+            logger.debug(`Skipping status injection for API mode`, {requestId});
+            return;
+        }
+
         try {
-            const chunk = responseChunk.payload as any;
-            res.push(JSON.stringify(chunk) + '\n');
+            const holoChunk = HoloResponseFactory.createStatusChunk(requestId, model, message, providerType);
+            const holoTranslator = container.resolve(HoloTranslater);
+            const providerChunks = await holoTranslator.fromHoloStreamChunks([holoChunk], providerType);
 
-            // Close stream when Ollama indicates completion (chunk.done is true)
-            if (chunk.done) {
-                this.log.debug('Ollama streaming complete: closing response stream', {methodName});
-                res.end();
+            if (Array.isArray(providerChunks)) {
+                for (const chunk of providerChunks) {
+                    const workerResponse: LLMWorkerResponse = {
+                        requestId,
+                        sourceId: 'status',
+                        providerType,
+                        payload: chunk,
+                        organizationId: '',
+                        workerId: 'status',
+                        providerName: model
+                    };
+                    await this.streamData(workerResponse, stream);
+                }
             }
+
+            logger.debug(`Injected status message`, {requestId, message, providerType});
         } catch (error) {
-            this.log.error(`Ollama streaming error: ${(error as Error).message}`, {
-                requestId: responseChunk.requestId
+            logger.error(`Failed to inject status message: ${(error as Error).message}`, {
+                requestId,
+                message,
+                error
             });
-            throw error;
         }
     }
 
-    streamClaude(responseChunk: LLMWorkerResponse, res: ResponseStream) {
-        try {
-            const chunk = responseChunk.payload as MessageStreamEvent;
-            res.push(`event: ${chunk.type}\n`);
-            res.push(`data: ${JSON.stringify(chunk)} \n\n`);
-            if (chunk.type === 'message_stop') {
-                this.log.debug('message_stop_event: closing response stream');
-                res.end();
-            }
-        } catch (error) {
-            this.log.error(`Claude streaming error: ${(error as Error).message}`, {
-                requestId: responseChunk.requestId,
-                chunkType: (responseChunk.payload as MessageStreamEvent)?.type
-            });
-            throw error;
+    streamOllama(response: OllamaResponse, res: ResponseStream) {
+        const logger = this.mlog(this.streamOllama);
+        res.push(JSON.stringify(response) + '\n');
+
+        // Close stream when Ollama indicates completion (chunk.done is true)
+        if ("done" in response && response.done) {
+            logger.debug('Ollama streaming complete: closing response stream');
+            res.end();
         }
     }
 
-    streamOpenAI(responseChunk: LLMWorkerResponse, res: ResponseStream) {
-        try {
-            const chunk = responseChunk.payload as ChatCompletionChunk;
-            this.log.debug(`opeanai stream formatter ${JSON.stringify(responseChunk)}`);
-            // OpenAI uses SSE format with data: prefix
-            res.push(`data: ${JSON.stringify(chunk)}\n\n`);
+    streamClaude(response: ClaudeResponse, res: ResponseStream) {
+        const logger = this.mlog(this.streamClaude);
 
-            // Check if streaming is complete
-            const choice = chunk.choices?.[0];
-            if (choice?.finish_reason || responseChunk.fullResponse !== undefined) {
-                // Send final [DONE] message for OpenAI compatibility
-                res.push(`data: [DONE]\n\n`);
-                this.log.debug('OpenAI streaming complete: closing response stream');
-                res.end();
-            }
-        } catch (error) {
-            this.log.error(`OpenAI streaming error: ${(error as Error).message}`, {
-                requestId: responseChunk.requestId,
-                finishReason: (responseChunk.payload as ChatCompletionChunk)?.choices?.[0]?.finish_reason
-            });
-            throw error;
+        res.push(`event: ${response.type}\n`);
+        res.push(`data: ${JSON.stringify(response)} \n\n`);
+        if (response.type === 'message_stop') {
+            logger.debug('message_stop_event: closing response stream');
+            res.end();
+        }
+    }
+
+    streamOpenAI(response: OpenAIResponse, res: ResponseStream, fullResponse?: string) {
+        const logger = this.mlog(this.streamOpenAI);
+        logger.debug(`opeanai stream formatter ${JSON.stringify(response)}`);
+        // OpenAI uses SSE format with data: prefix
+        res.push(`data: ${JSON.stringify(response)}\n\n`);
+
+        // Check if streaming is complete
+        const choice = response.choices?.[0];
+        if (choice?.finish_reason || fullResponse !== undefined) {
+            // Send final [DONE] message for OpenAI compatibility
+            res.push(`data: [DONE]\n\n`);
+            logger.debug('OpenAI streaming complete: closing response stream');
+            res.end();
         }
     }
 }

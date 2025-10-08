@@ -58,6 +58,7 @@ export class ClaudeResponseFactory {
             id: 'msg_placeholder_id',
             container: null,
             content: this.createTextMessages(text),
+            context_management: null,
             model: '',
             role: 'assistant',
             stop_reason: null,
@@ -69,8 +70,7 @@ export class ClaudeResponseFactory {
 
     static createTextMessages(text: string | string[]): ClaudeTextBlock[] {
         if (Array.isArray(text)) {
-            const results = text.map(t => this.createTextMessage(t))
-            return results;
+            return text.map(t => this.createTextMessage(t));
         }
         return [this.createTextMessage(text)];
     }

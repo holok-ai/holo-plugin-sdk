@@ -1,12 +1,19 @@
 // Claude type aliases (map to Beta SDK types)
 import type {
+    BetaBase64PDFSource,
+    BetaBashCodeExecutionOutputBlock,
+    BetaBashCodeExecutionResultBlock,
+    BetaBashCodeExecutionToolResultBlock,
+    BetaBashCodeExecutionToolResultError,
     BetaCacheCreation,
     BetaCitationCharLocation,
+    BetaCitationConfig,
     BetaCitationContentBlockLocation,
     BetaCitationPageLocation,
     BetaCitationsDelta,
     BetaCitationSearchResultLocation,
     BetaCitationsWebSearchResultLocation,
+    BetaClearToolUses20250919EditResponse,
     BetaCodeExecutionOutputBlock,
     BetaCodeExecutionResultBlock,
     BetaCodeExecutionToolResultBlock,
@@ -15,11 +22,14 @@ import type {
     BetaContainer,
     BetaContainerUploadBlock,
     BetaContentBlock,
+    BetaContextManagementResponse,
+    BetaDocumentBlock,
     BetaInputJSONDelta,
     BetaMCPToolResultBlock,
     BetaMCPToolUseBlock,
     BetaMessage,
     BetaMessageDeltaUsage,
+    BetaPlainTextSource,
     BetaRawContentBlockDelta,
     BetaRawContentBlockDeltaEvent,
     BetaRawContentBlockStartEvent,
@@ -36,10 +46,18 @@ import type {
     BetaTextBlock,
     BetaTextCitation,
     BetaTextDelta,
+    BetaTextEditorCodeExecutionCreateResultBlock,
+    BetaTextEditorCodeExecutionStrReplaceResultBlock,
+    BetaTextEditorCodeExecutionToolResultBlock,
+    BetaTextEditorCodeExecutionToolResultError,
+    BetaTextEditorCodeExecutionViewResultBlock,
     BetaThinkingBlock,
     BetaThinkingDelta,
     BetaToolUseBlock,
     BetaUsage,
+    BetaWebFetchBlock,
+    BetaWebFetchToolResultBlock,
+    BetaWebFetchToolResultErrorBlock,
     BetaWebSearchResultBlock,
     BetaWebSearchToolResultBlock,
     BetaWebSearchToolResultBlockContent,
@@ -52,6 +70,11 @@ export type ClaudeCacheCreation = BetaCacheCreation;
 export type ClaudeServerToolUsage = BetaServerToolUsage;
 export type ClaudeUsage = BetaUsage;
 export type ClaudeMessageDeltaUsage = BetaMessageDeltaUsage;
+export type ClaudeBase64PDFSource = BetaBase64PDFSource;
+export type ClaudePlainTextSource = BetaPlainTextSource;
+export type ClaudeCitationConfig = BetaCitationConfig;
+export type ClaudeDocumentBlock = BetaDocumentBlock;
+export type ClaudeClearToolUses20250919EditResponse = BetaClearToolUses20250919EditResponse;
 export type ClaudeCitationCharLocation = BetaCitationCharLocation;
 export type ClaudeCitationPageLocation = BetaCitationPageLocation;
 export type ClaudeCitationContentBlockLocation = BetaCitationContentBlockLocation;
@@ -67,11 +90,24 @@ export type ClaudeWebSearchResultBlock = BetaWebSearchResultBlock;
 export type ClaudeWebSearchToolResultError = BetaWebSearchToolResultError;
 export type ClaudeWebSearchToolResultBlockContent = BetaWebSearchToolResultBlockContent;
 export type ClaudeWebSearchToolResultBlock = BetaWebSearchToolResultBlock;
+export type ClaudeWebFetchBlock = BetaWebFetchBlock;
+export type ClaudeWebFetchToolResultErrorBlock = BetaWebFetchToolResultErrorBlock;
+export type ClaudeWebFetchToolResultBlock = BetaWebFetchToolResultBlock;
 export type ClaudeCodeExecutionOutputBlock = BetaCodeExecutionOutputBlock;
 export type ClaudeCodeExecutionResultBlock = BetaCodeExecutionResultBlock;
 export type ClaudeCodeExecutionToolResultError = BetaCodeExecutionToolResultError;
 export type ClaudeCodeExecutionToolResultBlockContent = BetaCodeExecutionToolResultBlockContent;
 export type ClaudeCodeExecutionToolResultBlock = BetaCodeExecutionToolResultBlock;
+export type ClaudeBashCodeExecutionOutputBlock = BetaBashCodeExecutionOutputBlock;
+export type ClaudeBashCodeExecutionResultBlock = BetaBashCodeExecutionResultBlock;
+export type ClaudeBashCodeExecutionToolResultError = BetaBashCodeExecutionToolResultError;
+export type ClaudeBashCodeExecutionToolResultBlockContent = ClaudeBashCodeExecutionToolResultError | ClaudeBashCodeExecutionResultBlock;
+export type ClaudeBashCodeExecutionToolResultBlock = BetaBashCodeExecutionToolResultBlock;
+export type ClaudeTextEditorCodeExecutionViewResultBlock = BetaTextEditorCodeExecutionViewResultBlock;
+export type ClaudeTextEditorCodeExecutionCreateResultBlock = BetaTextEditorCodeExecutionCreateResultBlock;
+export type ClaudeTextEditorCodeExecutionStrReplaceResultBlock = BetaTextEditorCodeExecutionStrReplaceResultBlock;
+export type ClaudeTextEditorCodeExecutionToolResultError = BetaTextEditorCodeExecutionToolResultError;
+export type ClaudeTextEditorCodeExecutionToolResultBlock = BetaTextEditorCodeExecutionToolResultBlock;
 export type ClaudeMCPToolUseBlock = BetaMCPToolUseBlock;
 export type ClaudeMCPToolResultBlock = BetaMCPToolResultBlock;
 export type ClaudeContainerUploadBlock = BetaContainerUploadBlock;
@@ -91,3 +127,4 @@ export type ClaudeRawContentBlockDeltaEvent = BetaRawContentBlockDeltaEvent;
 export type ClaudeRawContentBlockStopEvent = BetaRawContentBlockStopEvent;
 export type ClaudeRawMessageStreamEvent = BetaRawMessageStreamEvent;
 export type ClaudeResponse = ClaudeRawMessageStreamEvent | ClaudeResponseMessage;
+export type ClaudeContextManagementResponse = BetaContextManagementResponse;

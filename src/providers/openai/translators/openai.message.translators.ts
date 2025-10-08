@@ -105,14 +105,21 @@ export class OpenAIMessageTranslator extends BaseTranslator<HoloMessage, OpenAIR
 
         switch (openaiMessage.role) {
             case 'assistant': {
-                const tool_calls = openaiMessage.tool_calls?.map(tc => ({
-                    id: tc.id,
-                    type: 'function' as const,
-                    function: {
-                        name: tc.function.name,
-                        arguments: safeParse(tc.function.arguments)
+                const tool_calls = openaiMessage.tool_calls?.map(tc => {
+                    // Handle union type: only process function tool calls
+                    if (tc.type === 'function') {
+                        return {
+                            id: tc.id,
+                            type: 'function' as const,
+                            function: {
+                                name: tc.function.name,
+                                arguments: safeParse(tc.function.arguments)
+                            }
+                        };
                     }
-                }));
+                    // Skip custom tool calls for now (not supported in Holo)
+                    return null;
+                }).filter((tc): tc is NonNullable<typeof tc> => tc !== null);
 
                 return pickDefined({
                     role: 'assistant' as const,

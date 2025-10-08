@@ -64,14 +64,18 @@ export class OpenAIResponseMessageTranslator extends BaseTranslator<HoloMessage,
 
     if (Array.isArray(source.tool_calls) && source.tool_calls.length) {
       for (const tc of source.tool_calls) {
-        tool_calls.push({
-          id: tc.id,
-          type: 'function',
-          function: {
-            name: tc.function.name,
-            arguments: safeParse(tc.function.arguments)
-          }
-        });
+        // Handle union type: only process function tool calls
+        if (tc.type === 'function') {
+          tool_calls.push({
+            id: tc.id,
+            type: 'function',
+            function: {
+              name: tc.function.name,
+              arguments: safeParse(tc.function.arguments)
+            }
+          });
+        }
+        // Skip custom tool calls (not supported in Holo)
       }
     } else if (source.function_call) {
       // Legacy pathway — keep stable id consistent with other path

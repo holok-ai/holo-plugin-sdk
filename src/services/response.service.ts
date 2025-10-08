@@ -109,28 +109,24 @@ export class ResponseService extends ClassLogger {
         }
     }
 
+    async createStream(requestId: string, isStreaming: boolean): Promise<Transform> {
+        return this.streamService.createResponseStream(requestId, isStreaming);
+    }
+
     async sendRequest(req: HttpApiRequest, res: Response, request: LLMWorkerRequest) {
         const logger = this.mlog(this.sendRequest);
 
         const {requestId, isStreaming} = request;
         await this.setStreamingHeaders(res, isStreaming);
 
-        // Create a response stream
-        let responseStream = await this.streamService.createResponseStream(requestId, isStreaming);
+        let responseStream = this.streamService.getStream(requestId) || await this.streamService.createResponseStream(requestId, isStreaming);
 
-
-        // Handle client disconnect
         req.on('close', () => {
             logger.info(`Client disconnected from request: ${requestId}`);
             if (responseStream) responseStream.end();
         });
 
-        // Send the request to the exchange instead of directly to the queue
-        // This allows multiple consumers (main processor and audit logger) to receive the message
         await this.sendRequestToExchange(request, requestId);
-
-        // Then start the streaming response AFTER the request has been queued
-        // Pipe the response stream to the client
         responseStream.pipe(res);
     }
 

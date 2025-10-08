@@ -4,6 +4,8 @@ import type {
     ChatCompletionAudio,
     ChatCompletionChunk,
     ChatCompletionMessage,
+    ChatCompletionMessageCustomToolCall,
+    ChatCompletionMessageFunctionToolCall,
     ChatCompletionMessageToolCall
 } from "openai/resources/chat/completions";
 import type {CompletionUsage} from "openai/resources/completions";
@@ -16,7 +18,10 @@ export type OpenAIChatCompletionAudio = ChatCompletionAudio;
 export type OpenAIChatCompletionMessageAnnotationURLCitation = ChatCompletionMessage.Annotation.URLCitation;
 export type OpenAIChatCompletionMessageAnnotation = ChatCompletionMessage.Annotation;
 export type OpenAIChatCompletionMessageFunctionCall = ChatCompletionMessage.FunctionCall;
-export type OpenAIChatCompletionMessageToolCallFunction = ChatCompletionMessageToolCall.Function;
+export type OpenAIChatCompletionMessageFunctionToolCall = ChatCompletionMessageFunctionToolCall;
+export type OpenAIChatCompletionMessageCustomToolCall = ChatCompletionMessageCustomToolCall;
+export type OpenAIChatCompletionMessageToolCallFunction = ChatCompletionMessageFunctionToolCall.Function;
+export type OpenAIChatCompletionMessageToolCallCustom = ChatCompletionMessageCustomToolCall.Custom;
 export type OpenAIChatCompletionMessageToolCall = ChatCompletionMessageToolCall;
 export type OpenAIChatCompletionMessage = ChatCompletionMessage;
 export type OpenAIChatCompletionTokenLogprobTopLogprob = ChatCompletionTokenLogprob.TopLogprob;

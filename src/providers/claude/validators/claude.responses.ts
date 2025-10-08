@@ -1,13 +1,20 @@
 import {type, type Type} from 'arktype';
 import {numberOrNull, stringOrNull} from "../../types";
 import {
+    ClaudeBase64PDFSource,
+    ClaudeBashCodeExecutionOutputBlock,
+    ClaudeBashCodeExecutionResultBlock,
+    ClaudeBashCodeExecutionToolResultBlock,
+    ClaudeBashCodeExecutionToolResultError,
     ClaudeCacheCreation,
     ClaudeCitationCharLocation,
+    ClaudeCitationConfig,
     ClaudeCitationContentBlockLocation,
     ClaudeCitationPageLocation,
     ClaudeCitationsDelta,
     ClaudeCitationSearchResultLocation,
     ClaudeCitationsWebSearchResultLocation,
+    ClaudeClearToolUses20250919EditResponse,
     ClaudeCodeExecutionOutputBlock,
     ClaudeCodeExecutionResultBlock,
     ClaudeCodeExecutionToolResultBlock,
@@ -16,10 +23,13 @@ import {
     ClaudeContainer,
     ClaudeContainerUploadBlock,
     ClaudeContentBlock,
+    ClaudeContextManagementResponse,
+    ClaudeDocumentBlock,
     ClaudeInputJSONDelta,
     ClaudeMCPToolResultBlock,
     ClaudeMCPToolUseBlock,
     ClaudeMessageDeltaUsage,
+    ClaudePlainTextSource,
     ClaudeRawContentBlockDelta,
     ClaudeRawContentBlockDeltaEvent,
     ClaudeRawContentBlockStartEvent,
@@ -38,10 +48,18 @@ import {
     ClaudeTextBlock,
     ClaudeTextCitation,
     ClaudeTextDelta,
+    ClaudeTextEditorCodeExecutionCreateResultBlock,
+    ClaudeTextEditorCodeExecutionStrReplaceResultBlock,
+    ClaudeTextEditorCodeExecutionToolResultBlock,
+    ClaudeTextEditorCodeExecutionToolResultError,
+    ClaudeTextEditorCodeExecutionViewResultBlock,
     ClaudeThinkingBlock,
     ClaudeThinkingDelta,
     ClaudeToolUseBlock,
     ClaudeUsage,
+    ClaudeWebFetchBlock,
+    ClaudeWebFetchToolResultBlock,
+    ClaudeWebFetchToolResultErrorBlock,
     ClaudeWebSearchResultBlock,
     ClaudeWebSearchToolResultBlock,
     ClaudeWebSearchToolResultBlockContent,
@@ -53,7 +71,7 @@ export const ClaudeContainerValidator = type({
     expires_at: 'string'
 }) satisfies Type<ClaudeContainer>;
 
-export const ClaudeStopReasonValidator = type("'end_turn'|'max_tokens'|'stop_sequence'|'tool_use'|'pause_turn'|'refusal'") satisfies Type<ClaudeStopReason>;
+export const ClaudeStopReasonValidator = type("'end_turn'|'max_tokens'|'stop_sequence'|'tool_use'|'pause_turn'|'refusal'|'model_context_window_exceeded'") satisfies Type<ClaudeStopReason>;
 
 export const ClaudeCacheCreationValidator = type({
     ephemeral_1h_input_tokens: 'number',
@@ -164,7 +182,7 @@ export const ClaudeToolUseBlockValidator = type({
 export const ClaudeServerToolUseBlockValidator = type({
     id: 'string',
     input: 'unknown',
-    name: "'web_search'|'code_execution'",
+    name: "'web_search'|'web_fetch'|'code_execution'|'bash_code_execution'|'text_editor_code_execution'",
     type: "'server_tool_use'"
 }) satisfies Type<ClaudeServerToolUseBlock>;
 
@@ -237,21 +255,138 @@ export const ClaudeContainerUploadBlockValidator = type({
     type: "'container_upload'"
 }) satisfies Type<ClaudeContainerUploadBlock>;
 
+export const ClaudeBase64PDFSourceValidator = type({
+    data: 'string',
+    media_type: "'application/pdf'",
+    type: "'base64'"
+}) satisfies Type<ClaudeBase64PDFSource>;
+
+export const ClaudePlainTextSourceValidator = type({
+    data: 'string',
+    media_type: "'text/plain'",
+    type: "'text'"
+}) satisfies Type<ClaudePlainTextSource>;
+
+export const ClaudeCitationConfigValidator = type({
+    enabled: 'boolean'
+}) satisfies Type<ClaudeCitationConfig>;
+
+export const ClaudeDocumentBlockValidator = type({
+    citations: ClaudeCitationConfigValidator.or('null'),
+    source: ClaudeBase64PDFSourceValidator.or(ClaudePlainTextSourceValidator),
+    title: stringOrNull,
+    type: "'document'"
+}) satisfies Type<ClaudeDocumentBlock>;
+
+export const ClaudeWebFetchToolResultErrorBlockValidator = type({
+    error_code: "'invalid_tool_input'|'url_too_long'|'url_not_allowed'|'url_not_accessible'|'unsupported_content_type'|'too_many_requests'|'max_uses_exceeded'|'unavailable'",
+    type: "'web_fetch_tool_result_error'"
+}) satisfies Type<ClaudeWebFetchToolResultErrorBlock>;
+
+export const ClaudeWebFetchBlockValidator = type({
+    content: ClaudeDocumentBlockValidator,
+    retrieved_at: stringOrNull,
+    type: "'web_fetch_result'",
+    url: 'string'
+}) satisfies Type<ClaudeWebFetchBlock>;
+
+export const ClaudeWebFetchToolResultBlockValidator = type({
+    content: ClaudeWebFetchToolResultErrorBlockValidator.or(ClaudeWebFetchBlockValidator),
+    tool_use_id: 'string',
+    type: "'web_fetch_tool_result'"
+}) satisfies Type<ClaudeWebFetchToolResultBlock>;
+
+export const ClaudeBashCodeExecutionOutputBlockValidator = type({
+    file_id: 'string',
+    type: "'bash_code_execution_output'"
+}) satisfies Type<ClaudeBashCodeExecutionOutputBlock>;
+
+export const ClaudeBashCodeExecutionResultBlockValidator = type({
+    content: ClaudeBashCodeExecutionOutputBlockValidator.array(),
+    return_code: 'number',
+    stderr: 'string',
+    stdout: 'string',
+    type: "'bash_code_execution_result'"
+}) satisfies Type<ClaudeBashCodeExecutionResultBlock>;
+
+export const ClaudeBashCodeExecutionToolResultErrorValidator = type({
+    error_code: "'invalid_tool_input'|'unavailable'|'too_many_requests'|'execution_time_exceeded'|'output_file_too_large'",
+    type: "'bash_code_execution_tool_result_error'"
+}) satisfies Type<ClaudeBashCodeExecutionToolResultError>;
+
+export const ClaudeBashCodeExecutionToolResultBlockValidator = type({
+    content: ClaudeBashCodeExecutionToolResultErrorValidator.or(ClaudeBashCodeExecutionResultBlockValidator),
+    tool_use_id: 'string',
+    type: "'bash_code_execution_tool_result'"
+}) satisfies Type<ClaudeBashCodeExecutionToolResultBlock>;
+
+export const ClaudeTextEditorCodeExecutionViewResultBlockValidator = type({
+    content: 'string',
+    file_type: "'text'|'image'|'pdf'",
+    num_lines: numberOrNull,
+    start_line: numberOrNull,
+    total_lines: numberOrNull,
+    type: "'text_editor_code_execution_view_result'"
+}) satisfies Type<ClaudeTextEditorCodeExecutionViewResultBlock>;
+
+export const ClaudeTextEditorCodeExecutionCreateResultBlockValidator = type({
+    is_file_update: 'boolean',
+    type: "'text_editor_code_execution_create_result'"
+}) satisfies Type<ClaudeTextEditorCodeExecutionCreateResultBlock>;
+
+export const ClaudeTextEditorCodeExecutionStrReplaceResultBlockValidator = type({
+    lines: type('string').array().or('null'),
+    new_lines: numberOrNull,
+    new_start: numberOrNull,
+    old_lines: numberOrNull,
+    old_start: numberOrNull,
+    type: "'text_editor_code_execution_str_replace_result'"
+}) satisfies Type<ClaudeTextEditorCodeExecutionStrReplaceResultBlock>;
+
+export const ClaudeTextEditorCodeExecutionToolResultErrorValidator = type({
+    error_code: "'invalid_tool_input'|'unavailable'|'too_many_requests'|'execution_time_exceeded'|'file_not_found'",
+    error_message: stringOrNull,
+    type: "'text_editor_code_execution_tool_result_error'"
+}) satisfies Type<ClaudeTextEditorCodeExecutionToolResultError>;
+
+export const ClaudeTextEditorCodeExecutionToolResultBlockValidator = type({
+    content: ClaudeTextEditorCodeExecutionToolResultErrorValidator
+        .or(ClaudeTextEditorCodeExecutionViewResultBlockValidator)
+        .or(ClaudeTextEditorCodeExecutionCreateResultBlockValidator)
+        .or(ClaudeTextEditorCodeExecutionStrReplaceResultBlockValidator),
+    tool_use_id: 'string',
+    type: "'text_editor_code_execution_tool_result'"
+}) satisfies Type<ClaudeTextEditorCodeExecutionToolResultBlock>;
+
 export const ClaudeContentBlockValidator = ClaudeTextBlockValidator
     .or(ClaudeThinkingBlockValidator)
     .or(ClaudeRedactedThinkingBlockValidator)
     .or(ClaudeToolUseBlockValidator)
     .or(ClaudeServerToolUseBlockValidator)
     .or(ClaudeWebSearchToolResultBlockValidator)
+    .or(ClaudeWebFetchToolResultBlockValidator)
     .or(ClaudeCodeExecutionToolResultBlockValidator)
+    .or(ClaudeBashCodeExecutionToolResultBlockValidator)
+    .or(ClaudeTextEditorCodeExecutionToolResultBlockValidator)
     .or(ClaudeMCPToolUseBlockValidator)
     .or(ClaudeMCPToolResultBlockValidator)
     .or(ClaudeContainerUploadBlockValidator) satisfies Type<ClaudeContentBlock>;
+
+export const ClaudeClearToolUses20250919EditResponseValidator = type({
+    cleared_input_tokens: 'number',
+    cleared_tool_uses: 'number',
+    type: "'clear_tool_uses_20250919'"
+}) satisfies Type<ClaudeClearToolUses20250919EditResponse>;
+
+export const ClaudeContextManagementResponseValidator = type({
+    applied_edits: ClaudeClearToolUses20250919EditResponseValidator.array()
+}) satisfies Type<ClaudeContextManagementResponse>;
 
 export const ClaudeResponseMessageValidator = type({
     id: 'string',
     container: ClaudeContainerValidator.or('null'),
     content: ClaudeContentBlockValidator.array(),
+    context_management: ClaudeContextManagementResponseValidator.or('null'),
     model: 'string',
     role: "'assistant'",
     stop_reason: ClaudeStopReasonValidator.or('null'),
@@ -297,6 +432,7 @@ export const ClaudeRawMessageStartEventValidator = type({
 }) satisfies Type<ClaudeRawMessageStartEvent>;
 
 export const ClaudeRawMessageDeltaEventValidator = type({
+    context_management: ClaudeContextManagementResponseValidator.or('null'),
     delta: type({
         container: ClaudeContainerValidator.or('null'),
         stop_reason: ClaudeStopReasonValidator.or('null'),

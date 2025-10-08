@@ -21,10 +21,6 @@ export class HoloResponseFactory {
         )
     }
 
-    /**
-     * Creates error stream chunks in Holo format.
-     * @param provider - Target provider type (CLAUDE, OPENAI, or OLLAMA from ProviderType enum)
-     */
     static createErrorStreamChunks(id: string, model: string, error: string, provider: ProviderType): HoloStreamChunk[] {
         const created = Date.now();
 
@@ -61,5 +57,18 @@ export class HoloResponseFactory {
                 finish_reason: 'stop'
             }))
         ];
+    }
+
+    static createStatusChunk(id: string, model: string, message: string, provider: ProviderType): HoloStreamChunk {
+        return HoloStreamChunkValidator.assert(pickDefined({
+            id,
+            model,
+            created: Date.now(),
+            delta: {
+                provider,
+                type: 'content_delta',
+                delta: { content: `[${message}]\n` }
+            }
+        }));
     }
 }

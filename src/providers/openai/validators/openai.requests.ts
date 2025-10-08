@@ -3,6 +3,8 @@ import {
     ChatCompletionAssistantMessageParam,
     ChatCompletionCreateParams,
     ChatCompletionDeveloperMessageParam,
+    ChatCompletionMessageCustomToolCall,
+    ChatCompletionMessageFunctionToolCall,
     ChatCompletionMessageToolCall,
     ChatCompletionNamedToolChoice,
     ChatCompletionSystemMessageParam,
@@ -134,13 +136,27 @@ const OpenAIAssistantMessageAudioValidator = type({
 const ChatCompletionMessageToolCallFunctionValidator = type({
     arguments: 'string',
     name: 'string'
-}) satisfies Type<ChatCompletionMessageToolCall.Function>;
+}) satisfies Type<ChatCompletionMessageFunctionToolCall.Function>;
 
-const ChatCompletionMessageToolCallValidator = type({
+const ChatCompletionMessageFunctionToolCallValidator = type({
     id: 'string',
     function: ChatCompletionMessageToolCallFunctionValidator,
     type: "'function'"
-}) satisfies Type<ChatCompletionMessageToolCall>;
+}) satisfies Type<ChatCompletionMessageFunctionToolCall>;
+
+const ChatCompletionMessageCustomToolCallCustomValidator = type({
+    input: 'string',
+    name: 'string'
+}) satisfies Type<ChatCompletionMessageCustomToolCall.Custom>;
+
+const ChatCompletionMessageCustomToolCallValidator = type({
+    id: 'string',
+    custom: ChatCompletionMessageCustomToolCallCustomValidator,
+    type: "'custom'"
+}) satisfies Type<ChatCompletionMessageCustomToolCall>;
+
+const ChatCompletionMessageToolCallValidator = ChatCompletionMessageFunctionToolCallValidator
+    .or(ChatCompletionMessageCustomToolCallValidator) satisfies Type<ChatCompletionMessageToolCall>;
 
 const ChatCompletionDeveloperMessageParamValidator = type({
     content: type('string').or(OpenAIChatCompletionContentPartTextValidator.array()),

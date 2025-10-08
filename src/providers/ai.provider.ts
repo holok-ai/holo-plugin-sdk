@@ -16,7 +16,7 @@ export interface IProvider {
 
     getModels(): Promise<ModelInfo[]>;
 
-    processRequest(request: LLMWorkerRequest): Promise<AIRequestStat>;
+    processRequest(request: LLMWorkerRequest): Promise<AIRequestStat | null>;
 
     handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat>;
 
@@ -51,11 +51,19 @@ export abstract class AIProvider extends ClassLogger implements IProvider {
     abstract getModels(): Promise<ModelInfo[]>;
 
 
-    async processRequest(request: LLMWorkerRequest): Promise<AIRequestStat> {
+    async processRequest(request: LLMWorkerRequest): Promise<AIRequestStat | null> {
+        const logger = this.mlog(this.processRequest);
         const {sourceId, requestId, payload, type} = request;
         ProviderRequestValidator.assert(payload);
 
-        return this.handleLLMRequest(sourceId, requestId, payload, type);
+        try {
+            return this.handleLLMRequest(sourceId, requestId, payload, type);
+        } catch (e) {
+            logger.error(`Error processing request: ${(e as Error).message}`);
+            await this.onError(sourceId, requestId, e as Error);
+            return null;
+        }
+
     }
 
 

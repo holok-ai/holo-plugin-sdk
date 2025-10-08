@@ -1,6 +1,5 @@
 import {
     BetaBase64ImageSource,
-    BetaBase64PDFSource,
     BetaCacheControlEphemeral,
     BetaCitationCharLocationParam,
     BetaCitationContentBlockLocationParam,
@@ -24,7 +23,6 @@ import {
     BetaMessageParam,
     BetaMessageStreamParams,
     BetaMetadata,
-    BetaPlainTextSource,
     BetaRedactedThinkingBlockParam,
     BetaRequestDocumentBlock,
     BetaRequestMCPServerToolConfiguration,
@@ -78,7 +76,6 @@ export type ClaudeBase64ImageSource = BetaBase64ImageSource;
 export type ClaudeURLImageSource = BetaURLImageSource;
 export type ClaudeFileImageSource = BetaFileImageSource;
 export type ClaudeContainerUploadBlockParam = BetaContainerUploadBlockParam;
-export type ClaudeBase64PDFSource = BetaBase64PDFSource;
 export type ClaudeTextBlockParam = BetaTextBlockParam;
 export type ClaudeImageBlockParam = BetaImageBlockParam;
 export type ClaudeToolUseBlockParam = BetaToolUseBlockParam;
@@ -86,7 +83,6 @@ export type ClaudeSearchResultBlockParam = BetaSearchResultBlockParam;
 export type ClaudeContentBlockSourceContent = BetaContentBlockSourceContent;
 export type ClaudeToolResultBlockParam = BetaToolResultBlockParam;
 export type ClaudeContentBlockSource = BetaContentBlockSource;
-export type ClaudePlainTextSource = BetaPlainTextSource;
 export type ClaudeURLPDFSource = BetaURLPDFSource;
 export type ClaudeFileDocumentSource = BetaFileDocumentSource;
 export type ClaudeThinkingBlockParam = BetaThinkingBlockParam;
