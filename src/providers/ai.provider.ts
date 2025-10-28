@@ -1,15 +1,34 @@
-import {AIProviderConfig, AIRequestStat, ModelInfo} from "./types";
+import {AIProviderConfig, AIRequestStat, ModelInfo, ProviderRequest, RequestType} from "./types";
 import {ResponseService} from "../services";
-import {LLMWorkerRequest, LLMWorkerResponse, RequestType} from "../types";
-import {ErrorMessages} from "../utils/error-messages";
-import logger from "../utils/logger";
+import {LLMWorkerRequest, LLMWorkerResponse, WorkerResponseFactory} from "../types";
+import {ErrorMessages} from "../utils";
 import {Provider} from "../db/types";
+import {ProviderRequestValidator} from "./validators";
+import {ClassLogger} from "../types/class.logger";
+import {env} from "../env";
+
+
+export interface IProvider {
+    name: string;
+    config: AIProviderConfig;
+
+    init(): Promise<void>;
+
+    getModels(): Promise<ModelInfo[]>;
+
+    processRequest(request: LLMWorkerRequest): Promise<AIRequestStat | null>;
+
+    handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat>;
+
+    onResponseChunk(responseChunk: LLMWorkerResponse): Promise<void>;
+}
+
 
 /**
  * Base interface for LLM providers
  * All LLM implementations must implement these methods
  */
-export abstract class AIProvider {
+export abstract class AIProvider extends ClassLogger implements IProvider {
     protected models: Record<string, ModelInfo> | null = null;
 
     //workerId is passed in via provider service
@@ -17,6 +36,7 @@ export abstract class AIProvider {
         protected provider: Provider,
         protected responseService: ResponseService,
         protected workerId: string) {
+        super();
     }
 
     /**
@@ -31,10 +51,26 @@ export abstract class AIProvider {
     abstract getModels(): Promise<ModelInfo[]>;
 
 
+    async processRequest(request: LLMWorkerRequest): Promise<AIRequestStat | null> {
+        const logger = this.mlog(this.processRequest);
+        const {sourceId, requestId, payload, type} = request;
+        ProviderRequestValidator.assert(payload);
+
+        try {
+            return this.handleLLMRequest(sourceId, requestId, payload, type);
+        } catch (e) {
+            logger.error(`Error processing request: ${(e as Error).message}`);
+            await this.onError(sourceId, requestId, e as Error);
+            return null;
+        }
+
+    }
+
+
     /**
      * Handle LLMWorkerRequest - unified interface for all providers
      */
-    abstract handleLLMRequest(request: LLMWorkerRequest): Promise<AIRequestStat>;
+    abstract handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat>;
 
     /**
      * Wraps provider method calls with statistics tracking, error handling, and logging.
@@ -50,6 +86,7 @@ export abstract class AIProvider {
         method: (...args: T) => Promise<void>,
         ...args: T
     ): Promise<AIRequestStat> {
+        const logger = this.mlog(this.wrapWithStats);
         const startTime = Date.now();
         let success = 0;
         let error = 0;
@@ -87,21 +124,7 @@ export abstract class AIProvider {
      * @param error - The error that occurred during processing
      */
     async onError(sourceId: string, requestId: string, error: Error) {
-        const errorResponse: LLMWorkerResponse = {
-            organizationId: this.provider.organization_id,
-            sourceId: sourceId,
-            requestId: requestId,
-            providerType: this.provider.type as any, // Provider will be set by concrete implementation
-            workerId: process.env.WORKER_ID || 'unknown',
-            payload: {
-                type: 'error',
-                error: {
-                    message: error.message
-                },
-                requestId
-            }
-        };
-        await this.onResponseChunk(errorResponse);
+        await this.responseService.sendErrorResponse(this.provider.organization_id, this.provider.type, this.provider.name, this.workerId, sourceId, requestId, error);
     }
 
     /**
@@ -147,15 +170,16 @@ export abstract class AIProvider {
         payload: any,
         fullResponse?: string
     ): LLMWorkerResponse {
-        return {
-            organizationId: this.provider.organization_id,
+        return WorkerResponseFactory.create(
             sourceId,
             requestId,
             providerType,
-            workerId: process.env.WORKER_ID || 'unknown',
             payload,
-            ...(fullResponse !== undefined && {fullResponse})
-        };
+            this.provider.organization_id,
+            fullResponse,
+            env.worker.serverId || 'unknown',
+            this.provider.name
+        );
     }
 
     /**
@@ -167,6 +191,7 @@ export abstract class AIProvider {
      * @returns Promise that resolves when the chunk has been sent to the response service
      */
     async onResponseChunk(responseChunk: LLMWorkerResponse, auditEnabled?: boolean) {
+        const logger = this.mlog(this.onResponseChunk);
         logger.info(`auditEnabled ${auditEnabled}`);
         // Default to false if not provided
         const auditEnabledValue = auditEnabled ?? false;

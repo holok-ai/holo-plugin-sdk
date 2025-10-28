@@ -4,7 +4,7 @@ import { EvaluatorService } from "../services";
 import { withDB, withQueue } from "./mixins";
 import { container, injectable } from "tsyringe";
 import { env } from "../env";
-import { AuditServiceEvent, EvaluatorServiceEvent } from '../types/evaluator.types';
+import { AuditServiceEvent, EvaluatorServiceEvent } from '../types';
 
 @injectable()
 export class EvaluatorServer extends withQueue(withDB(BaseServer)) {
@@ -26,7 +26,7 @@ export class EvaluatorServer extends withQueue(withDB(BaseServer)) {
              await this.evaluatorService.handleRequest(content);
          });
 
-       // @ts-ignore 
+       // @ts-ignore
         const auditEvent: AuditServiceEvent  = {
             source: "audit",
             eventName: "response-complete",
@@ -34,7 +34,7 @@ export class EvaluatorServer extends withQueue(withDB(BaseServer)) {
             llmResponseDataId: 'b6e00cb7-ddfe-489e-93d5-decfb4d84344' // 'f210f939-b023-4b93-b884-f63fec021286' //  '08f3d3bf-69f0-4aa5-a45c-5c6bdc6c4720',
         };
         // await this.evaluatorService.handleRequest(auditEvent);
-        // @ts-ignore 
+        // @ts-ignore
         const mokuEvent: MokuEvent = {
             source: "moku",
             eventName: "webhook",
@@ -42,7 +42,7 @@ export class EvaluatorServer extends withQueue(withDB(BaseServer)) {
             timestamp: Date.now()
         };
         // // await this.evaluatorService.handleRequest(mokuEvent);
-        // @ts-ignore 
+        // @ts-ignore
         const contentEval: EvaluatorServiceEvent = {
              source: "evaluator",
              eventName: "github-pullrequest-closed",
@@ -57,7 +57,7 @@ export class EvaluatorServer extends withQueue(withDB(BaseServer)) {
                  },
              }]
          };
-    
+
 
     }
 

@@ -3,18 +3,18 @@ import {Response} from 'express';
 import {BaseController} from './base.controller';
 import {HttpApiRequest} from '../types';
 import {injectable} from 'tsyringe';
-import {ResponseService} from "../../services";
-import {ProviderType, RequestType} from '../../types';
+import {ProviderType, RequestType} from "../../providers/types";
+import {RequestService} from "../../admin/services/request.service";
 
 @injectable()
 export default class OllamaController extends BaseController {
-    constructor(private responseService: ResponseService) {
+    constructor(private requestService: RequestService) {
         super();
     }
 
     public generate = async (req: HttpApiRequest, res: Response): Promise<void> => {
         try {
-            await this.responseService.parseAndSendLLMRequest(ProviderType.OLLAMA, RequestType.GENERATE, req, res);
+            await this.requestService.processRequest(ProviderType.OLLAMA, RequestType.GENERATE, req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to generate text');
         }
@@ -23,7 +23,7 @@ export default class OllamaController extends BaseController {
     public chat = async (req: HttpApiRequest, res: Response): Promise<void> => {
         try {
             if (!this.hasRequiredFields(req.body, ['model', 'messages'], res)) return;
-            await this.responseService.parseAndSendLLMRequest(ProviderType.OLLAMA, RequestType.CHAT, req, res);
+            await this.requestService.processRequest(ProviderType.OLLAMA, RequestType.CHAT, req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to complete chat');
         }

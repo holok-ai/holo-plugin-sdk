@@ -1,15 +1,10 @@
-// Configure dotenv FIRST, before any other imports that depend on environment variables
-// This ensures .env file is loaded before env.ts module executes
-import dotenv from 'dotenv';
-dotenv.config();
-
 import 'reflect-metadata';
 import {BaseServer} from "./base.server";
 import {AuditService} from "../services";
 import {withDB, withQueue} from "./mixins";
 import {container, injectable} from "tsyringe";
+import logger from "../utils/logger";
 import {env} from "../env";
-
 
 @injectable()
 export class AuditServer extends withQueue(withDB(BaseServer)) {
@@ -41,3 +36,16 @@ export class AuditServer extends withQueue(withDB(BaseServer)) {
 
 const auditServer = container.resolve(AuditServer);
 auditServer.start();
+
+['SIGBREAK', 'SIGINT', 'SIGTERM'].forEach((signal) => {
+    process.on(signal, () => {
+        logger.info(`Received ${signal}, shutting down worker server...`);
+        auditServer.shutdown();
+        process.exit(0);
+    });
+});
+
+process.on("uncaughtException", (err) => {
+    logger.error(`Uncaught exception in worker server: ${err.message}`);
+    logger.error(err.stack);
+});

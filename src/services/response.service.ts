@@ -1,24 +1,21 @@
 import 'reflect-metadata';
 import {QueueService} from "./queue.service";
-import logger from "../utils/logger";
 import {Transform, TransformCallback} from "node:stream";
 import {container, injectable} from "tsyringe";
-import {v4 as uuidv4} from "uuid";
 import {HttpApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
-import {parseLLMRequest} from '../utils';
-import {LLMWorkerRequest, LLMWorkerResponse, ProviderType, RequestType} from '../types';
-import {StreamFormatter} from './streamFormatter.service';
+import {LLMWorkerRequest, LLMWorkerResponse, WorkerResponseFactory} from '../types';
+import {StreamService} from "./stream.service";
+import {ClassLogger} from "../types/class.logger";
+import {HoloTranslater} from "../providers/holo/holo.translator";
+import {HoloResponseFactory} from "../providers/holo/holo.response.factory";
+import {ProviderResponse, ProviderType} from "../providers/types";
 
 
-/**
- * Response stream for transforming LLM tokens into SSE or JSON
- */
 export class ResponseStream extends Transform {
     requestId: string;
     isStreaming: boolean;
-    accumulatedChunks: any[] = [];
 
     constructor(requestId: string, isStreaming: boolean = true) {
         super({objectMode: true});
@@ -32,22 +29,19 @@ export class ResponseStream extends Transform {
 }
 
 @injectable()
-export class ResponseService {
+export class ResponseService extends ClassLogger {
     private serverId: string = env.api.apiServerId;
-    private streams: Map<string, ResponseStream>;
+
     private readonly responseQueue = env.queue.responseQueue;
     private readonly requestExchange = env.queue.requestExchange;
 
     constructor(
-        private queueService: QueueService, private streamFormatter: StreamFormatter) {
-        this.streams = new Map<string, ResponseStream>();
+        private queueService: QueueService,
+        private streamService: StreamService) {
+        super();
+
     }
 
-    /**
-     * Start consuming LLM response messages from the queue
-     * Sets up a queue consumer that listens for LLM responses and routes them to active streams
-     * @param {string} [serverId] - Optional server ID override, defaults to env.api.apiServerId
-     */
     async startLLMResponseConsumer(serverId?: string) {
         this.serverId = serverId || this.serverId;
 
@@ -59,118 +53,53 @@ export class ResponseService {
         await this.queueService.consume(queueName, handler, true);
     }
 
-    /**
-     * Handle incoming response messages from the queue
-     * Routes response chunks to the appropriate active response stream
-     * @param {string} _id - Message ID (unused)
-     * @param {any} content - Response content containing requestId, provider, and token data
-     */
-    async handleLLMResponseMessage(_id: string, content: any) {
+    async handleLLMResponseMessage(_id: string, content: LLMWorkerResponse) {
+        const logger = this.mlog(this.handleLLMResponseMessage);
         logger.debug(`Received response: ${JSON.stringify(content)}`);
-        const {requestId} = content;
-        const {provider} = content;
-        logger.debug(`RequestId : ${requestId} provider: ${provider}`);
-        const openResponseStream = this.streams.get(requestId);
+        const {requestId, providerName} = content;
+        logger.debug(`RequestId : ${requestId} provider: ${providerName}`);
+        const openResponseStream = this.streamService.getStream(requestId);
 
         if (openResponseStream) {
-            this.streamFormatter.formatAndSend(content, openResponseStream);
+            await this.formatAndSend(content, openResponseStream);
         } else {
             logger.warn(`Received response for unknown request: ${requestId}`);
-            logger.warn(this.streams);
-        }
-
-    }
-
-    /**
-     * Create a response stream for a request
-     * @param {string} requestId - Request ID
-     * @param {boolean} isStreaming - Whether the response should be streamed
-     * @returns {Transform} - Response stream
-     */
-    async createResponseStream(requestId: string, isStreaming: boolean = true): Promise<Transform> {
-        const responseStream = new ResponseStream(requestId, isStreaming);
-
-        // Store the stream in the map
-        this.streams.set(requestId, responseStream);
-        // Set up auto-cleanup on stream end or error
-        responseStream.on('end', () => {
-            logger.debug(`Stream ended for request ${requestId}`);
-            this.removeStream(requestId)
-        });
-        responseStream.on('error', () => {
-            logger.error(`Stream error for request ${requestId}`);
-            this.removeStream(requestId)
-        });
-
-        logger.info(`Created response stream for request ${requestId}, active streams: ${this.activeStreamCount}`);
-        return responseStream;
-    }
-
-    /**
-     * Remove a response stream
-     * @param {string} requestId - Request ID
-     */
-    removeStream(requestId: string) {
-        if (this.streams.has(requestId)) {
-            this.streams.delete(requestId);
-            logger.info(`Removed response stream for request ${requestId}, active streams: ${this.activeStreamCount}`);
+            logger.warn(this.streamService.getActiveStreams());
         }
     }
 
-    /**
-     * Get the number of active streams
-     * @returns {number} - Count of active streams
-     */
-    get activeStreamCount(): number {
-        return this.streams.size;
+    async formatAndSend(responseChunk: LLMWorkerResponse, res: ResponseStream) {
+        const logger = this.mlog(this.formatAndSend);
+
+        // Check if payload is an array (guard error chunks)
+        if (Array.isArray(responseChunk.payload)) {
+            logger.debug(`Streaming array of ${responseChunk.payload.length} chunks for request ${responseChunk.requestId}`);
+            // Stream each chunk individually
+            for (const chunk of responseChunk.payload) {
+                const chunkResponse: LLMWorkerResponse = {
+                    ...responseChunk,
+                    payload: chunk
+                };
+                await this.streamService.streamData(chunkResponse, res);
+            }
+            return;
+        }
+
+        if (!res.isStreaming) {
+            try {
+                return this.streamService.endStream(responseChunk.payload, res);
+            } catch (error) {
+                logger.error(`Non-streaming response error: ${(error as Error).message}`, {
+                    requestId: responseChunk.requestId,
+                    providerType: responseChunk.providerType
+                });
+                throw error;
+            }
+        }
+        return this.streamService.streamData(responseChunk, res);
     }
 
-    /**
-     * Parse HTTP request into LLM worker request and initiate streaming response
-     * Handles the complete request lifecycle: parsing, validation, queue submission, and stream setup
-     * @param {ProviderType} providerType - LLM provider (ollama, claude, openai)
-     * @param {RequestType} type - Request type (generate or chat)
-     * @param {HttpApiRequest} req - HTTP request object
-     * @param {Response} res - HTTP response object
-     */
-    async parseAndSendLLMRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest, res: Response) {
-        const payload = parseLLMRequest(req, providerType, type);
-        const requestId = uuidv4();
-
-        const workerRequest: LLMWorkerRequest = {
-            providerType: providerType,
-            sourceId: this.serverId,
-            requestId: requestId,
-            type: type,
-            payload,
-            timestamp: Date.now(),
-            ...(req.user !== undefined && {
-                organizationId: req.user.organizationId,
-                userId: req.user.userId
-            }),
-            ...(req.applicationId !== undefined && {applicationId: req.applicationId})
-        };
-
-        logger.debug(`LLMWorkerRequest: ${JSON.stringify(workerRequest)}`);
-
-        // Check if request is streaming
-        const isStreaming = payload.stream === true;
-        await this._openResponseStream(req, res, workerRequest, requestId, isStreaming);
-    }
-
-    /**
-     * Set up streaming or regular JSON response and submit request to queue
-     * Configures appropriate headers based on streaming mode, creates response stream, handles client disconnect, and pipes response
-     * @param {HttpApiRequest} req - HTTP request object
-     * @param {Response} res - HTTP response object
-     * @param {Object} request - LLM worker request object to send to queue
-     * @param {string} requestId - Unique request identifier
-     * @param {boolean} isStreaming - Whether the request should use streaming response
-     * @private
-     */
-    async _openResponseStream(req: HttpApiRequest, res: Response, request: Object, requestId: string, isStreaming: boolean = true) {
-
-        // Set up appropriate response headers based on streaming mode
+    async setStreamingHeaders(res: Response, isStreaming: boolean) {
         if (isStreaming) {
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
@@ -178,40 +107,63 @@ export class ResponseService {
         } else {
             res.setHeader('Content-Type', 'application/json');
         }
+    }
 
-        // Create a response stream
-        let responseStream = await this.createResponseStream(requestId, isStreaming);
+    async createStream(requestId: string, isStreaming: boolean): Promise<Transform> {
+        return this.streamService.createResponseStream(requestId, isStreaming);
+    }
 
+    async sendRequest(req: HttpApiRequest, res: Response, request: LLMWorkerRequest) {
+        const logger = this.mlog(this.sendRequest);
 
-        // Handle client disconnect
+        const {requestId, isStreaming} = request;
+        await this.setStreamingHeaders(res, isStreaming);
+
+        let responseStream = this.streamService.getStream(requestId) || await this.streamService.createResponseStream(requestId, isStreaming);
+
         req.on('close', () => {
             logger.info(`Client disconnected from request: ${requestId}`);
             if (responseStream) responseStream.end();
         });
 
-        // Send the request to the exchange instead of directly to the queue
-        // This allows multiple consumers (main processor and audit logger) to receive the message
-        await this.queueService.sendToExchange(
-            this.requestExchange,
-            '',
-            request,
-            {correlationId: requestId}
-        )
-        // Then start the streaming response AFTER the request has been queued
-        // Pipe the response stream to the client
+        await this.sendRequestToExchange(request, requestId);
         responseStream.pipe(res);
     }
 
-    /**
-     * Send response chunk to client via queue exchange
-     * Routes response data to the appropriate server and optionally to audit logging
-     * @param {string} workerId - ID of the worker sending the response
-     * @param {string} sourceId - Server ID to route response to (used as routing key)
-     * @param {string} requestId - Request correlation ID
-     * @param {object} data - Response data/chunk to send
-     * @param {boolean} auditEnabled - Whether to send copy to audit logging
-     */
+    async streamRequestOnce<T = unknown>(request: LLMWorkerRequest, timeoutMs = 60000) {
+        const logger = this.mlog(this.streamRequestOnce);
+
+        logger.debug(`Submitting request: ${JSON.stringify(request)}`, {methodName: 'streamRequestOnce'});
+        const {requestId, isStreaming} = request;
+
+        const stream = await this.streamService.createResponseStream(requestId, isStreaming);
+
+        await this.sendRequestToExchange(request, requestId);
+
+        return new Promise<T>((resolve, reject) => {
+            stream.once('data', (data) => resolve(data as T));
+            const to = setTimeout(() => {
+                stream.removeListener('end', () => logger.debug(`Removing end listener for responseStream ${requestId}`));
+                stream.removeListener('error', () => logger.debug(`Removing error listener for responseStream ${requestId}`));
+                reject(new Error(`Response timed out after ${timeoutMs}ms (requestId=${requestId})`));
+            }, timeoutMs);
+
+            stream.once('end', () => clearTimeout(to));
+            stream.once('error', () => clearTimeout(to));
+        })
+    }
+
+    async sendRequestToExchange(request: LLMWorkerRequest, correlationId: string, exchange: string = this.requestExchange) {
+        await this.queueService.sendToExchange(
+            exchange,
+            '',
+            request,
+            {correlationId}
+        )
+    }
+
     async sendResponseChunk(workerId: string, sourceId: string, requestId: string, data: object, auditEnabled: boolean) {
+        const logger = this.mlog(this.sendResponseChunk);
         logger.debug(`Sending response chunk: ${sourceId}, ${requestId}, ${JSON.stringify(data)}`);
 
         await this.queueService.sendToExchange(
@@ -235,14 +187,8 @@ export class ResponseService {
         }
     }
 
-    /**
-     * Send data directly to audit exchange only
-     * Used for logging audit data without routing to client servers
-     * @param {string} workerId - ID of the worker sending the audit data
-     * @param {string} requestId - Request correlation ID
-     * @param {LLMWorkerResponse} data - Audit data to send
-     */
     async sendToAuditOnly(workerId: string, requestId: string, data: LLMWorkerResponse) {
+        const logger = this.mlog(this.sendToAuditOnly);
         logger.debug(`Sending audit-only data: ${requestId}, ${JSON.stringify(data)}`);
         data.workerId = workerId;
         data.timestamp = Date.now();
@@ -253,6 +199,120 @@ export class ResponseService {
         );
 
         logger.debug(`Successfully sent audit-only data for request ${requestId}`);
+    }
+
+    /**
+     * Unified error response handler for all error types (validation, guard, general).
+     * Automatically handles both streaming and non-streaming responses.
+     *
+     * @param request - The original LLM worker request
+     * @param options - Configuration options
+     * @param options.errorType - Type of error: 'validation' (permission/model access), 'guard' (PII/security), 'general' (other)
+     * @param options.errors - Array of error messages or single Error object
+     * @param options.workerId - ID of the worker processing the request
+     * @param options.auditEnabled - Whether to audit this error (default: true for validation/guard, false for general)
+     */
+    async sendError(
+        request: LLMWorkerRequest,
+        options: {
+            errorType: 'validation' | 'guard' | 'general';
+            errors: string[] | Error;
+            workerId: string;
+            auditEnabled?: boolean;
+        }
+    ): Promise<void> {
+        const logger = this.mlog(this.sendError);
+        const holoTranslator = container.resolve(HoloTranslater);
+
+        // Normalize errors to string array
+        const errorMessages = Array.isArray(options.errors)
+            ? options.errors
+            : [options.errors.message];
+
+        // Default audit behavior: enable for validation/guard, disable for general
+        const auditEnabled = options.auditEnabled ?? (options.errorType !== 'general');
+
+        try {
+            // Create error response (handles both streaming and non-streaming)
+            const workerResponse = await WorkerResponseFactory.createGuardError(
+                request,
+                errorMessages,
+                options.workerId,
+                holoTranslator
+            );
+
+            // Send error response back through response exchange
+            await this.sendResponseChunk(
+                options.workerId,
+                request.sourceId,
+                request.requestId,
+                workerResponse,
+                auditEnabled
+            );
+
+            logger.info(`${options.errorType} error response sent for request ${request.requestId}`, {
+                errorType: options.errorType,
+                errors: errorMessages,
+                isStreaming: request.isStreaming,
+                auditEnabled
+            });
+        } catch (error) {
+            logger.error(`Failed to send ${options.errorType} error response: ${(error as Error).message}`, {
+                requestId: request.requestId,
+                errorType: options.errorType,
+                error
+            });
+            throw error;
+        }
+    }
+
+    /**
+     * @deprecated Use sendError() instead with errorResponse option
+     * Legacy method - kept for backward compatibility
+     */
+    async sendErrorResponse(organizationId: string, providerType: ProviderType, providerName: string, workerId: string, sourceId: string, requestId: string, error: Error) {
+        const holoTranslator = container.resolve(HoloTranslater);
+
+        // Create Holo error response
+        const holoError = await HoloResponseFactory.createErrorResponse(
+            `HE-${requestId}`,
+            'error',
+            `We were unable to complete the request due to the following reasons: ${error.message}`
+        );
+
+        // Translate to provider-native format
+        const providerPayload = await holoTranslator.fromHoloResponse(holoError, providerType);
+
+        // Create worker response
+        const errorResponse = WorkerResponseFactory.create(
+            sourceId,
+            requestId,
+            providerType,
+            providerPayload as ProviderResponse,
+            organizationId,
+            JSON.stringify(providerPayload),
+            env.worker.serverId || 'unknown',
+            providerName
+        );
+
+        await this.sendResponseChunk(workerId, errorResponse.sourceId, errorResponse.requestId, errorResponse, false);
+    }
+
+    /**
+     * @deprecated Use sendError() instead with errorType: 'validation'
+     * Legacy method - kept for backward compatibility
+     */
+    async sendValidationErrorResponse(
+        request: LLMWorkerRequest,
+        errors: string[],
+        workerId: string
+    ): Promise<void> {
+        return this.sendError(request, {
+            errorType: 'validation',
+            errors,
+            workerId,
+            auditEnabled: true
+        });
     }
 }
 

@@ -1,15 +1,18 @@
 import {Response} from 'express';
-import logger from '../../utils/logger';
 import {ApiResponse} from "../types";
+import {ClassLogger} from "../../types/class.logger";
 
-export abstract class BaseController {
+export abstract class BaseController extends ClassLogger {
     protected handleError(
         res: Response,
         error: Error,
         message: string = 'Internal server error',
         statusCode: number = 500
     ): void {
-        logger.error(message, error);
+        const logger = this.mlog(this.handleError);
+        logger.error(`${message}: ${JSON.stringify(error.message, null, 2)}`, {
+            methodName: 'handleError'
+        });
         res.status(statusCode).json({
             success: false,
             error: {

@@ -1,11 +1,17 @@
 import {Request, Response} from 'express';
-import {JWTPayload} from '../../types/auth.types';
+import {JWTPayload} from "../../admin/types";
 
-// Base API types
+
 export interface HttpApiRequest extends Request {
-    user?: JWTPayload,
-    applicationId?: string,
-    urlSlugs?: string[]
+    auth?: JWTPayload,
+    appSlug?: string,
+    appSlugs?: string[]
+}
+
+export interface AuthenticatedRequest extends Request {
+    auth: JWTPayload;
+    appSlug?: string;
+    appSlugs?: string[];
 }
 
 export interface ApiResponse<T = any> extends Response {

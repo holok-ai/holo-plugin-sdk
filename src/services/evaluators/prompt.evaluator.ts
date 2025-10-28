@@ -1,9 +1,9 @@
-import { IEvaluator, EvaluatorEvent, EvaluatorResult } from '../../types/evaluator.types';
-import { Evaluator, Prompt, Provider, LlmResponse, EvaluatorData } from '../../db/types';
-import { OllamaProvider } from '../../providers';
-import { OllamaWorkerChatRequest } from '../../types/worker.request.types';
-import { EvaluatorDB } from '../../db';
+import {EvaluatorEvent, EvaluatorResult, IEvaluator} from '../../types';
+import {Evaluator, EvaluatorData, LlmResponse, Prompt, Provider} from '../../db/types';
+import {OllamaProvider} from '../../providers';
+import {EvaluatorDB} from '../../db';
 import logger from '../../utils/logger';
+import {OllamaChatRequest} from "../../providers/ollama/types";
 
 export class PromptEvaluator implements IEvaluator {
     evaluatorId: string;
@@ -20,7 +20,7 @@ export class PromptEvaluator implements IEvaluator {
         if (!evaluator.prompt_id) {
             throw new Error('No prompt_id found for prompt evaluator');
         }
-        
+
         this.evaluatorId = evaluator.id || '';
         this.handlesEventName = evaluator.evaluator_type || '';
         this.allowUserOverride = false;
@@ -78,11 +78,11 @@ export class PromptEvaluator implements IEvaluator {
             const aiProvider: OllamaProvider = new OllamaProvider(this.provider, null as any, 'evaluator-worker');
             await aiProvider.init();
 
-            const chatRequest: OllamaWorkerChatRequest = {
+            const chatRequest: OllamaChatRequest = {
                 model: modelName,
                 messages: [
-                    { role: 'system', content: systemPrompt || 'You are a helpful assistant.' },
-                    { role: 'user', content: userPrompt }
+                    {role: 'system', content: systemPrompt || 'You are a helpful assistant.'},
+                    {role: 'user', content: userPrompt}
                 ],
                 format: structuredOutput,
                 stream: false
@@ -98,14 +98,14 @@ export class PromptEvaluator implements IEvaluator {
                 value = JSON.parse(content);
             } catch {
                 // If not JSON, wrap in an object
-                value = { data: content };
+                value = {data: content};
             }
 
             return {
                 status: "ok",
                 message: "Prompt evaluated successfully",
                 next_events: [],
-                result: { key: "output", value: value },
+                result: {key: "output", value: value},
                 userId: llmResponse?.user_id || '',
                 organizationId: llmResponse?.organization_id || '',
                 applicationId: llmResponse?.application_id || ''
@@ -149,7 +149,7 @@ export class PromptEvaluator implements IEvaluator {
 
                 if (tableObject && typeof tableObject === 'object' && fieldName in tableObject) {
                     let value = (tableObject as any)[fieldName];
-                    if (llmResponse && llmResponse.provider_slug?.toLowerCase() === 'anthropic' && 
+                    if (llmResponse && llmResponse.provider_slug?.toLowerCase() === 'anthropic' &&
                         tableName === 'llm_responses' && fieldName === 'response') {
                         value = (tableObject as any)['response_raw'];
                     }

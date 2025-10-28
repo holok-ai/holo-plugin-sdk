@@ -7,12 +7,10 @@
  * The application entry points (app.ts, worker.server.ts, audit.server.ts) have been
  * configured to load dotenv before any other imports.
  */
-// Configure dotenv FIRST, before any other imports that depend on environment variables
-// This ensures .env file is loaded before env.ts module executes
 import dotenv from 'dotenv';
-dotenv.config();
-
 import {parseBoolean, parseNumber} from "./utils";
+
+dotenv.config();
 
 export namespace env {
     export const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -27,6 +25,9 @@ export namespace env {
          */
         export const apiServerId = process.env.API_SERVER_ID || `server_${id}`;
         export const port = parseNumber(process.env.PORT, 3000);
+        export const configMode = process.env.API_CONFIG_MODE || 'local';
+        export const configFile = process.env.API_CONFIG_FILE || './sample.app.config.json';
+        export const configTimeoutMs = parseNumber(process.env.API_CONFIG_TIMEOUT, 60000);
     }
 
     // Database config
@@ -147,10 +148,5 @@ export namespace env {
     export const mokuUrl = process.env.MOKU_URL;
     if (!mokuUrl) {
         throw new Error('MOKU_URL environment variable is required for the application to start');
-    }
-
-    export namespace proxy {
-        export const configMode = process.env.PROXY_CONFIG_MODE || 'local';
-        export const configFilePath = process.env.PROXY_CONFIG_FILE || './sample.app.config.json';
     }
 }

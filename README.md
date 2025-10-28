@@ -4,13 +4,13 @@ A scalable, distributed LLM proxy server built with TypeScript that provides uni
 
 ## 🏗️ Architecture Overview
 
-The LLM Proxy Server follows a distributed microservices architecture:
+The LLM Proxy Server follows a distributed microservices architecture with queue-based request/response handling:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   API Server    │    │   RabbitMQ      │    │   Worker Nodes  │
 │   (Express)     │◄──►│   (Message      │◄──►│   (LLM          │
-│                 │    │    Broker)      │    │    Processing)  │
+│   + Guards      │    │    Broker)      │    │    Processing)  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
@@ -24,12 +24,180 @@ The LLM Proxy Server follows a distributed microservices architecture:
 
 ### Core Components
 
-1. **API Server** (`src/app.ts`): Main Express.js application handling HTTP requests
-2. **Worker Server** (`src/servers/worker.server.ts`): Processes LLM requests from the queue
-3. **Audit Server** (`src/servers/audit.server.ts`): Logs all requests for compliance
-4. **Provider Services** (`src/providers/`): Interfaces to different LLM APIs
-5. **Queue Service** (`src/services/queue.service.ts`): RabbitMQ message handling
-6. **Response Service** (`src/services/response.service.ts`): Streaming response management
+1. **API Server** (`src/app.ts`): Express.js application handling requests and responses
+   - JWT authentication and request validation
+   - Listens on response exchange for worker responses
+   - Parses provider-specific responses
+   - Pipes responses to clients via SSE
+2. **Guard System** (`src/admin/`): App-level authorization guards run on LLM requests
+3. **Worker Server** (`src/servers/worker.server.ts`):
+   - Consumes requests from request queue
+   - Enforces guard results
+   - Calls provider APIs or generates errors
+   - Publishes responses to response exchange
+4. **Audit Server** (`src/servers/audit.server.ts`): Logs all requests and responses for compliance
+5. **Provider Services** (`src/providers/`): Provider-specific LLM API implementations
+6. **Queue Service** (`src/services/queue.service.ts`): RabbitMQ message handling
+7. **Response Service** (`src/services/response.service.ts`): Listens on response exchange, filters by request_id
+8. **Stream Service** (`src/services/stream.service.ts`): Formats and streams responses to client
+
+---
+
+## 🔄 Request Lifecycle
+
+The following diagram shows the complete request/response flow:
+
+```
+┌──────────┐
+│  Client  │
+└────┬─────┘
+     │ 1. HTTP Request
+     ▼
+┌────────────────────────────────────────────────┐
+│          API Server (app.controller.ts)        │
+├────────────────────────────────────────────────┤
+│  2. JWT Middleware (jwt.middleware.ts)         │
+│     └─► Validates JWT token                    │
+│     └─► Adds auth object to request            │
+│         (apps, providers user has access to)   │
+└────┬───────────────────────────────────────────┘
+     │ 3. Parse request params
+     │    Create LLM-specific request
+     ▼
+┌────────────────────────────────────────────────┐
+│         Guard Execution (admin/guards)         │
+├────────────────────────────────────────────────┤
+│  4. Run app guards on LLM request              │
+│     └─► Check permissions from auth object     │
+│     └─► Validate request against app rules     │
+│     └─► Attach guard results to LLM request    │
+└────┬───────────────────────────────────────────┘
+     │ 5. Open response stream (response.service, stream.service)
+     │    Generate unique request_id
+     ▼
+┌────────────────────────────────────────────────┐
+│    Queue Service (queue.service.ts)            │
+├────────────────────────────────────────────────┤
+│  6. Publish LLM request to request exchange    │
+│     └─► Request contains guard results         │
+│     └─► Request contains unique request_id     │
+└────┬───────────────────────────────────────────┘
+     │
+     │ RabbitMQ Request Exchange
+     │
+     ▼
+┌────────────────────────────────────────────────┐
+│      Worker Server (worker.server.ts)          │
+├────────────────────────────────────────────────┤
+│  7. Consume request from queue                 │
+│  8. Check guard results on request             │
+│     ├─► If guards PASSED:                      │
+│     │   └─► Route to provider API              │
+│     │   └─► Stream provider response           │
+│     └─► If guards FAILED:                      │
+│         └─► Generate provider-native error     │
+│         └─► Block call to actual provider      │
+│  9. Publish response chunks to exchange        │
+│     └─► Each chunk tagged with request_id      │
+└────┬───────────────────────────────────────────┘
+     │
+     │ RabbitMQ Response Exchange
+     │
+     ├──────────────────┬─────────────────────────┐
+     │                  │                         │
+     ▼                  ▼                         ▼
+┌─────────────────────────────────┐  ┌──────────────────────┐
+│  API Server (response.service)  │  │   Audit Server       │
+│                                 │  │ (audit.server.ts)    │
+├─────────────────────────────────┤  ├──────────────────────┤
+│ 11. Listen on response exchange │  │ • Listens on request │
+│ 12. Filter by request_id        │  │   exchange (audits   │
+│ 13. Parse provider responses    │  │   incoming requests) │
+│ 14. Push to response stream     │  │ • Listens on response│
+│     (stream.service.ts)         │  │   exchange (audits   │
+└─────┬───────────────────────────┘  │   all responses)     │
+      │                              │ • Writes to          │
+      ▼                              │   PostgreSQL         │
+┌────────────────────────────────────────────────┐──────────┘
+│      Stream Service (stream.service.ts)        │
+├────────────────────────────────────────────────┤
+│ 15. Format provider-specific chunks            │
+│ 16. Write to HTTP response stream              │
+│ 17. Handle client disconnect                   │
+└────┬───────────────────────────────────────────┘
+     │ 18. Server-Sent Events (SSE)
+     ▼
+┌──────────┐
+│  Client  │
+└──────────┘
+```
+
+### Key Lifecycle Stages
+
+1. **Authentication**: JWT middleware validates token and extracts user permissions (apps, providers)
+2. **Request Parsing**: Controller extracts params and creates provider-specific LLM request
+3. **Authorization**: App-level guards validate request against user's app permissions
+4. **Response Setup**: Response stream opened before queueing (identified by unique `request_id`)
+5. **Request Queueing**: LLM request (with guard results) published to RabbitMQ request exchange
+6. **Request Auditing**: Audit server listens on request exchange and logs all requests to PostgreSQL
+7. **Worker Processing**: Worker consumes request and checks guard results
+   - **Guards Passed**: Routes to provider API (OpenAI/Claude/Ollama) and receives streaming response
+   - **Guards Failed**: Generates provider-native error response, blocks actual provider call
+8. **Worker Response Publishing**: Worker pipes provider response chunks to response exchange with originating `request_id`
+9. **Response Auditing**: Audit server listens on response exchange and logs all responses to PostgreSQL
+10. **API Response Handling**: API server listens on response exchange, filters by `request_id`, parses provider responses
+11. **Stream Piping**: Parsed chunks pushed to HTTP response stream and piped to client via SSE
+
+### Guard System
+
+Guards provide multi-stage authorization with execution split between API and Worker servers:
+
+#### Guard Execution (API Server)
+Guards run **after** authentication but **before** request queueing:
+
+- **Input**: LLM request + auth object (from JWT middleware)
+- **Process**: Validate request against app-specific rules and user permissions
+- **Output**: Guard results attached to LLM request and sent to queue
+- **Purpose**: Pre-validate user permissions for apps/providers/models
+
+#### Guard Enforcement (Worker Server)
+Workers validate guard results **before** calling provider APIs:
+
+- **Input**: LLM request with attached guard results from queue
+- **Guard Check**:
+  - **If Passed**: Forward request to provider API (OpenAI/Claude/Ollama)
+  - **If Failed**: Generate provider-native error response without calling provider
+- **Response Format**: Errors returned in provider-specific format (OpenAI error structure, Claude error structure, etc.)
+- **Purpose**: Prevent unauthorized API calls while maintaining provider compatibility
+
+This two-stage approach ensures:
+1. **Early validation**: Guards execute at API server for quick feedback
+2. **Enforcement at worker**: Guard results checked before expensive provider API calls
+3. **Provider-native errors**: Failures returned in format matching the requested provider
+4. **Cost savings**: Blocked requests never reach paid provider APIs
+
+### Response Stream Coordination
+
+The response flow uses a pub/sub pattern with request_id correlation through the API server:
+
+1. **Before queueing**: API server opens SSE stream and generates unique `request_id`
+2. **Response listening**: API server's response service subscribes to response exchange filtering by `request_id`
+3. **Worker response publishing**: Worker receives provider response, pipes chunks to response exchange with `request_id`
+4. **API response handling**: API server picks up response from exchange, parses provider-specific format
+5. **Stream piping**: Parsed chunks pushed to HTTP response stream via stream service
+6. **Stream completion**: When provider signals done, response stream closed and client connection terminated
+
+**Key Flow**: Provider → Worker → Response Exchange → API Server (parse) → Stream Service → Client
+
+### Audit Service
+
+The audit server provides comprehensive logging for compliance and monitoring:
+
+- **Dual Exchange Monitoring**: Listens on both request and response exchanges
+- **Request Auditing**: Captures all incoming requests with full payload and guard results
+- **Response Auditing**: Captures all provider responses including streaming chunks
+- **Database Persistence**: Writes audit trails to PostgreSQL with timestamps and metadata
+- **Independent Operation**: Runs as separate service for reliability and scalability
 
 ## 🚀 Key Features
 
@@ -310,7 +478,7 @@ When adding a new LLM provider, you'll need to implement several components to e
 
 #### Step 1: Add Provider Enum Value
 
-1. **Update Provider Enum** (`src/types/worker.request.types.ts`):
+1. **Update Provider Enum** (`src/types/worker.types.ts`):
 ```typescript
 export enum Provider {
     OLLAMA = 'ollama',
@@ -322,7 +490,7 @@ export enum Provider {
 
 #### Step 2: Define Request Types
 
-2. **Add Provider-Specific Request Interfaces** (`src/types/worker.request.types.ts`):
+2. **Add Provider-Specific Request Interfaces** (`src/types/worker.types.ts`):
 ```typescript
 // Add interfaces for your provider's request formats
 export interface NewProviderGenerateRequest {
@@ -491,7 +659,7 @@ export const parseLLMRequest = (
 
 #### Step 4: Create Request Translator
 
-4. **Create Request Translator** (`src/translators/providers/new-provider.translator.ts`):
+4. **Create Request Translator** (`src/translators/providers/new-provider.auditors.ts`):
 ```typescript
 import { injectable } from 'tsyringe';
 import { BaseRequestTranslator } from './base.translator';
@@ -527,7 +695,7 @@ export class NewProviderRequestTranslator extends BaseRequestTranslator {
 }
 ```
 
-5. **Register Translator** (`src/translators/translator.registry.ts`):
+5. **Register Translator** (`src/translators/auditor.registry.ts`):
 ```typescript
 // Add to constructor and initializeTranslators method
 constructor(
@@ -644,7 +812,7 @@ export class NewProvider extends AIProvider implements IProvider {
 
 #### Step 5: Update Stream Formatter
 
-6. **Add Stream Formatting** (`src/services/streamFormatter.service.ts`):
+6. **Add Stream Formatting** (`src/services/stream.formatter.service.ts`):
 ```typescript
 // Add your provider case to the formatAndSend method
 async formatAndSend(responseChunk: LLMWorkerResponse, res: ResponseStream) {

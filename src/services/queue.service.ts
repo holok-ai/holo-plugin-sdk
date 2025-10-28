@@ -100,7 +100,7 @@ export class QueueService {
         if (!this.isConnected) {
             await this.connect();
         }
-        logger.info(`Consuming messages from queue: ${queueName}`);
+        // logger.debug(`Consuming messages from queue: ${queueName}`);
 
         try {
             await this.channel!.consume(queueName, async (message) => {
@@ -110,11 +110,11 @@ export class QueueService {
                 }
                 try {
                     const content = JSON.parse(message.content.toString());
-                    logger.debug(`Received message from queue: ${queueName} with ${message.content.toString()})`);
+                    // logger.debug(`Received message from queue: ${queueName} with ${message.content.toString()})`);
                     const {requestId} = content;
                     await callback(requestId, content, message);
                     this.channel!.ack(message);
-                    logger.debug(`Successfully processed message from queue: ${queueName} with requestId (${requestId})`);
+                    // logger.debug(`Successfully processed message from queue: ${queueName} with requestId (${requestId})`);
 
                 } catch (error) {
                     logger.error(`Error processing message from queue: ${queueName}: ${(error as Error).message}`);
@@ -262,9 +262,9 @@ export class QueueService {
         if (!this.isConnected) {
             await this.connect();
         }
-        if(pattern){
+        if (pattern) {
             logger.debug(`Binding queue ${queue} to exchange ${exchange} with pattern ${pattern}`);
-        }else{
+        } else {
             logger.debug(`Binding queue ${queue} to exchange ${exchange} directly`);
 
         }

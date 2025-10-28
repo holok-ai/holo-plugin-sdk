@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {Constructor, DatabaseConfig} from "../../types";
 import logger from "../../utils/logger";
-import {AppDB} from "../../db/app.db";
+import {AppDB} from "../../db";
 import {container, injectable} from "tsyringe";
 import {IAppServer} from "../base.server";
 import {env} from "../../env";

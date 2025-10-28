@@ -4,9 +4,10 @@ import logger from "../utils/logger";
 import {Provider} from "../db/types";
 import {ProviderDB} from "../db";
 import {injectable} from "tsyringe";
-import {IProvider, ProviderType} from "../providers/types";
+import {ProviderType} from "../providers/types";
 import {ResponseService} from "./response.service";
-import {PerplexityProvider} from "../providers/perplexity.provider";
+import {PerplexityProvider} from "../providers/perplexity/perplexity.provider";
+import {IProvider} from "../providers/ai.provider";
 
 @injectable()
 export class ProviderService {

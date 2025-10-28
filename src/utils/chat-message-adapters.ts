@@ -1,5 +1,5 @@
 // Sample Usage
-/* 
+/*
   const canonical: CanonicalMessage = {
     system_prompt: "You are a helpful assistant.",
     user_prompt: "Summarize the latest AI trends.",
@@ -12,7 +12,7 @@
 };
 
 const adapter = ChatAdapterFactory.createAdapter(Provider.PERPLEXITY, canonical
-console.log(adapter.toProviderFormat()); 
+console.log(adapter.toProviderFormat());
 */
 
 
@@ -30,7 +30,7 @@ export interface CanonicalMessage {
 }
 
 export enum Provider {
-  ANTHROPIC = "ANTHROPIC",
+  CLAUDE = "CLAUDE",
   OPENAI = "OPENAI",
   OLLAMA = "OLLAMA",
   PERPLEXITY = "PERPLEXITY"
@@ -39,7 +39,7 @@ export enum Provider {
 export class ChatAdapterFactory {
   static createAdapter(provider: Provider, data: CanonicalMessage): ChatMessageAdapter {
     switch (provider) {
-      case Provider.ANTHROPIC:
+      case Provider.CLAUDE:
         return new AnthropicAdapter(data);
       case Provider.OPENAI:
         return new OpenAIAdapter(data);
