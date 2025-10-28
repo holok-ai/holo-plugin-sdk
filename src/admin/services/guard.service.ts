@@ -11,7 +11,6 @@ import {HoloTranslater} from "../../providers/holo/holo.translator";
 import {ArkErrors} from "arktype";
 import {ClassLogger} from "../../types/class.logger";
 import {OllamaGenerateRequest} from "../../providers/ollama/types";
-import {ClaudeResponseMessage, ClaudeTextBlock} from "../../providers/claude/types";
 
 
 @injectable()
@@ -111,8 +110,16 @@ export class GuardService extends ClassLogger {
 
                             const response = await this.responseService.streamRequestOnce(guardRequest);
 
-                            const resultMessage = JSON.parse(response as string) as ClaudeResponseMessage
-                            return JSON.parse((resultMessage.content[0] as ClaudeTextBlock).text);
+                            const resultMessage = JSON.parse(response as string);
+                            const holoResponse = await this.holoTranslator.toHoloResponse(resultMessage, provider.type);
+
+                            // logger.info(`Guard response: ${JSON.stringify(holoResponse, null, 2)}`);
+                            if (!holoResponse.messages) {
+                                return {passed: false, errors: ['Guard response is missing messages']};
+                            }
+                            const guardResponse = holoResponse.messages[0].content as string;
+
+                            return JSON.parse(guardResponse);
                         } catch (e) {
                             logger.error(`Failed to process guard: ${(e as Error).message}`, {
                                 methodName: 'guard',
