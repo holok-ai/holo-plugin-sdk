@@ -42,6 +42,7 @@ import type {
     BetaServerToolUsage,
     BetaServerToolUseBlock,
     BetaSignatureDelta,
+    BetaSkill,
     BetaStopReason,
     BetaTextBlock,
     BetaTextCitation,
@@ -80,6 +81,7 @@ export type ClaudeCitationPageLocation = BetaCitationPageLocation;
 export type ClaudeCitationContentBlockLocation = BetaCitationContentBlockLocation;
 export type ClaudeCitationsWebSearchResultLocation = BetaCitationsWebSearchResultLocation;
 export type ClaudeCitationSearchResultLocation = BetaCitationSearchResultLocation;
+export type ClaudeSkill = BetaSkill;
 export type ClaudeTextCitation = BetaTextCitation;
 export type ClaudeTextBlock = BetaTextBlock;
 export type ClaudeThinkingBlock = BetaThinkingBlock;
@@ -101,7 +103,9 @@ export type ClaudeCodeExecutionToolResultBlock = BetaCodeExecutionToolResultBloc
 export type ClaudeBashCodeExecutionOutputBlock = BetaBashCodeExecutionOutputBlock;
 export type ClaudeBashCodeExecutionResultBlock = BetaBashCodeExecutionResultBlock;
 export type ClaudeBashCodeExecutionToolResultError = BetaBashCodeExecutionToolResultError;
-export type ClaudeBashCodeExecutionToolResultBlockContent = ClaudeBashCodeExecutionToolResultError | ClaudeBashCodeExecutionResultBlock;
+export type ClaudeBashCodeExecutionToolResultBlockContent =
+    ClaudeBashCodeExecutionToolResultError
+    | ClaudeBashCodeExecutionResultBlock;
 export type ClaudeBashCodeExecutionToolResultBlock = BetaBashCodeExecutionToolResultBlock;
 export type ClaudeTextEditorCodeExecutionViewResultBlock = BetaTextEditorCodeExecutionViewResultBlock;
 export type ClaudeTextEditorCodeExecutionCreateResultBlock = BetaTextEditorCodeExecutionCreateResultBlock;

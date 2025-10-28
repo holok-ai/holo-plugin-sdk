@@ -44,6 +44,7 @@ import {
     ClaudeServerToolUsage,
     ClaudeServerToolUseBlock,
     ClaudeSignatureDelta,
+    ClaudeSkill,
     ClaudeStopReason,
     ClaudeTextBlock,
     ClaudeTextCitation,
@@ -66,9 +67,16 @@ import {
     ClaudeWebSearchToolResultError
 } from "../types";
 
+export const ClaudeSkillValidator = type({
+    skill_id: 'string',
+    type: "'anthropic'|'custom'",
+    version: 'string'
+}) satisfies Type<ClaudeSkill>
+
 export const ClaudeContainerValidator = type({
     id: 'string',
-    expires_at: 'string'
+    expires_at: 'string',
+    skills: ClaudeSkillValidator.array()
 }) satisfies Type<ClaudeContainer>;
 
 export const ClaudeStopReasonValidator = type("'end_turn'|'max_tokens'|'stop_sequence'|'tool_use'|'pause_turn'|'refusal'|'model_context_window_exceeded'") satisfies Type<ClaudeStopReason>;
