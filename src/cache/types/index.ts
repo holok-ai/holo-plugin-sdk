@@ -4,7 +4,13 @@ import {Provider} from "./provider";
 
 export {Provider} from "./provider";
 export {Prompt} from "./prompt";
-export {Model} from "./model";
+export {
+    Model,
+    OpenAIModel,
+    ClaudeModelInfo,
+    OllamaModelDetails,
+    OllamaModelResponse
+} from "./model";
 export {SystemPromptMode} from "./system.prompt";
 export {SystemPrompt} from "./system.prompt";
 export {Application} from "./application";

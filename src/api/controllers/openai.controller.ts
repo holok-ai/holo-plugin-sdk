@@ -5,11 +5,16 @@ import {ApiResponse, HttpApiRequest} from "../types";
 import logger from "../../utils/logger";
 import {ProviderType, RequestType} from "../../providers/types";
 import {RequestService} from "../../admin/services/request.service";
+import {OrganizationService} from "../../admin/services/organization.service";
+import {OpenAIModel} from "../../cache";
 
 @injectable()
 export class OpenAIController extends BaseController {
 
-    constructor(private requestService: RequestService) {
+    constructor(
+        private requestService: RequestService,
+        private organizationService: OrganizationService
+    ) {
         super();
     }
 
@@ -22,8 +27,31 @@ export class OpenAIController extends BaseController {
         }
     }
 
-    public models = async (_req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+    public models = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+        const logger = this.mlog(this.models);
+        logger.info('Getting models');
+        const {auth} = req;
 
-        res.status(200).json({});
+        if (!auth) {
+            res.status(401).json({error: 'Unauthorized'});
+            return;
+        }
+
+        let openaiModels: OpenAIModel[] = [];
+
+        if (auth.organizationId && auth?.appSlug) {
+            logger.debug(`Getting models for app: ${auth.appSlug}`);
+            const allModels = this.organizationService.getModels(auth.organizationId, auth.appSlug) ?? [];
+            openaiModels = allModels.map(m => m.metadata!.openai as OpenAIModel);
+        } else if (auth.appSlugs) {
+            logger.debug('No app defined, getting all models');
+            const allModels = this.organizationService.getAllModels(auth?.organizationId, auth?.appSlugs);
+            openaiModels = allModels.map(m => m.metadata!.openai as OpenAIModel);
+        }
+
+        res.status(200).json({
+            object: 'list',
+            data: openaiModels
+        });
     }
 }
