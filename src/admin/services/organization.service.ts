@@ -49,6 +49,20 @@ export class OrganizationService extends ClassLogger {
         return this.orgCacheService.getApplication(orgId, urlSlug)?.models;
     }
 
+    getAllModels(orgId: string, urlSlugs: string[]): Model[] {
+        const models = new Set<Model>();
+
+        for (const slug of urlSlugs) {
+            const app = this.orgCacheService.getApplication(orgId, slug);
+            if (app?.models) {
+                for (const model of app.models) {
+                    models.add(model);
+                }
+            }
+        }
+        return Array.from(models);
+    }
+
     getGuards(orgId: string, urlSlug: string): Prompt[] | undefined {
         return this.orgCacheService.getApplication(orgId, urlSlug)?.guards;
     }

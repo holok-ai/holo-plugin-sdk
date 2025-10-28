@@ -5,10 +5,15 @@ import {HttpApiRequest} from '../types';
 import {injectable} from 'tsyringe';
 import {ProviderType, RequestType} from "../../providers/types";
 import {RequestService} from "../../admin/services/request.service";
+import {OrganizationService} from "../../admin/services/organization.service";
+import {OllamaModelResponse} from "../../cache";
 
 @injectable()
 export default class OllamaController extends BaseController {
-    constructor(private requestService: RequestService) {
+    constructor(
+        private requestService: RequestService,
+        private organizationService: OrganizationService
+    ) {
         super();
     }
 
@@ -27,5 +32,32 @@ export default class OllamaController extends BaseController {
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to complete chat');
         }
+    };
+
+    public models = async (req: HttpApiRequest, res: Response): Promise<void> => {
+        const logger = this.mlog(this.models);
+        logger.info('Getting models');
+        const {auth} = req;
+
+        if (!auth) {
+            res.status(401).json({error: 'Unauthorized'});
+            return;
+        }
+
+        let ollamaModels: OllamaModelResponse[] = [];
+
+        if (auth.organizationId && auth?.appSlug) {
+            logger.debug(`Getting models for app: ${auth.appSlug}`);
+            const allModels = this.organizationService.getModels(auth.organizationId, auth.appSlug) ?? [];
+            ollamaModels = allModels.map(m => m.metadata!.ollama as OllamaModelResponse);
+        } else if (auth.appSlugs) {
+            logger.debug('No app defined, getting all models');
+            const allModels = this.organizationService.getAllModels(auth?.organizationId, auth?.appSlugs);
+            ollamaModels = allModels.map(m => m.metadata!.ollama as OllamaModelResponse);
+        }
+
+        res.status(200).json({
+            models: ollamaModels
+        });
     };
 }

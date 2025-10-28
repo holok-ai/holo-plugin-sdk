@@ -30,6 +30,7 @@ export class GuardService extends ClassLogger {
         const logger = this.mlog(this.guard);
         // if no slug or auth
         if (!auth?.appSlug) {
+            logger.warn(`No app slug found for guard`, {methodName: 'guard', requestId: workerRequest.requestId});
             return;
         }
 
@@ -61,6 +62,7 @@ export class GuardService extends ClassLogger {
 
         const guards = this.organizationService.getGuards(auth.organizationId, auth.appSlug);
 
+        // logger.debug(`Found guards: ${JSON.stringify(guards, null, 2)} for ${providerType} ${type}, auth: ${JSON.stringify(auth, null, 2)}`);
         if (guards) {
             try {
                 //set guards onto request for auditing
@@ -140,6 +142,7 @@ export class GuardService extends ClassLogger {
                 return {passed: false, errors: [(e as Error).message]};
             }
         }
+        logger.info(`Finished running guards for: ${providerType} ${type}`);
         return {passed: true};
     }
 

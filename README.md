@@ -1,10 +1,10 @@
-# LLM Proxy Server
+# HoloKai Holo
 
 A scalable, distributed LLM proxy server built with TypeScript that provides unified access to multiple Large Language Model providers through standardized APIs. The system uses RabbitMQ for distributed processing and PostgreSQL for audit logging.
 
 ## 🏗️ Architecture Overview
 
-The LLM Proxy Server follows a distributed microservices architecture with queue-based request/response handling and a universal translation layer:
+Holo follows a distributed microservices architecture with queue-based request/response handling and a universal translation layer:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -252,6 +252,12 @@ The audit server provides comprehensive logging for compliance and monitoring:
 - **Type Safety**: ArkType validators + TypeScript for runtime & compile-time validation
 - **Stateless Design**: No shared state; orchestrator handles accumulation where needed
 
+### Universal Model Access
+- **Provider-Agnostic Discovery**: List all available models through any provider's API format
+- **Cross-Provider Usage**: Use any model (e.g., `gpt-4`, `claude-sonnet-4`, `llama3:8b`) through any endpoint
+- **Automatic Translation**: Holo translates requests/responses between provider formats seamlessly
+- **Example**: Call `claude-sonnet-4` using OpenAI SDK, and Holo handles the translation automatically
+
 ## 📡 API Endpoints
 
 ### Standard Endpoints
@@ -316,6 +322,23 @@ Content-Type: application/json
 GET /api/openai/v1/models
 ```
 
+**Response Format**:
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "gpt-4",
+      "object": "model",
+      "created": 1687882410,
+      "owned_by": "openai"
+    }
+  ]
+}
+```
+
+**Note**: Returns **all models** the user has access to (across all providers) in OpenAI format. This enables provider-agnostic model access through the Holo universal translator. For example, you can call `claude-sonnet-4` through the OpenAI endpoint, and Holo will translate the request/response automatically.
+
 ### Claude-Compatible Endpoints
 
 #### Messages
@@ -356,6 +379,62 @@ Content-Type: application/json
 - `tools`, `tool_choice`, `metadata`, `stop_sequences` (optional)
 - `container`, `mcp_servers`, `service_tier` (optional, new)
 - `thinking`, `betas` (optional, advanced features)
+
+#### List Models
+```http
+GET /api/claude/v1/models
+```
+
+**Response Format**:
+```json
+{
+  "data": [
+    {
+      "id": "claude-sonnet-4-20250514",
+      "created_at": "2025-02-19T00:00:00Z",
+      "display_name": "Claude Sonnet 4",
+      "type": "model"
+    }
+  ],
+  "has_more": false,
+  "first_id": "claude-sonnet-4-20250514",
+  "last_id": "claude-3-5-sonnet-20241022"
+}
+```
+
+**Note**: Returns **all models** the user has access to (across all providers) in Claude format. This enables provider-agnostic model access through the Holo universal translator.
+
+### Ollama-Compatible Endpoints
+
+#### List Models (Tags)
+```http
+GET /api/tags
+```
+
+**Response Format**:
+```json
+{
+  "models": [
+    {
+      "name": "llama3:8b",
+      "model": "llama3:8b",
+      "modified_at": "2025-05-10T08:06:48.639712648-07:00",
+      "size": 4683075271,
+      "digest": "0a8c266910232fd3291e71e5ba1e058cc5af9d411192cf88b6d30e92b6e73163",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": ["llama"],
+        "parameter_size": "8B",
+        "quantization_level": "Q4_K_M"
+      }
+    }
+  ]
+}
+```
+
+**Note**: Returns **all models** the user has access to (across all providers) in Ollama format. This enables provider-agnostic model access through the Holo universal translator.
 
 ### Health & Status
 
@@ -402,7 +481,7 @@ AUDIT_ID=audit_001              # Used to identify the audit server instance
 DATABASE_URL="postgresql://user:password@localhost:5432/llm_proxy"
 APP_PG_HOST=localhost
 APP_PG_PORT=5432
-APP_PG_DATABASE=llm_proxy
+APP_PG_DATABASE=holo
 APP_PG_USER=postgres
 APP_PG_PASSWORD=password
 APP_PG_SSL=false
@@ -444,7 +523,7 @@ OLLAMA_TIMEOUT=60000
 ```bash
 # Clone and navigate to project
 git clone <repository>
-cd llm-proxy
+cd holo
 
 # Start all services
 docker-compose up -d

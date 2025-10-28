@@ -1,7 +1,7 @@
 {
-  "name": "llm-proxy",
+  "name": "holo",
   "version": "1.0.0",
-  "description": "LLM Proxy Server with RabbitMQ for distributed processing",
+  "description": "Holokai Holo",
   "type": "module",
   "main": "src/app.js",
   "scripts": {

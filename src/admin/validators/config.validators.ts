@@ -35,4 +35,7 @@ export const JwtTokenConfigValidator = type({
     data: JwtTokenConfigDataValidator.array()
 }) satisfies Type<JwtTokenConfig>;
 
-export const HoloConfigValidator = OrganizationConfigValidator.or(ApplicationConfigValidator).or(JwtTokenConfigValidator) satisfies Type<HoloConfig>;
+export const HoloConfigValidator =
+    OrganizationConfigValidator
+        .or(ApplicationConfigValidator)
+        .or(JwtTokenConfigValidator) satisfies Type<HoloConfig>;

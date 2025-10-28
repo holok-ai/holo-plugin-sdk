@@ -63,7 +63,6 @@ export class RequestService extends ClassLogger {
             }
 
             await this.guardService.guard(providerType, type, workerRequest, auth);
-            logger.info(`Request guarded: ${providerType} ${type}`);
 
             if (workerRequest.isStreaming && isChatMode) {
                 if (workerRequest.guardResult?.passed === false) {
