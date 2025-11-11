@@ -37,7 +37,13 @@ export class GuardService extends ClassLogger {
         if (type === RequestType.GENERATE && providerType === ProviderType.OLLAMA) {
             lastMessage = (workerRequest.payload as OllamaGenerateRequest).prompt;
         } else {
-            const lastHoloMessage = (await this.holoTranslator.toHoloMessages((workerRequest.payload as ProviderChatRequest).messages as ProviderMessage[], providerType)).pop();
+            const payload = workerRequest.payload as ProviderChatRequest;
+            const messages = 'messages' in payload ? payload.messages : undefined;
+            if (!messages) {
+                logger.warn(`No messages to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
+                return;
+            }
+            const lastHoloMessage = (await this.holoTranslator.toHoloMessages(messages as ProviderMessage[], providerType)).pop();
             if (!lastHoloMessage || !lastHoloMessage.content || !lastHoloMessage.content.length) {
                 logger.warn(`No message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
                 return;

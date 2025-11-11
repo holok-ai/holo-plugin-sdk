@@ -1,0 +1,243 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks-node/onboard-project.mjs",
+            "timeout": 120
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks-node/tooling-check.mjs",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks-node/workflow-state-validator.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks-node/stage-gate-enforcer.mjs",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks-node/rubric-injector.mjs",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks-node/format-check.mjs",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks-node/reflection-trigger.mjs",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  },
+  "workflow": {
+    "enforce_stage_gates": true,
+    "allow_gate_bypass": false,
+    "work_types": {
+      "feature": {
+        "description": "New functionality or enhancement",
+        "required_gates": [
+          "requirements",
+          "architecture",
+          "plan",
+          "implementation",
+          "critic-review",
+          "documentation",
+          "complete"
+        ],
+        "optional_gates": [],
+        "requires_commit": true,
+        "minimum_review_score": 85
+      },
+      "bugfix": {
+        "description": "Fix for existing functionality",
+        "required_gates": [
+          "root-cause",
+          "plan",
+          "implementation",
+          "critic-review",
+          "complete"
+        ],
+        "optional_gates": [
+          "documentation"
+        ],
+        "requires_commit": true,
+        "minimum_review_score": 80,
+        "auto_priority": "high"
+      },
+      "security": {
+        "description": "Security vulnerability fix",
+        "required_gates": [
+          "assessment",
+          "plan",
+          "implementation",
+          "critic-review",
+          "complete"
+        ],
+        "optional_gates": [
+          "documentation"
+        ],
+        "requires_commit": true,
+        "minimum_review_score": 95,
+        "auto_priority": "critical"
+      },
+      "refactor": {
+        "description": "Code improvement without behavior change",
+        "required_gates": [
+          "justification",
+          "plan",
+          "implementation",
+          "critic-review",
+          "complete"
+        ],
+        "optional_gates": [
+          "documentation"
+        ],
+        "requires_commit": true,
+        "minimum_review_score": 85
+      },
+      "docs": {
+        "description": "Documentation only changes",
+        "required_gates": [
+          "plan",
+          "implementation",
+          "complete"
+        ],
+        "optional_gates": [
+          "critic-review"
+        ],
+        "requires_commit": false,
+        "minimum_review_score": 70
+      },
+      "chore": {
+        "description": "Build, tooling, dependency updates",
+        "required_gates": [
+          "plan",
+          "implementation",
+          "complete"
+        ],
+        "optional_gates": [
+          "critic-review"
+        ],
+        "requires_commit": false,
+        "minimum_review_score": 70
+      }
+    },
+    "stage_gate_descriptions": {
+      "requirements": "Clarify requirements, ask questions, identify edge cases",
+      "architecture": "Design approach, show architecture, get approval",
+      "root-cause": "Analyze root cause, identify affected code, assess impact",
+      "assessment": "Assess vulnerability, determine severity, identify attack vectors",
+      "justification": "Justify refactoring, document technical debt, show benefits",
+      "plan": "Present implementation plan with tasks and estimates",
+      "implementation": "Execute implementation with quality checks",
+      "critic-review": "Mandatory code review by critic subagent",
+      "documentation": "Update documentation if patterns changed",
+      "complete": "Final approval and completion"
+    },
+    "stage_file_patterns": {
+      "requirements": [
+        "**/*.md",
+        "docs/requirements/**",
+        "specs/**"
+      ],
+      "architecture": [
+        "**/*.md",
+        "docs/architecture/**",
+        "docs/design/**"
+      ],
+      "root-cause": [
+        "**/*.md",
+        "docs/root-cause/**",
+        "docs/analysis/**"
+      ],
+      "assessment": [
+        "**/*.md",
+        "docs/security/**",
+        "docs/assessment/**"
+      ],
+      "justification": [
+        "**/*.md",
+        "docs/refactor/**",
+        "docs/justification/**"
+      ],
+      "plan": [
+        "**/*.md",
+        "docs/plan/**"
+      ],
+      "implementation": [
+        "src/**/*.ts",
+        "src/**/*.js",
+        "src/**/*.tsx",
+        "src/**/*.jsx",
+        "src/**/*.py",
+        "src/**/*.java",
+        "src/**/*.go",
+        "src/**/*.rs",
+        "test/**",
+        "tests/**",
+        "**/*.test.*",
+        "**/*.spec.*"
+      ],
+      "critic-review": [
+        ".claude/review-state/**"
+      ],
+      "documentation": [
+        "README.md",
+        "CHANGELOG.md",
+        "docs/**/*.md",
+        "**/*.md"
+      ],
+      "complete": [
+        ".claude/workflow-state/**"
+      ]
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "Task"
+    ]
+  },
+  "includeCoAuthoredBy": true,
+  "enableAllProjectMcpServers": false,
+  "mcpServers": [],
+  "_warning": "⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY! Edit source in templates/ or src/, then run: npm run build"
+}

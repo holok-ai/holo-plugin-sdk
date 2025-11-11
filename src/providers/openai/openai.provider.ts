@@ -4,8 +4,8 @@ import {AIRequestStat, ModelInfo, ProviderRequest, RequestType} from '../types';
 import {ErrorMessages} from '../../utils';
 import {ResponseService} from "../../services";
 import {Provider} from "../../db/types";
-import {OpenAIChatRequest} from "./types";
-import {OpenAIChatCompletionsService} from "./services";
+import {OpenAIChatRequest, OpenAIResponseCreateParams} from "./types";
+import {OpenAIChatCompletionsService, OpenAIResponsesService} from "./services";
 
 /**
  * OpenAI provider for connecting to OpenAI API
@@ -13,6 +13,7 @@ import {OpenAIChatCompletionsService} from "./services";
 export class OpenAIProvider extends AIProvider {
     protected readonly client: OpenAI;
     private readonly chatCompletionsService: OpenAIChatCompletionsService;
+    private readonly responsesService: OpenAIResponsesService;
 
     constructor(
         protected provider: Provider,
@@ -35,6 +36,17 @@ export class OpenAIProvider extends AIProvider {
             this.onResponseChunk.bind(this),
             this.validateModel.bind(this)
         );
+
+        this.responsesService = new OpenAIResponsesService(
+            this.client,
+            this.createWorkerResponse.bind(this),
+            this.onResponseChunk.bind(this),
+            this.validateModel.bind(this)
+        );
+    }
+
+    private isResponsesAPIRequest(payload: ProviderRequest): payload is OpenAIResponseCreateParams {
+        return 'input' in payload && !('messages' in payload);
     }
 
     /**
@@ -85,14 +97,29 @@ export class OpenAIProvider extends AIProvider {
     }
 
 
-    /**
-     * Handle LLMWorkerRequest - unified interface
-     */
     async handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat> {
-        const openaiPayload = payload as OpenAIChatRequest;
+        const logger = this.mlog(this.handleLLMRequest);
 
-        // OpenAI uses a unified chat completions API, so both generate and chat go through the same method
-        return await this.wrapWithStats(type, this.chatCompletionsService.execute.bind(this.chatCompletionsService), sourceId, requestId, openaiPayload);
+        if (this.isResponsesAPIRequest(payload)) {
+            logger.debug('Routing to Responses API', {requestId});
+            return await this.wrapWithStats(
+                type,
+                this.responsesService.execute.bind(this.responsesService),
+                sourceId,
+                requestId,
+                payload
+            );
+        } else {
+            logger.debug('Routing to Chat Completions API', {requestId});
+            const chatPayload = payload as OpenAIChatRequest;
+            return await this.wrapWithStats(
+                type,
+                this.chatCompletionsService.execute.bind(this.chatCompletionsService),
+                sourceId,
+                requestId,
+                chatPayload
+            );
+        }
     }
 
 }
