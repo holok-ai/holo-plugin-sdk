@@ -27,6 +27,15 @@ export class OpenAIController extends BaseController {
         }
     }
 
+    public responses = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+        try {
+            await this.requestService.processRequest(ProviderType.OPENAI, RequestType.CHAT, req, res);
+        } catch (error) {
+            logger.error('Error: ' + (error as Error).stack);
+            this.handleError(res, error as Error, 'Failed to process response');
+        }
+    }
+
     public models = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
         const logger = this.mlog(this.models);
         logger.info('Getting models');
