@@ -3,6 +3,7 @@ export * from './openai.message.translators';
 export * from './openai.request.translators';
 export * from './openai.response.translators';
 export * from './openai.response.message.translators';
+export * from './openai.responses.request.translators';
 export * from './openai.tool.translators';
 export * from './openai.usage.translators';
 export * from './streaming/openai.stream.translator';

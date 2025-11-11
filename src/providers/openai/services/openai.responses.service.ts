@@ -10,8 +10,8 @@ export class OpenAIResponsesService extends ClassLogger {
         private readonly createWorkerResponse: (
             sourceId: string,
             requestId: string,
-            providerType: any,
-            payload: any,
+            providerType: ProviderType,
+            payload: OpenAIResponseStreamEvent | OpenAI.Responses.Response | Error,
             fullResponse?: string
         ) => LLMWorkerResponse,
         private readonly onResponseChunk: (responseChunk: LLMWorkerResponse, auditEnabled?: boolean) => Promise<void>,
@@ -112,14 +112,14 @@ export class OpenAIResponsesService extends ClassLogger {
                     partialResponseLength: fullResponse.length
                 });
 
-                const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, error);
+                const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, error as Error);
                 await this.onResponseChunk(errorResponse, false);
             }
         } else {
             // Non-streaming response
             logger.debug('Starting OpenAI responses non-streaming', {requestId, model: responseRequest.model});
             try {
-                const message = response as any;
+                const message = response as OpenAI.Responses.Response;
 
                 // Extract text from output items
                 if (message.output && Array.isArray(message.output)) {
@@ -134,7 +134,7 @@ export class OpenAIResponsesService extends ClassLogger {
                     }
                 }
 
-                const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, response, fullResponse);
+                const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, message, fullResponse);
                 await this.onResponseChunk(responseChunk, true);
             } catch (error) {
                 logger.error('OpenAI responses error', {
@@ -142,7 +142,7 @@ export class OpenAIResponsesService extends ClassLogger {
                     error: (error as Error).message
                 });
 
-                const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, error);
+                const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, error as Error);
                 await this.onResponseChunk(errorResponse, false);
             }
         }
