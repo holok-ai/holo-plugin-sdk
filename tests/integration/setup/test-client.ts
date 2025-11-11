@@ -45,12 +45,12 @@ export class TestClient {
 
             clearTimeout(timeoutId);
 
-            let data: any;
+            let data: T;
             const contentType = response.headers.get('content-type');
             if (contentType?.includes('application/json')) {
-                data = await response.json();
+                data = await response.json() as T;
             } else {
-                data = await response.text();
+                data = await response.text() as T;
             }
 
             return {
@@ -90,7 +90,7 @@ export class TestClient {
 
             clearTimeout(timeoutId);
 
-            const data = await response.json();
+            const data = await response.json() as T;
 
             return {
                 status: response.status,
