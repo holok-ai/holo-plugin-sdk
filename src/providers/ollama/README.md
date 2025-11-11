@@ -1,6 +1,6 @@
 # Ollama Provider
 
-> **Navigation**: [Main README](../README.md) | [Architecture](../ARCHITECTURE.md) | [Types](../TYPE_REFERENCE.md) | [Translation](../TRANSLATION_GUIDE.md) | [Streaming](../STREAMING_GUIDE.md)
+> [Provider System](../README.md) | [OpenAI](../openai/README.md) | [Claude](../claude/README.md) | [Holo](../holo/README.md)
 
 ---
 
@@ -363,12 +363,4 @@ for await (const frame of ollamaStream) {
 
 ---
 
-## Related Documentation
-
-- **[TYPE_REFERENCE.md](../TYPE_REFERENCE.md)** § Ollama Types
-- **[TRANSLATION_GUIDE.md](../TRANSLATION_GUIDE.md)** § Ollama ↔ Holo
-- **[STREAMING_GUIDE.md](../STREAMING_GUIDE.md)** § Frame-Based Streaming
-
----
-
-**Last Updated**: 2025-10-05
+**Last Updated**: 2025-11-11

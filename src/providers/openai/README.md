@@ -1,8 +1,12 @@
-# OpenAI Provider Implementation
+# OpenAI Provider
 
 **Last Updated:** 2025-11-11
 **Build Status:** ✅ Passing
 **SDK Version:** Latest (v7+)
+
+> [Provider System](../README.md) | [Claude](../claude/README.md) | [Ollama](../ollama/README.md) | [Holo](../holo/README.md)
+
+---
 
 ## Overview
 

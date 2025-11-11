@@ -1,6 +1,6 @@
 # Claude Provider
 
-> **Navigation**: [Main README](../README.md) | [Architecture](../ARCHITECTURE.md) | [Types](../TYPE_REFERENCE.md) | [Translation](../TRANSLATION_GUIDE.md) | [Streaming](../STREAMING_GUIDE.md)
+> [Provider System](../README.md) | [OpenAI](../openai/README.md) | [Ollama](../ollama/README.md) | [Holo](../holo/README.md)
 
 ---
 
@@ -240,12 +240,4 @@ for await (const event of claudeStream) {
 
 ---
 
-## Related Documentation
-
-- **[TYPE_REFERENCE.md](../TYPE_REFERENCE.md)** § Claude Types
-- **[TRANSLATION_GUIDE.md](../TRANSLATION_GUIDE.md)** § Claude ↔ Holo
-- **[STREAMING_GUIDE.md](../STREAMING_GUIDE.md)** § Claude Orchestration
-
----
-
-**Last Updated**: 2025-10-05
+**Last Updated**: 2025-11-11

@@ -1,211 +1,130 @@
-# Provider Translation System
+# Provider System
 
-> **Universal abstraction layer** for LLM providers (Claude, OpenAI, Ollama) using **Holo** as the portable format.
+**Last Updated:** 2025-11-11
 
-## 📚 Documentation Index
+## Overview
 
-### Core Documentation
+Universal abstraction layer for LLM providers using **Holo** as the portable interchange format.
 
-| Document | Purpose | Audience |
-|----------|---------|----------|
-| **[ARCHITECTURE.md](ARCHITECTURE.md)** | System architecture, base patterns, validators | Developers understanding the system |
-| **[TYPE_REFERENCE.md](TYPE_REFERENCE.md)** | Complete type definitions with side-by-side comparisons | Anyone working with types |
-| **[TRANSLATION_GUIDE.md](TRANSLATION_GUIDE.md)** | Field mapping tables (Holo ↔ Provider) | Implementing translations |
-| **[STREAMING_GUIDE.md](STREAMING_GUIDE.md)** | Streaming architecture, event lifecycle, patterns | Streaming implementations |
-| **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** | Step-by-step guide to add new providers/translators | New implementations |
-| **[GUARD_ERRORS.md](GUARD_ERRORS.md)** | Guard failure error response patterns | Error handling |
+### Supported Providers
 
-### Provider-Specific Documentation
+| Provider | Status | Documentation |
+|----------|--------|---------------|
+| **OpenAI** | ✅ Complete | [openai/README.md](openai/README.md) |
+| **Claude** | ✅ Complete | [claude/README.md](claude/README.md) |
+| **Ollama** | ✅ Complete | [ollama/README.md](ollama/README.md) |
+| **Holo** | ✅ Canonical Format | [holo/README.md](holo/README.md) |
+| **Perplexity** | 🚧 In Progress | - |
 
-Each provider has a README with quick reference:
-- **[claude/README.md](claude/README.md)** - Claude-specific notes
-- **[openai/README.md](openai/README.md)** - OpenAI-specific notes
-- **[ollama/README.md](ollama/README.md)** - Ollama-specific notes
-- **[holo/README.md](holo/README.md)** - Holo (canonical format) notes
+## Architecture
 
----
-
-## 🎯 Quick Start by Task
-
-### "I need to understand the architecture"
-1. Start with [ARCHITECTURE.md](ARCHITECTURE.md) - core principles
-2. Review [TYPE_REFERENCE.md](TYPE_REFERENCE.md) § Holo Types
-3. See [STREAMING_GUIDE.md](STREAMING_GUIDE.md) § Core Concepts
-
-### "I need to add a new provider"
-1. Read [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) - step-by-step checklist
-2. Review [TYPE_REFERENCE.md](TYPE_REFERENCE.md) - understand types
-3. Study [TRANSLATION_GUIDE.md](TRANSLATION_GUIDE.md) - mapping patterns
-4. Follow [STREAMING_GUIDE.md](STREAMING_GUIDE.md) - streaming implementation
-
-### "I need to understand Holo types"
-1. Go to [TYPE_REFERENCE.md](TYPE_REFERENCE.md) § Holo Types (Canonical)
-2. See comparison tables for provider differences
-
-### "I need to map Provider X ↔ Holo"
-1. Check [TRANSLATION_GUIDE.md](TRANSLATION_GUIDE.md) § Provider Quick Reference
-2. Look for specific field in comparison tables
-
-### "I need to implement streaming"
-1. Read [STREAMING_GUIDE.md](STREAMING_GUIDE.md) § Event Lifecycle
-2. Review implementation patterns (per-choice, tool fragments, etc.)
-3. See provider-specific event structures
-
-### "I need to handle guard failures"
-1. Read [GUARD_ERRORS.md](GUARD_ERRORS.md)
-2. See error response vs normal response comparison
-
----
-
-## 🏗️ System Overview
-
-### Architecture
+### Hub-and-Spoke Model
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         Client                              │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                    ┌─────────▼──────────┐
-                    │   Holo (Portable)  │ ← Universal Format
-                    └─────────┬──────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-┌───────▼────────┐   ┌────────▼───────┐   ┌────────▼───────┐
-│ Claude         │   │ OpenAI         │   │ Ollama         │
-│ Translator     │   │ Translator     │   │ Translator     │
-└───────┬────────┘   └────────┬───────┘   └────────┬───────┘
-        │                     │                     │
-┌───────▼────────┐   ┌────────▼───────┐   ┌────────▼───────┐
-│ Claude API     │   │ OpenAI API     │   │ Ollama API     │
-└────────────────┘   └────────────────┘   └────────────────┘
+                    ┌─────────────────┐
+                    │  Holo (Portable)│
+                    │   Canonical Hub │
+                    └────────┬────────┘
+                             │
+        ┌────────────────────┼────────────────────┐
+        │                    │                    │
+┌───────▼────────┐  ┌────────▼───────┐  ┌────────▼───────┐
+│ Claude         │  │ OpenAI         │  │ Ollama         │
+│ Translator     │  │ Translator     │  │ Translator     │
+└────────────────┘  └────────────────┘  └────────────────┘
 ```
 
-### Key Concepts
+**Benefits:**
+- **N translations** instead of N² (3 providers → 3 translators vs 6)
+- **Single source of truth** for portable format
+- **Independent evolution** of provider implementations
+- **Testable isolation** of each translation layer
 
-- **Holo**: Portable abstraction layer (hub-and-spoke model)
-- **Stateless Translators**: No state between calls
-- **Bidirectional**: All translators support Holo ↔ Provider
-- **Validator-First**: ArkType validators enforce contracts
-- **Lossless**: `provider_delta` preserves raw events for round-tripping
+### Design Principles
 
-### Translation Flow
+1. **Stateless Translators** - No instance variables, pure functions
+2. **Bidirectional Translation** - Holo ↔ Provider in both directions
+3. **Lossless Where Possible** - Preserve provider-specific data in `metadata` or `provider_delta`
+4. **Type-Safe** - All types validated with arktype, no `any` or `unknown`
 
-**Request Flow:**
+## Provider Features
+
+### OpenAI
+
+- **APIs:** Chat Completions + Responses API
+- **Streaming:** Chunk-based with 54 event types (Responses API)
+- **Tools:** Function calling, web search, code interpreter, computer use, MCP
+- **Models:** GPT-4, o1, o3, o4-mini
+- **Unique Features:** Multi-choice (n>1), reasoning models, structured outputs
+
+### Claude
+
+- **API:** Messages API
+- **Streaming:** 6 granular events (most detailed)
+- **Tools:** Function calling with parallel execution
+- **Models:** Claude 3.5 Sonnet, Claude 3 Opus
+- **Unique Features:** Prompt caching, extended thinking, MCP integration
+
+### Ollama
+
+- **APIs:** Chat + Generate (dual mode)
+- **Streaming:** Simple frame-based (done=true/false)
+- **Tools:** Function calling (chat mode only)
+- **Models:** Llama, Mistral, Gemma, etc. (local deployment)
+- **Unique Features:** Hardware control (GPU/NUMA), keep-alive, context continuation
+
+## Quick Start
+
+Each provider's README contains:
+- ✅ Complete API reference
+- ✅ Request/response mapping tables
+- ✅ Streaming event documentation
+- ✅ Usage examples
+- ✅ Known issues and edge cases
+- ✅ Provider-specific features
+
+**Start here:**
+1. Read [holo/README.md](holo/README.md) to understand the canonical format
+2. Read your target provider's README for specific mappings
+3. Check provider implementations for code examples
+
+## File Structure
+
 ```
-Client Request → Holo Format → Provider Translator → Provider API
+src/providers/
+├── README.md (this file)
+├── holo/
+│   ├── README.md
+│   └── types/
+├── openai/
+│   ├── README.md
+│   ├── types/
+│   ├── validators/
+│   ├── services/
+│   └── translators/
+├── claude/
+│   ├── README.md
+│   ├── types/
+│   ├── validators/
+│   └── translators/
+└── ollama/
+    ├── README.md
+    ├── types/
+    ├── validators/
+    └── translators/
 ```
 
-**Response Flow:**
-```
-Provider API → Provider Translator → Holo Format → Client
-```
+## Adding a New Provider
 
-**Streaming Flow:**
-```
-Provider Chunk → Event Translator → Holo StreamChunk → Client
-```
+1. Create provider directory structure
+2. Define types and validators (arktype)
+3. Implement bidirectional translators (Holo ↔ Provider)
+4. Add streaming support
+5. Write comprehensive README with mapping tables
+6. Add tests
+
+See [holo/README.md](holo/README.md) § "Adding a New Provider" for detailed checklist.
 
 ---
 
-## 📊 Supported Providers
-
-| Provider | Request | Response | Streaming | Status |
-|----------|---------|----------|-----------|--------|
-| **Claude** | ✅ | ✅ | ✅ (6 events) | Complete |
-| **OpenAI** | ✅ | ✅ | ✅ (4 events) | Complete |
-| **Ollama** | ✅ | ✅ | ✅ (3 events) | Complete |
-| **Holo** | ✅ | ✅ | ✅ (Canonical) | Complete |
-
----
-
-## 🔧 Implementation Status
-
-### Request/Response Translators
-
-| Component | Claude | OpenAI | Ollama |
-|-----------|--------|--------|--------|
-| Request Translator | ✅ | ✅ | ✅ (Chat + Generate) |
-| Response Translator | ✅ | ✅ | ✅ (Chat + Generate) |
-| Message Translator | ✅ | ✅ | ✅ |
-| Tool Translator | ✅ | ✅ | ✅ |
-| Usage Translator | ✅ | ✅ | ✅ |
-
-### Streaming Translators
-
-| Event Type | Claude | OpenAI | Ollama |
-|------------|--------|--------|--------|
-| Message Start | ✅ | ✅ | N/A (no explicit start) |
-| Content Delta | ✅ | ✅ | ✅ |
-| Message Delta | ✅ | ✅ | ✅ |
-| Message Stop | ✅ | ✅ | ✅ |
-| Content Block Start | ✅ | N/A | N/A |
-| Content Block Stop | ✅ | N/A | N/A |
-| **Orchestrator** | ✅ | ✅ | ✅ |
-
----
-
-## 🐛 Known Issues
-
-### High Priority
-- **OpenAI "Lean" provider_delta Pattern**: Creates reconstructed subsets instead of storing full source (violates lossless principle)
-  - **Files**: All OpenAI streaming translators
-  - **Fix**: Store full `source` chunk in `provider_delta`
-
-### Low Priority
-- **Ollama Type Safety**: Uses `as any` cast in message delta translator
-- **HoloRequestFactory**: Empty stub (unused in code)
-- **TODOs**: 3 TODO comments in codebase
-
-See [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) § Troubleshooting for details.
-
----
-
-## 📖 Further Reading
-
-### External Documentation
-- [Claude API Docs](https://docs.anthropic.com/claude/reference)
-- [OpenAI API Docs](https://platform.openai.com/docs/api-reference)
-- [Ollama API Docs](https://github.com/ollama/ollama/blob/main/docs/api.md)
-
-### Internal Documentation
-- Architecture patterns: [ARCHITECTURE.md](ARCHITECTURE.md)
-- Type definitions: [TYPE_REFERENCE.md](TYPE_REFERENCE.md)
-- Translation mappings: [TRANSLATION_GUIDE.md](TRANSLATION_GUIDE.md)
-- Streaming guide: [STREAMING_GUIDE.md](STREAMING_GUIDE.md)
-- Implementation guide: [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)
-
----
-
-## 🤝 Contributing
-
-When adding new providers or modifying existing ones:
-
-1. **Read**: [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) for step-by-step instructions
-2. **Follow**: [ARCHITECTURE.md](ARCHITECTURE.md) patterns (stateless, validators, etc.)
-3. **Document**: Update [TYPE_REFERENCE.md](TYPE_REFERENCE.md) and [TRANSLATION_GUIDE.md](TRANSLATION_GUIDE.md)
-4. **Test**: Bidirectional translation and round-trip fidelity
-
----
-
-## 📝 Documentation Status
-
-**Current**: 19 files scattered across directories
-**Goal**: 7 consolidated files + per-provider READMEs
-**Migration**: In progress (Phase 1 complete)
-
-### Deprecated Documentation
-
-The following files are **deprecated** and will be archived after consolidation is complete:
-
-- Individual type files (CLAUDE_REQUEST_TYPES.md, etc.) → See [TYPE_REFERENCE.md](TYPE_REFERENCE.md)
-- Individual mapping files (TRANSLATION_MAPPING.md per provider) → See [TRANSLATION_GUIDE.md](TRANSLATION_GUIDE.md)
-- Individual streaming files (STREAM_RESPONSE.md per provider) → See [STREAMING_GUIDE.md](STREAMING_GUIDE.md)
-- TRANSLATOR_METHODOLOGY.md → Split into [STREAMING_GUIDE.md](STREAMING_GUIDE.md) + [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)
-- TRANSLATOR_ARCHITECTURE.md → Merged into [ARCHITECTURE.md](ARCHITECTURE.md)
-
----
-
-**Last Updated**: 2025-10-05
-**Version**: 1.0.0 (Consolidated Documentation)
+**Last Updated:** 2025-11-11
