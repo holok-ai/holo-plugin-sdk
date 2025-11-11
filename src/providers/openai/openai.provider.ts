@@ -152,18 +152,30 @@ export class OpenAIProvider extends AIProvider {
                     error: (error as Error).message,
                     partialResponseLength: fullResponse.length
                 });
-                throw error;
+
+                const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, error);
+                await this.onResponseChunk(errorResponse, false);
             }
         } else {
             // For non-streaming, extract the text content
             logger.debug('Starting OpenAI chat completions non-streaming', {requestId, model: chatRequest.model});
-            const message = response as any;
-            if (message.choices && message.choices.length > 0) {
-                fullResponse = message.choices[0].message?.content || '';
-            }
+            try {
+                const message = response as any;
+                if (message.choices && message.choices.length > 0) {
+                    fullResponse = message.choices[0].message?.content || '';
+                }
 
-            const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, response, fullResponse);
-            await this.onResponseChunk(responseChunk, true);
+                const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, response, fullResponse);
+                await this.onResponseChunk(responseChunk, true);
+            } catch (error) {
+                logger.error('OpenAI chat completions error', {
+                    requestId,
+                    error: (error as Error).message
+                });
+
+                const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, error);
+                await this.onResponseChunk(errorResponse, false);
+            }
         }
     }
 }

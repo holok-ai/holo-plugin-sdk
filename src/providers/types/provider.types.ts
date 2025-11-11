@@ -1,5 +1,5 @@
 import {OllamaChatRequest, OllamaGenerateRequest, OllamaMessage, OllamaResponse} from "../ollama/types";
-import {OpenAIChatRequest, OpenAIRequestMessage, OpenAIResponse} from "../openai/types";
+import {OpenAIChatRequest, OpenAIRequestMessage, OpenAIChatCompletionResponse} from "../openai/types";
 import {ClaudeChatRequest, ClaudeRequestMessage, ClaudeResponse} from "../claude/types";
 
 export interface AIProviderConfig {
@@ -49,7 +49,7 @@ export interface AIRequestStat {
 export type ProviderResponse =
     ClaudeResponse
     | OllamaResponse
-    | OpenAIResponse;
+    | OpenAIChatCompletionResponse;
 
 export type ProviderChatRequest =
     ClaudeChatRequest

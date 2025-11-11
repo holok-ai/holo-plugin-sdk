@@ -25,7 +25,7 @@ This document provides a complete reference for all types in the provider transl
 | Category | Purpose | Examples |
 |----------|---------|----------|
 | **Request Types** | Client → LLM | `HoloRequest`, `ClaudeRequest`, `OpenAIRequest` |
-| **Response Types** | LLM → Client | `HoloResponse`, `ClaudeResponse`, `OpenAIResponse` |
+| **Response Types** | LLM → Client | `HoloResponse`, `ClaudeResponse`, `OpenAIChatCompletionResponse` |
 | **Streaming Types** | Real-time deltas | `HoloStreamChunk`, `ClaudeRawMessageStreamEvent` |
 | **Message Types** | Conversation history | `HoloMessage`, `ClaudeMessage`, `OpenAIMessage` |
 | **Tool Types** | Function calling | `HoloTool`, `ClaudeTool`, `OpenAITool` |
