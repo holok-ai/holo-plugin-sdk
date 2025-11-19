@@ -7,11 +7,12 @@ import {ErrorMessages, pickDefined} from "../utils";
 import {LLMWorkerRequest, LLMWorkerRequestValidator} from "./index";
 import {OllamaChatRequestWithDefaults, OllamaGenerateRequestWithDefaults} from "../providers/ollama/validators";
 import {ClaudeChatRequestWithDefaults} from "../providers/claude/validators";
-import {OpenAIChatRequestValidator} from "../providers/openai/validators";
+import {OpenAIChatRequestValidator, OpenAIResponseCreateParamsValidator} from "../providers/openai/validators";
 import {ArkErrors} from "arktype";
 
 export class WorkerRequestFactory {
     static logger = logger.child({className: 'WorkerRequestFactory'});
+
     static fromRequest(
         providerType: ProviderType,
         providerName: string | undefined,
@@ -74,7 +75,11 @@ export class WorkerRequestFactory {
                 break;
             case ProviderType.OPENAI:
             case ProviderType.PERPLEXITY:
-                request = OpenAIChatRequestValidator.assert(body);
+                if (type === RequestType.RESPONSES) {
+                    request = OpenAIResponseCreateParamsValidator.assert(body) as ProviderRequest;
+                } else {
+                    request = OpenAIChatRequestValidator.assert(body);
+                }
                 break;
             default:
                 logger.error('Unsupported provider in WorkerRequest unified parser.', {providerType}, {

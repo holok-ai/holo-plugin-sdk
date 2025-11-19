@@ -57,7 +57,13 @@ export class StreamService extends ClassLogger {
                     break;
                 case ProviderType.OPENAI:
                 case ProviderType.PERPLEXITY:
-                    this.streamOpenAI(payload, res, fullResponse);
+                    const isResponsesAPI = payload.object === 'response' || payload.type?.startsWith('response.');
+                    logger.debug(`OpenAI routing: object=${payload.object}, type=${payload.type}, isResponsesAPI=${isResponsesAPI}, isStreaming=${res.isStreaming}`);
+                    if (isResponsesAPI) {
+                        this.streamOpenAIResponses(payload, res, fullResponse);
+                    } else {
+                        this.streamOpenAI(payload, res, fullResponse);
+                    }
                     break;
             }
         } catch (error) {
@@ -188,16 +194,44 @@ export class StreamService extends ClassLogger {
     streamOpenAI(response: OpenAIChatCompletionResponse, res: ResponseStream, fullResponse?: string) {
         const logger = this.mlog(this.streamOpenAI);
         logger.debug(`opeanai stream formatter ${JSON.stringify(response)}`);
+
+        if (!res.isStreaming) {
+            res.push(JSON.stringify(response));
+            res.end();
+            return;
+        }
+
         res.push(`data: ${JSON.stringify(response)}\n\n`);
 
-        const choice = response.choices?.[0];
+        // const choice = response.choices?.[0];
         const hasError = 'error' in response;
+        const hasUsage = response.usage !== null && response.usage !== undefined;
 
-        if (choice?.finish_reason || fullResponse !== undefined || hasError) {
+        if (hasUsage || fullResponse !== undefined || hasError) {
             if (!hasError) {
                 res.push(`data: [DONE]\n\n`);
             }
             logger.debug('Closing response stream');
+            res.end();
+        }
+    }
+
+    streamOpenAIResponses(payload: any, res: ResponseStream, _fullResponse?: string) {
+        const logger = this.mlog(this.streamOpenAIResponses);
+
+        if (!res.isStreaming) {
+            res.push(JSON.stringify(payload));
+            res.end();
+            return;
+        }
+
+        res.push(`data: ${JSON.stringify(payload)}\n\n`);
+
+        if (payload.type === 'response.completed' || payload.type === 'response.failed' || payload.type === 'error') {
+            if (payload.type !== 'error') {
+                res.push(`data: [DONE]\n\n`);
+            }
+            logger.debug('Closing Responses API stream');
             res.end();
         }
     }

@@ -179,7 +179,7 @@ process.on('uncaughtException', (error: Error): void => {
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>): void => {
-    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    logger.error(`Unhandled Rejection: ${reason}`, promise, 'reason:', reason);
     process.exit(1);
 });
 

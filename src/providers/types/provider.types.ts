@@ -34,7 +34,8 @@ export interface ModelInfo {
 // Request type enum
 export enum RequestType {
     GENERATE = 'generate',
-    CHAT = 'chat'
+    CHAT = 'chat',
+    RESPONSES = 'responses'
 }
 
 export interface AIRequestStat {

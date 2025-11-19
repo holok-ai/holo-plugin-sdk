@@ -72,7 +72,7 @@ export class ResponseService extends ClassLogger {
         const logger = this.mlog(this.formatAndSend);
 
         const payload = responseChunk.payload as any;
-        const isSdkError = payload && typeof payload === 'object' && 'status' in payload && 'error' in payload;
+        const isSdkError = payload && typeof payload === 'object' && 'status' in payload && 'error' in payload && payload.error !== null;
 
         if (isSdkError) {
             logger.info(`Received SDK error for request ${responseChunk.requestId}, converting to streaming format`);

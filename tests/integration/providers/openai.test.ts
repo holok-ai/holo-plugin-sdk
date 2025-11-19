@@ -58,7 +58,7 @@ describe('OpenAI Integration Tests', () => {
 
     describe('Chat Completions API', () => {
         it('should handle non-streaming chat completion', async () => {
-            const response = await client.post('/v1/chat/completions', chatCompletionRequest);
+            const response = await client.post('/api/openai/v1/chat/completions', chatCompletionRequest);
 
             expect(response.status).toBe(200);
             validateChatCompletion(response.data);
@@ -66,13 +66,13 @@ describe('OpenAI Integration Tests', () => {
         }, 30000);
 
         it('should handle streaming chat completion', async () => {
-            const chunks = await client.stream('/v1/chat/completions', chatCompletionStreamRequest);
+            const chunks = await client.stream('/api/openai/v1/chat/completions', chatCompletionStreamRequest);
 
             validateStreamingChatCompletion(chunks);
         }, 30000);
 
         it('should handle function calling', async () => {
-            const response = await client.post('/v1/chat/completions', chatCompletionToolsRequest);
+            const response = await client.post('/api/openai/v1/chat/completions', chatCompletionToolsRequest);
 
             expect(response.status).toBe(200);
             validateChatCompletion(response.data);
@@ -88,7 +88,7 @@ describe('OpenAI Integration Tests', () => {
 
     describe('Responses API', () => {
         it('should handle non-streaming response', async () => {
-            const response = await client.post('/v1/responses', responsesAPIRequest);
+            const response = await client.post('/api/openai/v1/responses', responsesAPIRequest);
 
             expect(response.status).toBe(200);
             validateResponsesAPI(response.data);
@@ -102,7 +102,7 @@ describe('OpenAI Integration Tests', () => {
         }, 30000);
 
         it('should handle streaming response', async () => {
-            const chunks = await client.stream('/v1/responses', responsesAPIStreamRequest);
+            const chunks = await client.stream('/api/openai/v1/responses', responsesAPIStreamRequest);
 
             validateResponsesAPIStream(chunks);
 
@@ -112,7 +112,7 @@ describe('OpenAI Integration Tests', () => {
         }, 30000);
 
         it('should handle array input format', async () => {
-            const response = await client.post('/v1/responses', responsesAPIArrayInputRequest);
+            const response = await client.post('/api/openai/v1/responses', responsesAPIArrayInputRequest);
 
             expect(response.status).toBe(200);
             validateResponsesAPI(response.data);
@@ -124,7 +124,7 @@ describe('OpenAI Integration Tests', () => {
 
     describe('Models Endpoint', () => {
         it('should list available models', async () => {
-            const response = await client.get('/v1/models');
+            const response = await client.get('/api/openai/v1/models');
 
             expect(response.status).toBe(200);
             expect(response.data).toHaveProperty('object');

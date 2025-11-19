@@ -37,7 +37,10 @@ export class OpenAIResponsesService extends ClassLogger {
         const startTime = Date.now();
         let timeToFirst: number = 0;
 
-        if (responseRequest.stream) {
+        // Check if response is async iterable (streaming)
+        const isStreaming = responseRequest.stream === true && Symbol.asyncIterator in Object(response);
+
+        if (isStreaming) {
             logger.debug('Starting OpenAI responses stream', {requestId, model: responseRequest.model});
             try {
                 // @ts-ignore
@@ -51,8 +54,10 @@ export class OpenAIResponsesService extends ClassLogger {
                         case 'response.created':
                         case 'response.queued':
                         case 'response.in_progress':
-                            // Lifecycle events - just log
+                            // Lifecycle events - forward them
                             logger.debug(`Response lifecycle: ${streamEvent.type}`);
+                            const lifecycleChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, event);
+                            await this.onResponseChunk(lifecycleChunk);
                             break;
 
                         case 'response.output_text.delta':

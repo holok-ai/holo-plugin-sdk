@@ -63,10 +63,12 @@ export class OpenAIChatCompletionsService extends ClassLogger {
                         });
                     }
 
-                    if (choice?.delta?.content) {
-                        if (timeToFirst == 0) timeToFirst = Date.now() - startTime;
-                        const token = choice.delta.content;
-                        fullResponse += token;
+                    if (choice?.delta) {
+                        if (choice.delta.content) {
+                            if (timeToFirst == 0) timeToFirst = Date.now() - startTime;
+                            const token = choice.delta.content;
+                            fullResponse += token;
+                        }
 
                         const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OPENAI, chunk);
                         await this.onResponseChunk(responseChunk);

@@ -58,14 +58,18 @@ export const chatCompletionToolsRequest = {
 
 export const responsesAPIRequest = {
     model: 'gpt-4o-mini',
-    input: 'Say "Responses API working" and nothing else',
+    input: [
+        {role: 'user', content: 'Say "Responses API working" and nothing else'}
+    ],
     max_output_tokens: 20,
     stream: false
 };
 
 export const responsesAPIStreamRequest = {
     model: 'gpt-4o-mini',
-    input: 'Count to 3 slowly',
+    input: [
+        {role: 'user', content: 'Count to 3 slowly'}
+    ],
     max_output_tokens: 50,
     stream: true
 };
