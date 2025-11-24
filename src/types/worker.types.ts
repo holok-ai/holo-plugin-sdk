@@ -10,6 +10,7 @@ export interface LLMWorkerRequest {
     sourceId: string;
     appSlug?: string;
     userId?: string;
+    thread_id?: string;
     requestId: string;
     type: RequestType;
     payload: ProviderRequest;
