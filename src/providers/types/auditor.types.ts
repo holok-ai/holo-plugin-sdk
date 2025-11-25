@@ -82,6 +82,9 @@ export abstract class BaseAuditor implements IAuditor {
         if (workerRequest.userId !== undefined) {
             llmRequest.user_id = workerRequest.userId;
         }
+        if (workerRequest.thread_id !== undefined) {
+            llmRequest.thread_id = workerRequest.thread_id;
+        }
         if (workerRequest.payload !== undefined) {
             llmRequest.raw_request = workerRequest.payload;
         }

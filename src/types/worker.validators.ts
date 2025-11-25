@@ -13,6 +13,12 @@ export const RequestTypeValidator = type.valueOf(RequestType);
  * Validator for LLMWorkerRequest
  * Note: payload is 'unknown' since ProviderRequest is a complex union type
  */
+// UUID validator - matches standard UUID format (8-4-4-4-12 hex digits)
+const UUIDValidator = type('string').narrow((s, ctx) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(s) || ctx.mustBe('a valid UUID');
+});
+
 export const LLMWorkerRequestValidator = type({
     'organizationId?': 'string',
     providerType: ProviderTypeValidator,
@@ -20,6 +26,7 @@ export const LLMWorkerRequestValidator = type({
     sourceId: 'string',
     'appSlug?': 'string',
     'userId?': 'string',
+    'thread_id?': UUIDValidator,
     requestId: 'string',
     type: RequestTypeValidator,
     payload: ProviderRequestValidator,
