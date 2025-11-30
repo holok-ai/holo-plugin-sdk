@@ -1,0 +1,21 @@
+# Trigger deployment to dev environment on push to main
+# This workflow sends a repository_dispatch event to holokai-ops-aws
+
+name: Deploy to Dev
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  trigger-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger dev deployment
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.HOLOKAI_OPS_DEPLOY_TOKEN }}
+          repository: holok-ai/holokai-ops-aws
+          event-type: deploy-holo-dev
+          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
