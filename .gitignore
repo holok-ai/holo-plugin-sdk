@@ -35,3 +35,13 @@ curl.json
 
 # Application evaluators and scripts
 applications/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# BMAD and Claude
+.bmad/
+.claude/
+
+# Packages directory (for open-core migration)
+packages/

@@ -15,10 +15,6 @@ import {AppDB} from "./db";
 import {ConfigService, OrganizationCacheService, TokenService} from './admin/services';
 import {ConfigFileLoader} from "./admin/services/config.file.loader";
 import {ConfigQueueLoader, ConfigQueueLoaderFactory} from "./admin/services/config.queue.loader";
-import {PluginService} from "./services/plugin/plugin.service";
-import {PluginDiscoveryService} from "./services/plugin/discovery.service";
-import {PluginLoaderService} from "./services/plugin/loader.service";
-import {ProviderPluginRegistry} from "./services/plugin/provider-registry.service";
 
 // Initialize Express app
 const app: Application = express();
@@ -54,10 +50,6 @@ container.registerSingleton(ResponseService)
     .registerSingleton(TokenService)
     .registerSingleton(ConfigFileLoader)
     .registerSingleton(ConfigQueueLoader, ConfigQueueLoaderFactory)
-    .registerSingleton(PluginService)
-    .registerSingleton(PluginDiscoveryService)
-    .registerSingleton(PluginLoaderService)
-    .registerSingleton(ProviderPluginRegistry)
 
 const configService: ConfigService = container.resolve(ConfigService);
 
@@ -88,10 +80,6 @@ async function waitForInitialConfig(timeoutMs: number = 60000) {
 // Initialize app with async components
 async function initApp(): Promise<void> {
     try {
-        // Initialize plugin system first
-        const pluginService = container.resolve(PluginService);
-        await pluginService.initializePluginSystem();
-
         // const queueService = container.resolve(QueueService);
         const initService = container.resolve(InitService);
         const responseService: ResponseService = container.resolve(ResponseService);

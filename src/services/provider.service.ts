@@ -8,8 +8,6 @@ import {ProviderType} from "../providers/types";
 import {ResponseService} from "./response.service";
 import {PerplexityProvider} from "../providers/perplexity/perplexity.provider";
 import {IProvider} from "../providers/ai.provider";
-import {ProviderPluginRegistry} from "./plugin/provider-registry.service";
-import type {ProviderConfig} from "@holokai/common/provider";
 
 @injectable()
 export class ProviderService {
@@ -17,8 +15,7 @@ export class ProviderService {
 
     constructor(
         private providerDB: ProviderDB,
-        private responseService: ResponseService,
-        private providerPluginRegistry: ProviderPluginRegistry) {
+        private responseService: ResponseService) {
 
     }
 
