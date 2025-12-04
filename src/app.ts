@@ -15,6 +15,11 @@ import {AppDB} from "./db";
 import {ConfigService, OrganizationCacheService, TokenService} from './admin/services';
 import {ConfigFileLoader} from "./admin/services/config.file.loader";
 import {ConfigQueueLoader, ConfigQueueLoaderFactory} from "./admin/services/config.queue.loader";
+import {PluginDiscoveryService} from "./services/plugin/discovery.service";
+import {PluginLoaderService} from "./services/plugin/loader.service";
+import {ProviderPluginRegistry} from "./services/plugin/provider-registry.service";
+import type {IProviderPlugin} from "@holokai/common/plugin";
+import {PluginContext, PluginState} from "@holokai/common/plugin";
 
 // Initialize Express app
 const app: Application = express();
@@ -50,8 +55,57 @@ container.registerSingleton(ResponseService)
     .registerSingleton(TokenService)
     .registerSingleton(ConfigFileLoader)
     .registerSingleton(ConfigQueueLoader, ConfigQueueLoaderFactory)
+    .registerSingleton(PluginDiscoveryService)
+    .registerSingleton(PluginLoaderService)
+    .registerSingleton(ProviderPluginRegistry)
 
 const configService: ConfigService = container.resolve(ConfigService);
+
+async function initializePluginSystem(): Promise<void> {
+    logger.info('Initializing plugin system...');
+
+    const discovery = container.resolve(PluginDiscoveryService);
+    const loader = container.resolve(PluginLoaderService);
+    const providerRegistry = container.resolve(ProviderPluginRegistry);
+
+    // Discover provider plugins
+    const discovered = await discovery.discoverPluginsByType('provider');
+    logger.info(`Discovered ${discovered.length} provider plugins`);
+
+    // Load plugins
+    const loaded = await loader.loadPlugins(discovered);
+    logger.info(`Loaded ${loaded.length} provider plugins`);
+
+    // Initialize and register each provider plugin
+    for (const plugin of loaded) {
+        const providerPlugin = plugin as IProviderPlugin;
+
+        // Create plugin context
+        const pluginContext: PluginContext = {
+            logger: {
+                log: (msg, ...args) => logger.info(msg, ...args),
+                info: (msg, ...args) => logger.info(msg, ...args),
+                warn: (msg, ...args) => logger.warn(msg, ...args),
+                error: (msg, ...args) => logger.error(msg, ...args),
+                debug: (msg, ...args) => logger.debug(msg, ...args),
+            },
+            config: {},
+            env: process.env
+        };
+
+        // Initialize plugin
+        await providerPlugin.initialize(pluginContext);
+
+        if (providerPlugin.getState() === PluginState.READY) {
+            providerRegistry.registerPlugin(providerPlugin);
+            logger.info(`Registered provider plugin: ${providerPlugin.manifest.name}`);
+        } else {
+            logger.warn(`Plugin ${providerPlugin.manifest.name} not ready, state: ${providerPlugin.getState()}`);
+        }
+    }
+
+    logger.info('Plugin system initialized successfully');
+}
 
 async function waitForInitialConfig(timeoutMs: number = 60000) {
     return new Promise<void>((resolve, reject) => {
@@ -79,6 +133,9 @@ async function waitForInitialConfig(timeoutMs: number = 60000) {
 // Initialize app with async components
 async function initApp(): Promise<void> {
     try {
+        // Initialize plugin system first
+        await initializePluginSystem();
+
         // const queueService = container.resolve(QueueService);
         const initService = container.resolve(InitService);
         const responseService: ResponseService = container.resolve(ResponseService);
@@ -108,7 +165,7 @@ async function initApp(): Promise<void> {
         });
 
         // Handle server errors
-        server.on('error', (error: NodeJS.ErrnoException): void => {
+        server.on('error', (error: Error & { code?: string; syscall?: string }): void => {
             logger.error(`Server error: ${error.message}`);
             if (error.syscall !== 'listen') {
                 throw error;

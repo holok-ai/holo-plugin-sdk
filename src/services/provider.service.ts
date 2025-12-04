@@ -8,6 +8,8 @@ import {ProviderType} from "../providers/types";
 import {ResponseService} from "./response.service";
 import {PerplexityProvider} from "../providers/perplexity/perplexity.provider";
 import {IProvider} from "../providers/ai.provider";
+import {ProviderPluginRegistry} from "./plugin/provider-registry.service";
+import type {ProviderConfig} from "@holokai/common/provider";
 
 @injectable()
 export class ProviderService {
@@ -15,7 +17,8 @@ export class ProviderService {
 
     constructor(
         private providerDB: ProviderDB,
-        private responseService: ResponseService) {
+        private responseService: ResponseService,
+        private providerPluginRegistry: ProviderPluginRegistry) {
 
     }
 
@@ -35,7 +38,13 @@ export class ProviderService {
         for (const provider of providers) {
             switch (provider.type) {
                 case ProviderType.OPENAI:
-                    aiProvider = new OpenAIProvider(provider, this.responseService, serverId);
+                    // Try to load from plugin system first
+                    aiProvider = await this.loadProviderFromPlugin('openai', provider);
+                    if (!aiProvider) {
+                        // Fallback to legacy provider
+                        logger.warn(`OpenAI plugin not found, using legacy provider`);
+                        aiProvider = new OpenAIProvider(provider, this.responseService, serverId);
+                    }
                     break;
                 case ProviderType.CLAUDE:
                     aiProvider = new ClaudeProvider(provider, this.responseService, serverId);
@@ -57,6 +66,31 @@ export class ProviderService {
             this.aiProviders.set(provider.type, aiProvider);
         }
         logger.debug(`Available providers: ${Array.from(this.aiProviders.keys())}`);
+    }
+
+    private async loadProviderFromPlugin(providerType: string, provider: Provider): Promise<IProvider | null> {
+        const plugin = this.providerPluginRegistry.getByProviderType(providerType);
+        if (!plugin) {
+            logger.debug(`No plugin found for provider type: ${providerType}`);
+            return null;
+        }
+
+        logger.info(`Loading ${providerType} provider from plugin: ${plugin.manifest.name}`);
+
+        // Convert legacy Provider to PluginConfig
+        const pluginConfig: ProviderConfig = {
+            id: provider.id,
+            provider_type: providerType,
+            api_key: provider.config.apiKey || '',
+            base_url: provider.config.baseUrl,
+            model: provider.config.model || 'gpt-4'
+        };
+
+        // Create provider instance from plugin
+        const providerInstance = await plugin.createProvider(pluginConfig);
+
+        logger.info(`Successfully loaded ${providerType} provider from plugin`);
+        return providerInstance as unknown as IProvider;
     }
 
     async matchProvider(key: string): Promise<IProvider | undefined> {
