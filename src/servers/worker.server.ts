@@ -12,11 +12,10 @@ import {LLMWorkerRequest} from '../types';
 import {env} from "../env";
 import {GuardService} from "../admin/services";
 import {IProvider} from "../providers/ai.provider";
+import {PluginService} from "../services/plugin/plugin.service";
 import {PluginDiscoveryService} from "../services/plugin/discovery.service";
 import {PluginLoaderService} from "../services/plugin/loader.service";
 import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
-import type {IProviderPlugin} from "@holokai/common/plugin";
-import {PluginContext, PluginState} from "@holokai/common/plugin";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -128,56 +127,17 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
     }
 }
 
-container.registerSingleton(PluginDiscoveryService)
+container.registerSingleton(PluginService)
+    .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry);
-
-async function initializePluginSystem(): Promise<void> {
-    logger.info('Initializing plugin system...');
-
-    const discovery = container.resolve(PluginDiscoveryService);
-    const loader = container.resolve(PluginLoaderService);
-    const providerRegistry = container.resolve(ProviderPluginRegistry);
-
-    const discovered = await discovery.discoverPluginsByType('provider');
-    logger.info(`Discovered ${discovered.length} provider plugins`);
-
-    const loaded = await loader.loadPlugins(discovered);
-    logger.info(`Loaded ${loaded.length} provider plugins`);
-
-    for (const plugin of loaded) {
-        const providerPlugin = plugin as IProviderPlugin;
-
-        const pluginContext: PluginContext = {
-            logger: {
-                log: (msg, ...args) => logger.info(msg, ...args),
-                info: (msg, ...args) => logger.info(msg, ...args),
-                warn: (msg, ...args) => logger.warn(msg, ...args),
-                error: (msg, ...args) => logger.error(msg, ...args),
-                debug: (msg, ...args) => logger.debug(msg, ...args),
-            },
-            config: {},
-            env: process.env
-        };
-
-        await providerPlugin.initialize(pluginContext);
-
-        if (providerPlugin.getState() === PluginState.READY) {
-            providerRegistry.registerPlugin(providerPlugin);
-            logger.info(`Registered provider plugin: ${providerPlugin.manifest.name}`);
-        } else {
-            logger.warn(`Plugin ${providerPlugin.manifest.name} not ready, state: ${providerPlugin.getState()}`);
-        }
-    }
-
-    logger.info('Plugin system initialized successfully');
-}
 
 let workerInstance: WorkerServer | null = null;
 
 async function startWorker() {
     try {
-        await initializePluginSystem();
+        const pluginService = container.resolve(PluginService);
+        await pluginService.initializePluginSystem();
         workerInstance = container.resolve(WorkerServer);
         await workerInstance.start();
     } catch (error) {
