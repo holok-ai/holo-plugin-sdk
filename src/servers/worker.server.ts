@@ -12,6 +12,11 @@ import {LLMWorkerRequest} from '../types';
 import {env} from "../env";
 import {GuardService} from "../admin/services";
 import {IProvider} from "../providers/ai.provider";
+import {PluginDiscoveryService} from "../services/plugin/discovery.service";
+import {PluginLoaderService} from "../services/plugin/loader.service";
+import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
+import type {IProviderPlugin} from "@holokai/common/plugin";
+import {PluginContext, PluginState} from "@holokai/common/plugin";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -123,13 +128,76 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
     }
 }
 
-const worker = container.resolve(WorkerServer);
-worker.start();
+container.registerSingleton(PluginDiscoveryService)
+    .registerSingleton(PluginLoaderService)
+    .registerSingleton(ProviderPluginRegistry);
+
+async function initializePluginSystem(): Promise<void> {
+    logger.info('Initializing plugin system...');
+
+    const discovery = container.resolve(PluginDiscoveryService);
+    const loader = container.resolve(PluginLoaderService);
+    const providerRegistry = container.resolve(ProviderPluginRegistry);
+
+    const discovered = await discovery.discoverPluginsByType('provider');
+    logger.info(`Discovered ${discovered.length} provider plugins`);
+
+    const loaded = await loader.loadPlugins(discovered);
+    logger.info(`Loaded ${loaded.length} provider plugins`);
+
+    for (const plugin of loaded) {
+        const providerPlugin = plugin as IProviderPlugin;
+
+        const pluginContext: PluginContext = {
+            logger: {
+                log: (msg, ...args) => logger.info(msg, ...args),
+                info: (msg, ...args) => logger.info(msg, ...args),
+                warn: (msg, ...args) => logger.warn(msg, ...args),
+                error: (msg, ...args) => logger.error(msg, ...args),
+                debug: (msg, ...args) => logger.debug(msg, ...args),
+            },
+            config: {},
+            env: process.env
+        };
+
+        await providerPlugin.initialize(pluginContext);
+
+        if (providerPlugin.getState() === PluginState.READY) {
+            providerRegistry.registerPlugin(providerPlugin);
+            logger.info(`Registered provider plugin: ${providerPlugin.manifest.name}`);
+        } else {
+            logger.warn(`Plugin ${providerPlugin.manifest.name} not ready, state: ${providerPlugin.getState()}`);
+        }
+    }
+
+    logger.info('Plugin system initialized successfully');
+}
+
+let workerInstance: WorkerServer | null = null;
+
+async function startWorker() {
+    try {
+        await initializePluginSystem();
+        workerInstance = container.resolve(WorkerServer);
+        await workerInstance.start();
+    } catch (error) {
+        logger.error(`Failed to start worker: ${(error as Error).message}`, {
+            className: 'startWorker',
+            methodName: 'startWorker',
+            stack: (error as Error).stack
+        });
+        process.exit(1);
+    }
+}
+
+startWorker();
 
 ['SIGBREAK', 'SIGINT', 'SIGTERM'].forEach((signal) => {
     process.on(signal, () => {
         logger.info(`Received ${signal}, shutting down worker server...`, {className: 'process', methodName: signal});
-        worker.shutdown();
+        if (workerInstance) {
+            workerInstance.shutdown();
+        }
         process.exit(0);
     });
 });
