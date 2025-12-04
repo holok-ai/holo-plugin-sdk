@@ -29,7 +29,14 @@
   },
   "ts-node": {
     "esm": true,
-    "experimentalSpecifierResolution": "node"
+    "experimentalSpecifierResolution": "node",
+    "compilerOptions": {
+      "module": "ESNext",
+      "moduleResolution": "node"
+    },
+    "transpileOnly": true,
+    "files": false,
+    "emit": false
   },
   "include": [
     "src/**/*"
