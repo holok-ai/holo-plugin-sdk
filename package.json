@@ -6,7 +6,7 @@
   "type": "module",
   "main": "src/app.js",
   "workspaces": [
-    "packages/*"
+    "plugins/*"
   ],
   "scripts": {
     "prepare": "husky",
@@ -30,16 +30,16 @@
     "test:performance": "jest tests/baseline/performance --testTimeout=30000",
     "test:plugin": "jest tests/baseline/integration --testTimeout=15000",
     "build": "tsc --build",
-    "build:packages": "npm run build --workspaces --if-present",
+    "build:plugins": "npm run build --workspaces --if-present",
     "build:workspaces": "npm run build --workspaces --if-present",
     "clean": "tsc --build --clean",
     "clean:workspaces": "npm run clean --workspaces --if-present",
-    "type-check": "npm run build:packages && tsc --noEmit",
+    "type-check": "npm run build:plugins && tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "validate:boundaries": "node scripts/validate-boundaries.js",
     "docs:serve": "npx http-server ./docs -p 3001",
-    "docs:check": "ls -la README.md CONTRIBUTING.md packages/*/README.md"
+    "docs:check": "ls -la README.md CONTRIBUTING.md plugins/*/README.md"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.1",
