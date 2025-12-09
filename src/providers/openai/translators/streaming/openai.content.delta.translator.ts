@@ -1,18 +1,14 @@
 import 'reflect-metadata';
 import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
-import {ArkErrors} from 'arktype';
-import {BaseStreamTranslator} from '../../../base.stream.translator';
-import {HoloStreamChunk, HoloStreamChunkValidator} from '../../../holo';
 import {OpenAIChatCompletionChunk} from '../../types';
-import {OpenAIChatCompletionChunkValidator} from '../../validators';
 import {pickDefined} from '../../../../utils';
 import {v4 as uuidv4} from 'uuid';
+import {HoloStreamChunk} from "@holokai/sdk";
+import {BaseStreamTranslator} from "@holokai/sdk/provider";
 
 @injectable()
 export class OpenAIContentDeltaTranslator extends BaseStreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {
-    protected holoValidator = HoloStreamChunkValidator;
-    protected providerValidator = OpenAIChatCompletionChunkValidator;
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<OpenAIChatCompletionChunk> = {};
 
@@ -58,10 +54,7 @@ export class OpenAIContentDeltaTranslator extends BaseStreamTranslator<HoloStrea
 
         // Fast pass-through for OpenAI→OpenAI streaming
         if (d.provider === 'OPENAI' && d.provider_delta) {
-            const validated = this.providerValidator(d.provider_delta);
-            if (!(validated instanceof ArkErrors)) {
-                return [validated];
-            }
+            return [d.provider_delta];
         }
 
         const content = d.delta?.content;

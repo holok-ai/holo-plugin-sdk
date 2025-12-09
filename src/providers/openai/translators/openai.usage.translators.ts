@@ -1,15 +1,12 @@
 import 'reflect-metadata';
-import {HoloUsage, HoloUsageValidator} from "../../holo";
 import {OpenAICompletionUsage} from "../types";
-import {OpenAICompletionUsageValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {HoloUsage} from "@holokai/sdk";
+import {BaseTranslator} from "@holokai/sdk/provider";
 
 @injectable()
 export class OpenAIUsageTranslator extends BaseTranslator<HoloUsage, OpenAICompletionUsage> {
-    protected holoValidator = HoloUsageValidator;
-    protected providerValidator = OpenAICompletionUsageValidator;
     protected holoDefaults: Partial<HoloUsage> = {};
     protected providerDefaults: Partial<OpenAICompletionUsage> = {};
 

@@ -9,50 +9,26 @@
  * @packageDocumentation
  */
 
+import {HoloContent, HoloContentImage, HoloContentText, HoloRequest} from "./types.js";
+
 // Export all types
-export type {
-    // Core Request/Response
-    HoloRequest,
-    HoloResponse,
-    HoloMessage,
-    HoloChoice,
-    HoloUsage,
-    HoloFinishReason,
+export * from './types.js';
 
-    // Content types
-    HoloContent,
-    HoloContentText,
-    HoloContentImage,
+// Default values for Holo request
+export const HoloRequestDefaults: Partial<HoloRequest> = {
+    stream: false,
+    temperature: 1.0,
+    top_p: 1.0,
+    tool_choice: {type: 'auto'},
+    response_format: {type: 'text'}
+};
 
-    // Tool/Function types
-    HoloTool,
-    HoloToolCall,
-    HoloToolFunctionCall,
-    HoloToolChoice,
+export function isText(p: HoloContent): p is HoloContentText {
+    return p.type === "text";
+}
 
-    // Response format types
-    HoloResponseFormat,
-    HoloResponseFormatText,
-    HoloResponseFormatJsonObject,
-    HoloResponseFormatJsonSchema,
-
-    // Request metadata
-    HoloRequestMetadata,
-    RequestType,
-
-    // Streaming types
-    StreamingProviderType,
-    HoloStreamingDeltaType,
-    HoloStreamingDelta,
-    HoloStreamChunk,
-    HoloStreamChoice,
-    HoloStreamResponse,
-
-    // Legacy compatibility aliases
-    Tool,
-    ToolCall,
-    FunctionDefinition,
-    FunctionCall
-} from './types.js';
+export function isImage(p: HoloContent): p is HoloContentImage {
+    return p.type === "image";
+}
 
 // Validators removed - using TypeScript types only for plugin architecture

@@ -1,9 +1,8 @@
 import 'reflect-metadata';
-import {HoloContent, HoloContentValidator} from "../../holo";
 import {ClaudeContentBlockParam} from "../types";
-import {ClaudeContentBlockParamValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloContent} from "@holokai/sdk";
 
 type ImageMime = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
 
@@ -26,8 +25,6 @@ function parseDataUrl(u: string): { media: ImageMime; data: string } | null {
 
 @injectable()
 export class ClaudeContentTranslator extends BaseTranslator<HoloContent, ClaudeContentBlockParam> {
-    protected holoValidator = HoloContentValidator;
-    protected providerValidator = ClaudeContentBlockParamValidator;
     protected holoDefaults: Partial<HoloContent> = {};
     protected providerDefaults: Partial<ClaudeContentBlockParam> = {};
 

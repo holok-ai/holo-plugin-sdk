@@ -1,5 +1,3 @@
-import {BaseTranslator} from "../../base.translator";
-import {HoloContent, HoloMessage, HoloRequest, HoloRequestValidator, HoloTool} from "../../holo";
 import {
     OpenAIEasyInputMessage,
     OpenAIResponseCreateParams,
@@ -8,12 +6,10 @@ import {
     OpenAITool
 } from "../types";
 import {pickDefined} from "../../../utils";
-import {OpenAIResponseCreateParamsValidator} from "../validators";
-import {Type} from "arktype";
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloContent, HoloMessage, HoloRequest, HoloTool} from "@holokai/sdk";
 
 export class OpenAIResponseRequestTranslator extends BaseTranslator<HoloRequest, OpenAIResponseCreateParams> {
-    protected holoValidator = HoloRequestValidator;
-    protected providerValidator = OpenAIResponseCreateParamsValidator as Type<OpenAIResponseCreateParams>;
     protected holoDefaults: Partial<HoloRequest> = {};
     protected providerDefaults: Partial<OpenAIResponseCreateParams> = {};
 

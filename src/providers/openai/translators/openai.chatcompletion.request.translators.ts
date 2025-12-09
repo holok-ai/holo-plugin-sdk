@@ -1,6 +1,3 @@
-import {BaseTranslator} from "../../base.translator";
-import {OpenAIChatRequestValidator} from "../validators";
-import {HoloMessage, HoloRequest, HoloRequestValidator, HoloResponseFormat, HoloTool, HoloToolChoice} from "../../holo";
 import {OpenAIMessageTranslator} from "./openai.message.translators";
 import {OpenAIToolChoiceTranslator, OpenAIToolTranslator} from "./openai.tool.translators";
 import {
@@ -12,6 +9,8 @@ import {
 } from "../types";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloMessage, HoloRequest, HoloResponseFormat, HoloTool, HoloToolChoice} from "@holokai/sdk";
 
 /**
  * OpenAI Request Translator
@@ -23,8 +22,6 @@ import {pickDefined} from "../../../utils";
  */
 @injectable()
 export class OpenAIRequestTranslator extends BaseTranslator<HoloRequest, OpenAIChatRequest> {
-    protected holoValidator = HoloRequestValidator;
-    protected providerValidator = OpenAIChatRequestValidator;
     protected holoDefaults: Partial<HoloRequest> = {};
     protected providerDefaults: Partial<OpenAIChatRequest> = {};
 

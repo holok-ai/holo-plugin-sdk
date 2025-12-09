@@ -7,7 +7,7 @@ import {HoloContentText, HoloRequest, HoloRequestValidator} from "../../provider
 import {ProviderChatRequest, ProviderMessage, ProviderRequest, ProviderType, RequestType} from "../../providers/types";
 import {env} from "../../env";
 import {ResponseService} from "../../services";
-import {HoloTranslater} from "../../providers/holo/holo.translator";
+import {HoloTranslator} from "../../providers/holo/holo.translator";
 import {ArkErrors} from "arktype";
 import {ClassLogger} from "../../types/class.logger";
 import {OllamaGenerateRequest} from "../../providers/ollama/types";
@@ -20,7 +20,7 @@ export class GuardService extends ClassLogger {
     constructor(
         private organizationService: OrganizationService,
         private responseService: ResponseService,
-        private holoTranslator: HoloTranslater
+        private holoTranslator: HoloTranslator
     ) {
         super();
     }

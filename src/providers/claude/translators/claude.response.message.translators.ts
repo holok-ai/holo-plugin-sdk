@@ -1,17 +1,14 @@
 import 'reflect-metadata';
-import {HoloContent, HoloMessage, HoloMessageValidator} from "../../holo";
 import {ClaudeResponseMessage} from "../types";
 import {ClaudeResponseContentTranslator} from "./claude.response.content.translators";
-import {ClaudeResponseMessageValidator} from "../validators";
 import {createStableId} from "../../utils/stable-id";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloContent, HoloMessage} from "@holokai/sdk";
 
 @injectable()
 export class ClaudeResponseMessageTranslator extends BaseTranslator<HoloMessage, ClaudeResponseMessage> {
-    protected holoValidator = HoloMessageValidator;
-    protected providerValidator = ClaudeResponseMessageValidator;
     protected holoDefaults: Partial<HoloMessage> = {};
     protected providerDefaults: Partial<ClaudeResponseMessage> = {};
 

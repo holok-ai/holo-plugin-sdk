@@ -3,7 +3,7 @@ import {LLMWorkerResponse} from "./index";
 import {pickDefined} from "../utils";
 import {env} from "../env";
 import {HoloResponseFactory} from "../providers/holo/holo.response.factory";
-import {HoloTranslater} from "../providers/holo/holo.translator";
+import {HoloTranslator} from "../providers/holo/holo.translator";
 import {LLMWorkerRequest} from "./worker.types";
 
 export class WorkerResponseFactory {
@@ -58,7 +58,7 @@ export class WorkerResponseFactory {
         request: LLMWorkerRequest,
         errors: string[],
         workerId: string,
-        holoTranslator: HoloTranslater
+        holoTranslator: HoloTranslator
     ): Promise<LLMWorkerResponse> {
         const payload = request.payload;
         const model = (payload && typeof payload === 'object' && 'model' in payload)

@@ -1,29 +1,15 @@
 import 'reflect-metadata';
 import {
-    HoloContent,
-    HoloContentImage,
-    HoloContentImageValidator,
-    HoloContentText,
-    HoloContentTextValidator,
-    HoloContentValidator
-} from "../../holo";
-import {
-    OpenAIChatCompletionContentPartImageValidator,
-    OpenAIChatCompletionContentPartTextValidator,
-    OpenAIChatCompletionContentPartValidator
-} from "../validators";
-import {
     OpenAIChatCompletionContentPart,
     OpenAIChatCompletionContentPartImage,
     OpenAIChatCompletionContentPartText
 } from "../types";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloContent, HoloContentImage, HoloContentText} from "@holokai/sdk";
 
 @injectable()
 export class OpenAITextContentTranslator extends BaseTranslator<HoloContentText, OpenAIChatCompletionContentPartText> {
-    protected holoValidator = HoloContentTextValidator;
-    protected providerValidator = OpenAIChatCompletionContentPartTextValidator;
     protected holoDefaults: Partial<HoloContentText> = {};
     protected providerDefaults: Partial<OpenAIChatCompletionContentPartText> = {};
 
@@ -48,8 +34,6 @@ export class OpenAITextContentTranslator extends BaseTranslator<HoloContentText,
 
 @injectable()
 export class OpenAIImageContentTranslator extends BaseTranslator<HoloContentImage, OpenAIChatCompletionContentPartImage> {
-    protected holoValidator = HoloContentImageValidator;
-    protected providerValidator = OpenAIChatCompletionContentPartImageValidator;
     protected holoDefaults: Partial<HoloContentImage> = {};
     protected providerDefaults: Partial<OpenAIChatCompletionContentPartImage> = {};
 
@@ -76,8 +60,6 @@ export class OpenAIImageContentTranslator extends BaseTranslator<HoloContentImag
 
 @injectable()
 export class OpenAIContentTranslator extends BaseTranslator<HoloContent, OpenAIChatCompletionContentPart> {
-    protected holoValidator = HoloContentValidator;
-    protected providerValidator = OpenAIChatCompletionContentPartValidator;
     protected holoDefaults: Partial<HoloContent> = {};
     protected providerDefaults: Partial<OpenAIChatCompletionContentPart> = {};
 

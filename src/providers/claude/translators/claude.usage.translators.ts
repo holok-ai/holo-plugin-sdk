@@ -1,15 +1,12 @@
 import 'reflect-metadata';
-import {HoloUsage, HoloUsageValidator} from "../../holo";
 import {ClaudeUsage} from "../types";
-import {ClaudeUsageValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloUsage} from "@holokai/sdk";
 
 @injectable()
 export class ClaudeUsageTranslator extends BaseTranslator<HoloUsage, ClaudeUsage> {
-    protected holoValidator = HoloUsageValidator;
-    protected providerValidator = ClaudeUsageValidator;
     protected holoDefaults: Partial<HoloUsage> = {};
     protected providerDefaults: Partial<ClaudeUsage> = {};
 

@@ -1,15 +1,12 @@
 import 'reflect-metadata';
 import {OllamaOptions} from "../types";
-import {HoloRequest, HoloRequestValidator} from "../../holo";
-import {OllamaOptionsValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {HoloRequest} from "@holokai/sdk";
+import {BaseTranslator} from "@holokai/sdk/provider";
 
 @injectable()
 export class OllamaOptionsTranslator extends BaseTranslator<HoloRequest, OllamaOptions> {
-    protected holoValidator = HoloRequestValidator;
-    protected providerValidator = OllamaOptionsValidator;
     protected holoDefaults: Partial<HoloRequest> = {};
     protected providerDefaults: Partial<OllamaOptions> = {};
 

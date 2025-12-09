@@ -8,7 +8,7 @@ import {ArkErrors} from "arktype";
 import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "./index";
 
 @injectable()
-export class HoloTranslater {
+export class HoloTranslator {
     private translators = new Map<ProviderType, IProviderTranslator>();
 
     constructor(

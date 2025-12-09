@@ -6,7 +6,7 @@ import {ProviderType} from "../providers/types";
 import {ErrorMessages} from "../utils";
 import {ClassLogger} from "../types/class.logger";
 import {HoloResponseFactory} from "../providers/holo/holo.response.factory";
-import {HoloTranslater} from "../providers/holo/holo.translator";
+import {HoloTranslator} from "../providers/holo/holo.translator";
 import {OllamaResponse} from "../providers/ollama/types";
 import {ClaudeResponse} from "../providers/claude/types";
 import {OpenAIChatCompletionResponse} from "../providers/openai/types";
@@ -133,7 +133,7 @@ export class StreamService extends ClassLogger {
 
         try {
             const holoChunk = HoloResponseFactory.createStatusChunk(requestId, model, message, providerType);
-            const holoTranslator = container.resolve(HoloTranslater);
+            const holoTranslator = container.resolve(HoloTranslator);
             const providerChunks = await holoTranslator.fromHoloStreamChunks([holoChunk], providerType);
 
             if (Array.isArray(providerChunks)) {

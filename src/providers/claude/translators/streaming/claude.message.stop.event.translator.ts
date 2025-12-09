@@ -1,17 +1,12 @@
 import 'reflect-metadata';
 import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
-import {HoloStreamChunk} from '../../../holo';
 import {ClaudeRawMessageStopEvent} from '../../types';
-import {ClaudeRawMessageStopEventValidator} from '../../validators';
-import {HoloStreamChunkValidator} from '../../../holo/validators';
-import {ArkErrors} from 'arktype';
-import {BaseStreamTranslator} from "../../../base.stream.translator";
+import {HoloStreamChunk} from "@holokai/sdk";
+import {BaseStreamTranslator} from "@holokai/sdk/provider";
 
 @injectable()
 export class ClaudeMessageStopEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ClaudeRawMessageStopEvent> {
-    protected holoValidator = HoloStreamChunkValidator;
-    protected providerValidator = ClaudeRawMessageStopEventValidator;
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<ClaudeRawMessageStopEvent> = {};
 
@@ -25,9 +20,8 @@ export class ClaudeMessageStopEventTranslator extends BaseStreamTranslator<HoloS
 
         // Pass-through if we already have a valid Claude stop event as provider_delta
         if (d.provider_delta) {
-            const validated = this.providerValidator(d.provider_delta);
-            if (!(validated instanceof ArkErrors) && validated.type === 'message_stop') {
-                return [validated];
+            if (d.provider_delta.type === 'message_stop') {
+                return [d.provider_delta];
             }
         }
 

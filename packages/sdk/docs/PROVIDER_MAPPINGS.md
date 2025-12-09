@@ -37,7 +37,7 @@ This document provides comprehensive field-by-field mappings between each provid
 | `max_tokens` | `max_tokens` | Direct | Required by Claude |
 | `stop_sequences` | `stop_sequences` | Direct | Already array format |
 | **🟡 Structure Transforms** ||||
-| `system` (string/array) | `system` (string) | Join array with `\n\n` if needed | Optional |
+| `system` (string or text blocks) | `system` (string) | If array, join text blocks with `\n\n` and drop non-text metadata | Optional; lossy if structured |
 | `metadata.user_id` | `metadata.user_id` | Direct | Optional |
 | `tools[].input_schema` | `tools[].parameters` | Rename field | Optional |
 | `tool_choice.type: 'tool'` | `tool_choice.type: 'specific'` | Map type + extract name | Optional |
@@ -80,7 +80,7 @@ This document provides comprehensive field-by-field mappings between each provid
 | `logit_bias` | ❌ Drop | - | Token biasing |
 | `logprobs` | ❌ Drop | - | Log probabilities |
 | `top_logprobs` | ❌ Drop | - | Top log probs |
-| `n` | ❌ Drop | - | Multiple completions |
+| `n` | ❌ Drop | - | Multiple completions (OpenAI-only; use streaming + choice index if needed) |
 | `parallel_tool_calls` | ❌ Drop | - | Parallel execution |
 | `prediction` | ❌ Drop | - | Prediction API |
 | `store` | ❌ Drop | - | Conversation storage |
@@ -118,13 +118,15 @@ This document provides comprehensive field-by-field mappings between each provid
 | Ollama Generate Field | Holo Field | Transformation | Notes |
 |--------------|------------|----------------|-------|
 | `model` | `model` + `request_type: 'generate'` | Set request type | ✅ Required |
-| `prompt` | Special handling | Cannot coexist with `messages` | ✅ Required |
+| `prompt` | Synthetic `messages` array | Wrap as `messages: [{role:'user', content: prompt}]` | ✅ Required; cannot coexist with messages |
 | `system` | `system` | Direct | Optional |
 | `template` | ❌ Drop | - | Prompt template |
 | `context` | ❌ Drop | - | Conversation state |
 | `raw` | ❌ Drop | - | Bypass templating |
 | `images` | Transform to content | Convert to message content | Optional |
 | `suffix` | ❌ Drop | - | Completion suffix |
+
+**Note on generate mode**: In Holo, generate mode is represented as `request_type: 'generate'` with the `prompt` wrapped into a synthetic messages array: `messages: [{role:'user', content: prompt}]`. Tools are NOT supported in generate mode (chat API only).
 
 ---
 
@@ -144,9 +146,9 @@ This document provides comprehensive field-by-field mappings between each provid
 | `usage.input_tokens` | `usage.input_tokens` | Direct | Optional |
 | `usage.output_tokens` | `usage.output_tokens` | Direct | Optional |
 | Computed | `usage.total_tokens` | `input + output` | Derived |
-| `usage.cache_read_input_tokens` | `usage.cache_read_tokens` | Direct | Optional |
-| `usage.cache_creation_input_tokens` | `usage.cache_write_tokens` | Direct | Optional |
-| `usage.service_tier` | `usage.service_tier` | Direct | Optional |
+| `usage.cache_read_input_tokens` | `usage.cache_read_tokens` | Direct | Optional; see Capability Analysis |
+| `usage.cache_creation_input_tokens` | `usage.cache_write_tokens` | Direct | Optional; see Capability Analysis |
+| `usage.service_tier` | `service_tier` | Promote to top-level | Optional; also keep in usage if desired |
 | **🟡 OpenAI Compatibility** ||||
 | Wrap response | `object: 'chat.completion'` | Add field | For compatibility |
 | Wrap message | `choices[0]` | Create choice array | For compatibility |
@@ -163,12 +165,12 @@ This document provides comprehensive field-by-field mappings between each provid
 | `id` | `id` | Direct | Always present |
 | `model` | `model` | Direct | Always present |
 | `object` | `object` | Direct | 'chat.completion' |
-| `created` | `created` | Direct | Unix timestamp |
-| `service_tier` | `service_tier` | Direct | Optional |
+| `created` | `created` | Multiply by 1000 | OpenAI seconds → Holo ms |
+| `service_tier` | `service_tier` | Direct | Optional, top-level |
 | **🟡 Structure Transforms** ||||
-| `choices[0].message` | `messages[0]` | Extract first choice | Primary completion |
+| `choices[0].message` | `messages[0]` | Extract first choice | Canonical Holo response |
 | `choices[0].finish_reason` | `finish_reason` | Direct | See Finish Reason table |
-| `choices[]` | `choices[]` | Direct | Preserve all choices |
+| `choices[]` | `choices[]` | Optional, for OpenAI compatibility only | Not used by core Holo logic |
 | `usage.prompt_tokens` | `usage.input_tokens` | Rename | Optional |
 | `usage.completion_tokens` | `usage.output_tokens` | Rename | Optional |
 | `usage.total_tokens` | `usage.total_tokens` | Direct | Optional |
@@ -189,9 +191,10 @@ This document provides comprehensive field-by-field mappings between each provid
 | `model` | `model` | Direct | Always present |
 | `message.role` | `messages[0].role` | Wrap in array | Always 'assistant' |
 | `message.content` | `messages[0].content` | Wrap in array | Text content |
-| `done` | `finish_reason` | Map to 'stop' if true | Boolean to reason |
 | **🟡 Structure Transforms** ||||
-| `created_at` | `created` | Parse ISO8601 to timestamp | Optional |
+| `created_at` | `created` | Parse ISO8601 to milliseconds since epoch | Optional |
+| `done` | (not mapped) | Used only to signal stream completion | Orchestrator decides done |
+| `done_reason` | `finish_reason` | Map reason string ('stop', 'length') | Optional |
 | `prompt_eval_count` | `usage.input_tokens` | Direct | Optional |
 | `eval_count` | `usage.output_tokens` | Direct | Optional |
 | Computed | `usage.total_tokens` | `prompt_eval_count + eval_count` | Derived |
@@ -199,7 +202,6 @@ This document provides comprehensive field-by-field mappings between each provid
 | `load_duration` (ns) | `usage.timings.load` | Direct | Optional |
 | `prompt_eval_duration` (ns) | `usage.timings.prompt_eval` | Direct | Optional |
 | `eval_duration` (ns) | `usage.timings.eval` | Direct | Optional |
-| `done_reason` | `finish_reason` | Map reason string | Optional |
 | **🟡 Generate Mode Only** ||||
 | `response` | `messages[0].content` | Direct (text) | Generate mode |
 | `context` | ❌ Drop | - | Conversation state |
@@ -282,11 +284,18 @@ This document provides comprehensive field-by-field mappings between each provid
 
 ### Streaming Response Structures
 
-| Provider | Structure | Key Fields | Holo Mapping |
-|----------|-----------|------------|--------------|
-| Claude | `BetaRawMessageStreamEvent` | `type`, `index`, `content_block`, `delta` | Map by event type |
-| OpenAI | `ChatCompletionChunk` | `choices[].delta`, `choices[].finish_reason` | Extract delta content |
-| Ollama | Incremental `ChatResponse` | `message.content`, `done` | Accumulate content |
+| Provider | Structure | Key Fields | Holo Mapping | Raw Event Preservation |
+|----------|-----------|------------|--------------|------------------------|
+| Claude | `BetaRawMessageStreamEvent` | `type`, `index`, `content_block`, `delta` | Map by event type | Store full event in `provider_delta` |
+| OpenAI | `ChatCompletionChunk` | `choices[].delta`, `choices[].finish_reason` | Extract delta content | Store full chunk in `provider_delta` |
+| Ollama | Incremental `ChatResponse` | `message.content`, `done` | Accumulate content | Store full response in `provider_delta` |
+
+**Critical**: Translators MUST store the full raw provider event in `provider_delta` (not a lean subset) to guarantee round-trip fidelity and enable provider-specific debugging. This is a normative requirement for third-party plugins.
+
+**Ollama Streaming Completion**:
+- `done === true` signals stream completion (orchestrator level)
+- `done_reason` maps to Holo `finish_reason` ('stop', 'length', etc.)
+- Do NOT map `done` boolean directly to `finish_reason`
 
 ---
 

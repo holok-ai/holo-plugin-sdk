@@ -1,15 +1,12 @@
 import 'reflect-metadata';
-import {HoloTool, HoloToolChoice, HoloToolChoiceValidator, HoloToolValidator} from "../../holo";
 import {ClaudeTool, ClaudeToolChoice, ClaudeToolUnion} from "../types";
-import {ClaudeToolChoiceValidator, ClaudeToolUnionValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloTool, HoloToolChoice} from "@holokai/sdk";
 
 @injectable()
 export class ClaudeToolTranslator extends BaseTranslator<HoloTool, ClaudeToolUnion> {
-    protected holoValidator = HoloToolValidator;
-    protected providerValidator = ClaudeToolUnionValidator;
     protected holoDefaults: Partial<HoloTool> = {};
     protected providerDefaults: Partial<ClaudeToolUnion> = {};
 
@@ -40,8 +37,6 @@ export class ClaudeToolTranslator extends BaseTranslator<HoloTool, ClaudeToolUni
 
 @injectable()
 export class ClaudeToolChoiceTranslator extends BaseTranslator<HoloToolChoice, ClaudeToolChoice> {
-    protected holoValidator = HoloToolChoiceValidator;
-    protected providerValidator = ClaudeToolChoiceValidator;
     protected holoDefaults: Partial<HoloToolChoice> = {};
     protected providerDefaults: Partial<ClaudeToolChoice> = {};
 

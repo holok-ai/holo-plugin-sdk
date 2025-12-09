@@ -1,16 +1,13 @@
 import 'reflect-metadata';
 import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
-import {BaseStreamTranslator} from '../../../base.stream.translator';
-import {HoloStreamChunk, HoloStreamChunkValidator} from '../../../holo';
 import {ClaudeRawContentBlockStartEvent} from '../../types';
-import {ClaudeRawContentBlockStartEventValidator} from '../../validators';
 import {pickDefined} from '../../../../utils';
+import {BaseStreamTranslator} from "@holokai/sdk/provider";
+import {HoloStreamChunk} from "@holokai/sdk";
 
 @injectable()
 export class ClaudeContentBlockStartEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ClaudeRawContentBlockStartEvent> {
-    protected holoValidator = HoloStreamChunkValidator;
-    protected providerValidator = ClaudeRawContentBlockStartEventValidator;
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<ClaudeRawContentBlockStartEvent> = {};
 

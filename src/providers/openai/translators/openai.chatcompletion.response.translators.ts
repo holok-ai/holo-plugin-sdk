@@ -1,17 +1,14 @@
 import 'reflect-metadata';
-import {HoloFinishReason, HoloMessage, HoloResponse, HoloResponseValidator} from "../../holo";
 import {OpenAIChatCompletion, OpenAIChatCompletionResponse} from "../types";
 import {OpenAIResponseMessageTranslator} from "./openai.response.message.translators";
 import {OpenAIUsageTranslator} from "./openai.usage.translators";
-import {OpenAIChatCompletionValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloFinishReason, HoloMessage, HoloResponse} from "@holokai/sdk";
 
 @injectable()
 export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenAIChatCompletionResponse> {
-    protected holoValidator = HoloResponseValidator;
-    protected providerValidator = OpenAIChatCompletionValidator; // For non-streaming responses
     protected holoDefaults: Partial<HoloResponse> = {};
     protected providerDefaults: Partial<OpenAIChatCompletionResponse> = {};
 

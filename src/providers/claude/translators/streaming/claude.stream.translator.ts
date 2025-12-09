@@ -2,8 +2,6 @@ import 'reflect-metadata';
 import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {ArkErrors} from 'arktype';
-import {BaseStreamTranslator} from '../../../base.stream.translator';
-import {HoloStreamChunk, HoloStreamChunkValidator} from '../../../holo';
 import {ClaudeRawMessageStreamEvent} from '../../types';
 import {ClaudeRawMessageStreamEventValidator} from '../../validators';
 import {ClaudeMessageStartEventTranslator} from './claude.message.start.event.translator';
@@ -13,6 +11,9 @@ import {ClaudeContentBlockStartEventTranslator} from './claude.content.block.sta
 import {ClaudeContentBlockDeltaEventTranslator} from './claude.content.block.delta.event.translator';
 import {ClaudeContentBlockStopEventTranslator} from './claude.content.block.stop.event.translator';
 import {mapHoloFinishReasonToClaude} from '../../utils/finish.reason.mapper';
+import {BaseStreamTranslator} from "@holokai/sdk/provider";
+import {HoloStreamChunk} from "@holokai/sdk";
+import {HoloStreamChunkValidator} from "../../../holo";
 
 @injectable()
 export class ClaudeStreamTranslator extends BaseStreamTranslator<HoloStreamChunk, ClaudeRawMessageStreamEvent> {
@@ -100,24 +101,24 @@ export class ClaudeStreamTranslator extends BaseStreamTranslator<HoloStreamChunk
                 // - content_block_delta (for tool argument fragments)
                 // - message_stop (if finish_reason indicates completion)
                 const results: Partial<ClaudeRawMessageStreamEvent>[] = [];
-                
+
                 // Order matters: start → delta → stop
                 results.push(...await this.messageDeltaTranslator.fromHoloMany(source));
                 results.push(...await this.contentBlockStartTranslator.fromHoloMany(source));
                 results.push(...await this.contentBlockDeltaTranslator.fromHoloMany(source));
-                
+
                 // Only emit message_stop if finish_reason maps to a valid Claude stop reason
                 const claudeStopReason = mapHoloFinishReasonToClaude(source.finish_reason);
                 if (claudeStopReason !== undefined && claudeStopReason !== null) {
                     results.push(...await this.messageStopTranslator.fromHoloMany(source));
                 }
-                
+
                 return results;
-                
+
             case 'content_delta':
                 // Content delta only produces content_block_delta events
                 return this.contentBlockDeltaTranslator.fromHoloMany(source);
-                
+
             case 'message_stop':
                 // For non-Claude sources, synthesize content_block_stop before message_stop
                 const stopResults: Partial<ClaudeRawMessageStreamEvent>[] = [];
@@ -133,7 +134,7 @@ export class ClaudeStreamTranslator extends BaseStreamTranslator<HoloStreamChunk
                 stopResults.push(...await this.messageStopTranslator.fromHoloMany(source));
 
                 return stopResults;
-                
+
             default:
                 return [];
         }

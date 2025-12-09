@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import {injectable} from "tsyringe";
-import {IProviderTranslator,} from "../types";
 import {
     ClaudeMessageTranslator,
     ClaudeRequestTranslator,
@@ -8,7 +7,8 @@ import {
     ClaudeStreamTranslator
 } from "./translators";
 import {ClaudeChatRequest, ClaudeRequestMessage, ClaudeResponse} from "./types";
-import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "../holo";
+import {IProviderTranslator} from "@holokai/sdk/provider";
+import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "@holokai/sdk";
 
 
 @injectable()

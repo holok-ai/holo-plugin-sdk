@@ -1,11 +1,10 @@
 import 'reflect-metadata';
-import {HoloFinishReason, HoloMessage, HoloResponse, HoloResponseValidator, HoloUsage} from "../../holo";
 import {OllamaChatResponse} from "../types";
-import {OllamaChatResponseValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
 import {OllamaMessageTranslator} from "./ollama.message.translators";
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloFinishReason, HoloMessage, HoloResponse, HoloUsage} from "@holokai/sdk";
 
 /**
  * Translator for Ollama Chat API responses.
@@ -13,8 +12,6 @@ import {OllamaMessageTranslator} from "./ollama.message.translators";
  */
 @injectable()
 export class OllamaChatResponseTranslator extends BaseTranslator<HoloResponse, OllamaChatResponse> {
-    protected holoValidator = HoloResponseValidator;
-    protected providerValidator = OllamaChatResponseValidator;
     protected holoDefaults: Partial<HoloResponse> = {};
     protected providerDefaults: Partial<OllamaChatResponse> = {};
 

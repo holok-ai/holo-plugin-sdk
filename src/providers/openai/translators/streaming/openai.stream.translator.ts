@@ -1,20 +1,16 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {ArkErrors} from 'arktype';
-import {BaseStreamTranslator} from '../../../base.stream.translator';
-import {HoloStreamChunk, HoloStreamChunkValidator} from '../../../holo';
 import {OpenAIChatCompletionChunk} from '../../types';
-import {OpenAIChatCompletionChunkValidator} from '../../validators';
 import {OpenAIMessageStartTranslator} from './openai.message.start.translator';
 import {OpenAIContentDeltaTranslator} from './openai.content.delta.translator';
 import {OpenAIMessageDeltaTranslator} from './openai.message.delta.translator';
 import {OpenAIMessageStopTranslator} from './openai.message.stop.translator';
 import {ProviderType} from '../../../types';
+import {HoloStreamChunk} from "@holokai/sdk";
+import {BaseStreamTranslator} from "@holokai/sdk/provider";
 
 @injectable()
 export class OpenAIStreamTranslator extends BaseStreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {
-    protected holoValidator = HoloStreamChunkValidator;
-    protected providerValidator = OpenAIChatCompletionChunkValidator;
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<OpenAIChatCompletionChunk> = {};
 
@@ -63,10 +59,7 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator<HoloStreamChunk
 
         // Fast pass-through for OpenAI→OpenAI streaming
         if (d.provider === ProviderType.OPENAI && d.provider_delta) {
-            const validated = this.providerValidator(d.provider_delta);
-            if (!(validated instanceof ArkErrors)) {
-                return [validated];
-            }
+            return [d.provider_delta];
         }
 
         // Route based on delta type

@@ -1,18 +1,16 @@
 import 'reflect-metadata';
-import {HoloRequest, HoloRequestDefaults, HoloRequestValidator, HoloResponseFormat} from "../../holo";
 import {OllamaChatRequest, OllamaOptions} from "../types";
 import {OllamaToolTranslator} from "./ollama.tool.translators";
 import {OllamaOptionsTranslator} from "./ollama.options.translators";
 import {OllamaMessageTranslator} from "./ollama.message.translators";
-import {OllamaChatRequestDefaults, OllamaChatRequestValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
+import {OllamaChatRequestDefaults} from "../validators";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloRequest, HoloRequestDefaults, HoloResponseFormat} from "@holokai/sdk";
 
 @injectable()
 export class OllamaChatRequestTranslator extends BaseTranslator<HoloRequest, OllamaChatRequest> {
-    protected holoValidator = HoloRequestValidator;
-    protected providerValidator = OllamaChatRequestValidator;
     protected holoDefaults: Partial<HoloRequest> = HoloRequestDefaults;
     protected providerDefaults: Partial<OllamaChatRequest> = OllamaChatRequestDefaults;
 

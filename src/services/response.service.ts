@@ -8,7 +8,7 @@ import {env} from "../env";
 import {LLMWorkerRequest, LLMWorkerResponse, WorkerResponseFactory} from '../types';
 import {StreamService} from "./stream.service";
 import {ClassLogger} from "../types/class.logger";
-import {HoloTranslater} from "../providers/holo/holo.translator";
+import {HoloTranslator} from "../providers/holo/holo.translator";
 import {HoloResponseFactory} from "../providers/holo/holo.response.factory";
 import {ProviderResponse, ProviderType} from "../providers/types";
 
@@ -236,7 +236,7 @@ export class ResponseService extends ClassLogger {
         }
     ): Promise<void> {
         const logger = this.mlog(this.sendError);
-        const holoTranslator = container.resolve(HoloTranslater);
+        const holoTranslator = container.resolve(HoloTranslator);
 
         // Normalize errors to string array
         const errorMessages = Array.isArray(options.errors)
@@ -285,7 +285,7 @@ export class ResponseService extends ClassLogger {
      * Legacy method - kept for backward compatibility
      */
     async sendErrorResponse(organizationId: string, providerType: ProviderType, providerName: string, workerId: string, sourceId: string, requestId: string, error: Error) {
-        const holoTranslator = container.resolve(HoloTranslater);
+        const holoTranslator = container.resolve(HoloTranslator);
 
         // Create Holo error response
         const holoError = await HoloResponseFactory.createErrorResponse(

@@ -1,18 +1,15 @@
 import 'reflect-metadata';
 import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
-import {BaseStreamTranslator} from '../../../base.stream.translator';
-import {HoloStreamChunk, HoloStreamChunkValidator, HoloFinishReason} from '../../../holo';
 import {OllamaChatResponse, OllamaGenerateResponse} from '../../types';
-import {OllamaChatResponseValidator, OllamaGenerateResponseValidator} from '../../validators';
 import {pickDefined} from '../../../../utils';
+import {HoloFinishReason, HoloStreamChunk} from "@holokai/sdk";
+import {BaseStreamTranslator} from "@holokai/sdk/provider";
 
 type OllamaStreamResponse = Partial<OllamaChatResponse> | Partial<OllamaGenerateResponse>;
 
 @injectable()
 export class OllamaMessageStopTranslator extends BaseStreamTranslator<HoloStreamChunk, OllamaStreamResponse> {
-    protected holoValidator = HoloStreamChunkValidator;
-    protected providerValidator = OllamaChatResponseValidator.partial().or(OllamaGenerateResponseValidator.partial());
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<OllamaStreamResponse> = {};
 
@@ -23,7 +20,7 @@ export class OllamaMessageStopTranslator extends BaseStreamTranslator<HoloStream
     protected async toHoloManyImpl(source: OllamaStreamResponse): Promise<Partial<HoloStreamChunk>[]> {
         // Only emit stop for done chunks
         if (!source.done) return [];
-        
+
         return [pickDefined({
             delta: {
                 provider: ProviderType.OLLAMA,
@@ -39,7 +36,7 @@ export class OllamaMessageStopTranslator extends BaseStreamTranslator<HoloStream
     protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<OllamaStreamResponse>[]> {
         const d = source.delta;
         if (!d || d.type !== 'message_stop') return [];
-        
+
         // Emit final chunk with done=true
         // Note: Usage is handled by message.delta translator, not here
         return [pickDefined({
@@ -47,10 +44,10 @@ export class OllamaMessageStopTranslator extends BaseStreamTranslator<HoloStream
             done_reason: source.finish_reason ? this.mapHoloFinishReasonToOllama(source.finish_reason) : undefined
         }) as Partial<OllamaStreamResponse>];
     }
-    
+
     private mapOllamaFinishReason(reason?: string): HoloFinishReason | undefined {
         if (!reason) return undefined;
-        
+
         switch (reason) {
             case 'stop':
                 return 'stop';
@@ -62,10 +59,10 @@ export class OllamaMessageStopTranslator extends BaseStreamTranslator<HoloStream
                 return undefined;
         }
     }
-    
+
     private mapHoloFinishReasonToOllama(reason?: HoloFinishReason | null): string | undefined {
         if (!reason) return undefined;
-        
+
         switch (reason) {
             case 'stop':
                 return 'stop';

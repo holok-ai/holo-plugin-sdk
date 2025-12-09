@@ -1,17 +1,12 @@
 import 'reflect-metadata';
 import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
-import {ArkErrors} from 'arktype';
-import {BaseStreamTranslator} from '../../../base.stream.translator';
-import {HoloStreamChunk} from '../../../holo';
 import {ClaudeRawContentBlockDeltaEvent} from '../../types';
-import {ClaudeRawContentBlockDeltaEventValidator} from '../../validators';
-import {HoloStreamChunkValidator} from '../../../holo/validators';
+import {HoloStreamChunk} from "@holokai/sdk";
+import {BaseStreamTranslator} from "@holokai/sdk/provider";
 
 @injectable()
 export class ClaudeContentBlockDeltaEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ClaudeRawContentBlockDeltaEvent> {
-    protected holoValidator = HoloStreamChunkValidator;
-    protected providerValidator = ClaudeRawContentBlockDeltaEventValidator;
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<ClaudeRawContentBlockDeltaEvent> = {};
 
@@ -42,13 +37,10 @@ export class ClaudeContentBlockDeltaEventTranslator extends BaseStreamTranslator
             const rawList = Array.isArray(d.provider_delta) ? d.provider_delta : [d.provider_delta];
 
             for (const raw of rawList) {
-                const validated = this.providerValidator(raw);
-                if (!(validated instanceof ArkErrors)) {
-                    const ev = validated as ClaudeRawContentBlockDeltaEvent;
-                    // Only forward input_json_delta events (tool arg fragments)
-                    if (ev.type === 'content_block_delta' && ev.delta?.type === 'input_json_delta') {
-                        out.push(ev);  // Lossless pass-through
-                    }
+                const ev = raw;
+                // Only forward input_json_delta events (tool arg fragments)
+                if (ev.type === 'content_block_delta' && ev.delta?.type === 'input_json_delta') {
+                    out.push(ev);  // Lossless pass-through
                 }
             }
         }

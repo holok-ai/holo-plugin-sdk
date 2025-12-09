@@ -1,18 +1,14 @@
 import 'reflect-metadata';
 import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
-import {ArkErrors} from 'arktype';
 import {v4 as uuidv4} from 'uuid';
-import {BaseStreamTranslator} from '../../../base.stream.translator';
-import {HoloStreamChunk, HoloStreamChunkValidator} from '../../../holo';
 import {OpenAIChatCompletionChunk} from '../../types';
-import {OpenAIChatCompletionChunkValidator} from '../../validators';
 import {pickDefined} from '../../../../utils';
+import {BaseStreamTranslator} from "@holokai/sdk/provider";
+import {HoloStreamChunk} from "@holokai/sdk";
 
 @injectable()
 export class OpenAIMessageStartTranslator extends BaseStreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {
-    protected holoValidator = HoloStreamChunkValidator;
-    protected providerValidator = OpenAIChatCompletionChunkValidator;
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<OpenAIChatCompletionChunk> = {};
 
@@ -48,16 +44,12 @@ export class OpenAIMessageStartTranslator extends BaseStreamTranslator<HoloStrea
     }
 
     protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<OpenAIChatCompletionChunk>[]> {
-        const logger = this.mlog(this.fromHoloManyImpl);
         const d = source.delta;
         if (!d || d.type !== 'message_start') return [];
 
         // Fast pass-through if we already carry an OpenAI chunk
         if (d.provider === 'OPENAI' && d.provider_delta) {
-            const validated = this.providerValidator(d.provider_delta);
-            if (!(validated instanceof ArkErrors)) {
-                return [validated];
-            }
+            return [d.provider_delta];
         }
 
         const id = source.id || this.providerDefaults.id || uuidv4();
@@ -65,10 +57,6 @@ export class OpenAIMessageStartTranslator extends BaseStreamTranslator<HoloStrea
             ? Math.floor(source.created / 1000) // ms → sec
             : Math.floor(Date.now() / 1000);
         const model = source.model || this.providerDefaults.model;
-
-        if (!model) {
-            logger.warn('OpenAIMessageStartTranslator: model missing; orchestrator should supply it via providerDefaults');
-        }
 
         const choiceIndex = d.choice !== undefined && Number.isInteger(d.choice) && d.choice >= 0 ? d.choice : 0;
 

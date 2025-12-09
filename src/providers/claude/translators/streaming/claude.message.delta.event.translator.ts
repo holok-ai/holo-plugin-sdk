@@ -1,18 +1,14 @@
 import 'reflect-metadata';
 import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
-import {BaseStreamTranslator} from '../../../base.stream.translator';
-import {HoloStreamChunk} from '../../../holo';
 import {ClaudeRawMessageDeltaEvent} from '../../types';
-import {ClaudeRawMessageDeltaEventValidator} from '../../validators';
-import {HoloStreamChunkValidator} from '../../../holo/validators';
 import {pickDefined} from '../../../../utils';
 import {mapClaudeFinishReason, mapHoloFinishReasonToClaude} from '../../utils/finish.reason.mapper';
+import {HoloStreamChunk} from "@holokai/sdk";
+import {BaseStreamTranslator} from "@holokai/sdk/provider";
 
 @injectable()
 export class ClaudeMessageDeltaEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ClaudeRawMessageDeltaEvent> {
-    protected holoValidator = HoloStreamChunkValidator;
-    protected providerValidator = ClaudeRawMessageDeltaEventValidator;
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<ClaudeRawMessageDeltaEvent> = {};
 
@@ -44,9 +40,9 @@ export class ClaudeMessageDeltaEventTranslator extends BaseStreamTranslator<Holo
                 stop_reason: stop_reason ?? null,
                 stop_sequence: null
             },
-            ...(usage ? { usage: usage as any } : {})  // Claude usage type is strict but we have partials
+            ...(usage ? {usage: usage as any} : {})  // Claude usage type is strict but we have partials
         };
-        
+
         return [event];
     }
 
@@ -70,7 +66,7 @@ export class ClaudeMessageDeltaEventTranslator extends BaseStreamTranslator<Holo
             },
             finish_reason: mapClaudeFinishReason(source.delta.stop_reason)  // Mapper handles null/undefined
         }) as Partial<HoloStreamChunk>;
-        
+
         return [chunk];
     }
 }

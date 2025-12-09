@@ -1,10 +1,9 @@
 import 'reflect-metadata';
-import {HoloFinishReason, HoloMessage, HoloResponse, HoloResponseValidator, HoloUsage} from "../../holo";
 import {OllamaGenerateResponse} from "../types";
-import {OllamaGenerateResponseValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {HoloFinishReason, HoloMessage, HoloResponse, HoloUsage} from "@holokai/sdk";
+import {BaseTranslator} from "@holokai/sdk/provider";
 
 /**
  * Translator for Ollama Generate API responses.
@@ -12,14 +11,13 @@ import {pickDefined} from "../../../utils";
  */
 @injectable()
 export class OllamaGenerateResponseTranslator extends BaseTranslator<HoloResponse, OllamaGenerateResponse> {
-    protected holoValidator = HoloResponseValidator;
-    protected providerValidator = OllamaGenerateResponseValidator;
     protected holoDefaults: Partial<HoloResponse> = {};
     protected providerDefaults: Partial<OllamaGenerateResponse> = {};
 
     constructor() {
         super();
     }
+
     private mapUsageFromHolo(usage?: HoloUsage): Partial<OllamaGenerateResponse> {
         if (!usage) return {};
         const t = usage.timings ?? {};
@@ -85,6 +83,7 @@ export class OllamaGenerateResponseTranslator extends BaseTranslator<HoloRespons
             ...usage
         }) as Partial<OllamaGenerateResponse>;
     }
+
     protected async toHoloImpl(source: OllamaGenerateResponse): Promise<Partial<HoloResponse>> {
         const usage = this.mapUsageToHolo(source);
 

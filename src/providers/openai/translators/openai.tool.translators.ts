@@ -1,15 +1,12 @@
 import 'reflect-metadata';
-import {HoloTool, HoloToolChoice, HoloToolChoiceValidator, HoloToolValidator} from "../../holo";
+import {HoloTool, HoloToolChoice} from "@holokai/sdk";
 import {OpenAIChatCompletionTool, OpenAIChatCompletionToolChoiceOption} from "../types";
-import {ChatCompletionToolChoiceOptionValidator, ChatCompletionToolValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {BaseTranslator} from "@holokai/sdk/provider";
 
 @injectable()
 export class OpenAIToolTranslator extends BaseTranslator<HoloTool, OpenAIChatCompletionTool> {
-    protected holoValidator = HoloToolValidator;
-    protected providerValidator = ChatCompletionToolValidator;
     protected holoDefaults: Partial<HoloTool> = {};
     protected providerDefaults: Partial<OpenAIChatCompletionTool> = {};
 
@@ -46,8 +43,6 @@ export class OpenAIToolTranslator extends BaseTranslator<HoloTool, OpenAIChatCom
 
 @injectable()
 export class OpenAIToolChoiceTranslator extends BaseTranslator<HoloToolChoice, OpenAIChatCompletionToolChoiceOption> {
-    protected holoValidator = HoloToolChoiceValidator;
-    protected providerValidator = ChatCompletionToolChoiceOptionValidator;
     protected holoDefaults: Partial<HoloToolChoice> = {};
     protected providerDefaults: Partial<OpenAIChatCompletionToolChoiceOption> = {};
 

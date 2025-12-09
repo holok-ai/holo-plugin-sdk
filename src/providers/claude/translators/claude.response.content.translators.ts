@@ -1,14 +1,11 @@
 import 'reflect-metadata';
-import {HoloContent, HoloContentValidator} from "../../holo";
 import {ClaudeContentBlock} from "../types";
-import {ClaudeContentBlockValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloContent} from "@holokai/sdk";
 
 @injectable()
 export class ClaudeResponseContentTranslator extends BaseTranslator<HoloContent, ClaudeContentBlock> {
-    protected holoValidator = HoloContentValidator;
-    protected providerValidator = ClaudeContentBlockValidator;
     protected holoDefaults: Partial<HoloContent> = {};
     protected providerDefaults: Partial<ClaudeContentBlock> = {};
 
@@ -33,7 +30,7 @@ export class ClaudeResponseContentTranslator extends BaseTranslator<HoloContent,
     protected async toHoloImpl(source: ClaudeContentBlock): Promise<Partial<HoloContent>> {
         switch (source.type) {
             case 'text':
-                return { type: 'text', text: source.text };
+                return {type: 'text', text: source.text};
 
             case 'tool_use':
                 // Handled at the message layer (mapped to Holo tool_calls[]).

@@ -1,19 +1,15 @@
 import 'reflect-metadata';
 import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
-import {ArkErrors} from 'arktype';
-import {BaseStreamTranslator} from '../../../base.stream.translator';
-import {HoloStreamChunk, HoloStreamChunkValidator, HoloFinishReason} from '../../../holo';
 import {OllamaChatResponse, OllamaGenerateResponse} from '../../types';
-import {OllamaChatResponseValidator, OllamaGenerateResponseValidator} from '../../validators';
 import {pickDefined} from '../../../../utils';
+import {HoloFinishReason, HoloStreamChunk} from "@holokai/sdk";
+import {BaseStreamTranslator} from "@holokai/sdk/provider";
 
 type OllamaStreamResponse = Partial<OllamaChatResponse> | Partial<OllamaGenerateResponse>;
 
 @injectable()
 export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStreamChunk, OllamaStreamResponse> {
-    protected holoValidator = HoloStreamChunkValidator;
-    protected providerValidator = OllamaChatResponseValidator.partial().or(OllamaGenerateResponseValidator.partial());
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<OllamaStreamResponse> = {};
 
@@ -26,11 +22,11 @@ export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
         const isChat = 'message' in source;
         const toolCalls = isChat ? (source as any).message?.tool_calls : undefined;
         const hasToolCalls = Array.isArray(toolCalls) && toolCalls.length > 0;
-        
+
         // For non-final chunks, only emit if there are tool calls
         if (!source.done) {
             if (!hasToolCalls) return [];
-            
+
             return [pickDefined({
                 delta: {
                     provider: ProviderType.OLLAMA,
@@ -51,7 +47,7 @@ export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                 ? source.prompt_eval_count + source.eval_count
                 : undefined
         });
-        
+
         const hasUsage = Object.keys(usage).length > 0;
         const finish_reason = this.mapOllamaFinishReason(source.done_reason);
 
@@ -62,7 +58,7 @@ export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
             delta: {
                 provider: ProviderType.OLLAMA,
                 type: 'message_delta' as const,
-                delta: hasToolCalls ? { tool_calls: toolCalls } : {},
+                delta: hasToolCalls ? {tool_calls: toolCalls} : {},
                 usage: hasUsage ? usage : undefined,
                 provider_delta: source
             },
@@ -76,14 +72,11 @@ export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
 
         // Fast pass-through for Ollama→Ollama streaming
         if (d.provider === ProviderType.OLLAMA && d.provider_delta) {
-            const validated = this.providerValidator(d.provider_delta);
-            if (!(validated instanceof ArkErrors)) {
-                return [validated];
-            }
+            return [d.provider_delta];
         }
 
         const results: Partial<OllamaStreamResponse>[] = [];
-        
+
         // 1) Map tool_calls → ChatResponse-shaped partial
         const toolCalls = d.delta?.tool_calls;
         if (Array.isArray(toolCalls) && toolCalls.length > 0) {
@@ -97,7 +90,7 @@ export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                 done: false
             } as Partial<OllamaStreamResponse>);
         }
-        
+
         // 2) Map usage if present
         if (d.usage) {
             results.push(pickDefined({

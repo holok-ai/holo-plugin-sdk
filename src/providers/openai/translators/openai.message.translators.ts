@@ -1,18 +1,15 @@
 import 'reflect-metadata';
 import {OpenAIContentTranslator} from "./openai.content.translators";
-import {HoloMessage, HoloMessageValidator} from "../../holo";
 import {OpenAIRequestMessage} from "../types";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
-import {OpenAIRequestMessageValidator} from "../validators";
 import {createStableId} from "../../utils/stable-id";
 import {safeParse} from "../../utils/safe.parse";
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloMessage} from "@holokai/sdk";
 
 @injectable()
 export class OpenAIMessageTranslator extends BaseTranslator<HoloMessage, OpenAIRequestMessage> {
-    protected holoValidator = HoloMessageValidator;
-    protected providerValidator = OpenAIRequestMessageValidator;
     protected holoDefaults: Partial<HoloMessage> = {};
     protected providerDefaults: Partial<OpenAIRequestMessage> = {};
 

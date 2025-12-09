@@ -1,18 +1,15 @@
 import 'reflect-metadata';
 import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
-import {BaseStreamTranslator} from '../../../base.stream.translator';
-import {HoloStreamChunk, HoloStreamChunkValidator} from '../../../holo';
 import {OllamaChatResponse, OllamaGenerateResponse} from '../../types';
-import {OllamaChatResponseValidator, OllamaGenerateResponseValidator} from '../../validators';
+import {pickDefined} from '../../../../utils';
+import {BaseStreamTranslator} from "@holokai/sdk/provider";
+import {HoloStreamChunk} from "@holokai/sdk";
 
 type OllamaStreamResponse = Partial<OllamaChatResponse> | Partial<OllamaGenerateResponse>;
-import {pickDefined} from '../../../../utils';
 
 @injectable()
 export class OllamaContentDeltaTranslator extends BaseStreamTranslator<HoloStreamChunk, OllamaStreamResponse> {
-    protected holoValidator = HoloStreamChunkValidator;
-    protected providerValidator = OllamaChatResponseValidator.partial().or(OllamaGenerateResponseValidator.partial());
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<OllamaStreamResponse> = {};
 
@@ -22,15 +19,15 @@ export class OllamaContentDeltaTranslator extends BaseStreamTranslator<HoloStrea
 
     protected async toHoloManyImpl(source: OllamaStreamResponse): Promise<Partial<HoloStreamChunk>[]> {
         // Stateless - just map content if present
-        
+
         // Determine if this is a chat or generate response
         const isChat = 'message' in source;
-        
+
         // Extract text content based on format
-        const content = isChat 
-            ? (source as any).message?.content 
+        const content = isChat
+            ? (source as any).message?.content
             : (source as any).response;
-        
+
         // Only emit if there's actual text content
         if (typeof content === 'string' && content.length > 0) {
             return [{
@@ -44,14 +41,14 @@ export class OllamaContentDeltaTranslator extends BaseStreamTranslator<HoloStrea
                 }
             }];
         }
-        
+
         return [];
     }
 
     protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<OllamaStreamResponse>[]> {
         const d = source.delta;
         if (!d || d.type !== 'content_delta') return [];
-        
+
         if (typeof d.delta?.content === 'string') {
             // Need context to know if this should be chat or generate format
             // Check for role to determine format
@@ -72,7 +69,7 @@ export class OllamaContentDeltaTranslator extends BaseStreamTranslator<HoloStrea
                 }) as Partial<OllamaStreamResponse>];
             }
         }
-        
+
         return [];
     }
 }

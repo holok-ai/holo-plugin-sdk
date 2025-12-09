@@ -1,15 +1,12 @@
 import 'reflect-metadata';
-import {HoloTool, HoloToolValidator} from "../../holo";
 import {OllamaTool} from "../types";
-import {OllamaToolValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {HoloTool} from "@holokai/sdk";
+import {BaseTranslator} from "@holokai/sdk/provider";
 
 @injectable()
 export class OllamaToolTranslator extends BaseTranslator<HoloTool, OllamaTool> {
-    protected holoValidator = HoloToolValidator;
-    protected providerValidator = OllamaToolValidator;
     protected holoDefaults: Partial<HoloTool> = {};
     protected providerDefaults: Partial<OllamaTool> = {};
 

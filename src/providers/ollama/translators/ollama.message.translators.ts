@@ -1,15 +1,12 @@
 import 'reflect-metadata';
-import {HoloContent, HoloMessage, HoloMessageValidator} from "../../holo";
 import {OllamaMessage} from "../types";
 import {isUint8Array, pickDefined, uint8ToDataUrl} from "../../../utils";
-import {OllamaMessageValidator} from "../validators";
-import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
+import {BaseTranslator} from "@holokai/sdk/provider";
+import {HoloContent, HoloMessage} from "@holokai/sdk";
 
 @injectable()
 export class OllamaMessageTranslator extends BaseTranslator<HoloMessage, OllamaMessage> {
-    protected holoValidator = HoloMessageValidator;
-    protected providerValidator = OllamaMessageValidator;
     protected holoDefaults: Partial<HoloMessage> = {};
     protected providerDefaults: Partial<OllamaMessage> = {};
 

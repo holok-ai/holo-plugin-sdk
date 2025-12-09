@@ -1,18 +1,16 @@
 import 'reflect-metadata';
-import {BaseTranslator} from "../../base.translator";
-import {HoloMessage, HoloRequest, HoloRequestDefaults, HoloRequestValidator, isImage, isText} from "../../holo";
 import {OllamaGenerateRequest} from "../types";
-import {OllamaGenerateRequestDefaults, OllamaGenerateRequestValidator} from "../validators";
+import {OllamaGenerateRequestDefaults} from "../validators";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
+import {HoloMessage, HoloRequest, HoloRequestDefaults, isImage, isText} from "@holokai/sdk";
+import {BaseTranslator} from "@holokai/sdk/provider";
 
 @injectable()
 export class OllamaGenerateRequestTranslator extends BaseTranslator<HoloRequest, OllamaGenerateRequest> {
 
     protected holoDefaults = HoloRequestDefaults;
-    protected holoValidator = HoloRequestValidator;
     protected providerDefaults = OllamaGenerateRequestDefaults;
-    protected providerValidator = OllamaGenerateRequestValidator;
 
     constructor() {
         super();
