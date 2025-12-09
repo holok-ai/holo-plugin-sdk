@@ -1,0 +1,25 @@
+# Source files
+src/
+*.ts
+!*.d.ts
+
+# Config files
+tsconfig.json
+tsconfig.tsbuildinfo
+.eslintrc*
+jest.config*
+
+# Test files
+__tests__/
+*.test.ts
+*.spec.ts
+
+# Development files
+.DS_Store
+*.log
+node_modules/
+
+# Build artifacts (keep only dist)
+!dist/**/*.js
+!dist/**/*.d.ts
+!dist/**/*.map

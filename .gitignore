@@ -43,6 +43,3 @@ applications/
 .bmad/
 .claude/
 .codex/
-
-# Packages directory (for open-core migration)
-packages/

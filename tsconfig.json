@@ -27,11 +27,11 @@
     "exactOptionalPropertyTypes": true,
     "baseUrl": ".",
     "paths": {
-      "@holokai/common": ["./packages/common/src/index.ts"],
-      "@holokai/common/plugin": ["./packages/common/src/plugin/index.ts"],
-      "@holokai/common/provider": ["./packages/common/src/provider/index.ts"],
-      "@holokai/common/holo": ["./packages/common/src/holo/index.ts"],
-      "@holokai/common/utils": ["./packages/common/src/utils/index.ts"]
+      "@holokai/sdk": ["./packages/sdk/src/index.ts"],
+      "@holokai/sdk/plugin": ["./packages/sdk/src/plugin/index.ts"],
+      "@holokai/sdk/provider": ["./packages/sdk/src/provider/index.ts"],
+      "@holokai/sdk/holo": ["./packages/sdk/src/holo/index.ts"],
+      "@holokai/sdk/utils": ["./packages/sdk/src/utils/index.ts"]
     }
   },
   "ts-node": {
@@ -48,6 +48,6 @@
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "packages", "tests"],
   "references": [
-    { "path": "./packages/common" }
+    { "path": "./packages/sdk"}
   ]
 }

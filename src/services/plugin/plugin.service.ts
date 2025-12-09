@@ -3,8 +3,8 @@ import {ClassLogger} from '../../types/class.logger';
 import {PluginDiscoveryService} from './discovery.service';
 import {PluginLoaderService} from './loader.service';
 import {ProviderPluginRegistry} from './provider-registry.service';
-import type {IProviderPlugin} from '@holokai/common/plugin';
-import {PluginContext, PluginState} from '@holokai/common/plugin';
+import type {IProviderPlugin} from '@holokai/sdk/plugin';
+import {PluginContext, PluginState} from '@holokai/sdk/plugin';
 import logger from '../../utils/logger';
 
 /**
