@@ -1,0 +1,125 @@
+<story-context id="story-2-1" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>1</storyId>
+    <title>Create Common SDK Package Structure</title>
+    <status>done</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow (Retrospective)</generator>
+    <sourceStoryPath>docs/sprint-artifacts/story-2-1-create-common-sdk-package-structure.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>plugin system developer</asA>
+    <iWant>a properly structured @holokai/common package</iWant>
+    <soThat>all subsequent SDK development has a solid foundation to build upon</soThat>
+    <tasks>
+      - Create package structure under packages/common/
+      - Organize namespace folders (/plugin, /provider, /holo, /utils)
+      - Configure TypeScript for clean builds with declaration files
+      - Set up package.json with metadata and subpath exports
+      - Integrate build scripts with monorepo tooling
+      - Create README with documentation
+      - Add index files for each namespace
+      - Include license file
+      - Configure .npmignore
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    - Package structure created under packages/common/
+    - Namespace folders organized (/plugin, /provider, /holo, /utils)
+    - TypeScript configuration for clean builds with declaration files
+    - Package.json with proper metadata and subpath exports
+    - Build scripts integrated with monorepo tooling
+    - README with basic documentation and usage examples
+    - Index files for each namespace with proper exports
+    - License file (MIT or Apache 2.0) included
+    - .npmignore configured to exclude source files
+    - Package builds successfully with npm run build
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <item>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>Common SDK Requirements</section>
+        <snippet>Common SDK provides shared contracts and utilities for plugin developers without exposing proprietary core code</snippet>
+      </item>
+      <item>
+        <path>docs/plugin-system-architecture.md</path>
+        <title>Plugin System Architecture</title>
+        <section>Common SDK Structure</section>
+        <snippet>Namespaced + Subpath Exports: @holokai/common with /plugin, /provider, /holo, /utils subpaths for tree-shakeable, explicit public API</snippet>
+      </item>
+      <item>
+        <path>docs/epics.md</path>
+        <title>Epic 2: Common SDK Package</title>
+        <section>Story 2.1</section>
+        <snippet>Create @holokai/common package structure with namespace organization and export strategy maintaining IP boundary</snippet>
+      </item>
+      <item>
+        <path>docs/archive/pre-bmm-2025-11-21/index.md</path>
+        <title>Brownfield Documentation</title>
+        <section>Existing Monorepo Structure</section>
+        <snippet>Project uses NPM workspaces with TypeScript 5.0+ and Node 18+</snippet>
+      </item>
+    </docs>
+    <code>
+      <item>
+        <path>package.json</path>
+        <kind>config</kind>
+        <symbol>workspaces</symbol>
+        <lines>root</lines>
+        <reason>Monorepo workspace configuration defines packages structure</reason>
+      </item>
+      <item>
+        <path>tsconfig.json</path>
+        <kind>config</kind>
+        <symbol>compilerOptions</symbol>
+        <lines>root</lines>
+        <reason>Base TypeScript configuration for monorepo</reason>
+      </item>
+    </code>
+    <dependencies>
+      <node>
+        "typescript": "^5.0.0",
+        "tslib": "^2.6.2",
+        "arktype": "2.1.0"
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - ADR-001: Namespaced + Subpath Exports pattern
+    - No imports from src/ or packages/core/ (IP boundary)
+    - Tree-shakeable export structure
+    - TypeScript 5.0+ compatibility
+    - Node 18+ compatibility
+    - Start at version 0.1.0 for initial development
+    - Use package.json exports field for clean imports
+    - Must emit clean .d.ts files for TypeScript consumers
+  </constraints>
+
+  <interfaces>
+    <item>
+      <name>Package Subpath Exports</name>
+      <kind>Package exports</kind>
+      <signature>@holokai/common/plugin, @holokai/common/provider, @holokai/common/holo, @holokai/common/utils</signature>
+      <path>packages/common/package.json</path>
+    </item>
+  </interfaces>
+
+  <tests>
+    <standards>Use Jest for unit testing, verify imports work correctly, test that TypeScript types are accessible</standards>
+    <locations>packages/common/__tests__/, packages/test-common/</locations>
+    <ideas>
+      - Test package can be imported without errors
+      - Verify each namespace exports correctly
+      - Check TypeScript types are accessible
+      - Verify .d.ts files are generated in dist/
+      - Test tree shaking with sample import
+    </ideas>
+  </tests>
+</story-context>

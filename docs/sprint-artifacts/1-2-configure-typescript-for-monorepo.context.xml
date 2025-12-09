@@ -1,0 +1,270 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.2</storyId>
+    <title>Configure TypeScript for Monorepo</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-20</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-2-configure-typescript-for-monorepo.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>platform architect</asA>
+    <iWant>TypeScript configured for monorepo with composite projects</iWant>
+    <soThat>workspace packages can reference each other with proper type-checking and incremental builds</soThat>
+    <tasks>
+      <task id="1" ac="1,5">
+        <title>Configure root tsconfig.json for composite projects</title>
+        <subtasks>
+          <subtask>Read current root tsconfig.json</subtask>
+          <subtask>Add "composite": true to compilerOptions</subtask>
+          <subtask>Add "references": [] array to root config (empty initially)</subtask>
+          <subtask>Add "declaration": true and "declarationMap": true</subtask>
+          <subtask>Update "exclude" to exclude packages/ directory</subtask>
+          <subtask>Verify tsconfig.json is valid with tsc --showConfig</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Create package-level tsconfig.json template</title>
+        <subtasks>
+          <subtask>Create example tsconfig.json structure for workspace packages</subtask>
+          <subtask>Configure "extends": "../../tsconfig.json"</subtask>
+          <subtask>Set "composite": true for incremental builds</subtask>
+          <subtask>Configure "outDir": "./dist" and "rootDir": "./src"</subtask>
+          <subtask>Add "include": ["src/**/*"] pattern</subtask>
+          <subtask>Document template in dev notes</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Verify no path aliases used</title>
+        <subtasks>
+          <subtask>Check root tsconfig.json for paths configuration</subtask>
+          <subtask>If paths exist, verify they don't conflict with workspace resolution</subtask>
+          <subtask>Document decision: workspace resolution preferred</subtask>
+          <subtask>Add note explaining rationale (Architecture ADR-001)</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4,6">
+        <title>Test workspace package imports</title>
+        <subtasks>
+          <subtask>Create test workspace package in packages/test-common/</subtask>
+          <subtask>Add minimal package.json with name "@holokai/test-common"</subtask>
+          <subtask>Create src/index.ts with exported interface</subtask>
+          <subtask>Add package tsconfig.json using template</subtask>
+          <subtask>Update root tsconfig.json references to include test package</subtask>
+          <subtask>Create second test package that imports from first</subtask>
+          <subtask>Run tsc --build to verify cross-package type checking</subtask>
+          <subtask>Verify IDE (VSCode) shows type errors across packages</subtask>
+          <subtask>Remove test packages after verification</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Verify build order and incremental compilation</title>
+        <subtasks>
+          <subtask>Run npm run build and verify TypeScript compiles</subtask>
+          <subtask>Verify --build flag enables incremental compilation</subtask>
+          <subtask>Test that changing one file only rebuilds affected packages</subtask>
+          <subtask>Document build performance (initial vs incremental)</subtask>
+          <subtask>Verify dist/ directories created with .d.ts files</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Root tsconfig.json includes composite: true and references: []</criterion>
+    <criterion id="2">Each workspace package has its own tsconfig.json extending root config</criterion>
+    <criterion id="3">TypeScript path aliases are NOT used (rely on workspace resolution)</criterion>
+    <criterion id="4">Packages can import from other packages using package names (e.g., @holokai/common/plugin)</criterion>
+    <criterion id="5">npm run build at root compiles all workspaces in dependency order</criterion>
+    <criterion id="6">IDE shows type errors across workspace boundaries</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification - Foundation &amp; Monorepo Setup</title>
+        <section>Data Models and Contracts - Root tsconfig.json Structure</section>
+        <snippet>Defines root tsconfig.json with composite: true, declaration: true, declarationMap: true, and references array. Specifies project references pattern for cross-package type checking and incremental builds.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification</title>
+        <section>Data Models - Package-level tsconfig.json Template</section>
+        <snippet>Package tsconfig extends root config with composite: true, outDir: ./dist, rootDir: ./src. Each package has independent compilation unit with project references for cross-package imports.</snippet>
+      </doc>
+      <doc>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR57: Core types separated from provider types</section>
+        <snippet>Core Holo types separated from provider-specific types enables clear boundaries and type safety across packages without circular dependencies.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Holo Architecture</title>
+        <section>Recommendations for Clean Architecture</section>
+        <snippet>Proposed structure uses TypeScript composite projects for monorepo organization. Clear boundaries enable core extraction as standalone library. Dependency flow: server → api → core → nothing.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epics Document</title>
+        <section>Epic 1, Story 1.2</section>
+        <snippet>Technical notes specify TypeScript composite projects (no path aliases per Architecture ADR-001), root tsconfig with composite: true and references array, packages can reference each other using package names.</snippet>
+      </doc>
+      <doc>
+        <path>docs/sprint-artifacts/1-1-create-monorepo-workspace-structure.md</path>
+        <title>Story 1.1 - Create Monorepo Workspace Structure (COMPLETED)</title>
+        <section>Dev Agent Record - Completion Notes</section>
+        <snippet>Workspace configuration complete: npm workspaces added to package.json, private flag set, .gitignore updated. Build and test infrastructure verified stable. Foundation ready for TypeScript configuration.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>tsconfig.json</path>
+        <kind>config</kind>
+        <symbol>root TypeScript configuration</symbol>
+        <lines>1-32</lines>
+        <reason>MUST be modified to add composite: true, references array, declaration settings, and exclude packages/ directory. Currently configured for existing src/ compilation only.</reason>
+      </file>
+      <file>
+        <path>package.json</path>
+        <kind>config</kind>
+        <symbol>root package configuration</symbol>
+        <lines>1-80</lines>
+        <reason>Reference for build scripts. Story 1.1 added workspaces config. Build script uses 'tsc' which will be enhanced with '--build' flag for incremental compilation.</reason>
+      </file>
+      <file>
+        <path>src/app.ts</path>
+        <kind>server</kind>
+        <symbol>Main API server entry point</symbol>
+        <lines>all</lines>
+        <reason>Existing core functionality that must remain unchanged after TypeScript configuration. Used to verify no regression in core compilation.</reason>
+      </file>
+      <file>
+        <path>jest.config.cjs</path>
+        <kind>config</kind>
+        <symbol>Jest test configuration</symbol>
+        <lines>1-25</lines>
+        <reason>Test configuration uses ts-jest for TypeScript support. Must continue to work after composite project configuration changes.</reason>
+      </file>
+      <file>
+        <path>packages/.gitkeep</path>
+        <kind>placeholder</kind>
+        <symbol>packages directory marker</symbol>
+        <lines>1</lines>
+        <reason>Workspace directory created in Story 1.1. Will contain test packages during validation, then be empty again after cleanup.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <node>
+        <runtime>
+          <package name="express" version="^4.21.2" />
+          <package name="amqplib" version="^0.10.9" />
+          <package name="pg" version="^8.11.3" />
+          <package name="tsyringe" version="^4.10.0" />
+          <package name="winston" version="^3.18.3" />
+          <package name="arktype" version="^2.1.22" />
+          <package name="@anthropic-ai/sdk" version="^0.67.0" />
+          <package name="openai" version="^6.8.1" />
+          <package name="ollama" version="^0.6.0" />
+        </runtime>
+        <devtime>
+          <package name="typescript" version="^5.8.3" />
+          <package name="ts-node" version="^10.9.2" />
+          <package name="jest" version="^29.7.0" />
+          <package name="ts-jest" version="^29.4.1" />
+          <package name="eslint" version="^9.30.1" />
+          <package name="@typescript-eslint/eslint-plugin" version="^8.36.0" />
+          <package name="@typescript-eslint/parser" version="^8.36.0" />
+          <package name="nodemon" version="^3.1.10" />
+        </devtime>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="critical">MUST enable "composite": true in root tsconfig.json to support project references</constraint>
+    <constraint type="critical">MUST add "declaration": true and "declarationMap": true for type declarations required by composite projects</constraint>
+    <constraint type="critical">MUST add "references": [] array to root tsconfig.json (will be populated when packages are added)</constraint>
+    <constraint type="critical">MUST exclude packages/ directory from root tsconfig to prevent double compilation</constraint>
+    <constraint type="critical">MUST NOT use TypeScript path aliases - rely on workspace resolution (Architecture ADR-001)</constraint>
+    <constraint type="architecture">Each workspace package tsconfig must extend root config with "extends": "../../tsconfig.json"</constraint>
+    <constraint type="architecture">Each workspace package tsconfig must have "composite": true for incremental builds</constraint>
+    <constraint type="testing">NFR-EPIC1-2: IDE must show type errors within 2 seconds of code change</constraint>
+    <constraint type="testing">NFR-EPIC1-5: All existing integration tests must pass after changes</constraint>
+    <constraint type="performance">NFR-EPIC1-1: Build performance must be &lt;30 seconds initial, &lt;5 seconds incremental</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>TypeScript composite projects configuration</name>
+      <kind>tsconfig.json structure</kind>
+      <signature>
+{
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    ...
+  },
+  "references": [],
+  "exclude": ["node_modules", "dist", "packages"]
+}
+      </signature>
+      <path>tsconfig.json</path>
+      <notes>Root configuration enables project references. References array will list package paths as they are added (e.g., [{ "path": "./packages/common" }]).</notes>
+    </interface>
+    <interface>
+      <name>Workspace package tsconfig template</name>
+      <kind>tsconfig.json structure</kind>
+      <signature>
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*"],
+  "references": []
+}
+      </signature>
+      <path>packages/*/tsconfig.json</path>
+      <notes>Each package extends root config and declares its own references to dependent packages. Enables cross-package type checking and incremental compilation.</notes>
+    </interface>
+    <interface>
+      <name>TypeScript build command</name>
+      <kind>npm script</kind>
+      <signature>tsc --build</signature>
+      <path>package.json scripts</path>
+      <notes>The --build flag enables incremental compilation and respects project references. Compiles packages in dependency order automatically.</notes>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing framework: Jest with ts-jest preset for TypeScript support. Tests located in tests/ directory with pattern **/*.test.ts. Integration tests use testTimeout=30000 and runInBand flag. Existing test: tests/integration/providers/openai.test.ts validates provider functionality. All tests must pass after TypeScript configuration changes to ensure no regression (AC validation, NFR-EPIC1-5).
+    </standards>
+    <locations>
+      <location>tests/</location>
+      <location>tests/integration/</location>
+      <location>**/__tests__/**/*.test.ts</location>
+      <location>**/?(*.)+(spec|test).ts</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Verify root tsconfig.json contains "composite": true in compilerOptions by parsing JSON</idea>
+      <idea ac="1">Verify root tsconfig.json contains "references": [] array at root level by parsing JSON</idea>
+      <idea ac="1">Verify root tsconfig.json contains "declaration": true and "declarationMap": true in compilerOptions</idea>
+      <idea ac="1">Verify "exclude" array includes "packages" to prevent double compilation</idea>
+      <idea ac="2">Create temporary test package with tsconfig.json extending root config, verify "extends": "../../tsconfig.json" resolves correctly</idea>
+      <idea ac="3">Parse root tsconfig.json and verify "paths" field is either absent or empty (no path aliases)</idea>
+      <idea ac="4">Create two test packages where second imports from first using package name (e.g., import { Foo } from '@holokai/test-common'), verify TypeScript compilation succeeds</idea>
+      <idea ac="5">Run npm run build and verify exit code 0, verify dist/ directories created, verify .d.ts declaration files generated</idea>
+      <idea ac="5">Modify single file in src/, run npm run build again, verify only affected files recompiled (check build time &lt;5 seconds)</idea>
+      <idea ac="6">Open test package in IDE, introduce type error, verify red squiggly appears and error shown in problems panel</idea>
+      <idea ac="all">After all changes, run existing integration tests (npm test) and verify they still pass (test framework unaffected)</idea>
+    </ideas>
+  </tests>
+</story-context>

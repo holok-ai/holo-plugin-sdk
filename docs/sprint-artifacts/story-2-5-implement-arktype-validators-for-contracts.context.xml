@@ -1,0 +1,139 @@
+<story-context id="story-2-5" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>5</storyId>
+    <title>Implement ArkType Validators for Contracts</title>
+    <status>done</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow (Retrospective)</generator>
+    <sourceStoryPath>docs/sprint-artifacts/story-2-5-implement-arktype-validators-for-contracts.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>plugin system developer</asA>
+    <iWant>ArkType validators for all plugin contracts</iWant>
+    <soThat>the system can validate plugin exports at runtime and provide clear error messages</soThat>
+    <tasks>
+      - Create pluginManifestValidator in src/plugin/validators.ts
+      - Validate required fields (name, version, pluginType, commonSdkVersion)
+      - Validate semver format for versions
+      - Validate PluginType enum values
+      - Create validators for type-specific interfaces
+      - Ensure error messages are clear and actionable
+      - Use satisfies Type constraint pattern
+      - Create validators for all nested types
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    - src/plugin/validators.ts exports pluginManifestValidator
+    - validator uses ArkType type() syntax with satisfies Type&lt;PluginManifest&gt;
+    - validator enforces required fields (name, version, pluginType, commonSdkVersion)
+    - validator validates semver format for version and commonSdkVersion
+    - validator validates PluginType enum values
+    - validation returns type.errors for invalid input
+    - error messages are clear and actionable (FR72)
+    - all validators follow CLAUDE.md rule: satisfies Type&lt;T&gt;, NEVER use any
+    - validators compile without TypeScript errors
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <item>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR8: ArkType validators</section>
+        <snippet>FR8: ArkType validators for all contracts providing runtime validation with clear error messages for plugin developers</snippet>
+      </item>
+      <item>
+        <path>docs/plugin-system-architecture.md</path>
+        <title>Plugin System Architecture</title>
+        <section>Runtime Validation</section>
+        <snippet>ArkType 2.0 for runtime validation with descriptive errors. All contracts have corresponding validators</snippet>
+      </item>
+      <item>
+        <path>docs/epics.md</path>
+        <title>Epic 2: Common SDK Package</title>
+        <section>Story 2.5</section>
+        <snippet>ArkType validators with satisfies Type constraint, clear error messages, semver validation</snippet>
+      </item>
+      <item>
+        <path>.bmad/bmm/CLAUDE.md</path>
+        <title>CLAUDE Rules</title>
+        <section>ArkType Implementation</section>
+        <snippet>ALWAYS use satisfies Type&lt;T&gt; on every validator - NEVER use any or flexible types</snippet>
+      </item>
+    </docs>
+    <code>
+      <item>
+        <path>src/plugin/validators.ts</path>
+        <kind>validators</kind>
+        <symbol>pluginManifestValidator</symbol>
+        <lines>all validators</lines>
+        <reason>Main validators file for all plugin contracts</reason>
+      </item>
+      <item>
+        <path>src/plugin/validators/</path>
+        <kind>directory</kind>
+        <symbol>type-specific validators</symbol>
+        <lines>subdirectory</lines>
+        <reason>Validators for guard, evaluator, provider types</reason>
+      </item>
+    </code>
+    <dependencies>
+      <node>
+        "arktype": "2.1.0",
+        "semver": "^7.5.0",
+        "typescript": "^5.0.0"
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - MUST use satisfies Type&lt;T&gt; for ALL validators (CLAUDE.md rule)
+    - NEVER use 'any' type
+    - NEVER use Record&lt;string, unknown&gt; as shortcut
+    - Start with zero-dependency types first, build up
+    - Use proper ArkType methods (.array(), .or(), type.valueOf())
+    - Semver validation using regex or semver library
+    - Clear error messages for developer experience
+    - All validators must be exported for external use
+    - Build validators from simple to complex types
+  </constraints>
+
+  <interfaces>
+    <item>
+      <name>pluginManifestValidator</name>
+      <kind>validator</kind>
+      <signature>type({...}) satisfies Type&lt;PluginManifest&gt;</signature>
+      <path>src/plugin/validators.ts</path>
+    </item>
+    <item>
+      <name>pluginTypeValidator</name>
+      <kind>validator</kind>
+      <signature>type('"provider" | "guard" | "evaluator" | "logger" | "worker"') satisfies Type&lt;PluginType&gt;</signature>
+      <path>src/plugin/validators.ts</path>
+    </item>
+    <item>
+      <name>guardResultValidator</name>
+      <kind>validator</kind>
+      <signature>type({passed: boolean, ...}) satisfies Type&lt;GuardResult&gt;</signature>
+      <path>src/plugin/validators/guard.ts</path>
+    </item>
+  </interfaces>
+
+  <tests>
+    <standards>Jest unit tests, test validation success and failure cases, verify error messages</standards>
+    <locations>packages/common/__tests__/plugin/validators/</locations>
+    <ideas>
+      - Test valid manifest passes validation
+      - Test missing required fields fail with clear errors
+      - Test invalid semver format fails
+      - Test invalid plugin type fails
+      - Verify error messages are actionable
+      - Test nested type validation
+      - Test satisfies Type compilation
+      - Test array and optional field validation
+    </ideas>
+  </tests>
+</story-context>

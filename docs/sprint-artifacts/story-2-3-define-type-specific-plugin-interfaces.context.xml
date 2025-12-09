@@ -1,0 +1,136 @@
+<story-context id="story-2-3" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>3</storyId>
+    <title>Define Type-Specific Plugin Interfaces</title>
+    <status>done</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow (Retrospective)</generator>
+    <sourceStoryPath>docs/sprint-artifacts/story-2-3-define-type-specific-plugin-interfaces.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>plugin developer</asA>
+    <iWant>type-specific plugin interfaces (IProviderPlugin, IGuardPlugin, etc.)</iWant>
+    <soThat>I know exactly what methods to implement for each plugin type</soThat>
+    <tasks>
+      - Define IProviderPlugin interface extending IPlugin
+      - Define IGuardPlugin interface for validation/security
+      - Define IEvaluatorPlugin interface for output evaluation
+      - Define ILoggerPlugin interface for logging backends
+      - Define IWorkerPlugin interface for background processing
+      - Create type-specific configuration interfaces
+      - Add capability declaration interfaces
+      - Document with JSDoc and examples
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    - IProviderPlugin interface extending IPlugin with provider-specific methods
+    - IGuardPlugin interface for request/response validation and security
+    - IEvaluatorPlugin interface for LLM output evaluation
+    - ILoggerPlugin interface for custom logging backends
+    - IWorkerPlugin interface for background processing
+    - Type-specific configuration interfaces for each plugin type
+    - Capability declaration interfaces for each type
+    - JSDoc documentation explaining each plugin type's purpose
+    - Usage examples for each interface
+    - Interfaces compile without errors
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <item>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR3-FR5: Type-specific interfaces</section>
+        <snippet>FR3: IProviderPlugin extends IPlugin for LLM providers. FR4: IGuardPlugin for security. FR5: IEvaluatorPlugin for quality scoring</snippet>
+      </item>
+      <item>
+        <path>docs/plugin-system-architecture.md</path>
+        <title>Plugin System Architecture</title>
+        <section>Plugin Types</section>
+        <snippet>IProviderPlugin extends with validation, IGuardPlugin for auth/rate limiting, IEvaluatorPlugin for quality/cost tracking</snippet>
+      </item>
+      <item>
+        <path>docs/epics.md</path>
+        <title>Epic 2: Common SDK Package</title>
+        <section>Story 2.3</section>
+        <snippet>Type-specific interfaces with unique methods: createProvider, validateRequest, evaluate, etc.</snippet>
+      </item>
+    </docs>
+    <code>
+      <item>
+        <path>src/plugin/provider.ts</path>
+        <kind>interface</kind>
+        <symbol>IProviderPlugin</symbol>
+        <lines>current implementation</lines>
+        <reason>Provider plugin interface location</reason>
+      </item>
+      <item>
+        <path>src/plugin/guard.ts</path>
+        <kind>interface</kind>
+        <symbol>IGuardPlugin</symbol>
+        <lines>current implementation</lines>
+        <reason>Guard plugin interface location</reason>
+      </item>
+      <item>
+        <path>src/plugin/evaluator.ts</path>
+        <kind>interface</kind>
+        <symbol>IEvaluatorPlugin</symbol>
+        <lines>current implementation</lines>
+        <reason>Evaluator plugin interface location</reason>
+      </item>
+    </code>
+    <dependencies>
+      <node>
+        "typescript": "^5.0.0",
+        "arktype": "2.1.0"
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - All interfaces must extend IPlugin base interface
+    - Type-specific methods must be async (return Promises)
+    - Generic types for input/output to support different implementations
+    - No 'any' types - use proper generics
+    - Must support batch operations where applicable
+    - Configuration methods must support partial updates
+    - Capability declarations must be static/synchronous
+  </constraints>
+
+  <interfaces>
+    <item>
+      <name>IProviderPlugin</name>
+      <kind>interface</kind>
+      <signature>extends IPlugin with createProvider, validateConfig, getCapabilities, getSupportedModels</signature>
+      <path>src/plugin/provider.ts</path>
+    </item>
+    <item>
+      <name>IGuardPlugin</name>
+      <kind>interface</kind>
+      <signature>extends IPlugin with validateRequest, validateResponse, getGuardType, getRules</signature>
+      <path>src/plugin/guard.ts</path>
+    </item>
+    <item>
+      <name>IEvaluatorPlugin</name>
+      <kind>interface</kind>
+      <signature>extends IPlugin with evaluate, getMetrics, configure, batchEvaluate</signature>
+      <path>src/plugin/evaluator.ts</path>
+    </item>
+  </interfaces>
+
+  <tests>
+    <standards>Jest unit tests, verify interface extensions, test generic type parameters</standards>
+    <locations>packages/common/__tests__/plugin/</locations>
+    <ideas>
+      - Verify each interface extends IPlugin
+      - Test type-specific method signatures
+      - Mock implementations for each plugin type
+      - Test generic type parameters work correctly
+      - Verify batch operations where applicable
+      - Test configuration partial updates
+    </ideas>
+  </tests>
+</story-context>

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {HoloTool, HoloToolChoice, HoloToolChoiceValidator, HoloToolValidator} from "../../holo";
 import {OpenAIChatCompletionTool, OpenAIChatCompletionToolChoiceOption} from "../types";
-import {ChatCompletionToolValidator, ChatCompletionToolChoiceOptionValidator} from "../validators";
+import {ChatCompletionToolChoiceOptionValidator, ChatCompletionToolValidator} from "../validators";
 import {BaseTranslator} from "../../base.translator";
 import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
@@ -59,7 +59,7 @@ export class OpenAIToolChoiceTranslator extends BaseTranslator<HoloToolChoice, O
         if (source.type === "specific") {
             return {
                 type: "function",
-                function: { name: source.name }
+                function: {name: source.name}
             };
         }
         return source.type as any; // 'auto' | 'none' | 'required'
@@ -72,6 +72,6 @@ export class OpenAIToolChoiceTranslator extends BaseTranslator<HoloToolChoice, O
                 name: source.function.name
             };
         }
-        return { type: source as 'auto' | 'none' | 'required' };
+        return {type: source as 'auto' | 'none' | 'required'};
     }
 }

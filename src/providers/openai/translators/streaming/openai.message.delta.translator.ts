@@ -23,7 +23,7 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
 
     protected async toHoloManyImpl(source: OpenAIChatCompletionChunk): Promise<Partial<HoloStreamChunk>[]> {
         const results: Partial<HoloStreamChunk>[] = [];
-        
+
         // Process tool calls - emit one Holo chunk per tool_call delta for clean indexing
         for (const choice of source.choices) {
             const toolCalls = choice.delta?.tool_calls ?? [];
@@ -64,7 +64,7 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                 }
             }
         }
-        
+
         // Handle usage data (usually in final chunk)
         if (source.usage) {
             const usage = pickDefined({
@@ -72,7 +72,7 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                 output_tokens: source.usage.completion_tokens,
                 total_tokens: source.usage.total_tokens
             });
-            
+
             if (Object.keys(usage).length > 0) {
                 results.push(pickDefined({
                     id: source.id,
@@ -89,14 +89,14 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                 }) as Partial<HoloStreamChunk>);
             }
         }
-        
+
         return results;
     }
 
     protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<OpenAIChatCompletionChunk>[]> {
         const d = source.delta;
         if (!d || d.type !== 'message_delta') return [];
-        
+
         // Fast pass-through for OpenAI→OpenAI streaming
         if (d.provider === 'OPENAI' && d.provider_delta) {
             const validated = this.providerValidator(d.provider_delta);
@@ -104,12 +104,12 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                 return [validated];
             }
         }
-        
+
         const results: Partial<OpenAIChatCompletionChunk>[] = [];
-        const createdSec = source.created 
+        const createdSec = source.created
             ? Math.floor(source.created / 1000) // ms -> sec
             : Math.floor(Date.now() / 1000);
-        
+
         // Handle tool calls
         const toolCalls = d.delta?.tool_calls;
         if (Array.isArray(toolCalls) && toolCalls.length > 0) {
@@ -137,7 +137,7 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                 }]
             }) as Partial<OpenAIChatCompletionChunk>);
         }
-        
+
         // Handle usage
         if (d.usage) {
             const totalTokens = d.usage.total_tokens
@@ -158,7 +158,7 @@ export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
                 })
             }) as Partial<OpenAIChatCompletionChunk>);
         }
-        
+
         return results;
     }
 }

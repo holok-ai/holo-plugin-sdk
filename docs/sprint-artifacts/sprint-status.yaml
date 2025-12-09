@@ -1,0 +1,139 @@
+# generated: 2025-11-20
+# updated: 2025-11-24
+# project: holo
+# project_key: holo
+# tracking_system: file-system
+# story_location: {project-root}/docs/sprint-artifacts
+# current_sprint: 1
+# sprint_goal: Establish @holokai/common package with core plugin interfaces
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic exists in epic file but not contexted
+#   - contexted: Epic tech context created (required before drafting stories)
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - drafted: Story file created in stories folder
+#   - ready-for-dev: Draft approved and story context created
+#   - in-progress: Developer actively working on implementation
+#   - review: Under SM review (via code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - completed: Retrospective has been done
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epics should be 'contexted' before stories can be 'drafted'
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically drafts next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', SM reviews, then Dev moves to 'done'
+
+generated: 2025-11-20
+project: holo
+project_key: holo
+tracking_system: file-system
+story_location: "{project-root}/docs/sprint-artifacts"
+
+development_status:
+  # Epic 1: Foundation & Monorepo Setup
+  epic-1: contexted
+  1-1-create-monorepo-workspace-structure: done
+  1-2-configure-typescript-for-monorepo: done
+  1-3-setup-build-scripts-and-tooling: done
+  1-4-configure-package-publishing-metadata: done
+  1-5-establish-import-boundaries-and-validation: done
+  1-6-create-readme-and-monorepo-documentation: done
+  epic-1-retrospective: optional
+
+  # Sprint 0.a: Foundation Refinement (Process Improvements) - COMPLETE
+  0a-1-create-definition-of-done-rubric: done
+  0a-2-implement-git-hygiene-standards: done
+  0a-3-setup-pre-review-automation: done
+  0a-4-establish-documentation-as-you-go: done
+  0a-5-create-epic-2-technical-context: done
+  sprint-0a-retrospective: done
+
+  # Sprint 1: Common SDK Foundation (Epic 2) - IN PROGRESS
+  # Started: 2025-11-24
+  # Target: 2025-11-30
+  # Planned: Stories 2.1-2.5 (15 points)
+
+  # Epic 2: Common SDK Package (@holokai/common)
+  epic-2: contexted
+  2-1-create-common-sdk-package-structure: done
+  2-2-define-base-plugin-interfaces: done
+  2-3-define-type-specific-plugin-interfaces: done
+  2-4-define-pluginmanifest-schema: done
+  2-5-implement-arktype-validators-for-contracts: done
+  2-6-define-provider-specific-types: done
+  2-7-define-holo-universal-format-types: done
+  2-8-define-shared-utility-types: done
+  2-9-publish-common-sdk-to-npm: done
+  epic-2-retrospective: optional
+
+  # Epic 3: Core Plugin Infrastructure - COMPLETE
+  epic-3: contexted
+  3-1-implement-plugin-discovery-service: done
+  3-2-implement-plugin-loader-service: done
+  3-3-implement-generic-plugin-registry-service: done
+  3-4-implement-provider-plugin-registry: done
+  3-5-implement-future-ready-plugin-registries: done
+  3-6-implement-plugin-cache-service: done
+  3-7-implement-plugin-lifecycle-events: done
+  epic-3-retrospective: optional
+
+  # Epic 4: Provider Plugin Framework
+  epic-4: contexted
+  4-1-define-provider-plugin-package-template: done
+  4-2-implement-iproviderplugin-contract-methods: done
+  4-3-implement-configuration-queue-integration: done
+  4-4-implement-provider-config-validation: done
+  4-5-implement-provider-capabilities-declaration: done
+  4-6-implement-plugin-metadata-reporting: done
+  epic-4-retrospective: optional
+
+  # Epic 5: Hot-Reload System
+  epic-5: backlog
+  5-1-implement-file-watcher-service-with-chokidar: drafted
+  5-2-implement-version-based-change-detection: drafted
+  5-3-implement-module-cache-clearing: drafted
+  5-4-implement-atomic-registry-swap: drafted
+  5-5-implement-distributed-hot-reload-coordination: drafted
+  5-6-implement-hot-reload-error-handling-and-rollback: drafted
+  epic-5-retrospective: optional
+
+  # Epic 6: OpenAI Reference Plugin
+  epic-6: contexted
+  6-1-extract-openai-provider-to-plugin-package: done
+  6-2-implement-openai-plugin-manifest-and-lifecycle: done
+  6-3-implement-openai-createprovider-and-validation: blocked
+  6-4-create-integration-tests-for-legacy-provider: done
+  6-5-create-integration-tests-for-plugin-provider-parity: blocked
+  6-6-implement-hot-reload-test-for-openai-plugin: blocked
+  6-7-publish-openai-plugin-to-npm: done
+  epic-6-retrospective: optional
+
+  # Epic 7: Worker Integration & Legacy Coexistence
+  epic-7: backlog
+  7-1-implement-provider-selection-strategy-pattern: drafted
+  7-2-integrate-plugin-system-into-worker-startup: drafted
+  7-3-implement-plugin-based-provider-creation-in-workers: drafted
+  7-4-implement-legacy-provider-fallback: drafted
+  7-5-implement-provider-strategy-logging-and-observability: drafted
+  7-6-verify-backward-compatibility-and-zero-breaking-changes: drafted
+  7-7-create-baseline-test-suite: done  # NEW: Portable test suite for any CI/CD
+  epic-7-retrospective: optional
+
+  # Epic 8: Developer Documentation & Experience
+  epic-8: backlog
+  8-1-document-plugin-contracts-and-interfaces: drafted
+  8-2-create-openai-plugin-as-reference-example: drafted
+  8-3-implement-clear-error-messages-for-contract-violations: drafted
+  8-4-create-plugin-development-guide: drafted
+  8-5-document-publishing-process-and-npm-workflow: drafted
+  8-6-create-plugin-developer-faq-and-troubleshooting-guide: drafted
+  epic-8-retrospective: optional

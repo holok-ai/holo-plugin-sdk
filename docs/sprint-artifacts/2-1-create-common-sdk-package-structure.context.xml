@@ -1,0 +1,226 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>1</storyId>
+    <title>Create Common SDK Package Structure</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-22</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/2-1-create-common-sdk-package-structure.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>plugin developer</asA>
+    <iWant>@holokai/common package with organized namespaces</iWant>
+    <soThat>I can import specific plugin contracts without loading unnecessary code</soThat>
+    <tasks>
+### Create Package Directory Structure
+- Create packages/common/ directory
+  - Create src/ subdirectory
+  - Create tests/ subdirectory for future tests
+  - Create dist/ directory in .gitignore
+
+### Create Namespace Folders
+- Create src/plugin/ namespace
+  - Create src/plugin/index.ts barrel export
+  - Create src/plugin/interfaces.ts placeholder
+  - Create src/plugin/types.ts placeholder
+- Create src/provider/ namespace
+  - Create src/provider/index.ts barrel export
+  - Create src/provider/types.ts placeholder
+  - Create src/provider/validators.ts placeholder
+- Create src/holo/ namespace
+  - Create src/holo/index.ts barrel export
+  - Create src/holo/types.ts placeholder
+  - Create src/holo/validators.ts placeholder
+- Create src/utils/ namespace
+  - Create src/utils/index.ts barrel export
+  - Create src/utils/types.ts placeholder
+
+### Configure Package Metadata
+- Create package.json
+  - Set name to "@holokai/common"
+  - Set version to "0.1.0"
+  - Add description field
+  - Add author and license fields
+  - Configure peerDependencies: { "arktype": "^2.0.0" }
+- Configure subpath exports
+  - Add exports field with /plugin subpath
+  - Add exports field with /provider subpath
+  - Add exports field with /holo subpath
+  - Add exports field with /utils subpath
+  - Configure both import and types for each subpath
+- Configure TypeScript settings
+  - Set main field pointing to dist/
+  - Set types field for TypeScript definitions
+  - Add publishConfig with access: "public"
+
+### Setup TypeScript Configuration
+- Create tsconfig.json
+  - Extend root tsconfig.json
+  - Set composite: true
+  - Configure outDir: "./dist"
+  - Configure rootDir: "./src"
+  - Enable declaration files generation
+
+### Verify Build and Import
+- Test TypeScript compilation
+  - Run tsc to compile package
+  - Verify dist/ directory created
+  - Verify .d.ts files generated
+  - Check for compilation errors
+- Test subpath imports
+  - Create test script importing from @holokai/common/plugin
+  - Verify TypeScript can resolve import
+  - Test all four subpaths work</tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. **Given** monorepo foundation is established
+   **When** I create @holokai/common package
+   **Then** packages/common/ directory exists with src/ subdirectory
+
+2. **And** src/ contains namespaced folders: plugin/, provider/, holo/, utils/
+
+3. **And** each namespace has index.ts barrel export
+
+4. **And** package.json includes subpath exports: /plugin, /provider, /holo, /utils
+
+5. **And** package.json name is "@holokai/common"
+
+6. **And** package.json version starts at "0.1.0" (pre-release)
+
+7. **And** package.json has peerDependencies: arktype ^2.0.0
+
+8. **And** TypeScript compiles successfully with composite: true
+
+9. **And** developers can import: `from '@holokai/common/plugin'`</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <artifact>
+        <path>docs/epics.md</path>
+        <title>Epic 2: Common SDK Package</title>
+        <section>Story 2.1: Create Common SDK Package Structure</section>
+        <snippet>Create @holokai/common package with organized namespaces (plugin/, provider/, holo/, utils/) and subpath exports for tree-shakeable imports.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/epics.md</path>
+        <title>Common SDK Package FRs</title>
+        <section>FR1-FR9</section>
+        <snippet>FR1: Install via npm, FR2: Base plugin interface, FR3: Plugin type enum, FR4: Type-specific interfaces, FR5: PluginManifest type.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/plugin-system-architecture.md</path>
+        <title>Plugin System Architecture</title>
+        <section>Common SDK Structure</section>
+        <snippet>Namespaced with subpath exports (@holokai/common with /plugin, /provider, /holo, /utils subpaths), tree-shakeable, prevents internal imports.</snippet>
+      </artifact>
+      <artifact>
+        <path>docs/plugin-system-architecture.md</path>
+        <title>Package Structure</title>
+        <section>packages/common/ directory layout</section>
+        <snippet>Shows detailed file organization with src/ containing plugin/, provider/, holo/, utils/ namespaces, each with index.ts, interfaces.ts, types.ts, validators.ts.</snippet>
+      </artifact>
+    </docs>
+    <code>
+      <artifact>
+        <path>packages/common/package.json</path>
+        <kind>package</kind>
+        <symbol>@holokai/common</symbol>
+        <lines>1-62</lines>
+        <reason>Existing package configuration with subpath exports already configured</reason>
+      </artifact>
+      <artifact>
+        <path>packages/common/src/index.ts</path>
+        <kind>module</kind>
+        <symbol>IPlugin, PluginManifest</symbol>
+        <lines>7-22</lines>
+        <reason>Existing placeholder interfaces need to be moved to proper namespace</reason>
+      </artifact>
+      <artifact>
+        <path>packages/common/src/plugin/index.ts</path>
+        <kind>barrel</kind>
+        <symbol>exports</symbol>
+        <lines>2</lines>
+        <reason>Current barrel export needs updating to export from local files</reason>
+      </artifact>
+      <artifact>
+        <path>packages/common/tsconfig.json</path>
+        <kind>config</kind>
+        <symbol>TypeScript config</symbol>
+        <lines>1-14</lines>
+        <reason>TypeScript configuration for package compilation</reason>
+      </artifact>
+      <artifact>
+        <path>tsconfig.json</path>
+        <kind>config</kind>
+        <symbol>root tsconfig</symbol>
+        <lines>1-35</lines>
+        <reason>Root TypeScript config that common package extends from</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <arktype>^2.1.22 (peerDependency)</arktype>
+        <typescript>^5.0.0 (devDependency)</typescript>
+        <node-engine>>=18.0.0</node-engine>
+      </node>
+      <publishConfig>
+        <access>public</access>
+        <registry>https://registry.npmjs.org/</registry>
+      </publishConfig>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Architecture ADR-001: Must use subpath exports for tree-shaking, no barrel at root</constraint>
+    <constraint>Each namespace must be independently importable without loading other namespaces</constraint>
+    <constraint>TypeScript must compile with composite: true for incremental builds</constraint>
+    <constraint>Package must start at version 0.1.0 (pre-release)</constraint>
+    <constraint>Must have peerDependencies on arktype ^2.0.0</constraint>
+    <constraint>Must extend root tsconfig.json configuration</constraint>
+    <constraint>Must support Node.js >= 18.0.0</constraint>
+    <constraint>Must use MIT license for open-source compatibility</constraint>
+    <constraint>Placeholders needed for interfaces.ts and types.ts in each namespace</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>npm workspaces</name>
+      <kind>package management</kind>
+      <signature>workspaces: ["packages/*"] in root package.json</signature>
+      <path>package.json</path>
+    </interface>
+    <interface>
+      <name>TypeScript composite projects</name>
+      <kind>build system</kind>
+      <signature>composite: true with references in tsconfig</signature>
+      <path>tsconfig.json</path>
+    </interface>
+    <interface>
+      <name>Subpath exports</name>
+      <kind>module resolution</kind>
+      <signature>exports field with /plugin, /provider, /holo, /utils</signature>
+      <path>packages/common/package.json</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>Jest with ts-jest for TypeScript support. Tests located in tests/ subdirectory. No unit tests needed for structure setup - only import verification tests to ensure subpaths work correctly.</standards>
+    <locations>
+      <location>packages/common/tests/ (future tests)</location>
+      <location>packages/test-consumer/src/consumer.test.ts (import verification)</location>
+    </locations>
+    <ideas>
+      <idea ac="AC-1">Verify packages/common/ directory exists with src/ subdirectory</idea>
+      <idea ac="AC-2">Test that src/ contains all required namespaced folders</idea>
+      <idea ac="AC-3">Verify each namespace has index.ts barrel export file</idea>
+      <idea ac="AC-4">Test package.json subpath exports configuration is correct</idea>
+      <idea ac="AC-5">Verify package name is "@holokai/common" and version is "0.1.0"</idea>
+      <idea ac="AC-7">Check peerDependencies includes arktype ^2.0.0</idea>
+      <idea ac="AC-8">Test TypeScript compilation with composite: true</idea>
+      <idea ac="AC-9">Create test script importing from @holokai/common/plugin and verify resolution</idea>
+    </ideas>
+  </tests>
+</story-context>

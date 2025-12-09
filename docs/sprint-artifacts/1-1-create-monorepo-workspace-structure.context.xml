@@ -1,0 +1,226 @@
+<story-context id=".bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.1</storyId>
+    <title>Create Monorepo Workspace Structure</title>
+    <status>drafted</status>
+    <generatedAt>2025-11-20</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/sprint-artifacts/1-1-create-monorepo-workspace-structure.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>platform architect</asA>
+    <iWant>to organize the codebase into a monorepo with packages/ directory</iWant>
+    <soThat>Common SDK and plugins can be developed, built, and published independently from core Holo</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Create packages directory</title>
+        <subtasks>
+          <subtask>Create packages/ directory at project root</subtask>
+          <subtask>Add .gitkeep or placeholder README to packages/</subtask>
+          <subtask>Verify directory is tracked by git</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2,3">
+        <title>Configure npm workspaces</title>
+        <subtasks>
+          <subtask>Open root package.json</subtask>
+          <subtask>Add "workspaces": ["packages/*"] to root package.json</subtask>
+          <subtask>Add "private": true to root package.json (prevent accidental publishing)</subtask>
+          <subtask>Verify package.json is valid JSON</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="4">
+        <title>Verify existing src/ directory unchanged</title>
+        <subtasks>
+          <subtask>Confirm src/ directory still exists</subtask>
+          <subtask>Verify no changes to src/ structure</subtask>
+          <subtask>Run existing build scripts to ensure they work</subtask>
+          <subtask>Run existing tests to ensure they pass</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="5">
+        <title>Update .gitignore for workspace packages</title>
+        <subtasks>
+          <subtask>Add packages/*/dist to .gitignore</subtask>
+          <subtask>Add packages/*/node_modules to .gitignore</subtask>
+          <subtask>Verify .gitignore syntax is correct</subtask>
+          <subtask>Test that git ignores the specified directories</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="all">
+        <title>Test workspace configuration</title>
+        <subtasks>
+          <subtask>Run `npm install` at root (should recognize workspaces)</subtask>
+          <subtask>Verify no errors during workspace resolution</subtask>
+          <subtask>Create a test package in packages/test-package with minimal package.json</subtask>
+          <subtask>Run `npm install` again and verify workspace linking works</subtask>
+          <subtask>Remove test package after verification</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">A packages/ directory exists at the project root</criterion>
+    <criterion id="2">npm workspaces is configured in root package.json</criterion>
+    <criterion id="3">The workspace includes "packages/*" pattern</criterion>
+    <criterion id="4">Existing src/ directory remains unchanged (private core)</criterion>
+    <criterion id="5">.gitignore excludes packages/*/dist and packages/*/node_modules</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/sprint-artifacts/tech-spec-epic-1.md</path>
+        <title>Epic 1 Technical Specification - Foundation &amp; Monorepo Setup</title>
+        <section>Data Models and Contracts</section>
+        <snippet>Defines root package.json structure with workspaces config pattern ["packages/*"], TypeScript composite configuration, and ESLint import boundary rules. Specifies "private": true for root to prevent accidental publishing.</snippet>
+      </doc>
+      <doc>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR56-61: Project Structure &amp; Modularity</section>
+        <snippet>FR56: Provider plugins are extracted to packages/provider-{name}/ directories. FR57: Core Holo types are separated from provider-specific types. FR58-61: Clear import boundaries enforced between core, common, and plugins.</snippet>
+      </doc>
+      <doc>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR81-86: IP Protection &amp; Boundaries</section>
+        <snippet>FR81: Core Holo engine code (queue, orchestration, Holo format) remains in private repository. FR82-83: Common SDK and official plugins published to public NPM. FR84: Plugin contracts expose only extension points, not core implementation.</snippet>
+      </doc>
+      <doc>
+        <path>docs/architecture.md</path>
+        <title>Holo Architecture</title>
+        <section>Recommendations for Clean Architecture</section>
+        <snippet>Proposed structure separates core/ (pure TS), api/ (SDK clients), and server/ (Node runtime). Clear boundaries enable core extraction as standalone library. Dependency flow: server → api → core → nothing.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epics Document</title>
+        <section>Epic 1, Story 1.1</section>
+        <snippet>Technical notes specify npm workspaces (not yarn/pnpm for MVP), root package.json with "workspaces": ["packages/*"], and workspace packages can reference each other using package names (e.g., @holokai/common/plugin).</snippet>
+      </doc>
+    </docs>
+    <code>
+      <file>
+        <path>package.json</path>
+        <kind>config</kind>
+        <symbol>root package configuration</symbol>
+        <lines>1-76</lines>
+        <reason>Must be modified to add workspaces config and private: true. Currently has name "holo", version "1.0.0", existing scripts for start/test/build.</reason>
+      </file>
+      <file>
+        <path>.gitignore</path>
+        <kind>config</kind>
+        <symbol>git ignore patterns</symbol>
+        <lines>1-40</lines>
+        <reason>Must be modified to add workspace-specific ignore patterns. Currently ignores node_modules/, dist/, build/, but not workspace package artifacts.</reason>
+      </file>
+      <file>
+        <path>src/app.ts</path>
+        <kind>server</kind>
+        <symbol>Main API server entry point</symbol>
+        <lines>all</lines>
+        <reason>Existing core functionality that must remain unchanged after workspace configuration (AC #4). Used to verify no regression.</reason>
+      </file>
+      <file>
+        <path>jest.config.cjs</path>
+        <kind>config</kind>
+        <symbol>Jest test configuration</symbol>
+        <lines>1-25</lines>
+        <reason>Test configuration that verifies existing test framework. Tests must pass after workspace changes to confirm no regression (AC #4).</reason>
+      </file>
+      <file>
+        <path>tests/integration/providers/openai.test.ts</path>
+        <kind>test</kind>
+        <symbol>OpenAI integration test</symbol>
+        <lines>all</lines>
+        <reason>Existing integration test that must continue to pass after workspace configuration to verify no regression.</reason>
+      </file>
+    </code>
+    <dependencies>
+      <node>
+        <runtime>
+          <package name="express" version="^4.21.2" />
+          <package name="amqplib" version="^0.10.9" />
+          <package name="pg" version="^8.11.3" />
+          <package name="tsyringe" version="^4.10.0" />
+          <package name="winston" version="^3.18.3" />
+          <package name="arktype" version="^2.1.22" />
+          <package name="@anthropic-ai/sdk" version="^0.67.0" />
+          <package name="openai" version="^6.8.1" />
+          <package name="ollama" version="^0.6.0" />
+        </runtime>
+        <devtime>
+          <package name="typescript" version="^5.8.3" />
+          <package name="ts-node" version="^10.9.2" />
+          <package name="jest" version="^29.7.0" />
+          <package name="ts-jest" version="^29.4.1" />
+          <package name="eslint" version="^9.30.1" />
+          <package name="@typescript-eslint/eslint-plugin" version="^8.36.0" />
+          <package name="@typescript-eslint/parser" version="^8.36.0" />
+          <package name="nodemon" version="^3.1.10" />
+        </devtime>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="critical">MUST NOT modify any code in src/ directory - all core Holo functionality must remain unchanged (AC #4)</constraint>
+    <constraint type="critical">MUST add "private": true to root package.json to prevent accidental publishing of core code (IP protection, FR81)</constraint>
+    <constraint type="critical">MUST preserve existing build and test workflows - all existing scripts must continue to work</constraint>
+    <constraint type="architecture">Unidirectional dependency flow: packages → @holokai/common (future), NEVER packages → src/</constraint>
+    <constraint type="architecture">Physical code separation matches logical IP boundaries - src/ is private proprietary, packages/ are public ecosystem</constraint>
+    <constraint type="tooling">npm workspaces pattern: "workspaces": ["packages/*"] enables package discovery (not yarn/pnpm for MVP)</constraint>
+    <constraint type="tooling">Workspace feature requires npm >= 7.x (bundled with Node.js >= 15)</constraint>
+    <constraint type="testing">NFR-EPIC1-5: All existing integration tests must pass after changes</constraint>
+    <constraint type="testing">NFR-EPIC1-6: Package builds must not block core Holo compilation</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>npm workspaces configuration</name>
+      <kind>package.json field</kind>
+      <signature>"workspaces": ["packages/*"]</signature>
+      <path>package.json</path>
+      <notes>Enables npm to recognize all subdirectories in packages/ as workspace packages. Workspaces are symlinked into node_modules/ for resolution.</notes>
+    </interface>
+    <interface>
+      <name>package.json private field</name>
+      <kind>package.json field</kind>
+      <signature>"private": true</signature>
+      <path>package.json</path>
+      <notes>Prevents accidental publishing of root package to NPM. Critical for IP protection - ensures core code cannot be published.</notes>
+    </interface>
+    <interface>
+      <name>.gitignore workspace patterns</name>
+      <kind>gitignore pattern</kind>
+      <signature>packages/*/dist\npackages/*/node_modules</signature>
+      <path>.gitignore</path>
+      <notes>Ignores build artifacts and dependencies for all workspace packages. Pattern packages/*/dist matches any package's dist directory.</notes>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing framework: Jest with ts-jest preset for TypeScript support. Tests located in tests/ directory with pattern **/*.test.ts. Integration tests use testTimeout=30000 and runInBand flag. Existing test: tests/integration/providers/openai.test.ts validates OpenAI provider functionality. All tests must pass after workspace configuration to ensure no regression (AC #4, NFR-EPIC1-5).
+    </standards>
+    <locations>
+      <location>tests/</location>
+      <location>tests/integration/</location>
+      <location>**/__tests__/**/*.test.ts</location>
+      <location>**/?(*.)+(spec|test).ts</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Verify packages/ directory exists and is tracked by git using filesystem check</idea>
+      <idea ac="2,3">Parse package.json and validate workspaces field equals ["packages/*"] and private equals true</idea>
+      <idea ac="4">Run existing test suite (npm test) and verify all tests pass - confirms no regression in core functionality</idea>
+      <idea ac="4">Run existing build script (npm run build) and verify successful compilation</idea>
+      <idea ac="5">Parse .gitignore and verify patterns "packages/*/dist" and "packages/*/node_modules" are present</idea>
+      <idea ac="all">Create temporary test package in packages/test-package, run npm install, verify workspace linking, then clean up</idea>
+      <idea ac="all">After all changes, verify npm install succeeds and recognizes workspace configuration without errors</idea>
+    </ideas>
+  </tests>
+</story-context>

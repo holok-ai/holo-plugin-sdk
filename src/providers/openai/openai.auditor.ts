@@ -49,34 +49,6 @@ export class OpenAIAuditor extends BaseAuditor {
         }
     }
 
-    private extractUserPromptFromMessages(messages?: any[]): string | undefined {
-        if (!messages || !Array.isArray(messages)) return undefined;
-
-        const userMessages = messages.filter(msg => msg.role === 'user');
-        if (userMessages.length === 0) return undefined;
-
-        // Return the last user message content
-        const lastUserMessage = userMessages[userMessages.length - 1];
-        if (typeof lastUserMessage.content === 'string') {
-            return lastUserMessage.content;
-        } else if (Array.isArray(lastUserMessage.content)) {
-            // Handle content array - extract text content
-            const textParts = lastUserMessage.content
-                .filter((part: any) => part.type === 'text')
-                .map((part: any) => part.text);
-            return textParts.length > 0 ? textParts.join('\n') : undefined;
-        }
-
-        return undefined;
-    }
-
-    private extractSystemPromptFromMessages(messages?: any[]): string | undefined {
-        if (!messages || !Array.isArray(messages)) return undefined;
-
-        const systemMessage = messages.find(msg => msg.role === 'system');
-        return systemMessage && typeof systemMessage.content === 'string' ? systemMessage.content : undefined;
-    }
-
     protected mapResponseToHolo(
         workerResponse: LLMWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>
@@ -145,5 +117,33 @@ export class OpenAIAuditor extends BaseAuditor {
         } else {
             llmResponse.status = LlmStatus.SUCCESS;
         }
+    }
+
+    private extractUserPromptFromMessages(messages?: any[]): string | undefined {
+        if (!messages || !Array.isArray(messages)) return undefined;
+
+        const userMessages = messages.filter(msg => msg.role === 'user');
+        if (userMessages.length === 0) return undefined;
+
+        // Return the last user message content
+        const lastUserMessage = userMessages[userMessages.length - 1];
+        if (typeof lastUserMessage.content === 'string') {
+            return lastUserMessage.content;
+        } else if (Array.isArray(lastUserMessage.content)) {
+            // Handle content array - extract text content
+            const textParts = lastUserMessage.content
+                .filter((part: any) => part.type === 'text')
+                .map((part: any) => part.text);
+            return textParts.length > 0 ? textParts.join('\n') : undefined;
+        }
+
+        return undefined;
+    }
+
+    private extractSystemPromptFromMessages(messages?: any[]): string | undefined {
+        if (!messages || !Array.isArray(messages)) return undefined;
+
+        const systemMessage = messages.find(msg => msg.role === 'system');
+        return systemMessage && typeof systemMessage.content === 'string' ? systemMessage.content : undefined;
     }
 }

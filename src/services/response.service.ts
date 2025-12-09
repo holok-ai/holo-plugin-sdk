@@ -71,10 +71,24 @@ export class ResponseService extends ClassLogger {
     async formatAndSend(responseChunk: LLMWorkerResponse, res: ResponseStream) {
         const logger = this.mlog(this.formatAndSend);
 
-        // Check if payload is an array (guard error chunks)
+        const payload = responseChunk.payload as any;
+        const isSdkError = payload && typeof payload === 'object' && 'status' in payload && 'error' in payload && payload.error !== null;
+
+        if (isSdkError) {
+            logger.info(`Received SDK error for request ${responseChunk.requestId}, converting to streaming format`);
+
+            const errorPayload = payload.error;
+            const modifiedChunk: LLMWorkerResponse = {
+                ...responseChunk,
+                payload: errorPayload
+            };
+
+            await this.streamService.streamData(modifiedChunk, res);
+            return;
+        }
+
         if (Array.isArray(responseChunk.payload)) {
             logger.debug(`Streaming array of ${responseChunk.payload.length} chunks for request ${responseChunk.requestId}`);
-            // Stream each chunk individually
             for (const chunk of responseChunk.payload) {
                 const chunkResponse: LLMWorkerResponse = {
                     ...responseChunk,

@@ -1,0 +1,140 @@
+<story-context id="story-2-2" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2</storyId>
+    <title>Define Base Plugin Interfaces</title>
+    <status>done</status>
+    <generatedAt>2025-11-24</generatedAt>
+    <generator>BMAD Story Context Workflow (Retrospective)</generator>
+    <sourceStoryPath>docs/sprint-artifacts/story-2-2-define-base-plugin-interfaces.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>plugin developer</asA>
+    <iWant>well-defined base plugin interfaces with lifecycle hooks</iWant>
+    <soThat>I can implement plugins that integrate properly with the Holo platform</soThat>
+    <tasks>
+      - Define IPlugin base interface with lifecycle methods
+      - Implement optional lifecycle hooks
+      - Create PluginContext types
+      - Define error handling patterns
+      - Add plugin state management
+      - Document all interfaces with JSDoc
+      - Create base abstract class
+      - Add plugin metadata interface
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    - IPlugin interface fully defined with initialize/destroy methods
+    - Optional lifecycle hooks implemented (onBeforeInitialize, onAfterInitialize, etc.)
+    - Plugin context types with logger, config, and environment access
+    - Error handling types and patterns defined
+    - Plugin state management interface
+    - JSDoc documentation for all interfaces
+    - Usage examples in comments
+    - Base abstract class implementing common functionality
+    - Plugin metadata interface for runtime introspection
+    - Validation that interfaces compile without errors
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <item>
+        <path>docs/prd.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR1-FR9: Common SDK Package</section>
+        <snippet>FR1: IPlugin base interface with initialize(), destroy() lifecycle methods. FR2: PluginContext passed to initialize() with logger, config, environment</snippet>
+      </item>
+      <item>
+        <path>docs/plugin-system-architecture.md</path>
+        <title>Plugin System Architecture</title>
+        <section>Plugin Contracts</section>
+        <snippet>Rich Lifecycle with Context: IPlugin with initialize(context), destroy(). Ensures AI agent consistency, context injection for dependencies</snippet>
+      </item>
+      <item>
+        <path>docs/epics.md</path>
+        <title>Epic 2: Common SDK Package</title>
+        <section>Story 2.2</section>
+        <snippet>IPlugin interface with manifest, initialize(context), destroy(), getState(), healthCheck() methods</snippet>
+      </item>
+      <item>
+        <path>docs/archive/pre-bmm-2025-11-21/CLAUDE.md</path>
+        <title>CLAUDE Rules</title>
+        <section>TypeScript Standards</section>
+        <snippet>NEVER use 'any' type, always use proper TypeScript types with strict mode</snippet>
+      </item>
+    </docs>
+    <code>
+      <item>
+        <path>src/plugin/index.ts</path>
+        <kind>interface</kind>
+        <symbol>IPlugin</symbol>
+        <lines>current implementation</lines>
+        <reason>Base plugin interface definition location</reason>
+      </item>
+      <item>
+        <path>src/services/</path>
+        <kind>directory</kind>
+        <symbol>service patterns</symbol>
+        <lines>existing services</lines>
+        <reason>Reference for DI patterns using tsyringe @injectable</reason>
+      </item>
+    </code>
+    <dependencies>
+      <node>
+        "typescript": "^5.0.0",
+        "tsyringe": "^4.8.0",
+        "arktype": "2.1.0"
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - All lifecycle methods must return Promises (async first)
+    - No use of 'any' type - strict TypeScript
+    - Must support graceful shutdown via destroy()
+    - Configuration hot reload capability via onConfigChange()
+    - Built-in health monitoring support
+    - Design for backward compatibility and future extension
+    - Follow existing tsyringe DI patterns from services
+    - Context injection for all dependencies
+    - PluginState enum: CREATED, INITIALIZING, INITIALIZED, DESTROYING, DESTROYED, ERROR
+  </constraints>
+
+  <interfaces>
+    <item>
+      <name>IPlugin</name>
+      <kind>interface</kind>
+      <signature>interface IPlugin { manifest: PluginManifest; initialize(context: PluginContext): Promise&lt;void&gt;; destroy(): Promise&lt;void&gt;; getState(): PluginState; healthCheck(): Promise&lt;HealthCheckResult&gt; }</signature>
+      <path>src/plugin/index.ts</path>
+    </item>
+    <item>
+      <name>PluginContext</name>
+      <kind>interface</kind>
+      <signature>interface PluginContext { logger: Logger; config: PluginConfig; env: NodeJS.ProcessEnv; registry: IPluginRegistry; events: EventEmitter }</signature>
+      <path>src/plugin/index.ts</path>
+    </item>
+    <item>
+      <name>PluginLifecycle</name>
+      <kind>interface</kind>
+      <signature>Optional lifecycle hooks: onBeforeInitialize, onAfterInitialize, onBeforeDestroy, onAfterDestroy, onConfigChange, onHealthCheck</signature>
+      <path>src/plugin/index.ts</path>
+    </item>
+  </interfaces>
+
+  <tests>
+    <standards>Jest unit tests, mock plugin implementations to verify interface contracts, test lifecycle state transitions</standards>
+    <locations>packages/common/__tests__/plugin/, packages/test-common/</locations>
+    <ideas>
+      - Test IPlugin interface implementation with mock plugin
+      - Verify lifecycle method calling order
+      - Test state transitions (CREATED -> INITIALIZING -> INITIALIZED)
+      - Test error handling in lifecycle methods
+      - Verify context injection works correctly
+      - Test health check response format
+      - Test graceful shutdown via destroy()
+      - Mock plugin with all optional lifecycle hooks
+    </ideas>
+  </tests>
+</story-context>

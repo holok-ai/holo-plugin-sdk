@@ -7,7 +7,7 @@ import {
     OpenAIResponseTranslator,
     OpenAIStreamTranslator
 } from "./translators";
-import {OpenAIChatRequest, OpenAIRequestMessage, OpenAIResponse} from "./types";
+import {OpenAIChatCompletionResponse, OpenAIChatRequest, OpenAIRequestMessage} from "./types";
 import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "../holo";
 
 @injectable()
@@ -20,11 +20,11 @@ export class OpenAITranslator implements IProviderTranslator {
     ) {
     }
 
-    async fromHoloResponse(response: HoloResponse): Promise<Partial<OpenAIResponse>> {
+    async fromHoloResponse(response: HoloResponse): Promise<Partial<OpenAIChatCompletionResponse>> {
         return this.responseTranslator.fromHolo(response);
     }
 
-    async toHoloResponse(response: OpenAIResponse): Promise<Partial<HoloResponse>> {
+    async toHoloResponse(response: OpenAIChatCompletionResponse): Promise<Partial<HoloResponse>> {
         return this.responseTranslator.toHolo(response);
     }
 

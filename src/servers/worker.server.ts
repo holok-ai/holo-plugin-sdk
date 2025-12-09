@@ -1,5 +1,3 @@
-// Configure dotenv FIRST, before any other imports that depend on environment variables
-// This ensures .env file is loaded before env.ts module executes
 import 'reflect-metadata';
 import {withAdmin, withDB} from "./mixins";
 import {BaseServer} from "./base.server";
@@ -12,6 +10,10 @@ import {LLMWorkerRequest} from '../types';
 import {env} from "../env";
 import {GuardService} from "../admin/services";
 import {IProvider} from "../providers/ai.provider";
+import {PluginService} from "../services/plugin/plugin.service";
+import {PluginDiscoveryService} from "../services/plugin/discovery.service";
+import {PluginLoaderService} from "../services/plugin/loader.service";
+import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -80,6 +82,10 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         this.stats.chatRequests++;
                         requestStats = await ai!.processRequest(llmRequest);
                         break;
+                    case RequestType.RESPONSES:
+                        this.stats.chatRequests++;
+                        requestStats = await ai!.processRequest(llmRequest);
+                        break;
                     default:
                         logger.warn(`No handler registered for message type ${llmRequest.type} - ignoring message...`);
                         break;
@@ -123,10 +129,17 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
     }
 }
 
+container.registerSingleton(PluginService)
+    .registerSingleton(PluginDiscoveryService)
+    .registerSingleton(PluginLoaderService)
+    .registerSingleton(ProviderPluginRegistry);
+
 let workerInstance: WorkerServer | null = null;
 
 async function startWorker() {
     try {
+        const pluginService = container.resolve(PluginService);
+        await pluginService.initializePluginSystem();
         workerInstance = container.resolve(WorkerServer);
         await workerInstance.start();
     } catch (error) {
