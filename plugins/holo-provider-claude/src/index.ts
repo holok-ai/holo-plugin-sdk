@@ -5,4 +5,4 @@
  * Exports the plugin instance as default export per Holo plugin contract.
  */
 
-export { ClaudeProviderPlugin } from './plugin.js';
+export {ClaudeProviderPlugin} from './plugin.js';
