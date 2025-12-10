@@ -6,3 +6,7 @@
  */
 
 export {OpenAIProviderPlugin} from './plugin.js';
+export {OpenAIAuditor} from './openai.auditor.js';
+export {OpenAITranslator} from './openai.translator.js';
+export * from './types/index.js';
+export * from './translators/index.js';
