@@ -1,10 +1,9 @@
 import 'reflect-metadata';
 import {OllamaChatResponse} from "../types";
 import {injectable} from 'tsyringe';
-import {pickDefined} from "../../../utils";
 import {OllamaMessageTranslator} from "./ollama.message.translators";
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloFinishReason, HoloMessage, HoloResponse, HoloUsage} from "@holokai/sdk";
+import {HoloFinishReason, HoloMessage, HoloResponse, HoloUsage, pickDefined} from "@holokai/sdk";
 
 /**
  * Translator for Ollama Chat API responses.
@@ -17,6 +16,51 @@ export class OllamaChatResponseTranslator extends BaseTranslator<HoloResponse, O
 
     constructor(private readonly messageTranslator: OllamaMessageTranslator) {
         super();
+    }
+
+    // ---------- Implementations ----------
+    protected async fromHoloImpl(source: HoloResponse): Promise<Partial<OllamaChatResponse>> {
+        // Build a single assistant message from the last assistant message in Holo (or synthesize empty)
+        const holoMsgs = source.messages ?? [];
+        const lastAssistant: HoloMessage | undefined =
+            [...holoMsgs].reverse().find(m => m.role === 'assistant');
+
+        // Reuse your message translator rather than duplicating content/image/tool parsing
+        const message = lastAssistant
+            ? await this.messageTranslator.fromHolo(lastAssistant)
+            : {role: 'assistant' as const, content: ''};
+
+        const usageFields = this.mapUsageFromHolo(source.usage);
+
+        return pickDefined({
+            model: source.model,
+            created_at: source.created ? new Date(source.created).toISOString() : undefined,
+            message,
+            done_reason: this.mapFinishReasonFromHolo(source.finish_reason ?? null),
+            done: true,
+            ...usageFields,
+        }) as Partial<OllamaChatResponse>;
+    }
+
+    protected async toHoloImpl(source: OllamaChatResponse): Promise<Partial<HoloResponse>> {
+        // Convert provider message back to Holo via your message translator
+        const holoAssistant = await this.messageTranslator.toHolo(source.message);
+
+        // Ensure we produce a Holo message array; omit empty content when possible
+        const messages: HoloMessage[] = [];
+        if (Object.keys(holoAssistant).length) {
+            messages.push(holoAssistant as HoloMessage);
+        }
+
+        const usage = this.mapUsageToHolo(source);
+
+        return pickDefined({
+            model: source.model,
+            messages: messages.length ? messages : undefined,
+            created: source.created_at ? new Date(source.created_at).getTime() : undefined,
+            finish_reason: this.mapFinishReasonToHolo(source.done_reason),
+            usage,
+        }) as Partial<HoloResponse>;
     }
 
     // ---------- Usage mapping ----------
@@ -79,50 +123,5 @@ export class OllamaChatResponseTranslator extends BaseTranslator<HoloResponse, O
             default:
                 return null; // unknown → null
         }
-    }
-
-    // ---------- Implementations ----------
-    protected async fromHoloImpl(source: HoloResponse): Promise<Partial<OllamaChatResponse>> {
-        // Build a single assistant message from the last assistant message in Holo (or synthesize empty)
-        const holoMsgs = source.messages ?? [];
-        const lastAssistant: HoloMessage | undefined =
-            [...holoMsgs].reverse().find(m => m.role === 'assistant');
-
-        // Reuse your message translator rather than duplicating content/image/tool parsing
-        const message = lastAssistant
-            ? await this.messageTranslator.fromHolo(lastAssistant)
-            : {role: 'assistant' as const, content: ''};
-
-        const usageFields = this.mapUsageFromHolo(source.usage);
-
-        return pickDefined({
-            model: source.model,
-            created_at: source.created ? new Date(source.created).toISOString() : undefined,
-            message,
-            done_reason: this.mapFinishReasonFromHolo(source.finish_reason ?? null),
-            done: true,
-            ...usageFields,
-        }) as Partial<OllamaChatResponse>;
-    }
-
-    protected async toHoloImpl(source: OllamaChatResponse): Promise<Partial<HoloResponse>> {
-        // Convert provider message back to Holo via your message translator
-        const holoAssistant = await this.messageTranslator.toHolo(source.message);
-
-        // Ensure we produce a Holo message array; omit empty content when possible
-        const messages: HoloMessage[] = [];
-        if (Object.keys(holoAssistant).length) {
-            messages.push(holoAssistant as HoloMessage);
-        }
-
-        const usage = this.mapUsageToHolo(source);
-
-        return pickDefined({
-            model: source.model,
-            messages: messages.length ? messages : undefined,
-            created: source.created_at ? new Date(source.created_at).getTime() : undefined,
-            finish_reason: this.mapFinishReasonToHolo(source.done_reason),
-            usage,
-        }) as Partial<HoloResponse>;
     }
 }

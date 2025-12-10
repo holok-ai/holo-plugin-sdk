@@ -1,13 +1,11 @@
 import 'reflect-metadata';
-import {OllamaChatRequest, OllamaOptions} from "../types";
+import {OllamaChatRequest, OllamaChatRequestDefaults, OllamaOptions} from "../types";
 import {OllamaToolTranslator} from "./ollama.tool.translators";
 import {OllamaOptionsTranslator} from "./ollama.options.translators";
 import {OllamaMessageTranslator} from "./ollama.message.translators";
-import {OllamaChatRequestDefaults} from "../validators";
 import {injectable} from 'tsyringe';
-import {pickDefined} from "../../../utils";
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloRequest, HoloRequestDefaults, HoloResponseFormat} from "@holokai/sdk";
+import {HoloRequest, HoloRequestDefaults, HoloResponseFormat, pickDefined} from "@holokai/sdk";
 
 @injectable()
 export class OllamaChatRequestTranslator extends BaseTranslator<HoloRequest, OllamaChatRequest> {
@@ -20,22 +18,6 @@ export class OllamaChatRequestTranslator extends BaseTranslator<HoloRequest, Oll
         private readonly optionsTranslator: OllamaOptionsTranslator
     ) {
         super();
-    }
-
-    private mapResponseFormat(response_format?: HoloResponseFormat): string | Record<string, unknown> | undefined {
-        if (!response_format) return undefined;
-        return response_format.type === 'json_object'
-            ? 'json'
-            : response_format.type === 'json_schema'
-                ? response_format.schema
-                : undefined;
-    }
-
-    private mapFromFormat(format?: string | Record<string, unknown>): HoloResponseFormat | undefined {
-        if (!format) return undefined;
-        if (format === 'json') return {type: 'json_object'};
-        if (typeof format === 'object') return {type: 'json_schema', schema: format};
-        return undefined;
     }
 
     protected async fromHoloImpl(source: HoloRequest): Promise<Partial<OllamaChatRequest>> {
@@ -94,5 +76,21 @@ export class OllamaChatRequestTranslator extends BaseTranslator<HoloRequest, Oll
         }) as Partial<HoloRequest>;
 
         return Object.keys(holoOptions).length ? {...base, ...holoOptions} : base;
+    }
+
+    private mapResponseFormat(response_format?: HoloResponseFormat): string | Record<string, unknown> | undefined {
+        if (!response_format) return undefined;
+        return response_format.type === 'json_object'
+            ? 'json'
+            : response_format.type === 'json_schema'
+                ? response_format.schema
+                : undefined;
+    }
+
+    private mapFromFormat(format?: string | Record<string, unknown>): HoloResponseFormat | undefined {
+        if (!format) return undefined;
+        if (format === 'json') return {type: 'json_object'};
+        if (typeof format === 'object') return {type: 'json_schema', schema: format};
+        return undefined;
     }
 }

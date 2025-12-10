@@ -1,4 +1,4 @@
-export type {RequestType} from './request.type';
+export {RequestType} from './request.type';
 export {BaseTranslator} from './base.translator';
 export {BaseStreamTranslator} from './base.stream.translator';
 export type {IProviderPlugin} from '../plugin/provider.js';

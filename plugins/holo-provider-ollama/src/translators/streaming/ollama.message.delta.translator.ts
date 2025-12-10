@@ -1,9 +1,7 @@
 import 'reflect-metadata';
-import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {OllamaChatResponse, OllamaGenerateResponse} from '../../types';
-import {pickDefined} from '../../../../utils';
-import {HoloFinishReason, HoloStreamChunk} from "@holokai/sdk";
+import {HoloFinishReason, HoloStreamChunk, pickDefined} from "@holokai/sdk";
 import {BaseStreamTranslator} from "@holokai/sdk/provider";
 
 type OllamaStreamResponse = Partial<OllamaChatResponse> | Partial<OllamaGenerateResponse>;
@@ -29,7 +27,7 @@ export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
 
             return [pickDefined({
                 delta: {
-                    provider: ProviderType.OLLAMA,
+                    provider: 'ollama',
                     type: 'message_delta' as const,
                     delta: {
                         tool_calls: toolCalls
@@ -56,7 +54,7 @@ export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
 
         return [pickDefined({
             delta: {
-                provider: ProviderType.OLLAMA,
+                provider: 'ollama',
                 type: 'message_delta' as const,
                 delta: hasToolCalls ? {tool_calls: toolCalls} : {},
                 usage: hasUsage ? usage : undefined,
@@ -71,7 +69,7 @@ export class OllamaMessageDeltaTranslator extends BaseStreamTranslator<HoloStrea
         if (!d || d.type !== 'message_delta') return [];
 
         // Fast pass-through for Ollama→Ollama streaming
-        if (d.provider === ProviderType.OLLAMA && d.provider_delta) {
+        if (d.provider === 'ollama' && d.provider_delta) {
             return [d.provider_delta];
         }
 

@@ -1,9 +1,7 @@
 import 'reflect-metadata';
-import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {OllamaChatResponse, OllamaGenerateResponse} from '../../types';
-import {pickDefined} from '../../../../utils';
-import {HoloFinishReason, HoloStreamChunk} from "@holokai/sdk";
+import {HoloFinishReason, HoloStreamChunk, pickDefined} from "@holokai/sdk";
 import {BaseStreamTranslator} from "@holokai/sdk/provider";
 
 type OllamaStreamResponse = Partial<OllamaChatResponse> | Partial<OllamaGenerateResponse>;
@@ -23,7 +21,7 @@ export class OllamaMessageStopTranslator extends BaseStreamTranslator<HoloStream
 
         return [pickDefined({
             delta: {
-                provider: ProviderType.OLLAMA,
+                provider: 'ollama',
                 type: 'message_stop' as const,
                 delta: {},
                 provider_delta: source

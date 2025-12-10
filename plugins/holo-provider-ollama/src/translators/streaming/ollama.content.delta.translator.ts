@@ -1,10 +1,8 @@
 import 'reflect-metadata';
-import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {OllamaChatResponse, OllamaGenerateResponse} from '../../types';
-import {pickDefined} from '../../../../utils';
 import {BaseStreamTranslator} from "@holokai/sdk/provider";
-import {HoloStreamChunk} from "@holokai/sdk";
+import {HoloStreamChunk, pickDefined} from "@holokai/sdk";
 
 type OllamaStreamResponse = Partial<OllamaChatResponse> | Partial<OllamaGenerateResponse>;
 
@@ -32,7 +30,7 @@ export class OllamaContentDeltaTranslator extends BaseStreamTranslator<HoloStrea
         if (typeof content === 'string' && content.length > 0) {
             return [{
                 delta: {
-                    provider: ProviderType.OLLAMA,
+                    provider: 'ollama',
                     type: 'content_delta' as const,
                     delta: {
                         content: content

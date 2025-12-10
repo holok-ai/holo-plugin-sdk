@@ -4,8 +4,6 @@ import {AIRequestStat, ModelInfo, OllamaProviderConfig, ProviderRequest, Provide
 import {ErrorMessages} from "../../utils";
 import {ResponseService} from "../../services";
 import {Provider} from "../../db/types";
-import {OllamaChatRequestValidator, OllamaGenerateRequestValidator} from "./validators";
-import {OllamaChatRequest, OllamaGenerateRequest} from "./types";
 
 export class OllamaProvider extends AIProvider {
     private readonly client: Ollama = new Ollama();
@@ -68,10 +66,10 @@ export class OllamaProvider extends AIProvider {
      */
     async handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat> {
         if (type === RequestType.GENERATE) {
-            const generatePayload = OllamaGenerateRequestValidator.assert(payload);
+            const generatePayload = payload
             return await this.wrapWithStats(RequestType.GENERATE, this._ollamaGenerate.bind(this), sourceId, requestId, generatePayload);
         } else if (type === RequestType.CHAT) {
-            const chatPayload = OllamaChatRequestValidator.assert(payload);
+            const chatPayload = payload
             return await this.wrapWithStats(RequestType.CHAT, this._ollamaChat.bind(this), sourceId, requestId, chatPayload);
         } else {
             throw new Error(ErrorMessages.unsupportedRequestType(type));

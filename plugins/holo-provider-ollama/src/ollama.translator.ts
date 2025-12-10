@@ -1,22 +1,27 @@
 import 'reflect-metadata';
 import {injectable} from "tsyringe";
-import {IProviderTranslator, RequestType} from "../types";
-import {ArkErrors, type} from "arktype";
+import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk, IProviderTranslator, RequestType} from "@holokai/sdk";
 import {
     OllamaChatRequestTranslator,
-    OllamaGenerateRequestTranslator,
-    OllamaMessageTranslator,
     OllamaChatResponseTranslator,
+    OllamaGenerateRequestTranslator,
     OllamaGenerateResponseTranslator,
+    OllamaMessageTranslator,
     OllamaStreamTranslator
 } from "./translators";
-import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "../holo";
-import {OllamaChatRequest, OllamaChatResponse, OllamaGenerateRequest, OllamaGenerateResponse, OllamaMessage, OllamaResponse} from "./types";
-import {ClassLogger} from '../../types/class.logger';
-import {OllamaChatResponseValidator, OllamaGenerateRequestValidator} from "./validators";
+import {
+    isGenerateRequest,
+    isGenerateResponse,
+    OllamaChatRequest,
+    OllamaChatResponse,
+    OllamaGenerateRequest,
+    OllamaGenerateResponse,
+    OllamaMessage,
+    OllamaResponse
+} from "./types";
 
 @injectable()
-export class OllamaTranslator extends ClassLogger implements IProviderTranslator {
+export class OllamaTranslator implements IProviderTranslator {
     constructor(
         private ollamaGenerateRequestTranslator: OllamaGenerateRequestTranslator,
         private ollamaChatRequestTranslator: OllamaChatRequestTranslator,
@@ -25,7 +30,7 @@ export class OllamaTranslator extends ClassLogger implements IProviderTranslator
         private ollamaGenerateResponseTranslator: OllamaGenerateResponseTranslator,
         private ollamaStreamTranslator: OllamaStreamTranslator
     ) {
-        super();
+
     }
 
     async fromHoloResponse(response: HoloResponse): Promise<Partial<OllamaResponse>> {
@@ -35,22 +40,22 @@ export class OllamaTranslator extends ClassLogger implements IProviderTranslator
 
     async toHoloResponse(response: OllamaResponse): Promise<Partial<HoloResponse>> {
         // Check if it's a Generate response (has 'response' field) or Chat response (has 'message' field)
-        if (OllamaChatResponseValidator(response) instanceof ArkErrors) {
+        if (isGenerateResponse(response)) {
             return this.ollamaGenerateResponseTranslator.toHolo(response as OllamaGenerateResponse);
         } else {
             return this.ollamaChatResponseTranslator.toHolo(response as OllamaChatResponse);
         }
     }
 
-    async fromHoloRequest(request: HoloRequest): Promise<Partial<OllamaChatRequest> | type.errors> {
+    async fromHoloRequest(request: HoloRequest): Promise<Partial<OllamaChatRequest>> {
         if (request.request_type === RequestType.GENERATE) {
             return this.ollamaGenerateRequestTranslator.fromHolo(request);
         }
         return this.ollamaChatRequestTranslator.fromHolo(request);
     }
 
-    async toHoloRequest(request: OllamaChatRequest | OllamaGenerateRequest): Promise<Partial<HoloRequest> | type.errors> {
-        if (!(OllamaGenerateRequestValidator(request) instanceof ArkErrors)) {
+    async toHoloRequest(request: OllamaChatRequest | OllamaGenerateRequest): Promise<Partial<HoloRequest>> {
+        if (isGenerateRequest(request)) {
             return this.ollamaGenerateRequestTranslator.toHolo(request as OllamaGenerateRequest);
         }
         return this.ollamaChatRequestTranslator.toHolo(request);

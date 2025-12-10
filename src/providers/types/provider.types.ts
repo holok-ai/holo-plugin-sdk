@@ -1,4 +1,3 @@
-import {OllamaChatRequest, OllamaGenerateRequest, OllamaMessage, OllamaResponse} from "../ollama/types";
 import {
     OpenAIChatCompletionResponse,
     OpenAIChatRequest,

@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import {OllamaGenerateResponse} from "../types";
 import {injectable} from 'tsyringe';
-import {pickDefined} from "../../../utils";
 import {HoloFinishReason, HoloMessage, HoloResponse, HoloUsage} from "@holokai/sdk";
 import {BaseTranslator} from "@holokai/sdk/provider";
 
@@ -16,6 +15,43 @@ export class OllamaGenerateResponseTranslator extends BaseTranslator<HoloRespons
 
     constructor() {
         super();
+    }
+
+    protected async fromHoloImpl(source: HoloResponse): Promise<Partial<OllamaGenerateResponse>> {
+        const firstMessage = source.messages?.[0];
+        const responseText = typeof firstMessage?.content === 'string'
+            ? firstMessage.content
+            : Array.isArray(firstMessage?.content)
+                ? firstMessage.content.map(c => c.type === 'text' ? c.text : '').join('')
+                : '';
+
+        const usage = source.usage ? this.mapUsageFromHolo(source.usage) : {};
+
+        return pickDefined({
+            model: source.model,
+            created_at: source.created instanceof Date ? source.created : new Date(source.created ?? Date.now()),
+            response: responseText,
+            done: true,
+            done_reason: this.mapFinishReasonFromHolo(source.finish_reason),
+            ...usage
+        }) as Partial<OllamaGenerateResponse>;
+    }
+
+    protected async toHoloImpl(source: OllamaGenerateResponse): Promise<Partial<HoloResponse>> {
+        const usage = this.mapUsageToHolo(source);
+
+        const message: HoloMessage = {
+            role: 'assistant',
+            content: source.response
+        };
+
+        return pickDefined({
+            model: source.model,
+            created: source.created_at,
+            messages: [message],
+            finish_reason: this.mapFinishReasonToHolo(source.done_reason),
+            usage
+        }) as Partial<HoloResponse>;
     }
 
     private mapUsageFromHolo(usage?: HoloUsage): Partial<OllamaGenerateResponse> {
@@ -62,42 +98,5 @@ export class OllamaGenerateResponseTranslator extends BaseTranslator<HoloRespons
         if (reason === 'length') return 'length';
         if (reason === 'stop') return 'stop';
         return null;
-    }
-
-    protected async fromHoloImpl(source: HoloResponse): Promise<Partial<OllamaGenerateResponse>> {
-        const firstMessage = source.messages?.[0];
-        const responseText = typeof firstMessage?.content === 'string'
-            ? firstMessage.content
-            : Array.isArray(firstMessage?.content)
-                ? firstMessage.content.map(c => c.type === 'text' ? c.text : '').join('')
-                : '';
-
-        const usage = source.usage ? this.mapUsageFromHolo(source.usage) : {};
-
-        return pickDefined({
-            model: source.model,
-            created_at: source.created instanceof Date ? source.created : new Date(source.created ?? Date.now()),
-            response: responseText,
-            done: true,
-            done_reason: this.mapFinishReasonFromHolo(source.finish_reason),
-            ...usage
-        }) as Partial<OllamaGenerateResponse>;
-    }
-
-    protected async toHoloImpl(source: OllamaGenerateResponse): Promise<Partial<HoloResponse>> {
-        const usage = this.mapUsageToHolo(source);
-
-        const message: HoloMessage = {
-            role: 'assistant',
-            content: source.response
-        };
-
-        return pickDefined({
-            model: source.model,
-            created: source.created_at,
-            messages: [message],
-            finish_reason: this.mapFinishReasonToHolo(source.done_reason),
-            usage
-        }) as Partial<HoloResponse>;
     }
 }

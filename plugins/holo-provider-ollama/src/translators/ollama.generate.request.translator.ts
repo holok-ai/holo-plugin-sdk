@@ -1,9 +1,7 @@
 import 'reflect-metadata';
-import {OllamaGenerateRequest} from "../types";
-import {OllamaGenerateRequestDefaults} from "../validators";
+import {OllamaGenerateRequest, OllamaGenerateRequestDefaults} from "../types";
 import {injectable} from 'tsyringe';
-import {pickDefined} from "../../../utils";
-import {HoloMessage, HoloRequest, HoloRequestDefaults, isImage, isText} from "@holokai/sdk";
+import {HoloMessage, HoloRequest, HoloRequestDefaults, isImage, isText, pickDefined} from "@holokai/sdk";
 import {BaseTranslator} from "@holokai/sdk/provider";
 
 @injectable()
@@ -14,23 +12,6 @@ export class OllamaGenerateRequestTranslator extends BaseTranslator<HoloRequest,
 
     constructor() {
         super();
-    }
-
-    private extractPromptAndImages(
-        msg?: HoloMessage
-    ) {
-        if (!msg?.content) return {};
-
-        if (typeof msg.content === "string") {
-            return {prompt: msg.content};
-        }
-
-        const parts = msg.content; // HoloContent[]
-        const prompt = parts.filter(isText).map(p => p.text).join("\n") || undefined;
-        const imagesArr = parts.filter(isImage).map(p => p.url);
-        const images = imagesArr.length ? imagesArr : undefined;
-
-        return pickDefined({prompt, images});
     }
 
     protected async fromHoloImpl(source: HoloRequest): Promise<Partial<OllamaGenerateRequest>> {
@@ -92,5 +73,22 @@ export class OllamaGenerateRequestTranslator extends BaseTranslator<HoloRequest,
                         ? {type: "json_schema", schema: source.format as Record<string, unknown>}
                         : undefined,
         }) as Partial<HoloRequest>;
+    }
+
+    private extractPromptAndImages(
+        msg?: HoloMessage
+    ) {
+        if (!msg?.content) return {};
+
+        if (typeof msg.content === "string") {
+            return {prompt: msg.content};
+        }
+
+        const parts = msg.content; // HoloContent[]
+        const prompt = parts.filter(isText).map(p => p.text).join("\n") || undefined;
+        const imagesArr = parts.filter(isImage).map(p => p.url);
+        const images = imagesArr.length ? imagesArr : undefined;
+
+        return pickDefined({prompt, images});
     }
 }

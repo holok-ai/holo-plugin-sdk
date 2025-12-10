@@ -1,9 +1,7 @@
 import 'reflect-metadata';
 import {OllamaOptions} from "../types";
 import {injectable} from 'tsyringe';
-import {pickDefined} from "../../../utils";
-import {HoloRequest} from "@holokai/sdk";
-import {BaseTranslator} from "@holokai/sdk/provider";
+import {BaseTranslator, HoloRequest, pickDefined} from "@holokai/sdk";
 
 @injectable()
 export class OllamaOptionsTranslator extends BaseTranslator<HoloRequest, OllamaOptions> {

@@ -61,3 +61,17 @@ export type OllamaOnlyResponse = {
     eval_count?: number;
     eval_duration?: number;
 };
+
+export function isGenerateResponse(
+    res: OllamaResponse
+): res is OllamaGenerateResponse {
+    // Generate mode has top-level "response" string
+    return 'response' in res && typeof (res as any).response === 'string';
+}
+
+export function isChatResponse(
+    res: OllamaResponse
+): res is OllamaChatResponse {
+    // Chat mode has "message" with role/content
+    return 'message' in res;
+}

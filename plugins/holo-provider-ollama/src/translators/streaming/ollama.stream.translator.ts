@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import {ProviderType} from '../../../types';
 import {injectable} from 'tsyringe';
 import {OllamaChatResponse, OllamaGenerateResponse} from '../../types';
 import {OllamaContentDeltaTranslator} from './ollama.content.delta.translator';
@@ -57,7 +56,7 @@ export class OllamaStreamTranslator extends BaseStreamTranslator<HoloStreamChunk
         if (!d) return [];
 
         // Fast pass-through for Ollama→Ollama streaming
-        if (d.provider === ProviderType.OLLAMA && d.provider_delta) {
+        if (d.provider === 'ollama' && d.provider_delta) {
             return [d.provider_delta];
         }
 

@@ -1,13 +1,18 @@
 import {injectable} from 'tsyringe';
-import {LLMWorkerRequest, LLMWorkerResponse} from '../../types';
-import {LlmRequest, LlmResponse, LlmStatus} from '../../db/types';
-import logger from '../../utils/logger';
-import {BaseAuditor, ProviderType, RequestType} from "../types";
 import {OllamaChatRequest, OllamaGenerateRequest} from "./types";
+import {
+    BaseAuditor,
+    LlmRequest,
+    LlmResponse,
+    LlmStatus,
+    LLMWorkerRequest,
+    LLMWorkerResponse,
+    RequestType
+} from "@holokai/sdk";
 
 @injectable()
 export class OllamaAuditor extends BaseAuditor {
-    readonly provider = ProviderType.OLLAMA;
+    readonly provider = 'ollama';
 
     protected toHoloRequest(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
         const payload = workerRequest.payload as OllamaChatRequest | OllamaGenerateRequest;
@@ -74,7 +79,6 @@ export class OllamaAuditor extends BaseAuditor {
 
         // Extract response text from final response
         if (workerResponse.fullResponse) {
-            logger.debug(`has full response: ${workerResponse.fullResponse}`);
             llmResponse.response = workerResponse.fullResponse;
         } else if (payload.response) {
             // Generate format
@@ -127,7 +131,6 @@ export class OllamaAuditor extends BaseAuditor {
         } else {
             llmResponse.status = LlmStatus.PARTIAL;
         }
-        logger.debug(`end of translate: ${llmResponse.response}`);
     }
 
     /**
@@ -144,14 +147,8 @@ export class OllamaAuditor extends BaseAuditor {
         if (loadDuration !== undefined && promptEvalDuration !== undefined) {
             // Convert nanoseconds to milliseconds and sum the durations
             const timeToFirstTokenNs = loadDuration + promptEvalDuration;
-            const timeToFirstTokenMs = Math.round(timeToFirstTokenNs / 1000000);
-
-            logger.debug(`Calculated time to first token for Ollama: ${timeToFirstTokenMs}ms (load: ${Math.round(loadDuration / 1000000)}ms + prompt_eval: ${Math.round(promptEvalDuration / 1000000)}ms)`);
-
-            return timeToFirstTokenMs;
+            return Math.round(timeToFirstTokenNs / 1000000);
         }
-
-        logger.debug('Ollama timing data unavailable for time to first token calculation');
         return undefined;
     }
 }
