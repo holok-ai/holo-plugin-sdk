@@ -44,13 +44,6 @@ export interface IProviderPlugin<TProvider = unknown> extends IPlugin {
     createProvider(config: ProviderConfig): Promise<TProvider>;
 
     /**
-     * Validate provider configuration.
-     * @param config Configuration to validate.
-     * @returns Promise resolving to true if valid, false otherwise.
-     */
-    validateConfig(config: ProviderConfig): Promise<boolean>;
-
-    /**
      * Get provider capabilities.
      * @returns Provider capabilities including supported features and models.
      */

@@ -4,43 +4,31 @@
  * Implements IProviderPlugin contract for OpenAI API
  */
 
-import type { IProviderPlugin, PluginContext, PluginManifest } from '@holokai/sdk/plugin';
+import {BasePlugin, IProviderPlugin, PluginContext} from '@holokai/sdk/plugin';
+import {manifest} from "./manifest";
+import {ProviderCapabilities, ProviderConfig} from "@holokai/sdk";
 
-export class OpenAIProviderPlugin implements IProviderPlugin {
-  manifest: PluginManifest = {
-    name: '@holokai/provider-openai',
-    version: '0.1.0',
-    pluginType: 'provider',
-    providerType: 'openai',
-    sdkVersion: 'openai@6.9.1',
-    commonSdkVersion: '^0.1.0',
-    author: 'Holokai Team',
-    source: 'official',
-    description: 'OpenAI provider plugin'
-  };
+export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin {
+    createProvider(config: ProviderConfig): Promise<unknown> {
+        throw new Error("Method not implemented.");
+    }
 
-  async initialize(context: PluginContext): Promise<void> {
-    // TODO: Implement initialization
-    throw new Error('Not implemented');
-  }
+    getCapabilities(): ProviderCapabilities {
+        return manifest.capabilities || {} as ProviderCapabilities;
+    }
 
-  async destroy(): Promise<void> {
-    // TODO: Implement cleanup
-    throw new Error('Not implemented');
-  }
+    getSupportedModels(): string[] {
+        throw new Error("Method not implemented.");
+    }
 
-  createProvider(config: any): any {
-    // TODO: Implement provider creation
-    throw new Error('Not implemented');
-  }
+    manifest = manifest;
 
-  validateConfig(config: unknown): boolean {
-    // TODO: Implement config validation
-    throw new Error('Not implemented');
-  }
+    protected onInitialize(_context: PluginContext): Promise<void> {
+        return Promise.resolve();
+    }
 
-  getCapabilities(): any {
-    // TODO: Implement capabilities reporting
-    throw new Error('Not implemented');
-  }
+    protected onDestroy(): Promise<void> {
+        return Promise.resolve();
+    }
+
 }

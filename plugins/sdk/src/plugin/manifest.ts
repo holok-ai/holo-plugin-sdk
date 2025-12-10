@@ -88,91 +88,110 @@ export interface PluginCapabilities {
 }
 
 /**
- * JSON Schema property definition
+ * JSON Schema node definition (Draft 7–style).
+ *
+ * This represents a generic schema node that can be used at any level
+ * (root, property, items, nested objects, etc.).
  */
 export interface JSONSchemaProperty {
+    // Core
     type?: 'string' | 'number' | 'integer' | 'boolean' | 'array' | 'object' | 'null';
     description?: string;
     default?: string | number | boolean | null | object | Array<unknown>;
     enum?: Array<string | number | boolean | null>;
     const?: string | number | boolean | null;
+
     // String validation
     minLength?: number;
     maxLength?: number;
     pattern?: string;
     format?: string;
+
     // Number validation
     minimum?: number;
     maximum?: number;
     exclusiveMinimum?: number;
     exclusiveMaximum?: number;
     multipleOf?: number;
+
     // Array validation
     items?: JSONSchemaProperty | JSONSchemaProperty[];
     minItems?: number;
     maxItems?: number;
     uniqueItems?: boolean;
+
     // Object validation
     properties?: Record<string, JSONSchemaProperty>;
     required?: string[];
     additionalProperties?: boolean | JSONSchemaProperty;
     patternProperties?: Record<string, JSONSchemaProperty>;
+
     // Composition
     allOf?: JSONSchemaProperty[];
     anyOf?: JSONSchemaProperty[];
     oneOf?: JSONSchemaProperty[];
     not?: JSONSchemaProperty;
+
     // References
     $ref?: string;
+
+    // Optional metadata commonly used by tooling
+    title?: string;
+    examples?: unknown[];
 }
 
 /**
  * Configuration schema for runtime validation.
- * Should be a valid JSON Schema object with "type": "object" at the root.
+ *
+ * This is the *root* JSON Schema object for a plugin's configuration and
+ * must describe an object shape. It is what the host uses to validate
+ * user-provided configuration for this plugin.
  */
-export interface ConfigSchema {
+export interface ConfigSchema extends JSONSchemaProperty {
     /**
-     * JSON Schema version
+     * JSON Schema dialect identifier (optional).
+     * Example: "http://json-schema.org/draft-07/schema#"
      */
     $schema?: string;
 
     /**
-     * Type of the root configuration object
+     * Type of the root configuration object.
+     * Must be "object" for all plugin configs.
      */
     type: 'object';
 
     /**
-     * Property definitions
+     * Property definitions for the configuration object.
      */
     properties: Record<string, JSONSchemaProperty>;
 
     /**
-     * Required properties
+     * Required properties for the configuration object.
      */
     required?: string[];
 
     /**
-     * Additional properties allowed
+     * Additional properties allowed on the configuration object.
      */
     additionalProperties?: boolean | JSONSchemaProperty;
 
     /**
-     * Pattern-based property definitions
+     * Pattern-based property definitions for the configuration object.
      */
     patternProperties?: Record<string, JSONSchemaProperty>;
 
     /**
-     * Dependencies between properties
+     * Dependencies between properties on the configuration object.
      */
     dependencies?: Record<string, string[] | JSONSchemaProperty>;
 
     /**
-     * Minimum number of properties
+     * Minimum number of properties on the configuration object.
      */
     minProperties?: number;
 
     /**
-     * Maximum number of properties
+     * Maximum number of properties on the configuration object.
      */
     maxProperties?: number;
 }
@@ -253,7 +272,9 @@ export interface PluginManifest {
      * Plugin author or organization.
      * Can be a string or an object with name, email, and url.
      */
-    author?: string | {
+    author?:
+        | string
+        | {
         name: string;
         email?: string;
         url?: string;
@@ -275,7 +296,9 @@ export interface PluginManifest {
      * Source code repository information.
      * Follows npm package.json repository format.
      */
-    repository?: string | {
+    repository?:
+        | string
+        | {
         type: string;
         url: string;
         directory?: string;
@@ -285,7 +308,9 @@ export interface PluginManifest {
      * Issue tracker URL.
      * Where users can report bugs or request features.
      */
-    bugs?: string | {
+    bugs?:
+        | string
+        | {
         url?: string;
         email?: string;
     };
@@ -387,6 +412,12 @@ export interface PluginManifest {
      * Values must be primitive types or arrays of primitives.
      */
     custom?: {
-        [key: string]: string | number | boolean | string[] | number[] | undefined;
+        [key: string]:
+            | string
+            | number
+            | boolean
+            | string[]
+            | number[]
+            | undefined;
     };
 }
