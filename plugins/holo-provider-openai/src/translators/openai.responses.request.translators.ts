@@ -5,9 +5,8 @@ import {
     OpenAIResponseInputContent,
     OpenAITool
 } from "../types";
-import {pickDefined} from "@holokai/sdk";
+import {HoloContent, HoloMessage, HoloRequest, HoloTool, pickDefined} from "@holokai/sdk";
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloContent, HoloMessage, HoloRequest, HoloTool} from "@holokai/sdk";
 
 export class OpenAIResponseRequestTranslator extends BaseTranslator<HoloRequest, OpenAIResponseCreateParams> {
     protected holoDefaults: Partial<HoloRequest> = {};

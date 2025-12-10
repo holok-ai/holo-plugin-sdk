@@ -1,12 +1,5 @@
 import {injectable} from 'tsyringe';
-import {
-    BaseAuditor,
-    LlmRequest,
-    LlmResponse,
-    LlmStatus,
-    LLMWorkerRequest,
-    LLMWorkerResponse
-} from "@holokai/sdk";
+import {BaseAuditor, LlmRequest, LlmResponse, LlmStatus, LLMWorkerRequest, LLMWorkerResponse} from "@holokai/sdk";
 import {OpenAIChatRequest} from "./types";
 
 @injectable()

@@ -3,7 +3,6 @@ import {injectable} from 'tsyringe';
 import {Application, Organization, OrganizationCache, Provider} from "../../cache";
 import {ApplicationConfigValidator, OrganizationConfigValidator} from "../validators";
 import {ApplicationConfig, HoloConfigAction, OrganizationConfig} from "../types";
-import {ProviderType} from "../../providers/types";
 
 @injectable()
 export class OrganizationCacheService {
@@ -31,7 +30,7 @@ export class OrganizationCacheService {
     }
 
     /** @deprecated **/
-    getFirstProviderOfType(providerType: ProviderType): Provider | undefined {
+    getFirstProviderOfType(providerType: string): Provider | undefined {
         return this.getFirst()?.getAll('providers')?.find(p => p.type === providerType);
     }
 

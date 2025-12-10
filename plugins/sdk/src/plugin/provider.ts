@@ -1,5 +1,5 @@
 import {IPlugin} from './index.js';
-import type {ProviderCapabilities as ProviderFeatures, ProviderConfig} from '../provider/types.js';
+import type {IProvider, ProviderCapabilities as ProviderFeatures, ProviderConfig} from '../provider/types.js';
 
 /**
  * Provider plugin interface for LLM integrations.
@@ -35,7 +35,7 @@ import type {ProviderCapabilities as ProviderFeatures, ProviderConfig} from '../
  * }
  * ```
  */
-export interface IProviderPlugin<TProvider = unknown> extends IPlugin {
+export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
     /**
      * Create a provider instance with the given configuration.
      * @param config Provider configuration including API keys and model settings.

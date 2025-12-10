@@ -2,9 +2,8 @@ import 'reflect-metadata';
 
 import {injectable} from 'tsyringe';
 import {ClaudeRawMessageDeltaEvent} from '../../types';
-import {pickDefined} from '@holokai/sdk';
+import {HoloStreamChunk, pickDefined} from '@holokai/sdk';
 import {mapClaudeFinishReason, mapHoloFinishReasonToClaude} from '../../utils/finish.reason.mapper.js';
-import {HoloStreamChunk} from "@holokai/sdk";
 import {BaseStreamTranslator} from "@holokai/sdk/provider";
 
 @injectable()

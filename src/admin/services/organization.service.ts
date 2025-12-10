@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {OrganizationCacheService} from "./organization.cache.service";
 import {Application, Model, OrganizationCache, Prompt, Provider} from "../../cache";
-import {ProviderType} from "../../providers/types";
 import {ClassLogger} from "../../types/class.logger";
 
 @injectable()
@@ -22,7 +21,7 @@ export class OrganizationService extends ClassLogger {
     }
 
     /** @deprecated **/
-    getFirstProviderByType(providerType: ProviderType): Provider | undefined {
+    getFirstProviderByType(providerType: string): Provider | undefined {
         return this.orgCacheService.getFirstProviderOfType(providerType);
     }
 

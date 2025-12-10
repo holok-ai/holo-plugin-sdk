@@ -3,9 +3,8 @@ import {OpenAIChatCompletion, OpenAIChatCompletionResponse} from "../types";
 import {OpenAIResponseMessageTranslator} from "./openai.response.message.translators";
 import {OpenAIUsageTranslator} from "./openai.usage.translators";
 import {injectable} from 'tsyringe';
-import {pickDefined} from "@holokai/sdk";
+import {HoloFinishReason, HoloMessage, HoloResponse, pickDefined} from "@holokai/sdk";
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloFinishReason, HoloMessage, HoloResponse} from "@holokai/sdk";
 
 @injectable()
 export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenAIChatCompletionResponse> {

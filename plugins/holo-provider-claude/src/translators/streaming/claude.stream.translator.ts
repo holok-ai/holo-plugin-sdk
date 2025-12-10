@@ -55,11 +55,8 @@ export class ClaudeStreamTranslator extends BaseStreamTranslator<HoloStreamChunk
         // If we already have a validated Claude event, just return it
         const hasClaudeProviderDelta = d.provider === 'claude' && d.provider_delta;
         if (hasClaudeProviderDelta) {
-            const validated = this.providerValidator(d.provider_delta);
-            if (!(validated instanceof ArkErrors)) {
-                // It's already a valid Claude event, pass it through
-                return [validated];
-            }
+            // It's already a valid Claude event, pass it through
+            return [d.provider_delta];
         }
 
         // Detect cross-provider translation (OpenAI/Ollama → Claude)
@@ -92,7 +89,7 @@ export class ClaudeStreamTranslator extends BaseStreamTranslator<HoloStreamChunk
             case 'message_delta':
                 // Message delta can produce multiple event types:
                 // - message_delta (for finish_reason/usage)
-                // - content_block_start (for tool call shells)  
+                // - content_block_start (for tool call shells)
                 // - content_block_delta (for tool argument fragments)
                 // - message_stop (if finish_reason indicates completion)
                 const results: Partial<ClaudeRawMessageStreamEvent>[] = [];

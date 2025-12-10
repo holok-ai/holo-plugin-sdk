@@ -13,6 +13,7 @@ import {HoloContent, HoloContentImage, HoloContentText, HoloRequest} from "./typ
 
 // Export all types
 export * from './types.js';
+export * from './holo.response.factory';
 
 // Default values for Holo request
 export const HoloRequestDefaults: Partial<HoloRequest> = {

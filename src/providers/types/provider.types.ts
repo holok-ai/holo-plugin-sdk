@@ -1,12 +1,3 @@
-import {
-    OpenAIChatCompletionResponse,
-    OpenAIChatRequest,
-    OpenAIRequestMessage,
-    OpenAIResponse,
-    OpenAIResponseCreateParams
-} from "../openai/types";
-import {ClaudeChatRequest, ClaudeRequestMessage, ClaudeResponse} from "../claude/types";
-
 export interface AIProviderConfig {
     baseUrl?: string
     apiKey?: string
@@ -18,22 +9,7 @@ export interface OllamaProviderConfig extends AIProviderConfig {
     timeout: number
 }
 
-/**
- * Model information interface
- */
-export interface ModelInfo {
-    id: string;
-    name?: string;
-    description?: string;
-    size?: number;
-    parameterCount?: string;
-    quantization?: string;
-    family?: string;
-    parentModel?: string;
-    format?: string;
 
-    [key: string]: any; // Allow additional properties
-}
 
 
 // Request type enum
@@ -42,47 +18,3 @@ export enum RequestType {
     CHAT = 'chat',
     RESPONSES = 'responses'
 }
-
-export interface AIRequestStat {
-    type: RequestType;
-    startTime: number;
-    endTime: number;
-    duration: number;
-    success: number;
-    error: number;
-}
-
-export type ProviderResponse =
-    ClaudeResponse
-    | OllamaResponse
-    | OpenAIChatCompletionResponse
-    | OpenAIResponse;
-
-export type ProviderChatRequest =
-    ClaudeChatRequest
-    | OllamaChatRequest
-    | OpenAIChatRequest
-    | OpenAIResponseCreateParams;
-
-export type ProviderRequest =
-    OllamaChatRequest
-    | OllamaGenerateRequest
-    | ClaudeChatRequest
-    | OpenAIChatRequest
-    | OpenAIResponseCreateParams;
-
-export type ProviderMessage =
-    ClaudeRequestMessage
-    | OllamaMessage
-    | OpenAIRequestMessage
-
-
-export enum ProviderType {
-    OLLAMA = 'OLLAMA',
-    CLAUDE = 'CLAUDE',
-    OPENAI = 'OPENAI',
-    PERPLEXITY = 'PERPLEXITY'
-}
-
-// Streaming-capable providers (subset of ProviderType)
-export type StreamingProviderType = ProviderType.OLLAMA | ProviderType.CLAUDE | ProviderType.OPENAI;

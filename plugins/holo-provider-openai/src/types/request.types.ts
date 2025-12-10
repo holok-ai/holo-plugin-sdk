@@ -1,10 +1,7 @@
 // OpenAI ChatCompletions API type aliases (map to OpenAI SDK types)
 import type {
-    ChatCompletion,
     ChatCompletionAssistantMessageParam,
-    ChatCompletionAudio,
     ChatCompletionAudioParam,
-    ChatCompletionChunk,
     ChatCompletionContentPart,
     ChatCompletionContentPartImage,
     ChatCompletionContentPartInputAudio,
@@ -13,18 +10,12 @@ import type {
     ChatCompletionCreateParamsBase,
     ChatCompletionCustomTool,
     ChatCompletionFunctionTool,
-    ChatCompletionMessage,
-    ChatCompletionMessageCustomToolCall,
-    ChatCompletionMessageFunctionToolCall,
     ChatCompletionMessageParam,
-    ChatCompletionMessageToolCall,
     ChatCompletionPredictionContent,
     ChatCompletionStreamOptions,
-    ChatCompletionTokenLogprob,
     ChatCompletionTool,
     ChatCompletionToolChoiceOption
 } from "openai/resources/chat/completions";
-import type {CompletionUsage} from "openai/resources/completions";
 import type {
     FunctionDefinition,
     FunctionParameters,

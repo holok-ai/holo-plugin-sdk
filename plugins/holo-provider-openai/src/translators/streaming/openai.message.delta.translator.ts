@@ -2,10 +2,8 @@ import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {v4 as uuidv4} from 'uuid';
 import {OpenAIChatCompletionChunk} from '../../types';
-import {pickDefined} from '@holokai/sdk';
-import {safeParse} from '@holokai/sdk';
+import {HoloStreamChunk, pickDefined, safeParse} from '@holokai/sdk';
 import {BaseStreamTranslator} from "@holokai/sdk/provider";
-import {HoloStreamChunk} from "@holokai/sdk";
 
 @injectable()
 export class OpenAIMessageDeltaTranslator extends BaseStreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {

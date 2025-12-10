@@ -3,9 +3,8 @@ import {ClaudeResponse, ClaudeResponseMessage} from "../types";
 import {ClaudeResponseMessageTranslator} from "./claude.response.message.translators";
 import {ClaudeUsageTranslator} from "./claude.usage.translators";
 import {injectable} from 'tsyringe';
-import {pickDefined} from "../../../utils";
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloFinishReason, HoloMessage, HoloResponse} from "@holokai/sdk";
+import {HoloFinishReason, HoloMessage, HoloResponse, pickDefined} from "@holokai/sdk";
 
 @injectable()
 export class ClaudeResponseTranslator extends BaseTranslator<HoloResponse, ClaudeResponse> {
@@ -17,37 +16,6 @@ export class ClaudeResponseTranslator extends BaseTranslator<HoloResponse, Claud
         private readonly usageTranslator: ClaudeUsageTranslator
     ) {
         super();
-    }
-
-    private mapFinishReasonFromHolo(reason?: HoloFinishReason | null): ClaudeResponseMessage["stop_reason"] | undefined {
-        switch (reason) {
-            case 'stop':
-                return 'end_turn';
-            case 'length':
-                return 'max_tokens';
-            case 'tool_calls':
-            case 'function_call':
-                return 'tool_use';
-            case 'content_filter':
-                return 'refusal';
-            default:
-                return undefined;
-        }
-    }
-
-    private mapFinishReasonToHolo(reason?: string): HoloFinishReason | null {
-        switch (reason) {
-            case 'end_turn':
-                return 'stop';
-            case 'max_tokens':
-                return 'length';
-            case 'tool_use':
-                return 'tool_calls';
-            case 'refusal':
-                return 'content_filter';
-            default:
-                return null;
-        }
     }
 
     protected async fromHoloImpl(source: HoloResponse): Promise<Partial<ClaudeResponse>> {
@@ -100,6 +68,37 @@ export class ClaudeResponseTranslator extends BaseTranslator<HoloResponse, Claud
             // Streaming event - for now, return minimal response
             // Streaming events are typically handled in streaming contexts
             return {};
+        }
+    }
+
+    private mapFinishReasonFromHolo(reason?: HoloFinishReason | null): ClaudeResponseMessage["stop_reason"] | undefined {
+        switch (reason) {
+            case 'stop':
+                return 'end_turn';
+            case 'length':
+                return 'max_tokens';
+            case 'tool_calls':
+            case 'function_call':
+                return 'tool_use';
+            case 'content_filter':
+                return 'refusal';
+            default:
+                return undefined;
+        }
+    }
+
+    private mapFinishReasonToHolo(reason?: string): HoloFinishReason | null {
+        switch (reason) {
+            case 'end_turn':
+                return 'stop';
+            case 'max_tokens':
+                return 'length';
+            case 'tool_use':
+                return 'tool_calls';
+            case 'refusal':
+                return 'content_filter';
+            default:
+                return null;
         }
     }
 }

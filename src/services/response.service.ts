@@ -9,8 +9,7 @@ import {LLMWorkerRequest, LLMWorkerResponse, WorkerResponseFactory} from '../typ
 import {StreamService} from "./stream.service";
 import {ClassLogger} from "../types/class.logger";
 import {HoloTranslator} from "../providers/holo/holo.translator";
-import {HoloResponseFactory} from "../providers/holo/holo.response.factory";
-import {ProviderResponse, ProviderType} from "../providers/types";
+import {HoloResponseFactory} from "@holokai/sdk/holo";
 
 
 export class ResponseStream extends Transform {
@@ -284,7 +283,7 @@ export class ResponseService extends ClassLogger {
      * @deprecated Use sendError() instead with errorResponse option
      * Legacy method - kept for backward compatibility
      */
-    async sendErrorResponse(organizationId: string, providerType: ProviderType, providerName: string, workerId: string, sourceId: string, requestId: string, error: Error) {
+    async sendErrorResponse(organizationId: string, providerType: string, providerName: string, workerId: string, sourceId: string, requestId: string, error: Error) {
         const holoTranslator = container.resolve(HoloTranslator);
 
         // Create Holo error response
@@ -302,7 +301,7 @@ export class ResponseService extends ClassLogger {
             sourceId,
             requestId,
             providerType,
-            providerPayload as ProviderResponse,
+            providerPayload as any,
             organizationId,
             JSON.stringify(providerPayload),
             env.worker.serverId || 'unknown',

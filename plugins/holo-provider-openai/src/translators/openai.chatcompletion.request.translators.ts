@@ -8,9 +8,8 @@ import {
     OpenAIResponseFormat
 } from "../types";
 import {injectable} from 'tsyringe';
-import {pickDefined} from "@holokai/sdk";
+import {HoloMessage, HoloRequest, HoloResponseFormat, HoloTool, HoloToolChoice, pickDefined} from "@holokai/sdk";
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloMessage, HoloRequest, HoloResponseFormat, HoloTool, HoloToolChoice} from "@holokai/sdk";
 
 /**
  * OpenAI Request Translator

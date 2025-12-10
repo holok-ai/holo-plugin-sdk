@@ -10,23 +10,12 @@ import {
     ClaudeTextDelta,
     ClaudeUsage
 } from './types';
-import {
-    ClaudeRawContentBlockDeltaEventValidator,
-    ClaudeRawContentBlockStartEventValidator,
-    ClaudeRawContentBlockStopEventValidator,
-    ClaudeRawMessageDeltaEventValidator,
-    ClaudeRawMessageStartEventValidator,
-    ClaudeRawMessageStopEventValidator,
-    ClaudeResponseMessageValidator,
-    ClaudeTextBlockValidator,
-    ClaudeTextDeltaValidator,
-    ClaudeUsageValidator
-} from './validators';
+import {pickDefined} from "@holokai/sdk";
 
 export class ClaudeResponseFactory {
     static streamResponseMessage(text: string | string[] = '') {
         const messages = [];
-        const responseMessage = this.createResponseMessage(text);
+        const responseMessage = this.createResponseMessage(text) as ClaudeResponseMessage;
 
         // Start with message_start event
         messages.push(this.createRawMessageStartEvent(responseMessage));
@@ -53,38 +42,38 @@ export class ClaudeResponseFactory {
         return messages;
     }
 
-    static createResponseMessage(text: string | string[] = ''): ClaudeResponseMessage {
-        return ClaudeResponseMessageValidator.assert({
+    static createResponseMessage(text: string | string[] = ''): Partial<ClaudeResponseMessage> {
+        return pickDefined({
             id: 'msg_placeholder_id',
             container: null,
-            content: this.createTextMessages(text),
+            content: this.createTextMessages(text) as ClaudeTextBlock[],
             context_management: null,
             model: '',
             role: 'assistant',
             stop_reason: null,
             stop_sequence: null,
             type: 'message',
-            usage: this.createUsage()
+            usage: this.createUsage() as ClaudeUsage
         });
     }
 
-    static createTextMessages(text: string | string[]): ClaudeTextBlock[] {
+    static createTextMessages(text: string | string[]): Partial<ClaudeTextBlock>[] {
         if (Array.isArray(text)) {
             return text.map(t => this.createTextMessage(t));
         }
         return [this.createTextMessage(text)];
     }
 
-    static createTextMessage(text: string) {
-        return ClaudeTextBlockValidator.assert({
+    static createTextMessage(text: string): Partial<ClaudeTextBlock> {
+        return pickDefined({
             citations: [],
             type: 'text',
             text
         });
     }
 
-    static createUsage(): ClaudeUsage {
-        return ClaudeUsageValidator.assert({
+    static createUsage(): Partial<ClaudeUsage> {
+        return pickDefined({
             cache_creation: null,
             cache_creation_input_tokens: null,
             cache_read_input_tokens: null,
@@ -95,45 +84,45 @@ export class ClaudeResponseFactory {
         })
     }
 
-    static createRawContentBlockStartEvent(text: string = '', index: number = 0): ClaudeRawContentBlockStartEvent {
-        return ClaudeRawContentBlockStartEventValidator.assert({
-            content_block: this.createTextMessage(text),
+    static createRawContentBlockStartEvent(text: string = '', index: number = 0): Partial<ClaudeRawContentBlockStartEvent> {
+        return pickDefined({
+            content_block: this.createTextMessage(text) as ClaudeTextBlock,
             index,
             type: 'content_block_start'
         });
     }
 
-    static createRawContentBlockDeltaEvent(text: string = '', index: number = 0): ClaudeRawContentBlockDeltaEvent {
-        return ClaudeRawContentBlockDeltaEventValidator.assert({
-            delta: this.createTextDelta(text),
+    static createRawContentBlockDeltaEvent(text: string = '', index: number = 0): Partial<ClaudeRawContentBlockDeltaEvent> {
+        return pickDefined({
+            delta: this.createTextDelta(text) as ClaudeTextDelta,
             index,
             type: 'content_block_delta'
         });
     }
 
-    static createRawContentBlockStopEvent(index: number = 0): ClaudeRawContentBlockStopEvent {
-        return ClaudeRawContentBlockStopEventValidator.assert({
+    static createRawContentBlockStopEvent(index: number = 0): Partial<ClaudeRawContentBlockStopEvent> {
+        return pickDefined({
             index,
             type: 'content_block_stop'
         });
     }
 
-    static createTextDelta(text: string): ClaudeTextDelta {
-        return ClaudeTextDeltaValidator.assert({
+    static createTextDelta(text: string): Partial<ClaudeTextDelta> {
+        return pickDefined({
             text,
             type: 'text_delta'
         });
     }
 
-    static createRawMessageStartEvent(message: ClaudeResponseMessage): ClaudeRawMessageStartEvent {
-        return ClaudeRawMessageStartEventValidator.assert({
+    static createRawMessageStartEvent(message: ClaudeResponseMessage): Partial<ClaudeRawMessageStartEvent> {
+        return pickDefined({
             message,
             type: 'message_start'
         });
     }
 
-    static createRawMessageDeltaEvent(): ClaudeRawMessageDeltaEvent {
-        return ClaudeRawMessageDeltaEventValidator.assert({
+    static createRawMessageDeltaEvent(): Partial<ClaudeRawMessageDeltaEvent> {
+        return pickDefined({
             delta: {
                 container: null,
                 stop_reason: 'end_turn',
@@ -150,8 +139,8 @@ export class ClaudeResponseFactory {
         });
     }
 
-    static createRawMessageStopEvent(): ClaudeRawMessageStopEvent {
-        return ClaudeRawMessageStopEventValidator.assert({
+    static createRawMessageStopEvent(): Partial<ClaudeRawMessageStopEvent> {
+        return pickDefined({
             type: 'message_stop'
         });
     }

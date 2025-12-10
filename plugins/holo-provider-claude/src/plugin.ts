@@ -9,6 +9,8 @@ import {manifest} from "./manifest.js";
 import {ProviderCapabilities, ProviderConfig} from "@holokai/sdk/provider";
 
 export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin {
+    manifest = manifest;
+
     createProvider(_config: ProviderConfig): Promise<unknown> {
         throw new Error("Method not implemented.");
     }
@@ -32,8 +34,6 @@ export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin 
             'claude-3-haiku-20240307'
         ];
     }
-
-    manifest = manifest;
 
     protected onInitialize(_context: PluginContext): Promise<void> {
         return Promise.resolve();

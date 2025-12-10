@@ -181,6 +181,7 @@ packages/provider-{name}/
 ```
 
 **Important package.json rules:**
+
 - **Naming**: MUST follow `@holokai/provider-{name}` convention
 - **peerDependencies**: MUST include `@holokai/common` and `arktype` (shared versions)
 - **dependencies**: Provider SDK with **EXACT version** (e.g., `"openai": "4.73.1"`, NOT `"^4.73.1"`)
@@ -195,8 +196,8 @@ import plugin from './plugin';
 export default plugin;
 
 // Named exports for testing/utilities (optional)
-export { OpenAIProvider } from './provider';
-export { OpenAITranslator } from './translator';
+export {OpenAIProvider} from './provider';
+export {OpenAITranslator} from './translator';
 ```
 
 ### src/plugin.ts Template
@@ -272,78 +273,78 @@ export default plugin;
 ### src/provider.ts Template
 
 ```typescript
-import { IProvider } from '@holokai/common/provider';
-import { HoloRequest, HoloResponse } from '@holokai/common/holo';
-import { Logger } from '@holokai/common/utils';
+import {IProvider} from '@holokai/common/provider';
+import {HoloRequest, HoloResponse} from '@holokai/common/holo';
+import {Logger} from '@holokai/common/utils';
 import OpenAI from 'openai';
 
 export class OpenAIProvider implements IProvider {
-  private client: OpenAI;
+    private client: OpenAI;
 
-  constructor(
-    private config: { api_key: string; model: string },
-    private logger: Logger
-  ) {
-    this.client = new OpenAI({ apiKey: config.api_key });
-  }
+    constructor(
+        private config: { api_key: string; model: string },
+        private logger: Logger
+    ) {
+        this.client = new OpenAI({apiKey: config.api_key});
+    }
 
-  async processRequest(request: HoloRequest): Promise<HoloResponse> {
-    // Transform Holo to OpenAI format
-    const openaiRequest = this.translator.toOpenAI(request);
+    async processRequest(request: HoloRequest): Promise<HoloResponse> {
+        // Transform Holo to OpenAI format
+        const openaiRequest = this.translator.toOpenAI(request);
 
-    // Call provider API
-    const response = await this.client.chat.completions.create(openaiRequest);
+        // Call provider API
+        const response = await this.client.chat.completions.create(openaiRequest);
 
-    // Transform back to Holo format
-    return this.translator.fromOpenAI(response);
-  }
+        // Transform back to Holo format
+        return this.translator.fromOpenAI(response);
+    }
 
-  async processStreamRequest(request: HoloRequest): AsyncIterator<HoloStream> {
-    // Streaming implementation
-  }
+    async processStreamRequest(request: HoloRequest): AsyncIterator<HoloStream> {
+        // Streaming implementation
+    }
 }
 ```
 
 ### src/translator.ts Template
 
 ```typescript
-import { HoloRequest, HoloResponse } from '@holokai/common/holo';
-import { ChatCompletion, ChatCompletionCreateParams } from 'openai/resources';
+import {HoloRequest, HoloResponse} from '@holokai/common/holo';
+import {ChatCompletion, ChatCompletionCreateParams} from 'openai/resources';
 
 export class OpenAITranslator {
-  toOpenAI(holoRequest: HoloRequest): ChatCompletionCreateParams {
-    return {
-      model: holoRequest.model,
-      messages: holoRequest.messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      })),
-      temperature: holoRequest.temperature,
-      max_tokens: holoRequest.maxTokens,
-      stream: false
-    };
-  }
+    toOpenAI(holoRequest: HoloRequest): ChatCompletionCreateParams {
+        return {
+            model: holoRequest.model,
+            messages: holoRequest.messages.map(msg => ({
+                role: msg.role,
+                content: msg.content
+            })),
+            temperature: holoRequest.temperature,
+            max_tokens: holoRequest.maxTokens,
+            stream: false
+        };
+    }
 
-  fromOpenAI(openaiResponse: ChatCompletion): HoloResponse {
-    return {
-      id: openaiResponse.id,
-      model: openaiResponse.model,
-      choices: openaiResponse.choices.map(choice => ({
-        index: choice.index,
-        message: {
-          role: choice.message.role,
-          content: choice.message.content || ''
-        },
-        finishReason: choice.finish_reason
-      })),
-      usage: {
-        promptTokens: openaiResponse.usage?.prompt_tokens || 0,
-        completionTokens: openaiResponse.usage?.completion_tokens || 0,
-        totalTokens: openaiResponse.usage?.total_tokens || 0
-      },
-      created: openaiResponse.created
-    };
-  }
+    fromOpenAI(openaiResponse: ChatCompletion): HoloResponse {
+        return {
+            id: openaiResponse.id,
+            model: openaiResponse.model,
+            choices: openaiResponse.choices.map(choice => ({
+                index: choice.index,
+                message: {
+                    role: choice.message.role,
+                    content: choice.message.content || ''
+                },
+                finishReason: choice.finish_reason
+            })),
+            usage: {
+                promptTokens: openaiResponse.usage?.prompt_tokens || 0,
+                completionTokens: openaiResponse.usage?.completion_tokens || 0,
+                totalTokens: openaiResponse.usage?.total_tokens || 0
+            },
+            created: openaiResponse.created
+        };
+    }
 }
 ```
 
@@ -368,6 +369,7 @@ export class OpenAITranslator {
 ### Testing Structure
 
 **Integration Tests (PRIMARY - tests/integration/):**
+
 - Test real API calls with actual provider SDK
 - Verify request/response transformations work correctly
 - Test streaming functionality
@@ -375,6 +377,7 @@ export class OpenAITranslator {
 - Compare plugin output with expected Holo format
 
 **Unit Tests (LIMITED - tests/unit/):**
+
 - Test contract validation logic
 - Test manifest structure
 - Test plugin lifecycle (initialize, destroy)

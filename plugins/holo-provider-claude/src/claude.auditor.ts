@@ -1,13 +1,6 @@
 import {injectable} from 'tsyringe';
 import {ClaudeChatRequest} from "./types";
-import {
-    BaseAuditor,
-    LlmRequest,
-    LlmResponse,
-    LlmStatus,
-    LLMWorkerRequest,
-    LLMWorkerResponse
-} from "@holokai/sdk";
+import {BaseAuditor, LlmRequest, LlmResponse, LlmStatus, LLMWorkerRequest, LLMWorkerResponse} from "@holokai/sdk";
 
 @injectable()
 export class ClaudeAuditor extends BaseAuditor {
@@ -45,25 +38,6 @@ export class ClaudeAuditor extends BaseAuditor {
         if (Object.keys(options).length > 0) {
             llmRequest.options = options;
         }
-    }
-
-    private extractUserPromptFromMessages(messages?: any[]): string | undefined {
-        if (!messages || !Array.isArray(messages)) return undefined;
-
-        const userMessages = messages.filter(msg => msg.role === 'user');
-        if (userMessages.length === 0) return undefined;
-
-        // Return the last user message content
-        const lastUserMessage = userMessages[userMessages.length - 1];
-        if (typeof lastUserMessage.content === 'string') {
-            return lastUserMessage.content;
-        } else if (Array.isArray(lastUserMessage.content)) {
-            // Handle content blocks - extract text content
-            const textBlocks = lastUserMessage.content.filter((block: any) => block.type === 'text');
-            return textBlocks.length > 0 ? textBlocks[0].text : undefined;
-        }
-
-        return undefined;
     }
 
     protected mapResponseToHolo(
@@ -114,5 +88,24 @@ export class ClaudeAuditor extends BaseAuditor {
         } else {
             llmResponse.status = LlmStatus.SUCCESS;
         }
+    }
+
+    private extractUserPromptFromMessages(messages?: any[]): string | undefined {
+        if (!messages || !Array.isArray(messages)) return undefined;
+
+        const userMessages = messages.filter(msg => msg.role === 'user');
+        if (userMessages.length === 0) return undefined;
+
+        // Return the last user message content
+        const lastUserMessage = userMessages[userMessages.length - 1];
+        if (typeof lastUserMessage.content === 'string') {
+            return lastUserMessage.content;
+        } else if (Array.isArray(lastUserMessage.content)) {
+            // Handle content blocks - extract text content
+            const textBlocks = lastUserMessage.content.filter((block: any) => block.type === 'text');
+            return textBlocks.length > 0 ? textBlocks[0].text : undefined;
+        }
+
+        return undefined;
     }
 }

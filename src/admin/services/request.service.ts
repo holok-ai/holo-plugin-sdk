@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {ProviderType, RequestType} from "../../providers/types";
+import {RequestType} from "../../providers/types";
 import {HttpApiRequest} from "../../api/types";
 import {Response} from "express";
 import {ResponseService, StreamService} from "../../services";
@@ -24,7 +24,7 @@ export class RequestService extends ClassLogger {
         super();
     }
 
-    async processRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest, res: Response) {
+    async processRequest(providerType: string, type: RequestType, req: HttpApiRequest, res: Response) {
         const logger = this.mlog(this.processRequest);
         const errors: string[] = [];
         const {auth, body} = req;
@@ -91,7 +91,7 @@ export class RequestService extends ClassLogger {
         logger.info(`Request processed: ${providerType} ${type}`, {requestId: workerRequest.requestId});
     }
 
-    async parseRequest(providerType: ProviderType, providerName: string | undefined, type: RequestType, req: HttpApiRequest) {
+    async parseRequest(providerType: string, providerName: string | undefined, type: RequestType, req: HttpApiRequest) {
         return WorkerRequestFactory.fromRequest(providerType, providerName, type, req, this.serverId);
     }
 }

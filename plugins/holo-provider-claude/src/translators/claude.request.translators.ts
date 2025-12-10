@@ -32,24 +32,6 @@ export class ClaudeRequestTranslator extends BaseTranslator<HoloRequest, ClaudeC
         super();
     }
 
-    private buildSystemFromResponseFormat(system?: string, rf?: HoloResponseFormat): string | undefined {
-        if (!rf) return system;
-        const parts: string[] = [];
-        if (system?.trim()) parts.push(system.trim());
-
-        if (rf.type === "json_schema") {
-            parts.push(
-                `You must respond with valid JSON that matches this exact schema: ${JSON.stringify(rf.schema)}.`
-            );
-            if (rf.strict) {
-                parts.push("You must strictly adhere to this schema with no additional properties.");
-            }
-        } else if (rf.type === "json_object") {
-            parts.push("You must respond with a valid JSON object.");
-        }
-        return parts.length ? parts.join(" ") : undefined;
-    }
-
     protected async fromHoloImpl(source: HoloRequest): Promise<Partial<ClaudeChatRequest>> {
         const [messages, tools, tool_choice] = await Promise.all([
             source.messages ? this.messageTranslator.fromHoloArray(source.messages) : Promise.resolve<ClaudeRequestMessage[] | undefined>(undefined),
@@ -105,5 +87,23 @@ export class ClaudeRequestTranslator extends BaseTranslator<HoloRequest, ClaudeC
             tools: tools && tools.length ? tools : undefined,
             tool_choice: tool_choice,
         }) as Partial<HoloRequest>;
+    }
+
+    private buildSystemFromResponseFormat(system?: string, rf?: HoloResponseFormat): string | undefined {
+        if (!rf) return system;
+        const parts: string[] = [];
+        if (system?.trim()) parts.push(system.trim());
+
+        if (rf.type === "json_schema") {
+            parts.push(
+                `You must respond with valid JSON that matches this exact schema: ${JSON.stringify(rf.schema)}.`
+            );
+            if (rf.strict) {
+                parts.push("You must strictly adhere to this schema with no additional properties.");
+            }
+        } else if (rf.type === "json_object") {
+            parts.push("You must respond with a valid JSON object.");
+        }
+        return parts.length ? parts.join(" ") : undefined;
     }
 }

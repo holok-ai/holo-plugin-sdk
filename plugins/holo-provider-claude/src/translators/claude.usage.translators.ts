@@ -1,9 +1,8 @@
 import 'reflect-metadata';
 import {ClaudeUsage} from "../types";
 import {injectable} from 'tsyringe';
-import {pickDefined} from "../../../utils";
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloUsage} from "@holokai/sdk";
+import {HoloUsage, pickDefined} from "@holokai/sdk";
 
 @injectable()
 export class ClaudeUsageTranslator extends BaseTranslator<HoloUsage, ClaudeUsage> {

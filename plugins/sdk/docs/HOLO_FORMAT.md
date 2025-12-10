@@ -2,7 +2,9 @@
 
 ## Overview
 
-The **Holo format** serves as the universal translation hub in HoloKai's hub-and-spoke architecture. It prevents N² translations between providers by standardizing on a single, portable format. All provider translations flow through Holo:
+The **Holo format** serves as the universal translation hub in HoloKai's hub-and-spoke architecture. It prevents N²
+translations between providers by standardizing on a single, portable format. All provider translations flow through
+Holo:
 
 ```
 Provider → Holo → Provider
@@ -36,6 +38,7 @@ Provider → Holo → Provider
 ### HoloRequest
 
 Universal request format supporting:
+
 - **Common fields** (all providers): `model`, `messages`, `temperature`, `top_p`, `stream`, `tools`
 - **Mapped fields** (≥2 providers): `system`, `max_tokens`, `stop_sequences`, `response_format`, etc.
 - **Request types**: `chat` (default) or `generate` (Ollama-specific)
@@ -43,6 +46,7 @@ Universal request format supporting:
 ### HoloResponse
 
 Universal response format with:
+
 - **Core fields**: `id`, `model`, `messages`, `finish_reason`, `usage`
 - **Portable content**: Text, images, tool calls, tool results
 - **Usage tracking**: Input/output tokens, cache stats, service tier
@@ -50,6 +54,7 @@ Universal response format with:
 ### HoloMessage
 
 Flexible message format supporting:
+
 - **Roles**: `user`, `assistant`, `tool`
 - **Content**: String or structured `HoloContent[]` (text, images, tool calls)
 - **Tool integration**: Tool calls and results with proper linking
@@ -57,6 +62,7 @@ Flexible message format supporting:
 ### HoloContent
 
 Discriminated union of content types:
+
 - `text`: Plain text content
 - `image`: Images via URL or base64 data URI
 - Additional types for tool results
@@ -64,6 +70,7 @@ Discriminated union of content types:
 ## Type Safety
 
 All Holo types are:
+
 - ✅ **Strictly typed** with proper TypeScript interfaces
 - ✅ **Validated** using ArkType at runtime boundaries
 - ✅ **Self-documenting** with comprehensive JSDoc comments
@@ -101,6 +108,7 @@ function fromHolo(holoRequest: HoloRequest): MyProviderRequest {
 ### 🟢 Common (All Providers)
 
 Fields supported by Claude, OpenAI, and Ollama:
+
 - `model` - Model identifier (required)
 - `messages` - Conversation history
 - `temperature` - Sampling temperature (0-2)
@@ -111,6 +119,7 @@ Fields supported by Claude, OpenAI, and Ollama:
 ### 🟡 Mapped (≥2 Providers)
 
 Fields with functional equivalents in multiple providers:
+
 - `system` - System prompt (top-level)
 - `max_tokens` - Maximum tokens to generate
 - `stop_sequences` - Stop sequences
@@ -126,6 +135,7 @@ Fields with functional equivalents in multiple providers:
 ### 🔵 Provider-Specific
 
 Features unique to one provider are **NOT** in Holo format:
+
 - Claude: `thinking`, `betas`, `mcp_servers`, `container`
 - OpenAI: `reasoning_effort`, `audio`, `modalities`, `logprobs`, `n`
 - Ollama: `keep_alive`, specific `options` fields
@@ -149,6 +159,7 @@ interface HoloStreamChunk {
 ```
 
 Streaming events are normalized to:
+
 - `message_start` - Begin new message
 - `content_delta` - Incremental content
 - `message_delta` - Usage/metadata updates

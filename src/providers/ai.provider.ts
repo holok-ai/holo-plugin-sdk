@@ -1,27 +1,10 @@
-import {AIProviderConfig, AIRequestStat, ModelInfo, ProviderRequest, RequestType} from "./types";
 import {ResponseService} from "../services";
 import {LLMWorkerRequest, LLMWorkerResponse, WorkerResponseFactory} from "../types";
 import {ErrorMessages} from "../utils";
 import {Provider} from "../db/types";
-import {ProviderRequestValidator} from "./validators";
 import {ClassLogger} from "../types/class.logger";
 import {env} from "../env";
-
-
-export interface IProvider {
-    name: string;
-    config: AIProviderConfig;
-
-    init(): Promise<void>;
-
-    getModels(): Promise<ModelInfo[]>;
-
-    processRequest(request: LLMWorkerRequest): Promise<AIRequestStat | null>;
-
-    handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat>;
-
-    onResponseChunk(responseChunk: LLMWorkerResponse): Promise<void>;
-}
+import {AIRequestStat, IProvider, ModelInfo, ProviderConfig, RequestType} from "@holokai/sdk/provider";
 
 
 /**
@@ -54,7 +37,6 @@ export abstract class AIProvider extends ClassLogger implements IProvider {
     async processRequest(request: LLMWorkerRequest): Promise<AIRequestStat | null> {
         const logger = this.mlog(this.processRequest);
         const {sourceId, requestId, payload, type} = request;
-        ProviderRequestValidator.assert(payload);
 
         try {
             return this.handleLLMRequest(sourceId, requestId, payload, type);
@@ -70,7 +52,7 @@ export abstract class AIProvider extends ClassLogger implements IProvider {
     /**
      * Handle LLMWorkerRequest - unified interface for all providers
      */
-    abstract handleLLMRequest(sourceId: string, requestId: string, payload: ProviderRequest, type: RequestType): Promise<AIRequestStat>;
+    abstract handleLLMRequest(sourceId: string, requestId: string, payload: any, type: RequestType): Promise<AIRequestStat>;
 
     /**
      * Wraps provider method calls with statistics tracking, error handling, and logging.
@@ -209,8 +191,8 @@ export abstract class AIProvider extends ClassLogger implements IProvider {
         return this.provider.name;
     }
 
-    get config(): AIProviderConfig {
-        return this.provider.config as AIProviderConfig;
+    get config(): ProviderConfig {
+        return this.provider.config as ProviderConfig;
     }
 }
 

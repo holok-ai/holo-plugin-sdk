@@ -1,11 +1,14 @@
 # @holokai/common Package Testing Guide
 
 ## Overview
-This guide explains how we verify that the @holokai/common package is properly built, can be published to npm, and can be consumed by other packages.
+
+This guide explains how we verify that the @holokai/common package is properly built, can be published to npm, and can
+be consumed by other packages.
 
 ## Testing Strategy
 
 ### 1. Build Verification
+
 Before publishing, we verify the package builds correctly:
 
 ```bash
@@ -14,11 +17,13 @@ npm run build
 ```
 
 This should:
+
 - Compile TypeScript to JavaScript in `dist/`
 - Generate type declarations (`.d.ts` files)
 - Create sourcemaps for debugging
 
 ### 2. Package Verification Script
+
 Run the verification script before publishing:
 
 ```bash
@@ -26,12 +31,14 @@ node scripts/verify-package.js
 ```
 
 This script checks:
+
 - ✅ package.json has required fields (name, version, main, types)
 - ✅ dist folder exists with compiled output
 - ✅ Main entry point (dist/index.js) exists
 - ✅ Type declarations (dist/index.d.ts) exist
 
 ### 3. Local Testing with npm link
+
 Test the package locally before publishing:
 
 ```bash
@@ -46,6 +53,7 @@ import { Plugin, HoloRequest } from '@holokai/common';
 ```
 
 ### 4. Test Consumer Package
+
 The `packages/test-consumer` package serves as an integration test:
 
 ```bash
@@ -55,11 +63,13 @@ npm test
 ```
 
 This verifies:
+
 - Package can be installed as a dependency
 - Types are properly exported and work with TypeScript
 - Runtime exports work correctly
 
 ### 5. npm Pack Testing
+
 Test what would be published without actually publishing:
 
 ```bash
@@ -102,15 +112,19 @@ cd packages/common && node scripts/verify-package.js
 ## Common Issues and Solutions
 
 ### Issue: Types not found after installation
+
 **Solution**: Ensure `types` field in package.json points to the correct .d.ts file
 
 ### Issue: Module not found at runtime
+
 **Solution**: Check `main` field points to compiled JS, not TS source
 
 ### Issue: Large package size
+
 **Solution**: Review .npmignore, ensure only necessary files are published
 
 ### Issue: Peer dependency conflicts
+
 **Solution**: Use `peerDependencies` for shared dependencies like TypeScript
 
 ## Testing After Publishing
@@ -135,6 +149,7 @@ Our testing pipeline ensures quality at every stage:
 ## Version Management
 
 Follow semantic versioning:
+
 - PATCH (0.0.x): Bug fixes, documentation
 - MINOR (0.x.0): New features, backward compatible
 - MAJOR (x.0.0): Breaking changes

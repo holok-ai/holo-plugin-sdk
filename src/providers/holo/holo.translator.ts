@@ -3,9 +3,7 @@ import {injectable} from "tsyringe";
 import {IProviderTranslator, ProviderChatRequest, ProviderMessage, ProviderType} from "../types";
 import {OpenAITranslator} from "../openai";
 import {ClaudeTranslator} from "../claude";
-import {OllamaTranslator} from "../ollama/ollama.translator";
 import {ArkErrors} from "arktype";
-import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "./index";
 
 @injectable()
 export class HoloTranslator {

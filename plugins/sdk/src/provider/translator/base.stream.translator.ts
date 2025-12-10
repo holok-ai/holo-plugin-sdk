@@ -52,11 +52,6 @@ export abstract class BaseStreamTranslator<THolo, TProvider> {
         return batches.flat().filter(o => o && Object.keys(o).length > 0);
     }
 
-    // Abstract impls must emit arrays (0..N) for streaming semantics.
-    protected abstract fromHoloManyImpl(source: THolo): Promise<Partial<TProvider>[]>;
-
-    protected abstract toHoloManyImpl(source: TProvider): Promise<Partial<THolo>[]>;
-
     // Convenience wrappers
     async fromHoloMany(source: THolo, validateTarget = false): Promise<Partial<TProvider>[]> {
         return this.translateMany<THolo, TProvider>(source, {fromHolo: true, validateTarget});
@@ -73,4 +68,9 @@ export abstract class BaseStreamTranslator<THolo, TProvider> {
     async toHoloManyArray(items: TProvider[] | undefined, validateTarget = false): Promise<Partial<THolo>[]> {
         return this.translateManyArray<TProvider, THolo>(items, {fromHolo: false, validateTarget});
     }
+
+    // Abstract impls must emit arrays (0..N) for streaming semantics.
+    protected abstract fromHoloManyImpl(source: THolo): Promise<Partial<TProvider>[]>;
+
+    protected abstract toHoloManyImpl(source: TProvider): Promise<Partial<THolo>[]>;
 }

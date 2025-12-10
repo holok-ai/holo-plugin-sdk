@@ -2,7 +2,8 @@
 
 ## Overview
 
-The HoloKai SDK provides a universal format and plugin architecture for building LLM provider integrations. This documentation covers the Holo universal format, provider mappings, and implementation guidance.
+The HoloKai SDK provides a universal format and plugin architecture for building LLM provider integrations. This
+documentation covers the Holo universal format, provider mappings, and implementation guidance.
 
 ---
 
@@ -33,24 +34,24 @@ const request: HoloRequest = {
 ### Core Concepts
 
 1. **[Holo Format](./HOLO_FORMAT.md)** - Universal format overview
-   - Hub-and-spoke architecture
-   - Design principles
-   - Core types (HoloRequest, HoloResponse, HoloMessage)
-   - Field categories (common, mapped, provider-specific)
+    - Hub-and-spoke architecture
+    - Design principles
+    - Core types (HoloRequest, HoloResponse, HoloMessage)
+    - Field categories (common, mapped, provider-specific)
 
 2. **[Provider Mappings](./PROVIDER_MAPPINGS.md)** - Detailed field mappings
-   - Request mappings (all providers → Holo)
-   - Response mappings (all providers → Holo)
-   - Content type mappings
-   - Tool definition mappings
-   - Streaming event mappings
-   - Comprehensive transformation tables
+    - Request mappings (all providers → Holo)
+    - Response mappings (all providers → Holo)
+    - Content type mappings
+    - Tool definition mappings
+    - Streaming event mappings
+    - Comprehensive transformation tables
 
 3. **[Capability Analysis](./CAPABILITY_ANALYSIS.md)** - Verification & coverage
-   - Complete capability inventory
-   - Gap analysis (none found!)
-   - Type safety analysis
-   - Recommendations
+    - Complete capability inventory
+    - Gap analysis (none found!)
+    - Type safety analysis
+    - Recommendations
 
 ---
 
@@ -75,6 +76,7 @@ Holo format serves as the central hub, preventing N² translation complexity:
 ```
 
 **Benefits**:
+
 - Add new providers with just 2 translations (to/from Holo)
 - Consistent behavior across all providers
 - Type-safe portable format
@@ -83,15 +85,21 @@ Holo format serves as the central hub, preventing N² translation complexity:
 ### Field Categories
 
 #### 🟢 Common (All Providers)
+
 Fields supported by Claude, OpenAI, and Ollama:
+
 - `model`, `messages`, `temperature`, `top_p`, `stream`, `tools`
 
 #### 🟡 Mapped (≥2 Providers)
+
 Fields with functional equivalents:
+
 - `system`, `max_tokens`, `stop_sequences`, `response_format`, `tool_choice`, etc.
 
 #### 🔵 Provider-Specific
+
 Fields unique to one provider (intentionally excluded from Holo):
+
 - Claude: `thinking`, `betas`, `mcp_servers`
 - OpenAI: `reasoning_effort`, `audio`, `logprobs`, `n`
 - Ollama: `keep_alive`, `options`
@@ -100,30 +108,30 @@ Fields unique to one provider (intentionally excluded from Holo):
 
 ## Provider Support Matrix
 
-| Feature | Claude | OpenAI | Ollama | Holo Support |
-|---------|---------|---------|---------|--------------|
-| **Basic Chat** ||||
-| Messages | ✅ | ✅ | ✅ | ✅ |
-| Streaming | ✅ | ✅ | ✅ | ✅ |
-| System prompts | ✅ | ✅* | ✅* | ✅ |
-| Temperature | ✅ | ✅ | ✅ | ✅ |
-| Max tokens | ✅ | ✅ | ✅† | ✅ |
-| **Advanced** ||||
-| Tools/Functions | ✅ | ✅ | ✅ | ✅ |
-| Vision (images) | ✅ | ✅ | ✅ | ✅ |
-| JSON mode | ❌ | ✅ | ✅ | ✅ |
-| Stop sequences | ✅ | ✅ | ✅ | ✅ |
-| **Sampling** ||||
-| Top-p | ✅ | ✅ | ✅ | ✅ |
-| Top-k | ✅ | ❌ | ✅ | ✅ |
-| Frequency penalty | ❌ | ✅ | ✅ | ✅ |
-| Presence penalty | ❌ | ✅ | ✅ | ✅ |
-| Seed | ❌ | ✅ | ✅ | ✅ |
-| **Usage Tracking** ||||
-| Input tokens | ✅ | ✅ | ✅ | ✅ |
-| Output tokens | ✅ | ✅ | ✅ | ✅ |
-| Cache stats | ✅ | ✅* | ❌ | ✅ |
-| Performance timings | ❌ | ❌ | ✅ | ✅ |
+| Feature             | Claude | OpenAI | Ollama | Holo Support |
+|---------------------|--------|--------|--------|--------------|
+| **Basic Chat**      |        |        |        |
+| Messages            | ✅      | ✅      | ✅      | ✅            |
+| Streaming           | ✅      | ✅      | ✅      | ✅            |
+| System prompts      | ✅      | ✅*     | ✅*     | ✅            |
+| Temperature         | ✅      | ✅      | ✅      | ✅            |
+| Max tokens          | ✅      | ✅      | ✅†     | ✅            |
+| **Advanced**        |        |        |        |
+| Tools/Functions     | ✅      | ✅      | ✅      | ✅            |
+| Vision (images)     | ✅      | ✅      | ✅      | ✅            |
+| JSON mode           | ❌      | ✅      | ✅      | ✅            |
+| Stop sequences      | ✅      | ✅      | ✅      | ✅            |
+| **Sampling**        |        |        |        |
+| Top-p               | ✅      | ✅      | ✅      | ✅            |
+| Top-k               | ✅      | ❌      | ✅      | ✅            |
+| Frequency penalty   | ❌      | ✅      | ✅      | ✅            |
+| Presence penalty    | ❌      | ✅      | ✅      | ✅            |
+| Seed                | ❌      | ✅      | ✅      | ✅            |
+| **Usage Tracking**  |        |        |        |
+| Input tokens        | ✅      | ✅      | ✅      | ✅            |
+| Output tokens       | ✅      | ✅      | ✅      | ✅            |
+| Cache stats         | ✅      | ✅*     | ❌      | ✅            |
+| Performance timings | ❌      | ❌      | ✅      | ✅            |
 
 *Simulated or partial support
 †Via `options.num_predict`
@@ -511,6 +519,7 @@ it('should handle real Claude response', async () => {
 ### Q: Why not just use OpenAI's format?
 
 **A**: OpenAI's format doesn't cover Claude-specific features like:
+
 - Cache control
 - Service tiers
 - Tool result error states
@@ -533,7 +542,8 @@ interface ClaudeExtendedRequest extends HoloRequest {
 
 ### Q: What about streaming?
 
-**A**: Holo provides normalized streaming events. See [Provider Mappings](./PROVIDER_MAPPINGS.md#streaming-mappings) for details.
+**A**: Holo provides normalized streaming events. See [Provider Mappings](./PROVIDER_MAPPINGS.md#streaming-mappings) for
+details.
 
 ### Q: Can I add custom fields?
 
@@ -575,6 +585,7 @@ import type { HoloRequest } from '@holokai/sdk';
 ### Reporting Issues
 
 Found a gap in the Holo format? Open an issue with:
+
 - Provider name and feature
 - Example API request/response
 - Why it's portable (≥2 providers)
@@ -584,16 +595,19 @@ Found a gap in the Holo format? Open an issue with:
 ## Resources
 
 ### Internal Documentation
+
 - [Holo Format](./HOLO_FORMAT.md) - Format specification
 - [Provider Mappings](./PROVIDER_MAPPINGS.md) - Translation tables
 - [Capability Analysis](./CAPABILITY_ANALYSIS.md) - Coverage verification
 
 ### Provider Documentation
+
 - [Claude API](https://docs.anthropic.com/claude/reference/messages_post)
 - [OpenAI API](https://platform.openai.com/docs/api-reference/chat)
 - [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
 
 ### SDK Reference
+
 - [TypeScript Types](../src/holo/types.ts) - Type definitions
 - [Plugin Guide](../README.md#plugins) - Building plugins
 

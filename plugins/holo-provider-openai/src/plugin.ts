@@ -9,6 +9,8 @@ import {manifest} from "./manifest.js";
 import {ProviderCapabilities, ProviderConfig} from "@holokai/sdk/provider";
 
 export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin {
+    manifest = manifest;
+
     createProvider(_config: ProviderConfig): Promise<unknown> {
         throw new Error("Method not implemented.");
     }
@@ -32,8 +34,6 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
             'gpt-3.5-turbo'
         ];
     }
-
-    manifest = manifest;
 
     protected onInitialize(_context: PluginContext): Promise<void> {
         return Promise.resolve();

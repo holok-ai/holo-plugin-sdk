@@ -34,7 +34,11 @@ export function isUint8Array(value: any): value is Uint8Array {
 // Safe JSON parser that returns empty object on error
 export function safeParse(json?: string): Record<string, unknown> {
     if (!json) return {};
-    try { return JSON.parse(json); } catch { return {}; }
+    try {
+        return JSON.parse(json);
+    } catch {
+        return {};
+    }
 }
 
 // Simple deterministic ID generator for tool calls

@@ -2,9 +2,8 @@ import 'reflect-metadata';
 import {OpenAIContentTranslator} from "./openai.content.translators";
 import {OpenAIRequestMessage} from "../types";
 import {injectable} from 'tsyringe';
-import {pickDefined, createStableId, safeParse} from "@holokai/sdk";
+import {createStableId, HoloMessage, pickDefined, safeParse} from "@holokai/sdk";
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloMessage} from "@holokai/sdk";
 
 @injectable()
 export class OpenAIMessageTranslator extends BaseTranslator<HoloMessage, OpenAIRequestMessage> {

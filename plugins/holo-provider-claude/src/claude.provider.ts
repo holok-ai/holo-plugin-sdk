@@ -1,42 +1,26 @@
-import {AIProvider} from "../ai.provider";
-import {AIRequestStat, ModelInfo, RequestType} from "../types";
-import {ErrorMessages} from "../../utils";
 import {Anthropic} from "@anthropic-ai/sdk/client";
-import {ResponseService} from "../../services";
 import {Message, MessageCreateParamsBase, MessageStreamEvent} from "@anthropic-ai/sdk/resources/messages";
-import {Provider} from "../../db/types";
+import {IProvider, ModelInfo, ProviderConfig} from "@holokai/sdk";
 
-export class ClaudeProvider extends AIProvider {
+export class ClaudeProvider implements IProvider {
     protected readonly client: Anthropic;
 
-    constructor(
-        protected provider: Provider,
-        protected responseService: ResponseService,
-        protected workerId: string) {
-        super(provider, responseService, workerId);
-
-        if (!this.config.apiKey) {
+    constructor(private config: ProviderConfig) {
+        if (!this.config.api_key) {
             throw new Error(ErrorMessages.apiKeyRequired('Claude'));
         }
 
         this.client = new Anthropic({
-            apiKey: this.config.apiKey
+            apiKey: this.config.api_key
         });
+
+        this.init();
     }
 
-    async init(): Promise<void> {
-        if (!this.config.apiKey) {
-            throw new Error(ErrorMessages.apiKeyRequired('Claude'));
-        }
-
-        const logger = this.mlog(this.init);
-
+    init() {
         try {
             await this.getModels();
-
-            logger.info('Claude provider initialized');
         } catch (error) {
-            logger.error(`Failed to initialize Claude provider: ${(error as Error).message}`);
             throw error;
         }
     }
@@ -45,11 +29,7 @@ export class ClaudeProvider extends AIProvider {
      * Get available models
      */
     async getModels(): Promise<ModelInfo[]> {
-        const logger = this.mlog(this.getModels);
         try {
-            if (!this.client) {
-                await this.init();
-            }
 
             const response = await this.client!.models.list();
             logger.debug(`Claude models: ${JSON.stringify(response.data)}`);
@@ -65,10 +45,8 @@ export class ClaudeProvider extends AIProvider {
                 return acc;
             }, {} as Record<string, ModelInfo>);
 
-            logger.debug(`Claude models: ${JSON.stringify(Object.keys(this.models))}`);
             return modelList;
         } catch (error) {
-            logger.error(`Error fetching Claude models: ${(error as Error).message}`);
             throw error;
         }
     }

@@ -3,7 +3,7 @@ import {ClaudeStopReason} from "../types";
 
 export function mapClaudeFinishReason(reason?: string | null): HoloFinishReason | undefined {
     if (!reason) return undefined;
-    
+
     switch (reason) {
         case 'end_turn':
             return 'stop';
@@ -23,7 +23,7 @@ export function mapClaudeFinishReason(reason?: string | null): HoloFinishReason 
 export function mapHoloFinishReasonToClaude(reason?: HoloFinishReason): ClaudeStopReason | null | undefined {
     if (reason === undefined) return undefined;
     if (reason === null) return null;
-    
+
     switch (reason) {
         case 'stop':
             return 'end_turn';

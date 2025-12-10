@@ -37,10 +37,6 @@ export abstract class BaseTranslator<THolo, TProvider> {
         return results.filter(item => Object.keys(item).length > 0) as TTarget[];
     }
 
-    protected abstract fromHoloImpl(source: THolo): Promise<Partial<TProvider>>;
-
-    protected abstract toHoloImpl(source: TProvider): Promise<Partial<THolo>>;
-
     async fromHolo(source: THolo, validateTarget = false): Promise<Partial<TProvider>> {
         return await this.translate<THolo, TProvider>(source, {fromHolo: true, validateTarget});
     }
@@ -56,4 +52,8 @@ export abstract class BaseTranslator<THolo, TProvider> {
     async toHoloArray(items: TProvider[] | undefined, validateTarget = false): Promise<THolo[]> {
         return await this.translateArray(items, {fromHolo: false, validateTarget});
     }
+
+    protected abstract fromHoloImpl(source: THolo): Promise<Partial<TProvider>>;
+
+    protected abstract toHoloImpl(source: TProvider): Promise<Partial<THolo>>;
 }
