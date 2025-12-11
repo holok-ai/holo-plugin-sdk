@@ -78,7 +78,7 @@ packages/core/
 │   │   ├── config.types.ts
 │   │   └── index.ts
 │   └── utils/
-│       ├── parsers.ts
+│       ├── index.ts
 │       ├── pick-defined.ts
 │       └── error-messages.ts
 ├── package.json
@@ -121,7 +121,7 @@ packages/providers/
 │   │   ├── validators/
 │   │   ├── holo.translator.ts
 │   │   ├── holo.request.factory.ts
-│   │   └── holo.response.factory.ts
+│   │   └── response-factory.ts
 │   ├── claude/
 │   │   ├── types/
 │   │   ├── validators/
@@ -140,9 +140,9 @@ packages/providers/
 │   ├── perplexity/
 │   │   └── [similar structure]
 │   ├── base/
-│   │   ├── base.translator.ts
-│   │   ├── base.stream.translator.ts
-│   │   └── base.provider.ts         Abstract provider base
+│   │   ├── base.ts
+│   │   ├── stream.ts
+│   │   └── base.ts         Abstract provider base
 │   ├── http/
 │   │   └── http.client.ts           Generic HTTP client
 │   └── types/
@@ -272,7 +272,7 @@ packages/worker/
 │   │   └── worker.types.ts
 │   └── factories/
 │       ├── request.factory.ts
-│       └── response.factory.ts
+│       └── response-factory.ts
 ├── package.json
 └── README.md
 ```

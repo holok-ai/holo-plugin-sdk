@@ -5,15 +5,14 @@ import logger from "../utils/logger";
 import {ProviderService, ResponseService} from "../services";
 import {container, injectable} from "tsyringe";
 import {withStats} from "./mixins/withStats";
-import {AIRequestStat, RequestType} from "../providers/types";
 import {LLMWorkerRequest} from '../types';
 import {env} from "../env";
 import {GuardService} from "../admin/services";
-import {IProvider} from "../providers/ai.provider";
 import {PluginService} from "../services/plugin/plugin.service";
 import {PluginDiscoveryService} from "../services/plugin/discovery.service";
 import {PluginLoaderService} from "../services/plugin/loader.service";
 import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
+import {AIRequestStat, IProvider, RequestType} from "@holokai/sdk";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {

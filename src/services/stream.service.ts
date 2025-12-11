@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import {container, injectable} from 'tsyringe';
 import {ResponseStream} from "./response.service";
 import {LLMWorkerResponse} from "../types";
-import {ProviderType} from "../providers/types";
 import {ErrorMessages} from "../utils";
 import {ClassLogger} from "../types/class.logger";
 import {HoloResponseFactory} from "../providers/holo/holo.response.factory";

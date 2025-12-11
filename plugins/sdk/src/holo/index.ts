@@ -9,27 +9,14 @@
  * @packageDocumentation
  */
 
-import {HoloContent, HoloContentImage, HoloContentText, HoloRequest} from "./types.js";
 
-// Export all types
-export * from './types.js';
-export * from './holo.response.factory';
+// -- export types
+export * from './content';
+export * from './messages';
+export * from './requests';
+export * from './responses';
+export * from './tools';
 
-// Default values for Holo request
-export const HoloRequestDefaults: Partial<HoloRequest> = {
-    stream: false,
-    temperature: 1.0,
-    top_p: 1.0,
-    tool_choice: {type: 'auto'},
-    response_format: {type: 'text'}
-};
 
-export function isText(p: HoloContent): p is HoloContentText {
-    return p.type === "text";
-}
-
-export function isImage(p: HoloContent): p is HoloContentImage {
-    return p.type === "image";
-}
-
-// Validators removed - using TypeScript types only for plugin architecture
+// -- export factories
+export * from './factories';

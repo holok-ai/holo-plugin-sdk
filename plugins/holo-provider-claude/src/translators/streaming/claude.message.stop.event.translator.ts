@@ -3,10 +3,10 @@ import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {ClaudeRawMessageStopEvent} from '../../types';
 import {HoloStreamChunk} from "@holokai/sdk";
-import {BaseStreamTranslator} from "@holokai/sdk/provider";
+import {StreamTranslator} from "@holokai/sdk/provider";
 
 @injectable()
-export class ClaudeMessageStopEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ClaudeRawMessageStopEvent> {
+export class ClaudeMessageStopEventTranslator extends StreamTranslator<HoloStreamChunk, ClaudeRawMessageStopEvent> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<ClaudeRawMessageStopEvent> = {};
 

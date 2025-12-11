@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import {OpenAIResponseCreateParams, OpenAIResponseStreamEvent} from '../types';
-import {LLMWorkerResponse} from "@holokai/sdk";
+import {HoloWorkerResponse} from "@holokai/sdk";
 
 export class OpenAIResponsesService {
     constructor(
@@ -11,8 +11,8 @@ export class OpenAIResponsesService {
             providerType: 'openai',
             payload: OpenAIResponseStreamEvent | OpenAI.Responses.Response | Error,
             fullResponse?: string
-        ) => LLMWorkerResponse,
-        private readonly onResponseChunk: (responseChunk: LLMWorkerResponse, auditEnabled?: boolean) => Promise<void>,
+        ) => HoloWorkerResponse,
+        private readonly onResponseChunk: (responseChunk: HoloWorkerResponse, auditEnabled?: boolean) => Promise<void>,
         private readonly validateModel: (model: string) => void
     ) {
     }

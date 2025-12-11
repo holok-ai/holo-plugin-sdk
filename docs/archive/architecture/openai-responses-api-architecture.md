@@ -738,7 +738,7 @@ interface HoloStreamEnvelope {
 
 ```typescript
 import { injectable } from 'tsyringe';
-import { BaseTranslator } from '../../../base.translator';
+import { Base } from '../../../base.translator';
 
 @injectable()
 export class OpenAIResponsesEventTranslator {
@@ -857,7 +857,7 @@ export class OpenAIResponsesEventTranslator {
 
 ```typescript
 @injectable()
-export class TextDeltaTranslator extends BaseTranslator<
+export class TextDeltaTranslator extends Base<
     HoloStreamEnvelope,
     OpenAIResponsesEvent
 > {
@@ -894,7 +894,7 @@ export class TextDeltaTranslator extends BaseTranslator<
 
 ```typescript
 @injectable()
-export class ToolCallDeltaTranslator extends BaseTranslator<
+export class ToolCallDeltaTranslator extends Base<
     HoloStreamEnvelope,
     OpenAIResponsesEvent
 > {
@@ -934,7 +934,7 @@ export class ToolCallDeltaTranslator extends BaseTranslator<
 
 ```typescript
 @injectable()
-export class ReasoningSummaryTranslator extends BaseTranslator<
+export class ReasoningSummaryTranslator extends Base<
     HoloStreamEnvelope,
     OpenAIResponsesEvent
 > {

@@ -106,7 +106,7 @@
 - Translators MUST generate a synthetic `id` when the provider does not return one (e.g., Ollama)
 - **Recommended format**: UUIDv4 (`crypto.randomUUID()`) or use `createStableId()` utility for deterministic hashing
 - **Scope**: Synthesize for any provider lacking `id` (primarily Ollama, but future-proof)
-- **Note**: The `createStableId()` utility in `utils/stable-id.ts` provides a simple hash-based ID generator (primarily for tool calls, but pattern is reusable)
+- **Note**: The `createStableId()` utility in `utils/index.ts` provides a simple hash-based ID generator (primarily for tool calls, but pattern is reusable)
 
 ### HoloStreamChunk Fields
 

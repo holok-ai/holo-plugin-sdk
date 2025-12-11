@@ -1,12 +1,12 @@
 import {injectable} from 'tsyringe';
 import {ClaudeChatRequest} from "./types";
-import {BaseAuditor, LlmRequest, LlmResponse, LlmStatus, LLMWorkerRequest, LLMWorkerResponse} from "@holokai/sdk";
+import {BaseAuditor, LlmRequest, LlmResponse, LlmStatus, HoloWorkerRequest, HoloWorkerResponse} from "@holokai/sdk";
 
 @injectable()
 export class ClaudeAuditor extends BaseAuditor {
     readonly provider = 'claude';
 
-    protected toHoloRequest(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
+    protected toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
         const payload = workerRequest.payload as ClaudeChatRequest;
 
         llmRequest.model_slug = payload.model;
@@ -23,7 +23,7 @@ export class ClaudeAuditor extends BaseAuditor {
         }
     }
 
-    protected mapProviderPayload(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
+    protected mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
         const payload = workerRequest.payload as ClaudeChatRequest;
         const options: Record<string, any> = {};
 
@@ -41,7 +41,7 @@ export class ClaudeAuditor extends BaseAuditor {
     }
 
     protected mapResponseToHolo(
-        workerResponse: LLMWorkerResponse,
+        workerResponse: HoloWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>
     ): void {
         const payload = workerResponse.payload;
@@ -57,7 +57,7 @@ export class ClaudeAuditor extends BaseAuditor {
     }
 
     protected collectResponseMetrics(
-        workerResponse: LLMWorkerResponse,
+        workerResponse: HoloWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>
     ): void {
         const payload = workerResponse.payload;

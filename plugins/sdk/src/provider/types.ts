@@ -1,9 +1,9 @@
-import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "@holokai/sdk/holo";
-import {LLMWorkerRequest, LLMWorkerResponse} from "../types";
-import {RequestType} from "./request.type";
+import {RequestType} from "@holokai/sdk/holo";
+import {HoloWorkerRequest, HoloWorkerResponse} from "../core/worker";
 
 export interface ProviderConfig {
     id: string;
+    name: string;
     provider_type: string;
     api_key: string;
     model: string;
@@ -28,22 +28,6 @@ export interface ProviderCapabilities {
     maxTokens: number;
 }
 
-
-export interface IProviderTranslator {
-    toHoloRequest(request: any): Promise<Partial<HoloRequest>>;
-
-    fromHoloRequest(request: HoloRequest): Promise<Partial<any>>;
-
-    toHoloMessages(messages: any[]): Promise<Partial<HoloMessage>[]>;
-
-    fromHoloMessages(messages: HoloMessage[]): Promise<Partial<any>[]>;
-
-    toHoloResponse(response: any): Promise<Partial<HoloResponse>>;
-
-    fromHoloResponse(response: HoloResponse): Promise<Partial<any>>;
-
-    fromHoloStreamChunks(chunks: HoloStreamChunk[]): Promise<unknown>;
-}
 
 /**
  * Model information interface
@@ -81,9 +65,9 @@ export interface IProvider {
 
     getModels(): Promise<ModelInfo[]>;
 
-    processRequest(request: LLMWorkerRequest): Promise<AIRequestStat | null>;
+    processRequest(request: HoloWorkerRequest): Promise<AIRequestStat | null>;
 
     handleLLMRequest(sourceId: string, requestId: string, payload: any, type: RequestType): Promise<AIRequestStat>;
 
-    onResponseChunk(responseChunk: LLMWorkerResponse): Promise<void>;
+    onResponseChunk(responseChunk: HoloWorkerResponse): Promise<void>;
 }

@@ -4,7 +4,8 @@ import {ErrorMessages} from "../utils";
 import {Provider} from "../db/types";
 import {ClassLogger} from "../types/class.logger";
 import {env} from "../env";
-import {AIRequestStat, IProvider, ModelInfo, ProviderConfig, RequestType} from "@holokai/sdk/provider";
+import {AIRequestStat, IProvider, ModelInfo, ProviderConfig} from "@holokai/sdk/provider";
+import {RequestType} from "@holokai/sdk";
 
 
 /**

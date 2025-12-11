@@ -3,10 +3,10 @@ import {injectable} from 'tsyringe';
 import {v4 as uuidv4} from 'uuid';
 import {OpenAIChatCompletionChunk} from '../../types';
 import {HoloFinishReason, HoloStreamChunk, pickDefined} from '@holokai/sdk';
-import {BaseStreamTranslator} from "@holokai/sdk/provider";
+import {StreamTranslator} from "@holokai/sdk/provider";
 
 @injectable()
-export class OpenAIMessageStopTranslator extends BaseStreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {
+export class OpenAIMessageStopTranslator extends StreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<OpenAIChatCompletionChunk> = {};
 

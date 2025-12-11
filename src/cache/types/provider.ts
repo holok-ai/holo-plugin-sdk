@@ -1,8 +1,6 @@
-import {ProviderType} from "../../providers/types";
-
 export interface Provider {
     id: string;
     name: string;
-    type: ProviderType;
+    type: string;
     config: Record<string, any>;
 }

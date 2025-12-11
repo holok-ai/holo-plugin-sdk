@@ -4,10 +4,10 @@ import {injectable} from 'tsyringe';
 import {ClaudeRawMessageDeltaEvent} from '../../types';
 import {HoloStreamChunk, pickDefined} from '@holokai/sdk';
 import {mapClaudeFinishReason, mapHoloFinishReasonToClaude} from '../../utils/finish.reason.mapper.js';
-import {BaseStreamTranslator} from "@holokai/sdk/provider";
+import {StreamTranslator} from "@holokai/sdk/provider";
 
 @injectable()
-export class ClaudeMessageDeltaEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ClaudeRawMessageDeltaEvent> {
+export class ClaudeMessageDeltaEventTranslator extends StreamTranslator<HoloStreamChunk, ClaudeRawMessageDeltaEvent> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<ClaudeRawMessageDeltaEvent> = {};
 

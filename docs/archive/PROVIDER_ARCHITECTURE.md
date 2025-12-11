@@ -75,10 +75,10 @@ The Holo format serves as the **canonical intermediate representation** that all
 
 **Files**: `src/providers/{provider}/translators/`
 
-Each provider implements translators that extend `BaseTranslator<Source, Target>`:
+Each provider implements translators that extend `Base<Source, Target>`:
 
 ```typescript
-abstract class BaseTranslator<S, T> {
+abstract class Base<S, T> {
     protected abstract holoValidator: Type<S>;
     protected abstract providerValidator: Type<T>;
 

@@ -50,7 +50,7 @@
       "import": "./dist/holo/index.js",
       "require": "./dist/holo/index.js"
     },
-    "./api": {
+    "./core": {
       "types": "./dist/api/index.d.ts",
       "import": "./dist/api/index.js",
       "require": "./dist/api/index.js"

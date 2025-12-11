@@ -28,10 +28,10 @@
     "baseUrl": ".",
     "paths": {
       "@holokai/sdk": ["./plugins/sdk/src/index.ts"],
+      "@holokai/sdk/core": ["./plugins/sdk/src/core/index.ts"],
       "@holokai/sdk/plugin": ["./plugins/sdk/src/plugin/index.ts"],
       "@holokai/sdk/provider": ["./plugins/sdk/src/provider/index.ts"],
-      "@holokai/sdk/holo": ["./plugins/sdk/src/holo/index.ts"],
-      "@holokai/sdk/utils": ["./plugins/sdk/src/utils/index.ts"]
+      "@holokai/sdk/holo": ["./plugins/sdk/src/holo/index.ts"]
     }
   },
   "ts-node": {

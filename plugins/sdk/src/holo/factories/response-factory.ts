@@ -1,7 +1,7 @@
-import {HoloResponse, HoloStreamChunk} from "./types";
 import {pickDefined} from "@holokai/sdk";
+import {HoloResponse, HoloStreamChunk} from "../responses";
 
-export class HoloResponseFactory {
+export class ResponseFactory {
 
     static async createErrorResponse(id: string, model: string, error: string): Promise<Partial<HoloResponse>> {
         return pickDefined({

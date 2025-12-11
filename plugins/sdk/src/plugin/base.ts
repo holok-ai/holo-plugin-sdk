@@ -1,12 +1,82 @@
-import {
-    HealthCheckResult,
-    IPlugin,
-    PluginContext,
-    PluginError,
-    PluginErrorCode,
-    PluginManifest,
-    PluginState,
-} from './index.js';
+import {PluginManifest} from "./manifest";
+import {PluginContext} from "./context";
+import {PluginError, PluginErrorCode} from "./errors";
+import {ClassLogger} from "../core";
+
+
+export enum PluginState {
+    UNINITIALIZED = 'uninitialized',
+    INITIALIZING = 'initializing',
+    READY = 'ready',
+    ERROR = 'error',
+    DESTROYING = 'destroying',
+    DESTROYED = 'destroyed'
+}
+
+/**
+ * Base plugin interface that all plugin types must implement
+ *
+ * @example
+ * ```typescript
+ * class MyPlugin implements IPlugin {
+ *   manifest = {
+ *     name: '@myorg/my-plugin',
+ *     version: '1.0.0',
+ *     pluginType: 'provider' as const
+ *   };
+ *
+ *   async initialize(context: PluginContext): Promise<void> {
+ *     // Setup plugin resources
+ *   }
+ *
+ *   async destroy(): Promise<void> {
+ *     // Cleanup resources
+ *   }
+ * }
+ * ```
+ */
+export interface IPlugin {
+    /** Plugin metadata and configuration */
+    readonly manifest: PluginManifest;
+
+    /** Current plugin state */
+    readonly state: PluginState;
+
+    /**
+     * Initialize the plugin with provided context
+     * @param context Runtime context including logger, config, and environment
+     * @throws {PluginError} If initialization fails
+     */
+    initialize(context: PluginContext): Promise<void>;
+
+    /**
+     * Destroy the plugin and cleanup resources
+     * @throws {PluginError} If cleanup fails
+     */
+    destroy(): Promise<void>;
+
+    /**
+     * Get current plugin state
+     * @returns Current state of the plugin
+     */
+    getState(): PluginState;
+
+    /**
+     * Perform health check on the plugin
+     * @returns Health status and diagnostic information
+     */
+    healthCheck(): Promise<HealthCheckResult>;
+}
+
+/**
+ * Health check result for plugin status monitoring
+ */
+export interface HealthCheckResult {
+    healthy: boolean;
+    message?: string;
+    details?: Record<string, unknown>;
+    timestamp: number;
+}
 
 /**
  * Base abstract class implementing common plugin functionality.
@@ -15,7 +85,7 @@ import {
  *   UNINITIALIZED → INITIALIZING → READY → DESTROYING → DESTROYED
  *   Any failure moves the plugin to ERROR.
  */
-export abstract class BasePlugin implements IPlugin {
+export abstract class BasePlugin extends ClassLogger implements IPlugin {
     /**
      * Static manifest per-plugin implementation.
      * Implementations SHOULD treat this as immutable metadata.
@@ -31,6 +101,7 @@ export abstract class BasePlugin implements IPlugin {
     get state(): PluginState {
         return this._state;
     }
+
 
     /**
      * Strongly typed access to the plugin context.
@@ -54,10 +125,6 @@ export abstract class BasePlugin implements IPlugin {
         return this._state;
     }
 
-    /**
-     * Initialize the plugin with a runtime context.
-     * May only be called once from the UNINITIALIZED state.
-     */
     async initialize(context: PluginContext): Promise<void> {
         if (this._state !== PluginState.UNINITIALIZED) {
             throw new PluginError(
@@ -71,13 +138,13 @@ export abstract class BasePlugin implements IPlugin {
         this._context = context;
 
         try {
+            this.log.debug('Initializing plugin');
             await this.onInitialize(context);
             this._state = PluginState.READY;
+            this.log.info('Plugin initialized successfully');
         } catch (error) {
-            // Clear context on failed initialization to avoid half-initialized usage
-            this._context = undefined;
             this._state = PluginState.ERROR;
-
+            this.log.error('Plugin initialization failed', {error});
             throw new PluginError(
                 'Failed to initialize plugin',
                 PluginErrorCode.INITIALIZATION_FAILED,
@@ -87,31 +154,31 @@ export abstract class BasePlugin implements IPlugin {
         }
     }
 
-    /**
-     * Destroy the plugin and release any resources.
-     * Idempotent: safe to call multiple times.
-     */
     async destroy(): Promise<void> {
         if (this._state === PluginState.DESTROYED) {
             return;
         }
 
         if (this._state === PluginState.UNINITIALIZED) {
-            // Nothing to tear down; just mark as destroyed
             this._state = PluginState.DESTROYED;
-            this._context = undefined;
             return;
         }
 
         this._state = PluginState.DESTROYING;
 
         try {
+            this.log.info('Destroying plugin');
             await this.onDestroy();
             this._state = PluginState.DESTROYED;
             this._context = undefined;
         } catch (error) {
             this._state = PluginState.ERROR;
-            // Keep context for potential debugging/logging while in ERROR
+            // Fall back to console if logger is gone
+            try {
+                this.log.error('Plugin destruction failed', {error});
+            } catch {
+                console.error(`[${this.manifest.name}] Plugin destruction failed`, error);
+            }
             throw new PluginError(
                 'Failed to destroy plugin',
                 PluginErrorCode.DESTRUCTION_FAILED,
@@ -121,12 +188,6 @@ export abstract class BasePlugin implements IPlugin {
         }
     }
 
-    /**
-     * Health check endpoint used by the host.
-     * By default:
-     *   - Not READY → unhealthy
-     *   - READY → healthy unless onHealthCheck() reports otherwise
-     */
     async healthCheck(): Promise<HealthCheckResult> {
         const timestamp = Date.now();
 
@@ -134,64 +195,35 @@ export abstract class BasePlugin implements IPlugin {
             return {
                 healthy: false,
                 message: `Plugin not ready (state: ${this._state})`,
-                timestamp,
+                timestamp
             };
         }
 
         try {
             const customCheck = await this.onHealthCheck();
-            // Allow plugin to override default response
             return (
                 customCheck ?? {
                     healthy: true,
-                    timestamp,
+                    timestamp
                 }
             );
         } catch (error) {
+            this.log.warn('Health check failed', {error});
             return {
                 healthy: false,
-                message:
-                    error instanceof Error
-                        ? error.message
-                        : 'Health check failed',
-                timestamp,
+                message: error instanceof Error ? error.message : 'Health check failed',
+                timestamp
             };
         }
     }
 
-    /**
-     * Hook invoked during initialize().
-     * Implementations should:
-     *   - Validate configuration
-     *   - Establish any long-lived connections
-     *   - Perform a lightweight self-check
-     *
-     * Throwing will mark the plugin as ERROR and fail initialization.
-     */
     protected abstract onInitialize(context: PluginContext): Promise<void>;
 
-    /**
-     * Hook invoked during destroy().
-     * Implementations should:
-     *   - Close connections
-     *   - Flush buffers
-     *   - Release resources
-     *
-     * Throwing will mark the plugin as ERROR.
-     */
     protected abstract onDestroy(): Promise<void>;
 
-    /**
-     * Optional hook for custom health checks.
-     * Return:
-     *   - undefined → host will consider the plugin healthy
-     *   - HealthCheckResult → host will use this result verbatim
-     *
-     * Throwing marks the plugin unhealthy for that check invocation.
-     */
-    // eslint-disable-next-line @typescript-eslint/require-await
     protected async onHealthCheck(): Promise<HealthCheckResult | void> {
         // Default implementation: no-op (host treats as healthy if READY)
         return;
     }
+
 }

@@ -1,12 +1,12 @@
 import {injectable} from 'tsyringe';
-import {BaseAuditor, LlmRequest, LlmResponse, LlmStatus, LLMWorkerRequest, LLMWorkerResponse} from "@holokai/sdk";
+import {BaseAuditor, LlmRequest, LlmResponse, LlmStatus, HoloWorkerRequest, HoloWorkerResponse} from "@holokai/sdk";
 import {OpenAIChatRequest} from "./types";
 
 @injectable()
 export class OpenAIAuditor extends BaseAuditor {
     readonly provider = 'openai';
 
-    protected toHoloRequest(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
+    protected toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
         const payload = workerRequest.payload as OpenAIChatRequest;
 
         // Set model
@@ -25,7 +25,7 @@ export class OpenAIAuditor extends BaseAuditor {
         }
     }
 
-    protected mapProviderPayload(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
+    protected mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
         const payload = workerRequest.payload as OpenAIChatRequest;
         // Set options (OpenAI-specific parameters)
         const options: Record<string, any> = {};
@@ -48,7 +48,7 @@ export class OpenAIAuditor extends BaseAuditor {
     }
 
     protected mapResponseToHolo(
-        workerResponse: LLMWorkerResponse,
+        workerResponse: HoloWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>
     ): void {
         const payload = workerResponse.payload;
@@ -74,7 +74,7 @@ export class OpenAIAuditor extends BaseAuditor {
     }
 
     protected collectResponseMetrics(
-        workerResponse: LLMWorkerResponse,
+        workerResponse: HoloWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>
     ): void {
 

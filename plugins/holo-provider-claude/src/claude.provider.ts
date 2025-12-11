@@ -1,23 +1,29 @@
 import {Anthropic} from "@anthropic-ai/sdk/client";
 import {Message, MessageCreateParamsBase, MessageStreamEvent} from "@anthropic-ai/sdk/resources/messages";
 import {IProvider, ModelInfo, ProviderConfig} from "@holokai/sdk";
+import {BaseProvider} from "@holokai/sdk/provider";
+import {PluginContext} from "@holokai/sdk/plugin";
 
-export class ClaudeProvider implements IProvider {
+export class ClaudeProvider extends BaseProvider implements IProvider {
     protected readonly client: Anthropic;
 
-    constructor(private config: ProviderConfig) {
-        if (!this.config.api_key) {
-            throw new Error(ErrorMessages.apiKeyRequired('Claude'));
+    constructor(
+        context: PluginContext,
+        config: ProviderConfig
+    ) {
+        super(context, config);
+        if (!this._config.api_key) {
+            throw new Error('API Key Required');
         }
 
         this.client = new Anthropic({
-            apiKey: this.config.api_key
+            apiKey: this._config.api_key
         });
 
-        this.init();
+        this.init().then(() => this.logger.info('Provider has been initialized'));
     }
 
-    init() {
+    async init() {
         try {
             await this.getModels();
         } catch (error) {

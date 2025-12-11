@@ -47,13 +47,13 @@ For each provider event type (e.g., `message_start`, `content_block_delta`):
 ```typescript
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {BaseStreamTranslator} from '../../../base.stream.translator';
+import {Stream} from '../../../base.stream.translator';
 import {HoloStreamChunk, HoloStreamChunkValidator} from '../../../holo';
 import {ProviderEventType} from '../../types';
 import {ProviderEventValidator} from '../../validators';
 
 @injectable()
-export class ProviderEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ProviderEventType> {
+export class ProviderEventTranslator extends Stream<HoloStreamChunk, ProviderEventType> {
     protected holoValidator = HoloStreamChunkValidator;
     protected providerValidator = ProviderEventValidator;
     protected holoDefaults: Partial<HoloStreamChunk> = {};
@@ -84,7 +84,7 @@ The main translator that routes to appropriate sub-translators. This is where an
 
 ```typescript
 @injectable()
-export class ProviderStreamTranslator extends BaseStreamTranslator<HoloStreamChunk, ProviderRawStreamEvent> {
+export class ProviderStreamTranslator extends Stream<HoloStreamChunk, ProviderRawStreamEvent> {
     // ... validators and defaults ...
     
     // State tracking (if needed) belongs HERE in orchestrator, NOT in individual translators

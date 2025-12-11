@@ -1,5 +1,5 @@
-import {IPlugin} from './index.js';
 import type {IProvider, ProviderCapabilities as ProviderFeatures, ProviderConfig} from '../provider/types.js';
+import {IPlugin} from "./base";
 
 /**
  * Provider plugin interface for LLM integrations.

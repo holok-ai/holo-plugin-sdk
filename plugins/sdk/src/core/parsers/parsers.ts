@@ -30,26 +30,3 @@ export function isUint8Array(value: any): value is Uint8Array {
         typeof value.buffer === 'object' &&
         value.constructor?.name === 'Uint8Array';
 }
-
-// Safe JSON parser that returns empty object on error
-export function safeParse(json?: string): Record<string, unknown> {
-    if (!json) return {};
-    try {
-        return JSON.parse(json);
-    } catch {
-        return {};
-    }
-}
-
-// Simple deterministic ID generator for tool calls
-export function createStableId(name: string, args: Record<string, unknown>): string {
-    // Create a stable hash from function name and arguments
-    const input = name + JSON.stringify(args, Object.keys(args).sort());
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-        const char = input.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
-    }
-    return `call_${Math.abs(hash).toString(16)}`;
-}

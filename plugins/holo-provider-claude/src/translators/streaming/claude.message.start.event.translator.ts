@@ -3,11 +3,11 @@ import {injectable} from 'tsyringe';
 import {v4 as uuidv4} from 'uuid';
 import {ClaudeRawMessageStartEvent, ClaudeResponseMessage} from '../../types';
 import {ClaudeUsageTranslator} from '../claude.usage.translators';
-import {BaseStreamTranslator} from "@holokai/sdk/provider";
+import {StreamTranslator} from "@holokai/sdk/provider";
 import {HoloStreamChunk, pickDefined} from "@holokai/sdk";
 
 @injectable()
-export class ClaudeMessageStartEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ClaudeRawMessageStartEvent> {
+export class ClaudeMessageStartEventTranslator extends StreamTranslator<HoloStreamChunk, ClaudeRawMessageStartEvent> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<ClaudeRawMessageStartEvent> = {};
 

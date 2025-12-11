@@ -45,12 +45,12 @@ llm-proxy/
 │   ├── providers/                # LLM provider integrations
 │   │   ├── ai.provider.ts              # Base provider interface
 │   │   ├── auditors.ts                 # Request/response auditing
-│   │   ├── base.translator.ts          # Base translation logic
-│   │   ├── base.stream.translator.ts   # Base streaming translation
+│   │   ├── base.ts          # Base translation logic
+│   │   ├── stream.ts   # Base streaming translation
 │   │   ├── claude/               # Anthropic Claude integration
 │   │   │   ├── claude.translator.ts
 │   │   │   ├── claude.auditor.ts
-│   │   │   ├── claude.response.factory.ts
+│   │   │   ├── claude.response-factory.ts
 │   │   │   ├── translators/            # Request/response translators
 │   │   │   ├── types/                  # Claude type definitions
 │   │   │   ├── validators/             # ArkType validators
@@ -160,7 +160,7 @@ src/
 **Files**:
 - `worker.types.ts` - Core interfaces (LLMWorkerRequest, LLMWorkerResponse)
 - `worker.request.factory.ts` - Factory with DI (tsyringe) ❌
-- `worker.response.factory.ts` - Factory with DI (tsyringe) ❌
+- `worker.response-factory.ts` - Factory with DI (tsyringe) ❌
 - `worker.validators.ts` - ArkType validators ✅
 - `config.types.ts` - Configuration types ✅
 - `evaluator.types.ts`, `evaluator-pr.types.ts` - Domain types ✅
@@ -205,14 +205,14 @@ src/
 providers/
 ├── types/                  ✅ Core interfaces
 ├── validators.ts           ✅ Validation logic
-├── base.translator.ts      ✅ Abstract translator base
-├── base.stream.translator.ts ✅ Abstract stream translator
+├── base.ts      ✅ Abstract translator base
+├── stream.ts ✅ Abstract stream translator
 ├── holo/                   ✅ Canonical format (pure types + factories)
 │   ├── types/
 │   ├── validators/
 │   ├── holo.translator.ts
 │   ├── holo.request.factory.ts
-│   └── holo.response.factory.ts
+│   └── response-factory.ts
 ├── claude/                 ⚠️ Provider impl (minimal I/O via SDK)
 │   ├── types/
 │   ├── validators/
@@ -274,8 +274,8 @@ admin/
 **Purpose**: Pure utility functions
 
 **Files**:
-- `parsers.ts` - String/number/boolean parsing ✅
-- `pick.defined.ts` - Object filtering ✅
+- `index.ts` - String/number/boolean parsing ✅
+- `pick-defined.ts` - Object filtering ✅
 - `error-messages.ts` - Error message builders ✅
 - `chat-message-adapters.ts` - Message transformation ✅
 - `logger.ts` - Winston logger setup ❌ (I/O)
@@ -552,7 +552,7 @@ WorkerResponseFactory.create(...)
 
 4. **Translator Pattern**: Bidirectional Holo ↔ Provider translation
 ```typescript
-abstract class BaseTranslator<THolo, TProvider> {
+abstract class Base<THolo, TProvider> {
     abstract toHolo(source: TProvider): Promise<Partial<THolo>>;
     abstract fromHolo(source: THolo): Promise<Partial<TProvider>>;
 }
@@ -594,8 +594,8 @@ abstract class BaseTranslator<THolo, TProvider> {
 ### ✅ CORE (Pure TypeScript - No Node/DOM/I/O)
 ```
 src/
-├── utils/parsers.ts
-├── utils/pick.defined.ts
+├── utils/index.ts
+├── utils/pick-defined.ts
 ├── utils/error-messages.ts
 ├── utils/chat-message-adapters.ts
 ├── cache/types/**
@@ -603,8 +603,8 @@ src/
 ├── cache/organization.cache.ts
 ├── providers/types/**
 ├── providers/validators.ts
-├── providers/base.translator.ts
-├── providers/base.stream.translator.ts
+├── providers/base.ts
+├── providers/stream.ts
 ├── providers/holo/types/**
 ├── providers/holo/validators/**
 ├── providers/holo/*.factory.ts
@@ -674,7 +674,7 @@ src/
 │   │   ├── types/
 │   │   ├── holo/                   (Universal format)
 │   │   ├── translators/            (Claude, OpenAI, Ollama translators)
-│   │   └── base/                   (BaseTranslator, BaseStreamTranslator)
+│   │   └── base/                   (Base, Stream)
 │   ├── utils/                      (Pure utilities)
 │   └── types/                      (Shared interfaces)
 │

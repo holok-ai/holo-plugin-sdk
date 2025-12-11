@@ -2,7 +2,7 @@
 
 ## Architecture
 
-**Stateless streaming translators** that extend `BaseTranslator` pattern.
+**Stateless streaming translators** that extend `Base` pattern.
 
 **Input:** Provider streaming chunk → **Output:** `HoloStreamChunk[]`
 

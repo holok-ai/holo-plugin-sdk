@@ -3,9 +3,9 @@ import {container, injectable} from "tsyringe";
 import logger from "../../utils/logger";
 import {IAppServer} from "../base.server";
 import {withQueue} from "./withQueue";
-import {Constructor} from '../../types';
 import {env} from "../../env";
 import {AdminService} from '../../services';
+import {Constructor} from "@holokai/sdk";
 
 export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
 

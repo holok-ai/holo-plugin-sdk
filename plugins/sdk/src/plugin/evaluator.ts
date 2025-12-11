@@ -1,4 +1,4 @@
-import {IPlugin} from './index.js';
+import {IPlugin} from "./base";
 
 /**
  * Types of evaluation metrics

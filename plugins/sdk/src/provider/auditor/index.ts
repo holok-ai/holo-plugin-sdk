@@ -1,14 +1,14 @@
-import {LLMWorkerRequest, LLMWorkerResponse} from "./worker.types";
-import {LlmRequest, LlmResponse, LlmStatus} from "../api";
+import {HoloWorkerRequest, HoloWorkerResponse} from "../../core/worker";
+import {LlmRequest, LlmResponse, LlmStatus} from "../../core";
 
 
 export interface IAuditor {
     readonly provider: string;
 
-    auditRequest(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
+    auditRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
 
     auditResponse(
-        workerResponse: LLMWorkerResponse,
+        workerResponse: HoloWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>,
         requestContext?: { userId?: string; applicationId?: string }
     ): void;
@@ -17,21 +17,21 @@ export interface IAuditor {
 export abstract class BaseAuditor implements IAuditor {
     abstract readonly provider: string;
 
-    auditRequest(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
+    auditRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
         this.setCommonFields(workerRequest, llmRequest);
         this.toHoloRequest(workerRequest, llmRequest);
         this.mapProviderPayload(workerRequest, llmRequest);
     }
 
     auditResponse(
-        workerResponse: LLMWorkerResponse,
+        workerResponse: HoloWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>,
         requestContext?: { userId?: string; applicationId?: string }
     ): void {
         // If payload is an array, audit each chunk separately
         if (Array.isArray(workerResponse.payload)) {
             for (const chunk of workerResponse.payload) {
-                const chunkResponse: LLMWorkerResponse = {
+                const chunkResponse: HoloWorkerResponse = {
                     ...workerResponse,
                     payload: chunk
                 };
@@ -41,32 +41,32 @@ export abstract class BaseAuditor implements IAuditor {
         }
 
         // At this point, TypeScript knows payload is a single ProviderResponse
-        const singleResponse = workerResponse as LLMWorkerResponse & { payload: any };
+        const singleResponse = workerResponse as HoloWorkerResponse & { payload: any };
 
         this.setCommonResponseFields(singleResponse, llmResponse, requestContext);
         this.mapResponseToHolo(singleResponse, llmResponse);
         this.collectResponseMetrics(singleResponse, llmResponse);
     }
 
-    protected abstract toHoloRequest(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
+    protected abstract toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
 
-    protected abstract mapProviderPayload(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
+    protected abstract mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
 
 
     protected abstract mapResponseToHolo(
-        workerResponse: LLMWorkerResponse & { payload: any },
+        workerResponse: HoloWorkerResponse & { payload: any },
         llmResponse: Omit<LlmResponse, 'id'>
     ): void;
 
     protected abstract collectResponseMetrics(
-        workerResponse: LLMWorkerResponse & { payload: any },
+        workerResponse: HoloWorkerResponse & { payload: any },
         llmResponse: Omit<LlmResponse, 'id'>
     ): void;
 
     /**
      * Set common fields that are the same across all providers for requests
      */
-    protected setCommonFields(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
+    protected setCommonFields(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
         llmRequest.request_id = workerRequest.requestId;
         llmRequest.request_type = workerRequest.type;
         llmRequest.timestamp = new Date(workerRequest.timestamp).toISOString();
@@ -93,7 +93,7 @@ export abstract class BaseAuditor implements IAuditor {
      * Set common fields that are the same across all providers for responses
      */
     protected setCommonResponseFields(
-        workerResponse: LLMWorkerResponse,
+        workerResponse: HoloWorkerResponse,
         llmResponse: Omit<LlmResponse, 'id'>,
         requestContext?: { userId?: string; applicationId?: string }
     ): void {

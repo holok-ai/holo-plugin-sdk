@@ -9,7 +9,7 @@
 - [Overview](#overview)
 - [Core Principles](#core-principles)
 - [System Architecture](#system-architecture)
-- [BaseStreamTranslator Pattern](#basestreamtranslator-pattern)
+- [Stream Pattern](#basestreamtranslator-pattern)
 - [Validator Architecture](#validator-architecture)
 - [Error Handling](#error-handling)
 - [Dependency Injection](#dependency-injection)
@@ -59,14 +59,14 @@ The provider translation system provides a **universal abstraction layer** for L
 
 ```typescript
 // ✅ Good - stateless
-export class OpenAIMessageStopTranslator extends BaseStreamTranslator {
+export class OpenAIMessageStopTranslator extends Stream {
     protected async toHoloManyImpl(source: OpenAIChunk): Promise<HoloStreamChunk[]> {
         return [this.mapToHolo(source)];  // Pure function
     }
 }
 
 // ❌ Bad - stateful
-export class BadTranslator extends BaseStreamTranslator {
+export class BadTranslator extends Stream {
     private messageStartSent = false;  // ❌ State between calls
 
     protected async toHoloManyImpl(source: OpenAIChunk): Promise<HoloStreamChunk[]> {
@@ -104,7 +104,7 @@ All translators support **both directions**:
 - `fromHolo` (Holo → Provider)
 
 ```typescript
-export class OpenAIMessageTranslator extends BaseStreamTranslator<HoloMessage, OpenAIMessage> {
+export class OpenAIMessageTranslator extends Stream<HoloMessage, OpenAIMessage> {
     // Provider → Holo
     protected async toHoloManyImpl(source: OpenAIMessage): Promise<Partial<HoloMessage>[]> {
         // ...
@@ -157,12 +157,12 @@ protected async toHoloManyImpl(source: OpenAIChunk): Promise<HoloStreamChunk[]> 
 **ArkType validators enforce contracts** at runtime:
 
 ```typescript
-export class OpenAIMessageStopTranslator extends BaseStreamTranslator {
+export class OpenAIMessageStopTranslator extends Stream {
     protected holoValidator = HoloStreamChunkValidator;
     protected providerValidator = OpenAIChatCompletionChunkValidator;
 
     protected async toHoloManyImpl(source: OpenAIChunk): Promise<HoloStreamChunk[]> {
-        // source already validated by BaseStreamTranslator
+        // source already validated by Stream
         // result will be validated before return
         return [this.mapToHolo(source)];
     }
@@ -357,13 +357,13 @@ if (!model) {
 
 ---
 
-## BaseStreamTranslator Pattern
+## Stream Pattern
 
 ### Class Hierarchy
 
 ```
-BaseStreamTranslator<THolo, TProvider>
-    ├── BaseTranslator<THolo, TProvider>         (request/response)
+Stream<THolo, TProvider>
+    ├── Base<THolo, TProvider>         (request/response)
     │   ├── ClaudeRequestTranslator
     │   ├── ClaudeResponseTranslator
     │   ├── ClaudeMessageTranslator
@@ -379,7 +379,7 @@ BaseStreamTranslator<THolo, TProvider>
 
 ```typescript
 @injectable()
-export abstract class BaseStreamTranslator<THolo, TProvider> {
+export abstract class Stream<THolo, TProvider> {
     // Validators (must be defined by subclass)
     protected abstract holoValidator: Type<THolo>;
     protected abstract providerValidator: Type<TProvider>;
@@ -451,7 +451,7 @@ const result = await translator.toHoloMany(openaiChunk);
 
 **Implementation returns `Partial<T>`** to avoid duplication:
 - Translator focuses on mapping logic
-- BaseStreamTranslator applies defaults
+- Stream applies defaults
 - Clean separation of concerns
 
 ```typescript
@@ -463,7 +463,7 @@ protected async toHoloManyImpl(source: OpenAIChunk): Promise<Partial<HoloStreamC
     }];
 }
 
-// BaseStreamTranslator: apply defaults
+// Stream: apply defaults
 public async toHoloMany(source: OpenAIChunk): Promise<HoloStreamChunk[]> {
     const partials = await this.toHoloManyImpl(source);
     return partials.map(p => ({ ...this.holoDefaults, ...p }));
@@ -796,7 +796,7 @@ import 'reflect-metadata';
 import { injectable, inject } from 'tsyringe';
 
 @injectable()
-export class OpenAIStreamTranslator extends BaseStreamTranslator {
+export class OpenAIStreamTranslator extends Stream {
     constructor(
         // Inject sub-translators
         private readonly messageStartTranslator: OpenAIMessageStartTranslator,
@@ -888,13 +888,13 @@ pickDefined({ a: 0, b: '', c: null, d: undefined })
 ```typescript
 import 'reflect-metadata';
 import { injectable } from 'tsyringe';
-import { BaseStreamTranslator } from '../../../base.stream.translator';
+import { Stream } from '../../../base.stream.translator';
 import { HoloStreamChunk, HoloStreamChunkValidator } from '../../../holo';
 import { ProviderEventType, ProviderEventValidator } from '../../validators';
 import { pickDefined } from '../../../utils';
 
 @injectable()
-export class ProviderEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ProviderEventType> {
+export class ProviderEventTranslator extends Stream<HoloStreamChunk, ProviderEventType> {
     protected holoValidator = HoloStreamChunkValidator;
     protected providerValidator = ProviderEventValidator;
     protected holoDefaults: Partial<HoloStreamChunk> = {};

@@ -148,14 +148,14 @@ if (result instanceof ArkErrors) {
 
 ## 5. Translation Pattern (Holo System)
 
-### BaseTranslator Pattern
+### Base Pattern
 
 **Abstract Base**:
 ```typescript
-import { BaseTranslator } from '../base.translator';
+import { Base } from '../base.translator';
 
 @injectable()
-export class ProviderTranslator extends BaseTranslator<HoloType, ProviderType> {
+export class ProviderTranslator extends Base<HoloType, ProviderType> {
     protected holoValidator = HoloValidator;
     protected providerValidator = ProviderValidator;
     protected holoDefaults: Partial<HoloType> = {};
@@ -178,7 +178,7 @@ export class ProviderTranslator extends BaseTranslator<HoloType, ProviderType> {
 ```
 
 **Requirements**:
-1. Extend `BaseTranslator<THolo, TProvider>`
+1. Extend `Base<THolo, TProvider>`
 2. Implement `fromHoloImpl` (Holo → Provider) and `toHoloImpl` (Provider → Holo)
 3. Use `pickDefined()` to strip undefined values
 4. Keep translators **stateless** (no instance variables)
@@ -447,7 +447,7 @@ core/
 - ❌ No database/queue operations
 
 **Translator Rules**:
-1. Extend `BaseTranslator<THolo, TProvider>`
+1. Extend `Base<THolo, TProvider>`
 2. No instance state (all logic in methods)
 3. Use `pickDefined()` to clean output
 4. Validate with ArkType at boundaries
@@ -702,7 +702,7 @@ describe('ServiceName', () => {
 - [ ] DI pattern used correctly (`@injectable()`)
 - [ ] Logging via `ClassLogger.mlog()`
 - [ ] Validation at boundaries (ArkType)
-- [ ] Translators extend `BaseTranslator`
+- [ ] Translators extend `Base`
 - [ ] No Express types in core/domain
 - [ ] Async/await used consistently
 - [ ] Error handling with structured logging

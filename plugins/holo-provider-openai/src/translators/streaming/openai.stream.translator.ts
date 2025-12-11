@@ -6,10 +6,10 @@ import {OpenAIContentDeltaTranslator} from './openai.content.delta.translator';
 import {OpenAIMessageDeltaTranslator} from './openai.message.delta.translator';
 import {OpenAIMessageStopTranslator} from './openai.message.stop.translator';
 import {HoloStreamChunk} from "@holokai/sdk";
-import {BaseStreamTranslator} from "@holokai/sdk/provider";
+import {StreamTranslator} from "@holokai/sdk/provider";
 
 @injectable()
-export class OpenAIStreamTranslator extends BaseStreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {
+export class OpenAIStreamTranslator extends StreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<OpenAIChatCompletionChunk> = {};
 

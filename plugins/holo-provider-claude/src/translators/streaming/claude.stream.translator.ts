@@ -9,11 +9,11 @@ import {ClaudeContentBlockStartEventTranslator} from './claude.content.block.sta
 import {ClaudeContentBlockDeltaEventTranslator} from './claude.content.block.delta.event.translator';
 import {ClaudeContentBlockStopEventTranslator} from './claude.content.block.stop.event.translator';
 import {mapHoloFinishReasonToClaude} from '../../utils/finish.reason.mapper.js';
-import {BaseStreamTranslator} from "@holokai/sdk/provider";
+import {StreamTranslator} from "@holokai/sdk/provider";
 import {HoloStreamChunk} from "@holokai/sdk";
 
 @injectable()
-export class ClaudeStreamTranslator extends BaseStreamTranslator<HoloStreamChunk, ClaudeRawMessageStreamEvent> {
+export class ClaudeStreamTranslator extends StreamTranslator<HoloStreamChunk, ClaudeRawMessageStreamEvent> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<ClaudeRawMessageStreamEvent> = {};
 

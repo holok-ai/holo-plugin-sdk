@@ -1,3 +1,21 @@
+import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "../../holo";
+
+export interface IProviderTranslator {
+    toHoloRequest(request: any): Promise<Partial<HoloRequest>>;
+
+    fromHoloRequest(request: HoloRequest): Promise<Partial<any>>;
+
+    toHoloMessages(messages: any[]): Promise<Partial<HoloMessage>[]>;
+
+    fromHoloMessages(messages: HoloMessage[]): Promise<Partial<any>[]>;
+
+    toHoloResponse(response: any): Promise<Partial<HoloResponse>>;
+
+    fromHoloResponse(response: HoloResponse): Promise<Partial<any>>;
+
+    fromHoloStreamChunks(chunks: HoloStreamChunk[]): Promise<unknown>;
+}
+
 export type TranslateOptions = {
     /** true: THolo -> TProvider; false: TProvider -> THolo */
     fromHolo?: boolean;

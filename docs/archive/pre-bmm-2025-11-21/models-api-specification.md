@@ -1078,7 +1078,7 @@ This spec adheres to the hybrid architecture documented in `ARCHITECTURE.md`:
 
 **Key Distinction**: Models endpoints do **NOT** use translators.
 
-Translators (`BaseTranslator`, `HoloTranslator`, provider-specific translators) are for **request/response translation** during chat/completion calls, not for models metadata.
+Translators (`Base`, `HoloTranslator`, provider-specific translators) are for **request/response translation** during chat/completion calls, not for models metadata.
 
 Models endpoints serve **pre-translated metadata** that Moku populated during configuration push.
 

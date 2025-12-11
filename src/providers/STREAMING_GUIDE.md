@@ -231,7 +231,7 @@ chunk { usage: {...}, choices: [] }  ← Optional usage-only chunk
 
 ```typescript
 @injectable()
-export class OpenAIContentDeltaTranslator extends BaseStreamTranslator {
+export class OpenAIContentDeltaTranslator extends Stream {
     protected async toHoloManyImpl(source: OpenAIChunk): Promise<HoloStreamChunk[]> {
         const results: HoloStreamChunk[] = [];
 
@@ -684,7 +684,7 @@ test('Full streaming pipeline', async () => {
 
 ## Related Documentation
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - BaseStreamTranslator pattern
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Stream pattern
 - **[TYPE_REFERENCE.md](TYPE_REFERENCE.md)** - HoloStreamChunk types
 - **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Step-by-step guide
 

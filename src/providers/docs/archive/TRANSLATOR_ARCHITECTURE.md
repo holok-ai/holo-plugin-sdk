@@ -4,7 +4,7 @@ This document explains the translation architecture used throughout the provider
 
 ## 🏗️ **Core Architecture**
 
-All translations use the `BaseStreamTranslator` class which provides:
+All translations use the `Stream` class which provides:
 
 1. **Stateless Translation** - No state tracking between calls
 2. **Bidirectional Translation** - Both `toHolo` and `fromHolo` directions
@@ -15,15 +15,15 @@ This unified architecture works for both streaming and non-streaming translation
 
 ---
 
-## 🌊 **BaseStreamTranslator Architecture**
+## 🌊 **Stream Architecture**
 
-All translators extend `BaseStreamTranslator<HoloType, ProviderType>` for consistent, stateless translation.
+All translators extend `Stream<HoloType, ProviderType>` for consistent, stateless translation.
 
 ### **Key Components**
 
 | Component | Purpose | Example |
 |-----------|---------|---------|
-| `BaseStreamTranslator<HoloType, ProviderType>` | Base class for all translations | `OpenAIMessageStopTranslator` |
+| `Stream<HoloType, ProviderType>` | Base class for all translations | `OpenAIMessageStopTranslator` |
 | `toHoloManyImpl()` | Provider → Holo transformation (returns array) | Convert OpenAI chunk to Holo events |
 | `fromHoloManyImpl()` | Holo → Provider transformation (returns array) | Convert Holo event to OpenAI chunks |
 | **Validators** | Input/output validation using ArkType | `HoloStreamChunkValidator`, `OpenAIChatCompletionChunkValidator` |
@@ -33,7 +33,7 @@ All translators extend `BaseStreamTranslator<HoloType, ProviderType>` for consis
 
 ```typescript
 @injectable()
-export class ProviderEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ProviderEventType> {
+export class ProviderEventTranslator extends Stream<HoloStreamChunk, ProviderEventType> {
     protected holoValidator = HoloStreamChunkValidator;
     protected providerValidator = ProviderEventValidator;
     protected holoDefaults: Partial<HoloStreamChunk> = {};
@@ -343,4 +343,4 @@ For detailed implementation guidance, see:
 
 ---
 
-This unified `BaseStreamTranslator` architecture provides a robust, extensible foundation for all provider translations while maintaining type safety, statelessness, and clear separation of concerns.
+This unified `Stream` architecture provides a robust, extensible foundation for all provider translations while maintaining type safety, statelessness, and clear separation of concerns.

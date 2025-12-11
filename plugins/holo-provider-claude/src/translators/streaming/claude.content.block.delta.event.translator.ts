@@ -2,10 +2,10 @@ import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {ClaudeRawContentBlockDeltaEvent} from '../../types';
 import {HoloStreamChunk} from "@holokai/sdk";
-import {BaseStreamTranslator} from "@holokai/sdk/provider";
+import {StreamTranslator} from "@holokai/sdk/provider";
 
 @injectable()
-export class ClaudeContentBlockDeltaEventTranslator extends BaseStreamTranslator<HoloStreamChunk, ClaudeRawContentBlockDeltaEvent> {
+export class ClaudeContentBlockDeltaEventTranslator extends StreamTranslator<HoloStreamChunk, ClaudeRawContentBlockDeltaEvent> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
     protected providerDefaults: Partial<ClaudeRawContentBlockDeltaEvent> = {};
 

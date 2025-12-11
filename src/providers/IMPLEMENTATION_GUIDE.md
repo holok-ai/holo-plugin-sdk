@@ -183,13 +183,13 @@ export const NewProviderStreamChunkValidator = type({
 ```typescript
 import 'reflect-metadata';
 import { injectable } from 'tsyringe';
-import { BaseTranslator } from '../../base.translator';
+import { Base } from '../../base.translator';
 import { HoloRequest, HoloResponse } from '../../holo';
 import { NewProviderRequest, NewProviderResponse } from '../types';
 import { NewProviderRequestValidator, NewProviderResponseValidator } from '../validators';
 
 @injectable()
-export class NewProviderTranslator extends BaseTranslator<HoloRequest, NewProviderRequest> {
+export class NewProviderTranslator extends Base<HoloRequest, NewProviderRequest> {
     protected holoValidator = HoloRequestValidator;
     protected providerValidator = NewProviderRequestValidator;
 
@@ -249,13 +249,13 @@ Create a mapping table (see [TRANSLATION_GUIDE.md](TRANSLATION_GUIDE.md)):
 ```typescript
 import 'reflect-metadata';
 import { injectable } from 'tsyringe';
-import { BaseTranslator } from '../../base.translator';
+import { Base } from '../../base.translator';
 import { HoloRequest, HoloRequestValidator } from '../../holo';
 import { NewProviderRequest, NewProviderRequestValidator } from '../types';
 import { pickDefined } from '../../utils';
 
 @injectable()
-export class NewProviderRequestTranslator extends BaseTranslator<HoloRequest, NewProviderRequest> {
+export class NewProviderRequestTranslator extends Base<HoloRequest, NewProviderRequest> {
     protected holoValidator = HoloRequestValidator;
     protected providerValidator = NewProviderRequestValidator;
 
@@ -318,13 +318,13 @@ export class NewProviderRequestTranslator extends BaseTranslator<HoloRequest, Ne
 ```typescript
 import 'reflect-metadata';
 import { injectable } from 'tsyringe';
-import { BaseTranslator } from '../../base.translator';
+import { Base } from '../../base.translator';
 import { HoloResponse, HoloResponseValidator } from '../../holo';
 import { NewProviderResponse, NewProviderResponseValidator } from '../types';
 import { pickDefined } from '../../utils';
 
 @injectable()
-export class NewProviderResponseTranslator extends BaseTranslator<HoloResponse, NewProviderResponse> {
+export class NewProviderResponseTranslator extends Base<HoloResponse, NewProviderResponse> {
     protected holoValidator = HoloResponseValidator;
     protected providerValidator = NewProviderResponseValidator;
 
@@ -391,13 +391,13 @@ Create `STREAM_RESPONSE.md` documenting all event types.
 ```typescript
 import 'reflect-metadata';
 import { injectable } from 'tsyringe';
-import { BaseStreamTranslator } from '../../../base.stream.translator';
+import { Stream } from '../../../base.stream.translator';
 import { HoloStreamChunk, HoloStreamChunkValidator } from '../../../holo';
 import { NewProviderStreamChunk, NewProviderStreamChunkValidator } from '../../types';
 import { pickDefined } from '../../../utils';
 
 @injectable()
-export class NewProviderContentDeltaTranslator extends BaseStreamTranslator<HoloStreamChunk, NewProviderStreamChunk> {
+export class NewProviderContentDeltaTranslator extends Stream<HoloStreamChunk, NewProviderStreamChunk> {
     protected holoValidator = HoloStreamChunkValidator;
     protected providerValidator = NewProviderStreamChunkValidator;
     protected holoDefaults: Partial<HoloStreamChunk> = {};
@@ -453,14 +453,14 @@ export class NewProviderContentDeltaTranslator extends BaseStreamTranslator<Holo
 ```typescript
 import 'reflect-metadata';
 import { injectable } from 'tsyringe';
-import { BaseStreamTranslator } from '../../../base.stream.translator';
+import { Stream } from '../../../base.stream.translator';
 import { HoloStreamChunk, HoloStreamChunkValidator } from '../../../holo';
 import { NewProviderStreamChunk, NewProviderStreamChunkValidator } from '../../types';
 import { NewProviderContentDeltaTranslator } from './newprovider.content.delta.translator';
 import { NewProviderMessageStopTranslator } from './newprovider.message.stop.translator';
 
 @injectable()
-export class NewProviderStreamTranslator extends BaseStreamTranslator<HoloStreamChunk, NewProviderStreamChunk> {
+export class NewProviderStreamTranslator extends Stream<HoloStreamChunk, NewProviderStreamChunk> {
     protected holoValidator = HoloStreamChunkValidator;
     protected providerValidator = NewProviderStreamChunkValidator;
 

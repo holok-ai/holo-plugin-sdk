@@ -9,7 +9,7 @@ import {LLMWorkerRequest, LLMWorkerResponse, WorkerResponseFactory} from '../typ
 import {StreamService} from "./stream.service";
 import {ClassLogger} from "../types/class.logger";
 import {HoloTranslator} from "../providers/holo/holo.translator";
-import {HoloResponseFactory} from "@holokai/sdk/holo";
+import {ResponseFactory} from "@holokai/sdk/holo";
 
 
 export class ResponseStream extends Transform {
@@ -287,7 +287,7 @@ export class ResponseService extends ClassLogger {
         const holoTranslator = container.resolve(HoloTranslator);
 
         // Create Holo error response
-        const holoError = await HoloResponseFactory.createErrorResponse(
+        const holoError = await ResponseFactory.createErrorResponse(
             `HE-${requestId}`,
             'error',
             `We were unable to complete the request due to the following reasons: ${error.message}`

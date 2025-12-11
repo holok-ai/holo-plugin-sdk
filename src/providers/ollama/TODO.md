@@ -89,11 +89,11 @@ Add to all streaming translators' `toHoloManyImpl`:
 
 **Issue:** Per README §107-108, 255-257: "orchestrator must emit message_start on first frame". Current implementation immediately calls content delta translator without detecting first frame.
 
-**Problem:** Orchestrator is stateless (per BaseStreamTranslator), so cannot track "first frame" across calls.
+**Problem:** Orchestrator is stateless (per Stream), so cannot track "first frame" across calls.
 
 **Required Action (Option A - Stateful):**
 ```typescript
-export class OllamaStreamTranslator extends BaseStreamTranslator {
+export class OllamaStreamTranslator extends Stream {
     private hasEmittedStart = false;
 
     protected async toHoloManyImpl(source: OllamaStreamChunk): Promise<Partial<HoloStreamChunk>[]> {

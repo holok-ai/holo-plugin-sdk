@@ -1,11 +1,9 @@
-import {ProviderType} from "../../providers/types";
-
 export interface JWTPayload {
     organizationId: string;
     userId?: string;
     appSlugs?: string[];
     appSlug?: string;
-    providerType?: ProviderType;
+    providerType?: string;
     iat?: number;
     exp?: number;
 }

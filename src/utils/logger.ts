@@ -19,7 +19,7 @@ try {
 }
 
 // Define log levels
-const levels = {
+export const levels = {
     error: 0,
     warn: 1,
     info: 2,
@@ -28,7 +28,7 @@ const levels = {
 };
 
 // Define log colors
-const colors = {
+export const colors = {
     error: 'red',
     warn: 'yellow',
     info: 'green',

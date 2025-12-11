@@ -86,7 +86,7 @@ llm-proxy/
 │   ├── api/                               # HTTP API (unchanged)
 │   ├── providers/                         # Legacy providers (coexist during migration)
 │   │   ├── ai.provider.ts                 # Base interface (remains)
-│   │   ├── base.translator.ts             # Shared translation logic (remains)
+│   │   ├── base.ts             # Shared translation logic (remains)
 │   │   ├── auditors.ts                    # Core auditing (remains)
 │   │   ├── openai/                        # Legacy OpenAI (remove post-migration)
 │   │   ├── claude/                        # Legacy Claude (remove post-migration)

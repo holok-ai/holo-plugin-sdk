@@ -1,6 +1,6 @@
-import {TranslateOptions} from "./base.translator";
+import {TranslateOptions} from "./base";
 
-export abstract class BaseStreamTranslator<THolo, TProvider> {
+export abstract class StreamTranslator<THolo, TProvider> {
     /** Validators for single streaming chunks (not full messages) */
     protected abstract providerDefaults: Partial<TProvider>;
     protected abstract holoDefaults: Partial<THolo>;

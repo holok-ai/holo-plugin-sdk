@@ -1,2 +1,2 @@
-export * from './base.stream.translator';
-export * from './base.translator';
+export * from './stream';
+export * from './base';

@@ -1,5 +1,3 @@
-import {ProviderType} from "../../providers/types";
-
 export interface BaseEntity {
     id: string;
     created_at: Date;
@@ -11,7 +9,7 @@ export interface BaseEntity {
 export interface Provider extends BaseEntity {
     organization_id: string;
     name: string;
-    type: ProviderType;
+    type: string;
     description?: string;
     config: Record<string, any>;
     status?: { enabled?: boolean };

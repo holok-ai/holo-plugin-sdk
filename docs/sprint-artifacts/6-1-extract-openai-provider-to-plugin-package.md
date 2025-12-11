@@ -116,7 +116,7 @@ The extracted code has ~50 TypeScript import errors because it references:
 - ../holo (Holo format types - now in @holokai/common)
 
 **Resolution Strategy:**
-1. Copy base provider abstractions to plugin (ai.provider.ts, base.translator.ts)
+1. Copy base provider abstractions to plugin (ai.provider.ts, base.ts)
 2. Copy minimal utils needed (error messages, logger)
 3. Replace DB Provider type with ProviderConfig from @holokai/common
 4. Replace service dependencies with simpler implementations
