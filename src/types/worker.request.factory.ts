@@ -1,35 +1,33 @@
-import {ProviderRequest, ProviderType, RequestType} from "../providers/types";
 import {HttpApiRequest} from "../api/types";
 import {JWTPayload} from "../admin/types";
 import {v4 as uuidv4} from "uuid";
 import logger from "../utils/logger";
-import {ErrorMessages, pickDefined} from "../utils";
-import {LLMWorkerRequest, LLMWorkerRequestValidator} from "./index";
-import {OllamaChatRequestWithDefaults, OllamaGenerateRequestWithDefaults} from "../providers/ollama/validators";
-import {ClaudeChatRequestWithDefaults} from "../providers/claude/validators";
-import {OpenAIChatRequestValidator} from "../providers/openai/validators";
-import {ArkErrors} from "arktype";
+import {HoloWorkerRequest, pickDefined, RequestType} from "@holokai/sdk";
 
 export class WorkerRequestFactory {
     static logger = logger.child({className: 'WorkerRequestFactory'});
+
     static fromRequest(
-        providerType: ProviderType,
+        providerType: string,
         providerName: string | undefined,
         type: RequestType,
         req: HttpApiRequest,
         sourceId: string
-    ): LLMWorkerRequest {
-        const payload = this.parseLLMRequest(req, providerType, type);
+    ): HoloWorkerRequest {
         const {auth, body} = req;
-        const thread_id = body?.thread_id;
+        // this.logger.info(`parsing request: ${JSON.stringify(body, null, 2)}`)
+
+        // Remove thread_id from body before validation as it's not part of provider API schemas
+        // thread_id is extracted separately in fromRequest() and stored in LLMWorkerRequest
+        const {thread_id, ...payload} = body;
         return this.create(providerType, providerName, type, payload, sourceId, auth, thread_id);
     }
 
     static create(
-        providerType: ProviderType,
+        providerType: string,
         providerName: string | undefined,
         type: RequestType,
-        payload: ProviderRequest,
+        payload: any,
         sourceId: string,
         auth?: JWTPayload,
         thread_id?: string,
@@ -41,7 +39,7 @@ export class WorkerRequestFactory {
             sanitizedAuth = rest || {};
         }
 
-        return LLMWorkerRequestValidator.brand('LLMWorkerRequestValidator').assert(pickDefined({
+        return pickDefined({
             providerType,
             providerName,
             sourceId,
@@ -53,53 +51,6 @@ export class WorkerRequestFactory {
             thread_id,
             ...sanitizedAuth
 
-        }));
-    }
-
-    static parseLLMRequest(
-        req: HttpApiRequest,
-        providerType: ProviderType,
-        type: RequestType
-    ): ProviderRequest {
-        const {body} = req;
-        // this.logger.info(`parsing request: ${JSON.stringify(body, null, 2)}`)
-
-        // Remove thread_id from body before validation as it's not part of provider API schemas
-        // thread_id is extracted separately in fromRequest() and stored in LLMWorkerRequest
-        const {thread_id, ...providerBody} = body;
-
-        let request: ProviderRequest | ArkErrors;
-        switch (providerType) {
-            case ProviderType.OLLAMA:
-                if (type === RequestType.CHAT) {
-                    request = OllamaChatRequestWithDefaults.assert(providerBody);
-                } else {
-                    request = OllamaGenerateRequestWithDefaults.assert(providerBody);
-                }
-                break;
-            case ProviderType.CLAUDE:
-                request = ClaudeChatRequestWithDefaults.assert(providerBody);
-                break;
-            case ProviderType.OPENAI:
-            case ProviderType.PERPLEXITY:
-                request = OpenAIChatRequestValidator.assert(providerBody);
-                break;
-            default:
-                logger.error('Unsupported provider in WorkerRequest unified parser.', {providerType}, {
-                    className: 'WorkerRequestFactory',
-                    methodName: 'parseLLMRequest'
-                });
-                throw new Error(ErrorMessages.unsupportedProvider(providerType));
-        }
-
-        if (request instanceof ArkErrors) {
-            logger.error(`${providerType} request validation failed`, {
-                errors: request.summary,
-                input: req
-            });
-            throw new Error(`Invalid ${providerType} request: ${request.summary}`);
-        }
-
-        return request;
+        }) as HoloWorkerRequest;
     }
 }

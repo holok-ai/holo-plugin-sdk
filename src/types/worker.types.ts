@@ -1,11 +1,11 @@
-import {ProviderRequest, ProviderType, RequestType} from "../providers/types";
 import {GuardResult} from "../admin/types";
 import {Prompt} from "../cache";
+import {RequestType} from "@holokai/sdk";
 
 export interface LLMWorkerRequest {
     // nullable organization is ONLY until we finishing protecting all endpoints
     organizationId?: string;
-    providerType: ProviderType;
+    providerType: string;
     providerName?: string;
     sourceId: string;
     appSlug?: string;
@@ -13,7 +13,7 @@ export interface LLMWorkerRequest {
     thread_id?: string;
     requestId: string;
     type: RequestType;
-    payload: ProviderRequest;
+    payload: any;
     timestamp: number;
     isStreaming: boolean;
     systemPrompt?: Prompt;
@@ -28,7 +28,7 @@ export interface LLMWorkerResponse {
     organizationId?: string;
     sourceId: string;
     requestId: string;
-    providerType: ProviderType;
+    providerType: string;
     providerName?: string;
     payload: any;
     fullResponse?: string;

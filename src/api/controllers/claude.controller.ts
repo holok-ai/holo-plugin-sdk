@@ -2,10 +2,10 @@ import 'reflect-metadata';
 import {BaseController} from "./base.controller";
 import {injectable} from "tsyringe";
 import {ApiResponse, HttpApiRequest} from "../types";
-import {ProviderType, RequestType} from "../../providers/types";
 import {OrganizationService} from "../../admin/services/organization.service";
 import {RequestService} from "../../admin/services/request.service";
 import {ClaudeModelInfo} from "../../cache";
+import {RequestType} from "@holokai/sdk";
 
 @injectable()
 export class ClaudeController extends BaseController {
@@ -19,7 +19,7 @@ export class ClaudeController extends BaseController {
 
     public messages = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            await this.requestService.processRequest(ProviderType.CLAUDE, RequestType.CHAT, req, res);
+            await this.requestService.processRequest('CLAUDE', RequestType.CHAT, req, res);
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to complete chat');
         }

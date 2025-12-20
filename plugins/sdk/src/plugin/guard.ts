@@ -142,6 +142,7 @@ export interface GuardResult {
      * Processing metadata
      */
     metadata?: GuardMetadata;
+    errors?: string[];
 }
 
 /**

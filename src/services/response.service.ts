@@ -5,11 +5,12 @@ import {container, injectable} from "tsyringe";
 import {HttpApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
-import {LLMWorkerRequest, LLMWorkerResponse, WorkerResponseFactory} from '../types';
 import {StreamService} from "./stream.service";
 import {ClassLogger} from "../types/class.logger";
-import {HoloTranslator} from "../providers/holo/holo.translator";
-import {ResponseFactory} from "@holokai/sdk/holo";
+import {HoloTranslator} from "./providers/holo.translator";
+import {HoloResponse, HoloResponseFactory} from "@holokai/sdk/holo";
+import {HoloWorkerRequest, HoloWorkerResponse} from "@holokai/sdk";
+import {WorkerResponseFactory} from "../types";
 
 
 export class ResponseStream extends Transform {
@@ -52,7 +53,7 @@ export class ResponseService extends ClassLogger {
         await this.queueService.consume(queueName, handler, true);
     }
 
-    async handleLLMResponseMessage(_id: string, content: LLMWorkerResponse) {
+    async handleLLMResponseMessage(_id: string, content: HoloWorkerResponse) {
         const logger = this.mlog(this.handleLLMResponseMessage);
         logger.debug(`Received response: ${JSON.stringify(content)}`);
         const {requestId, providerName} = content;
@@ -67,7 +68,7 @@ export class ResponseService extends ClassLogger {
         }
     }
 
-    async formatAndSend(responseChunk: LLMWorkerResponse, res: ResponseStream) {
+    async formatAndSend(responseChunk: HoloWorkerResponse, res: ResponseStream) {
         const logger = this.mlog(this.formatAndSend);
 
         const payload = responseChunk.payload as any;
@@ -77,7 +78,7 @@ export class ResponseService extends ClassLogger {
             logger.info(`Received SDK error for request ${responseChunk.requestId}, converting to streaming format`);
 
             const errorPayload = payload.error;
-            const modifiedChunk: LLMWorkerResponse = {
+            const modifiedChunk: HoloWorkerResponse = {
                 ...responseChunk,
                 payload: errorPayload
             };
@@ -89,7 +90,7 @@ export class ResponseService extends ClassLogger {
         if (Array.isArray(responseChunk.payload)) {
             logger.debug(`Streaming array of ${responseChunk.payload.length} chunks for request ${responseChunk.requestId}`);
             for (const chunk of responseChunk.payload) {
-                const chunkResponse: LLMWorkerResponse = {
+                const chunkResponse: HoloWorkerResponse = {
                     ...responseChunk,
                     payload: chunk
                 };
@@ -126,7 +127,7 @@ export class ResponseService extends ClassLogger {
         return this.streamService.createResponseStream(requestId, isStreaming);
     }
 
-    async sendRequest(req: HttpApiRequest, res: Response, request: LLMWorkerRequest) {
+    async sendRequest(req: HttpApiRequest, res: Response, request: HoloWorkerRequest) {
         const logger = this.mlog(this.sendRequest);
 
         const {requestId, isStreaming} = request;
@@ -143,7 +144,7 @@ export class ResponseService extends ClassLogger {
         responseStream.pipe(res);
     }
 
-    async streamRequestOnce<T = unknown>(request: LLMWorkerRequest, timeoutMs = 60000) {
+    async streamRequestOnce<T = unknown>(request: HoloWorkerRequest, timeoutMs = 60000) {
         const logger = this.mlog(this.streamRequestOnce);
 
         logger.debug(`Submitting request: ${JSON.stringify(request)}`, {methodName: 'streamRequestOnce'});
@@ -166,7 +167,7 @@ export class ResponseService extends ClassLogger {
         })
     }
 
-    async sendRequestToExchange(request: LLMWorkerRequest, correlationId: string, exchange: string = this.requestExchange) {
+    async sendRequestToExchange(request: HoloWorkerRequest, correlationId: string, exchange: string = this.requestExchange) {
         await this.queueService.sendToExchange(
             exchange,
             '',
@@ -200,7 +201,7 @@ export class ResponseService extends ClassLogger {
         }
     }
 
-    async sendToAuditOnly(workerId: string, requestId: string, data: LLMWorkerResponse) {
+    async sendToAuditOnly(workerId: string, requestId: string, data: HoloWorkerResponse) {
         const logger = this.mlog(this.sendToAuditOnly);
         logger.debug(`Sending audit-only data: ${requestId}, ${JSON.stringify(data)}`);
         data.workerId = workerId;
@@ -226,7 +227,7 @@ export class ResponseService extends ClassLogger {
      * @param options.auditEnabled - Whether to audit this error (default: true for validation/guard, false for general)
      */
     async sendError(
-        request: LLMWorkerRequest,
+        request: HoloWorkerRequest,
         options: {
             errorType: 'validation' | 'guard' | 'general';
             errors: string[] | Error;
@@ -287,11 +288,11 @@ export class ResponseService extends ClassLogger {
         const holoTranslator = container.resolve(HoloTranslator);
 
         // Create Holo error response
-        const holoError = await ResponseFactory.createErrorResponse(
+        const holoError = await HoloResponseFactory.createErrorResponse(
             `HE-${requestId}`,
             'error',
             `We were unable to complete the request due to the following reasons: ${error.message}`
-        );
+        ) as HoloResponse;
 
         // Translate to provider-native format
         const providerPayload = await holoTranslator.fromHoloResponse(holoError, providerType);
@@ -316,7 +317,7 @@ export class ResponseService extends ClassLogger {
      * Legacy method - kept for backward compatibility
      */
     async sendValidationErrorResponse(
-        request: LLMWorkerRequest,
+        request: HoloWorkerRequest,
         errors: string[],
         workerId: string
     ): Promise<void> {

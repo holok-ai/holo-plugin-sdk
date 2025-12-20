@@ -2,7 +2,6 @@ import {NextFunction, Response} from 'express';
 import {HttpApiRequest} from '../types';
 import logger from '../../utils/logger';
 import {TokenService} from '../../admin/services';
-import {ProviderType} from "../../providers/types";
 
 type Options = {
     useCache?: boolean;
@@ -56,7 +55,7 @@ export const makeJwtAuthMiddleware = (tokenService: TokenService, opts: Options 
             const auth = {
                 ...tokenService.decodeToken(token),
                 ...(appSlug && {appSlug}),
-                ...(provider && {providerType: provider.toUpperCase() as ProviderType}),
+                ...(provider && {providerType: provider.toUpperCase()}),
                 ...(appSlugs && {appSlugs}),
             };
 

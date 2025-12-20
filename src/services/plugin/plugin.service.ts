@@ -1,11 +1,11 @@
 import {injectable} from 'tsyringe';
-import {ClassLogger} from '../../types/class.logger';
 import {PluginDiscoveryService} from './discovery.service';
 import {PluginLoaderService} from './loader.service';
 import {ProviderPluginRegistry} from './provider-registry.service';
 import type {IProviderPlugin} from '@holokai/sdk/plugin';
 import {PluginContext, PluginState} from '@holokai/sdk/plugin';
-import logger from '../../utils/logger';
+import {ClassLogger, HoloLogger} from "@holokai/sdk";
+import logger from "../../utils/logger";
 
 /**
  * Service responsible for initializing and managing the plugin system
@@ -43,13 +43,7 @@ export class PluginService extends ClassLogger {
 
             // Create plugin context
             const pluginContext: PluginContext = {
-                logger: {
-                    log: (msg, ...args) => logger.info(msg, ...args),
-                    info: (msg, ...args) => logger.info(msg, ...args),
-                    warn: (msg, ...args) => logger.warn(msg, ...args),
-                    error: (msg, ...args) => logger.error(msg, ...args),
-                    debug: (msg, ...args) => logger.debug(msg, ...args),
-                },
+                logger: logger as HoloLogger,
                 config: {},
                 env: process.env
             };

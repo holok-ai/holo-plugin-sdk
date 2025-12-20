@@ -1,6 +1,6 @@
 # Holo (Portable Format)
 
-> **Navigation**: [Main README](../README.md) | [Architecture](../ARCHITECTURE.md) | [Types](../TYPE_REFERENCE.md) | [Translation](../TRANSLATION_GUIDE.md) | [Streaming](../STREAMING_GUIDE.md)
+> **Navigation**: [Main README](../../../../src/providers/README.md) | [Architecture](../../../../src/providers/ARCHITECTURE.md) | [Types](../../../../src/providers/TYPE_REFERENCE.md) | [Translation](../../../../src/providers/TRANSLATION_GUIDE.md) | [Streaming](../../../../src/providers/STREAMING_GUIDE.md)
 
 ---
 
@@ -243,7 +243,7 @@ const errorChunks = createGuardErrorResponse(
 }
 ```
 
-**See also:** [GUARD_ERRORS.md](../GUARD_ERRORS.md) for complete factory implementation and text vs JSON mode handling.
+**See also:** [GUARD_ERRORS.md](../../../../src/providers/GUARD_ERRORS.md) for complete factory implementation and text vs JSON mode handling.
 
 ### Error Types
 
@@ -422,8 +422,8 @@ All providers normalize to **4 Holo event types**:
 
 6. **Document the provider:**
    - Create `{provider}/README.md` with quick reference tables
-   - Update [TYPE_REFERENCE.md](../TYPE_REFERENCE.md) with provider column
-   - Update [TRANSLATION_GUIDE.md](../TRANSLATION_GUIDE.md) with field mappings
+   - Update [TYPE_REFERENCE.md](../../../../src/providers/TYPE_REFERENCE.md) with provider column
+   - Update [TRANSLATION_GUIDE.md](../../../../src/providers/TRANSLATION_GUIDE.md) with field mappings
 
 ### Deprecating Fields
 
@@ -437,10 +437,10 @@ All providers normalize to **4 Holo event types**:
 
 ## Related Documentation
 
-- **[TYPE_REFERENCE.md](../TYPE_REFERENCE.md)** § Holo Types (Canonical)
-- **[TRANSLATION_GUIDE.md](../TRANSLATION_GUIDE.md)** § Provider Mappings
-- **[STREAMING_GUIDE.md](../STREAMING_GUIDE.md)** § Event Lifecycle
-- **[GUARD_ERRORS.md](../GUARD_ERRORS.md)** § Error Response Factory
+- **[TYPE_REFERENCE.md](../../../../src/providers/TYPE_REFERENCE.md)** § Holo Types (Canonical)
+- **[TRANSLATION_GUIDE.md](../../../../src/providers/TRANSLATION_GUIDE.md)** § Provider Mappings
+- **[STREAMING_GUIDE.md](../../../../src/providers/STREAMING_GUIDE.md)** § Event Lifecycle
+- **[GUARD_ERRORS.md](../../../../src/providers/GUARD_ERRORS.md)** § Error Response Factory
 
 ---
 

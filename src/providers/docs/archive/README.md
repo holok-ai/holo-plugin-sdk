@@ -75,7 +75,7 @@ The new consolidated documentation is organized as follows:
 1. **[claude/README.md](../../claude/README.md)** - Claude-specific reference
 2. **[openai/README.md](../../openai/README.md)** - OpenAI-specific reference
 3. **[ollama/README.md](../../ollama/README.md)** - Ollama-specific reference
-4. **[holo/README.md](../../holo/README.md)** - Holo (canonical format) reference
+4. **[holo/README.md](../../../../plugins/sdk/src/holo/HOLO.md)** - Holo (canonical format) reference
 
 ---
 

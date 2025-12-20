@@ -6,13 +6,14 @@
 
 import {BasePlugin, IProviderPlugin, PluginContext} from '@holokai/sdk/plugin';
 import {manifest} from "./manifest.js";
-import {ProviderCapabilities, ProviderConfig} from "@holokai/sdk/provider";
+import {IProvider, ProviderCapabilities} from "@holokai/sdk/provider";
+import {OpenAIProvider} from "./openai.provider";
 
 export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin {
     manifest = manifest;
 
-    createProvider(_config: ProviderConfig): Promise<unknown> {
-        throw new Error("Method not implemented.");
+    async createProvider(config: any): Promise<IProvider> {
+        return new OpenAIProvider(config);
     }
 
     getCapabilities(): ProviderCapabilities {

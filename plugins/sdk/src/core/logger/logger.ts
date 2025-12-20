@@ -1,3 +1,5 @@
+import {Logger} from "winston";
+
 export type HoloLogLevel =
     'fatal'
     | 'error'
@@ -7,18 +9,26 @@ export type HoloLogLevel =
     | 'trace'
     | 'silent';
 
+export interface HoloLoggerMethod {
+    (message: string, ...meta: any[]): Logger;
+
+    (message: any): Logger;
+
+    (infoObject: object): Logger;
+}
+
 export interface HoloLogger {
     level: HoloLogLevel;
 
-    error(message: string, meta?: unknown): void;
+    error: HoloLoggerMethod;
 
-    warn(message: string, meta?: unknown): void;
+    warn: HoloLoggerMethod;
 
-    info(message: string, meta?: unknown): void;
+    info: HoloLoggerMethod;
 
-    debug(message: string, meta?: unknown): void;
+    debug: HoloLoggerMethod;
 
-    trace?(message: string, meta?: unknown): void;
+    trace?: HoloLoggerMethod;
 
     /**
      * Optional child logger for scoping (class, method, plugin, etc.)

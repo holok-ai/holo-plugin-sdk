@@ -1,4 +1,4 @@
-import type {IProvider, ProviderCapabilities as ProviderFeatures, ProviderConfig} from '../provider/types.js';
+import type {IProvider, ProviderCapabilities as ProviderFeatures} from '../provider/types.js';
 import {IPlugin} from "./base";
 
 /**
@@ -41,7 +41,7 @@ export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
      * @param config Provider configuration including API keys and model settings.
      * @returns Promise resolving to a provider instance.
      */
-    createProvider(config: ProviderConfig): Promise<TProvider>;
+    createProvider(config: any): Promise<TProvider>;
 
     /**
      * Get provider capabilities.

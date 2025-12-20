@@ -1,5 +1,7 @@
 import {injectable} from 'tsyringe';
 import type {IPlugin, PluginContext, PluginType} from '@holokai/sdk/plugin';
+import {HoloLogger} from "@holokai/sdk";
+import logger from "../../utils/logger";
 
 export interface IPluginRegistry<T extends IPlugin> {
     registerPlugin(plugin: T): void;
@@ -24,7 +26,7 @@ export class PluginRegistryService {
     async registerPlugin(plugin: IPlugin): Promise<void> {
         try {
             const context: PluginContext = {
-                logger: console,
+                logger: logger as HoloLogger,
                 config: {},
                 env: process.env
             };

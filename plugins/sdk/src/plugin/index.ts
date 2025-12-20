@@ -4,6 +4,7 @@
 export const PLUGIN_SDK_VERSION = '0.1.0';
 
 export * from './base';
+export * from './context';
 export * from './provider';
 export * from './errors';
 export * from './evaluator';

@@ -3,10 +3,10 @@ import {BaseController} from "./base.controller";
 import {injectable} from "tsyringe";
 import {ApiResponse, HttpApiRequest} from "../types";
 import logger from "../../utils/logger";
-import {ProviderType, RequestType} from "../../providers/types";
 import {RequestService} from "../../admin/services/request.service";
 import {OrganizationService} from "../../admin/services/organization.service";
 import {OpenAIModel} from "../../cache";
+import {RequestType} from "@holokai/sdk";
 
 @injectable()
 export class OpenAIController extends BaseController {
@@ -20,7 +20,7 @@ export class OpenAIController extends BaseController {
 
     public chatCompletions = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            await this.requestService.processRequest(ProviderType.OPENAI, RequestType.CHAT, req, res);
+            await this.requestService.processRequest('OPENAI', RequestType.CHAT, req, res);
         } catch (error) {
             logger.error('Error: ' + (error as Error).stack);
             this.handleError(res, error as Error, 'Failed to complete chat');

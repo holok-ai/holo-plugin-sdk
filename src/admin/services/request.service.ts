@@ -1,14 +1,13 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {RequestType} from "../../providers/types";
 import {HttpApiRequest} from "../../api/types";
 import {Response} from "express";
 import {ResponseService, StreamService} from "../../services";
 import {env} from "../../env";
 import {GuardService} from "./guard.service";
-import {ClassLogger} from "../../types/class.logger";
 import {WorkerRequestFactory} from "../../types";
 import {OrganizationService} from "./organization.service";
+import {ClassLogger, RequestType} from "@holokai/sdk";
 
 
 @injectable()
@@ -64,26 +63,26 @@ export class RequestService extends ClassLogger {
 
             await this.guardService.guard(providerType, type, workerRequest, auth);
 
-            if (workerRequest.isStreaming && isChatMode) {
-                if (workerRequest.guardResult?.passed === false) {
-                    const errorMsg = workerRequest.guardResult.errors?.join(', ') || 'Security check failed';
-                    await this.streamService.injectStatusMessage(
-                        workerRequest.requestId,
-                        model,
-                        `Security check failed: ${errorMsg}`,
-                        providerType,
-                        isChatMode
-                    );
-                } else {
-                    await this.streamService.injectStatusMessage(
-                        workerRequest.requestId,
-                        model,
-                        'Security checks passed, processing your request...',
-                        providerType,
-                        isChatMode
-                    );
-                }
-            }
+            // if (workerRequest.isStreaming && isChatMode) {
+            //     if (workerRequest.guardResult?.passed === false) {
+            //         const errorMsg = workerRequest.guardResult.errors?.join(', ') || 'Security check failed';
+            //         await this.streamService.injectStatusMessage(
+            //             workerRequest.requestId,
+            //             model,
+            //             `Security check failed: ${errorMsg}`,
+            //             providerType,
+            //             isChatMode
+            //         );
+            //     } else {
+            //         await this.streamService.injectStatusMessage(
+            //             workerRequest.requestId,
+            //             model,
+            //             'Security checks passed, processing your request...',
+            //             providerType,
+            //             isChatMode
+            //         );
+            //     }
+            // }
         }
 
         await this.responseService.sendRequest(req, res, workerRequest);

@@ -2,13 +2,8 @@ import 'reflect-metadata';
 import {container, injectable} from 'tsyringe';
 import {ResponseStream} from "./response.service";
 import {LLMWorkerResponse} from "../types";
-import {ErrorMessages} from "../utils";
-import {ClassLogger} from "../types/class.logger";
-import {HoloResponseFactory} from "../providers/holo/holo.response.factory";
-import {HoloTranslator} from "../providers/holo/holo.translator";
-import {OllamaResponse} from "../providers/ollama/types";
-import {ClaudeResponse} from "../providers/claude/types";
-import {OpenAIChatCompletionResponse} from "../providers/openai/types";
+import {HoloTranslator} from "./providers/holo.translator";
+import {ClassLogger, HoloResponseFactory} from "@holokai/sdk";
 
 
 @injectable()
@@ -44,31 +39,27 @@ export class StreamService extends ClassLogger {
 
     async streamData(data: LLMWorkerResponse, res: ResponseStream) {
         const logger = this.mlog(this.streamData);
-        const {requestId, providerType, sourceId, payload, fullResponse} = data;
-        if (!(providerType in ProviderType)) {
-            logger.error(`No stream formatter for provider: ${providerType}`);
-            throw new Error(ErrorMessages.unsupportedProvider(providerType));
-        }
+        const {requestId, providerType, sourceId} = data;
 
         try {
-            switch (providerType) {
-                case ProviderType.OLLAMA:
-                    this.streamOllama(payload, res);
-                    break;
-                case ProviderType.CLAUDE:
-                    this.streamClaude(payload, res);
-                    break;
-                case ProviderType.OPENAI:
-                case ProviderType.PERPLEXITY:
-                    const isResponsesAPI = payload.object === 'response' || payload.type?.startsWith('response.');
-                    logger.debug(`OpenAI routing: object=${payload.object}, type=${payload.type}, isResponsesAPI=${isResponsesAPI}, isStreaming=${res.isStreaming}`);
-                    if (isResponsesAPI) {
-                        this.streamOpenAIResponses(payload, res, fullResponse);
-                    } else {
-                        this.streamOpenAI(payload, res, fullResponse);
-                    }
-                    break;
-            }
+            // switch (providerType) {
+            //     case ProviderType.OLLAMA:
+            //         this.streamOllama(payload, res);
+            //         break;
+            //     case ProviderType.CLAUDE:
+            //         this.streamClaude(payload, res);
+            //         break;
+            //     case ProviderType.OPENAI:
+            //     case ProviderType.PERPLEXITY:
+            //         const isResponsesAPI = payload.object === 'response' || payload.type?.startsWith('response.');
+            //         logger.debug(`OpenAI routing: object=${payload.object}, type=${payload.type}, isResponsesAPI=${isResponsesAPI}, isStreaming=${res.isStreaming}`);
+            //         if (isResponsesAPI) {
+            //             this.streamOpenAIResponses(payload, res, fullResponse);
+            //         } else {
+            //             this.streamOpenAI(payload, res, fullResponse);
+            //         }
+            //         break;
+            // }
         } catch (error) {
             logger.error(`${providerType} streaming error: ${(error as Error).message}`, {
                 requestId,
@@ -114,7 +105,7 @@ export class StreamService extends ClassLogger {
         requestId: string,
         model: string,
         message: string,
-        providerType: ProviderType,
+        providerType: string,
         isChatMode: boolean = true
     ): Promise<void> {
         const logger = this.mlog(this.injectStatusMessage);
@@ -160,7 +151,7 @@ export class StreamService extends ClassLogger {
         }
     }
 
-    streamOllama(response: OllamaResponse, res: ResponseStream) {
+    streamOllama(response: any, res: ResponseStream) {
         const logger = this.mlog(this.streamOllama);
         res.push(JSON.stringify(response) + '\n');
 
@@ -171,7 +162,7 @@ export class StreamService extends ClassLogger {
         }
     }
 
-    streamClaude(response: ClaudeResponse, res: ResponseStream) {
+    streamClaude(response: any, res: ResponseStream) {
         const logger = this.mlog(this.streamClaude);
         const payload = response as any;
 
@@ -190,7 +181,7 @@ export class StreamService extends ClassLogger {
         }
     }
 
-    streamOpenAI(response: OpenAIChatCompletionResponse, res: ResponseStream, fullResponse?: string) {
+    streamOpenAI(response: any, res: ResponseStream, fullResponse?: string) {
         const logger = this.mlog(this.streamOpenAI);
         logger.debug(`opeanai stream formatter ${JSON.stringify(response)}`);
 

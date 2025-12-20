@@ -236,7 +236,7 @@ protected async toHoloManyImpl(source: OpenAIChunk): Promise<HoloStreamChunk[]> 
 | Ollama | ISO 8601 string | `created: new Date(source.created_at).getTime()` | `"2021-01-01T00:00:00Z"` → `1609459200000` |
 | Claude | Not provided | Leave `undefined`; orchestrator injects | `undefined` → orchestrator default |
 
-See provider-specific READMEs for details: [Claude](claude/README.md), [OpenAI](openai/README.md), [Ollama](ollama/README.md)
+See provider-specific READMEs for details: [Claude](../../plugins/holo-provider-claude/src/README.md), [OpenAI](openai/README.md), [Ollama](ollama/README.md)
 
 ### 7. Backpressure & Cancellation
 

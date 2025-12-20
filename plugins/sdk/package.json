@@ -51,9 +51,9 @@
       "require": "./dist/holo/index.js"
     },
     "./core": {
-      "types": "./dist/api/index.d.ts",
-      "import": "./dist/api/index.js",
-      "require": "./dist/api/index.js"
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js",
+      "require": "./dist/core/index.js"
     },
     "./utils": {
       "types": "./dist/utils/index.d.ts",

@@ -12,7 +12,7 @@ import {PluginService} from "../services/plugin/plugin.service";
 import {PluginDiscoveryService} from "../services/plugin/discovery.service";
 import {PluginLoaderService} from "../services/plugin/loader.service";
 import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
-import {AIRequestStat, IProvider, RequestType} from "@holokai/sdk";
+import {AIRequestStat, IProvider} from "@holokai/sdk";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -72,23 +72,23 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                 let requestStats: AIRequestStat | null = null;
 
                 // explicitly define outcomes
-                switch (llmRequest.type) {
-                    case RequestType.GENERATE:
-                        this.stats.generateRequests++;
-                        requestStats = await ai!.processRequest(llmRequest);
-                        break;
-                    case RequestType.CHAT:
-                        this.stats.chatRequests++;
-                        requestStats = await ai!.processRequest(llmRequest);
-                        break;
-                    case RequestType.RESPONSES:
-                        this.stats.chatRequests++;
-                        requestStats = await ai!.processRequest(llmRequest);
-                        break;
-                    default:
-                        logger.warn(`No handler registered for message type ${llmRequest.type} - ignoring message...`);
-                        break;
-                }
+                // switch (llmRequest.type) {
+                //     case RequestType.GENERATE:
+                //         this.stats.generateRequests++;
+                //         requestStats = await ai!.processRequest(llmRequest);
+                //         break;
+                //     case RequestType.CHAT:
+                //         this.stats.chatRequests++;
+                //         requestStats = await ai!.processRequest(llmRequest);
+                //         break;
+                //     case RequestType.RESPONSES:
+                //         this.stats.chatRequests++;
+                //         requestStats = await ai!.processRequest(llmRequest);
+                //         break;
+                //     default:
+                //         logger.warn(`No handler registered for message type ${llmRequest.type} - ignoring message...`);
+                //         break;
+                // }
 
                 if (requestStats) await this.mergeStats(requestStats!);
             } catch (error) {

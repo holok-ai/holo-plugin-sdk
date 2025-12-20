@@ -7,7 +7,7 @@ import logger from "../utils/logger";
 import {QueueService} from "./queue.service";
 import {env} from '../env';
 
-import {AuditorRegistry} from "../providers/auditors";
+import {AuditorRegistry} from "./providers/auditors";
 
 /**
  * Service for auditing and logging LLM requests and responses

@@ -21,7 +21,7 @@ Each provider has a README with quick reference:
 - **[claude/README.md](claude/README.md)** - Claude-specific notes
 - **[openai/README.md](openai/README.md)** - OpenAI-specific notes
 - **[ollama/README.md](ollama/README.md)** - Ollama-specific notes
-- **[holo/README.md](holo/README.md)** - Holo (canonical format) notes
+- **[holo/README.md](../../plugins/sdk/src/holo/HOLO.md)** - Holo (canonical format) notes
 
 ---
 

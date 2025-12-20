@@ -3,7 +3,6 @@ import {Prompt} from "./prompt";
 import {GuardResult} from "@holokai/sdk/plugin";
 
 export interface HoloWorkerRequest {
-    // nullable organization is ONLY until we finishing protecting all endpoints
     organizationId?: string;
     providerType: string;
     providerName?: string;

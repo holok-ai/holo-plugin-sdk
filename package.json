@@ -38,6 +38,7 @@
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "validate:boundaries": "node scripts/validate-boundaries.js",
+    "validate:plugin-boundaries": "bash scripts/validate-plugin-boundaries.sh",
     "docs:serve": "npx http-server ./docs -p 3001",
     "docs:check": "ls -la README.md CONTRIBUTING.md plugins/*/README.md"
   },

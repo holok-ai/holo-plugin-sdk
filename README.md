@@ -606,7 +606,7 @@ The system uses a **Holo translation layer** for universal provider abstraction.
 
 #### Provider-Specific Examples
 
-- **[Claude README](src/providers/claude/README.md)** - 6-event streaming lifecycle, content blocks
+- **[Claude README](plugins/holo-provider-claude/src/README.md)** - 6-event streaming lifecycle, content blocks
 - **[OpenAI README](src/providers/openai/README.md)** - Multi-choice support, tool call streaming
 - **[Ollama README](src/providers/ollama/README.md)** - Generate vs Chat endpoints, frame-based streaming
 

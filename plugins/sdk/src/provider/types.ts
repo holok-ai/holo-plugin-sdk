@@ -1,5 +1,9 @@
 import {RequestType} from "@holokai/sdk/holo";
-import {HoloWorkerRequest, HoloWorkerResponse} from "../core/worker";
+import {HoloWorkerRequest} from "../core/worker";
+
+export enum ProviderEvent {
+
+}
 
 export interface ProviderConfig {
     id: string;
@@ -59,15 +63,11 @@ export interface AIRequestStat {
 
 export interface IProvider {
     name: string;
-    config: ProviderConfig;
 
-    init(): Promise<void>;
+    init(): void;
 
     getModels(): Promise<ModelInfo[]>;
 
-    processRequest(request: HoloWorkerRequest): Promise<AIRequestStat | null>;
+    processWorkerRequest(request: HoloWorkerRequest): Promise<AIRequestStat>;
 
-    handleLLMRequest(sourceId: string, requestId: string, payload: any, type: RequestType): Promise<AIRequestStat>;
-
-    onResponseChunk(responseChunk: HoloWorkerResponse): Promise<void>;
 }
