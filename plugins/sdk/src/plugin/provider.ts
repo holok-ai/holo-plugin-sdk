@@ -36,6 +36,8 @@ import {IPlugin} from "./base";
  * ```
  */
 export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
+    family: string;
+
     /**
      * Create a provider instance with the given configuration.
      * @param config Provider configuration including API keys and model settings.

@@ -4,9 +4,9 @@ import {HoloLogger} from "@holokai/sdk";
 import logger from "../../utils/logger";
 
 export interface IPluginRegistry<T extends IPlugin> {
-    registerPlugin(plugin: T): void;
+    registerPlugin(plugin: T, version?: string, isLatest?: boolean): void;
 
-    unregisterPlugin(id: string): void;
+    unregisterPlugin(id: string, version?: string): void;
 
     listPlugins(): T[];
 }

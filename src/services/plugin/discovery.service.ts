@@ -2,28 +2,7 @@ import {injectable} from 'tsyringe';
 import {promises as fs} from 'fs';
 import path from 'path';
 import type {PluginType} from '@holokai/sdk/plugin';
-
-interface Logger {
-    info(message: string, context?: Record<string, unknown>): void;
-
-    warn(message: string, context?: Record<string, unknown>): void;
-
-    error(message: string, context?: Record<string, unknown>): void;
-}
-
-class ConsoleLogger implements Logger {
-    info(message: string, context?: Record<string, unknown>): void {
-        console.log(`[PluginDiscovery] INFO: ${message}`, context || '');
-    }
-
-    warn(message: string, context?: Record<string, unknown>): void {
-        console.warn(`[PluginDiscovery] WARN: ${message}`, context || '');
-    }
-
-    error(message: string, context?: Record<string, unknown>): void {
-        console.error(`[PluginDiscovery] ERROR: ${message}`, context || '');
-    }
-}
+import {ClassLogger} from "@holokai/sdk";
 
 export interface DiscoveredPlugin {
     packageName: string;
@@ -31,6 +10,7 @@ export interface DiscoveredPlugin {
     entryPoint: string;
     pluginType: PluginType;
     packagePath: string;
+    isLatest: boolean;
 }
 
 interface PackageJson {
@@ -40,20 +20,20 @@ interface PackageJson {
 }
 
 @injectable()
-export class PluginDiscoveryService {
+export class PluginDiscoveryService extends ClassLogger {
     private readonly pluginScopePath: string;
-    private readonly logger: Logger;
 
     constructor() {
-        this.logger = new ConsoleLogger();
+        super();
         this.pluginScopePath = path.resolve(process.cwd(), 'node_modules', '@holokai');
     }
 
     async discoverPlugins(): Promise<DiscoveredPlugin[]> {
+        const logger = this.mlog(this.discoverPlugins);
         try {
             const scopeExists = await this.directoryExists(this.pluginScopePath);
             if (!scopeExists) {
-                this.logger.info('No @holokai scope found in node_modules', {path: this.pluginScopePath});
+                logger.info('No @holokai scope found in node_modules', {path: this.pluginScopePath});
                 return [];
             }
 
@@ -61,7 +41,7 @@ export class PluginDiscoveryService {
             const packageDirs = entries.filter(d => d.isDirectory() || d.isSymbolicLink()).map(d => d.name);
 
             if (packageDirs.length === 0) {
-                this.logger.info('No plugin packages found in @holokai scope');
+                logger.info('No plugin packages found in @holokai scope');
                 return [];
             }
 
@@ -73,19 +53,22 @@ export class PluginDiscoveryService {
                 }
             }
 
+            // Mark latest versions for each unique plugin
+            this.markLatestVersions(discovered);
+
             if (discovered.length > 0) {
                 const pluginNames = discovered.map(p => p.packageName).join(', ');
-                this.logger.info(`Found ${discovered.length} plugins: ${pluginNames}`, {
+                logger.info(`Found ${discovered.length} plugins: ${pluginNames}`, {
                     count: discovered.length,
-                    plugins: discovered.map(p => ({name: p.packageName, type: p.pluginType, version: p.version}))
+                    plugins: discovered.map(p => ({name: p.packageName, type: p.pluginType, version: p.version, isLatest: p.isLatest}))
                 });
             } else {
-                this.logger.info('No valid plugin packages found');
+                logger.info('No valid plugin packages found');
             }
 
             return discovered;
         } catch (error) {
-            this.logger.error('Failed to discover plugins', {error});
+            logger.error('Failed to discover plugins', {error});
             return [];
         }
     }
@@ -96,6 +79,7 @@ export class PluginDiscoveryService {
     }
 
     private async parsePackage(packageDir: string): Promise<DiscoveredPlugin | null> {
+        const logger = this.mlog(this.parsePackage);
         const packagePath = path.join(this.pluginScopePath, packageDir);
 
         try {
@@ -104,7 +88,7 @@ export class PluginDiscoveryService {
             const packageJson: PackageJson = JSON.parse(packageJsonContent);
 
             if (!packageJson.name || !packageJson.version) {
-                this.logger.warn('Package missing required fields', {
+                logger.warn('Package missing required fields', {
                     packageDir,
                     hasName: !!packageJson.name,
                     hasVersion: !!packageJson.version
@@ -114,7 +98,7 @@ export class PluginDiscoveryService {
 
             const pluginType = this.inferPluginType(packageJson.name);
             if (!pluginType) {
-                this.logger.warn('Could not infer plugin type from package name', {packageName: packageJson.name});
+                logger.warn('Could not infer plugin type from package name', {packageName: packageJson.name});
                 return null;
             }
 
@@ -123,10 +107,11 @@ export class PluginDiscoveryService {
                 version: packageJson.version,
                 entryPoint: packageJson.main || 'index.js',
                 pluginType,
-                packagePath
+                packagePath,
+                isLatest: false // Will be determined after all plugins are discovered
             };
         } catch (error) {
-            this.logger.warn('Failed to parse package', {
+            logger.warn('Failed to parse package', {
                 packageDir,
                 error: error instanceof Error ? error.message : String(error)
             });
@@ -135,8 +120,57 @@ export class PluginDiscoveryService {
     }
 
     private inferPluginType(packageName: string): PluginType | null {
-        const match = packageName.match(/@holokai\/(provider|guard|evaluator|logger|worker)-/);
+        // Match both patterns: @holokai/provider-* and @holokai/holo-provider-*
+        const match = packageName.match(/@holokai\/(?:holo-)?(provider|guard|evaluator|logger|worker)-/);
         return match ? (match[1] as PluginType) : null;
+    }
+
+    /**
+     * Marks the latest version for each unique plugin package
+     * Groups plugins by package name and marks the highest version as latest
+     */
+    private markLatestVersions(plugins: DiscoveredPlugin[]): void {
+        const pluginGroups = new Map<string, DiscoveredPlugin[]>();
+
+        // Group plugins by package name
+        for (const plugin of plugins) {
+            const existing = pluginGroups.get(plugin.packageName) || [];
+            existing.push(plugin);
+            pluginGroups.set(plugin.packageName, existing);
+        }
+
+        // For each group, find and mark the latest version
+        for (const [, group] of pluginGroups) {
+            if (group.length === 1) {
+                group[0].isLatest = true;
+            } else {
+                // Sort by version (descending) and mark the first one as latest
+                group.sort((a, b) => this.compareVersions(b.version, a.version));
+                group[0].isLatest = true;
+            }
+        }
+    }
+
+    /**
+     * Compare semantic versions
+     * Returns positive if v1 > v2, negative if v1 < v2, 0 if equal
+     */
+    private compareVersions(v1: string, v2: string): number {
+        const parts1 = v1.split('.').map(p => parseInt(p, 10) || 0);
+        const parts2 = v2.split('.').map(p => parseInt(p, 10) || 0);
+
+        const maxLength = Math.max(parts1.length, parts2.length);
+
+        for (let i = 0; i < maxLength; i++) {
+            const part1 = parts1[i] || 0;
+            const part2 = parts2[i] || 0;
+
+            if (part1 !== part2) {
+                return part1 - part2;
+            }
+        }
+
+        return 0;
     }
 
     private async directoryExists(dirPath: string): Promise<boolean> {

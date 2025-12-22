@@ -38,7 +38,7 @@ export class PluginService extends ClassLogger {
         log.info(`Loaded ${loaded.length} provider plugins`);
 
         // Initialize and register each provider plugin
-        for (const plugin of loaded) {
+        for (const {plugin, discoveryInfo} of loaded) {
             const providerPlugin = plugin as IProviderPlugin;
 
             // Create plugin context
@@ -52,8 +52,12 @@ export class PluginService extends ClassLogger {
             await providerPlugin.initialize(pluginContext);
 
             if (providerPlugin.getState() === PluginState.READY) {
-                this.providerRegistry.registerPlugin(providerPlugin);
-                log.info(`Registered provider plugin: ${providerPlugin.manifest.name}`);
+                this.providerRegistry.registerPlugin(
+                    providerPlugin,
+                    discoveryInfo.version,
+                    discoveryInfo.isLatest
+                );
+                log.info(`Registered provider plugin: ${providerPlugin.manifest.name}@${discoveryInfo.version}${discoveryInfo.isLatest ? ' (latest)' : ''}`);
             } else {
                 log.warn(`Plugin ${providerPlugin.manifest.name} not ready, state: ${providerPlugin.getState()}`);
             }

@@ -2,18 +2,23 @@ import 'reflect-metadata';
 import {ProviderDB} from "../db";
 import {injectable} from "tsyringe";
 import {ClassLogger, IProvider, Provider} from "@holokai/sdk";
+import {ProviderPluginRegistry} from "./plugin/provider-registry.service";
 
 @injectable()
 export class ProviderService extends ClassLogger {
     private providers: Map<string, IProvider> = new Map();
 
     constructor(
+        private providerRegistry: ProviderPluginRegistry,
         private providerDB: ProviderDB) {
         super();
 
     }
 
     async init(serverId: string): Promise<void> {
+        const logger = this.mlog(this.init);
+        const plugins = this.providerRegistry.listPlugins();
+        logger.debug(`Registered plugins: ${plugins.map(p => `${p.manifest.name}@${p.manifest.version}`).join(', ')}`);
         await this.refreshAvailableProviders(serverId);
     }
 

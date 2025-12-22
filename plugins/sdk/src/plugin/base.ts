@@ -225,5 +225,4 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
         // Default implementation: no-op (host treats as healthy if READY)
         return;
     }
-
 }

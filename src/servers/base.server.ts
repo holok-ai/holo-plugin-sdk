@@ -35,7 +35,9 @@ export class BaseServer extends ClassLogger implements IAppServer {
 
     private async handleError(error: Error) {
         const logger = this.mlog(this.handleError);
-        logger.error(`Server error: ${(error as Error).message}`);
+        logger.error(`Server error: ${(error as Error).message}`, {
+            stack: (error as Error).stack
+        });
         await this.onError(error);
     }
 
