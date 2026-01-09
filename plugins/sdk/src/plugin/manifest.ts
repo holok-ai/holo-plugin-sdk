@@ -257,6 +257,12 @@ export interface PluginManifest {
     pluginType: PluginType;
 
     /**
+     * Plugin family identifier for grouping related plugins.
+     * Used for version management and plugin resolution.
+     */
+    family?: string;
+
+    /**
      * Human-readable name for UI display.
      * Used in marketplace and admin interfaces.
      */

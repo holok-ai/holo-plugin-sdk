@@ -5,14 +5,14 @@ import logger from "../utils/logger";
 import {ProviderService, ResponseService} from "../services";
 import {container, injectable} from "tsyringe";
 import {withStats} from "./mixins/withStats";
-import {LLMWorkerRequest} from '../types';
 import {env} from "../env";
 import {GuardService} from "../admin/services";
 import {PluginService} from "../services/plugin/plugin.service";
 import {PluginDiscoveryService} from "../services/plugin/discovery.service";
 import {PluginLoaderService} from "../services/plugin/loader.service";
 import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
-import {AIRequestStat, IProvider} from "@holokai/sdk";
+import {AIRequestStat, HoloWorkerRequest, IProvider} from "@holokai/sdk";
+import {WorkerResponseFactory} from "../types";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -34,20 +34,17 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
         let requestQueue = env.queue.requestQueue;
 
         const logger = this.mlog('workerConsume')
-        await this.queueService.consume(requestQueue, async (requestId, llmRequest: LLMWorkerRequest) => {
+        await this.queueService.consume(requestQueue, async (requestId, workerRequest: HoloWorkerRequest) => {
             this.stats.totalRequests++;
-            logger.info(`Worker ${this.id} handling request: ${requestId} provider: ${llmRequest.providerType} from server ${llmRequest.sourceId} and queue ${requestQueue}...`);
-
+            logger.info(`Worker ${this.id} handling request: ${requestId} provider: ${workerRequest.providerType} from server ${workerRequest.sourceId} and queue ${requestQueue}...`);
             try {
                 // Check for upstream errors (validation/permission issues)
-                if (llmRequest.errors?.length) {
-                    logger.warn(`Request ${requestId} has upstream validation errors, sending error response`, {
-                        errors: llmRequest.errors
-                    });
+                if (workerRequest.errors?.length) {
+                    logger.warn(`Request ${requestId} has upstream validation errors, sending error response: ${JSON.stringify(workerRequest.errors)}`);
 
-                    await this.responseService.sendError(llmRequest, {
+                    await this.responseService.sendError(workerRequest, {
                         errorType: 'validation',
-                        errors: llmRequest.errors,
+                        errors: workerRequest.errors,
                         workerId: this.id,
                         auditEnabled: true
                     });
@@ -57,7 +54,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                 }
 
                 // Check guard results (PII/security checks)
-                const shouldProceed = await this.guardService.processGuardResult(llmRequest, this.id);
+                const shouldProceed = await this.guardService.processGuardResult(workerRequest, this.id);
 
                 if (!shouldProceed) {
                     logger.info(`Guard check blocked request ${requestId}, error response sent`);
@@ -66,33 +63,39 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
 
                 // Guards passed - proceed with normal provider processing
                 logger.info(`Guards passed for request ${requestId}, proceeding to provider`);
-                const ai: IProvider | undefined = await this.providerService.matchProvider(llmRequest.providerType);
+                const ai: IProvider | undefined = await this.providerService.matchProvider(workerRequest.providerName);
 
                 logger.info(`resolved ai provider: ${ai?.name}`);
-                let requestStats: AIRequestStat | null = null;
+                if (!ai) {
+                    throw new Error('No AI Provider Found to handle request.');
+                }
 
-                // explicitly define outcomes
-                // switch (llmRequest.type) {
-                //     case RequestType.GENERATE:
-                //         this.stats.generateRequests++;
-                //         requestStats = await ai!.processRequest(llmRequest);
-                //         break;
-                //     case RequestType.CHAT:
-                //         this.stats.chatRequests++;
-                //         requestStats = await ai!.processRequest(llmRequest);
-                //         break;
-                //     case RequestType.RESPONSES:
-                //         this.stats.chatRequests++;
-                //         requestStats = await ai!.processRequest(llmRequest);
-                //         break;
-                //     default:
-                //         logger.warn(`No handler registered for message type ${llmRequest.type} - ignoring message...`);
-                //         break;
-                // }
+                const wire = await this.providerService.matchWireAdapter(workerRequest.providerName, {
+                    requestId,
+                    isStreaming: workerRequest.isStreaming,
+                    requestType: workerRequest.type,
+                });
+                const {sourceId} = workerRequest;
+                await this.responseService.sendResponseChunk(this.id, sourceId, requestId, WorkerResponseFactory.create(sourceId, requestId, ai.family, {
+                    type: 'wire',
+                    wire: wire.start()
+                }), true);
 
-                if (requestStats) await this.mergeStats(requestStats!);
+                const q = await ai.processWorkerRequest(workerRequest);
+
+                for await (const evt of q) {
+                    for (const wc of wire.fromProviderEvent(evt)) {
+                        const chunk = WorkerResponseFactory.create(sourceId, requestId, ai.family, {
+                            type: "wire",
+                            wire: wc
+                        });
+                        await this.responseService.sendResponseChunk(this.id, sourceId, requestId, chunk, true);
+                    }
+                    if (evt.type === "done" || evt.type === "error") break;
+                }
             } catch (error) {
                 logger.error(`Error handling request (${requestId}): ${(error as Error).message}`);
+                logger.error(JSON.stringify(workerRequest, null, 2));
                 await this.onError(error as Error);
             }
         });

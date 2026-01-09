@@ -1,42 +1,92 @@
-import {AIRequestStat, IProvider, ModelInfo, ProviderConfig} from "./types";
+import {AsyncEventQueue, IProvider, ModelInfo, ProviderContext, ProviderEvent} from "./types";
 import {HoloWorkerRequest} from "../core/worker";
 import {ObservableClassLogger} from "@holokai/sdk/core";
-import {RequestType} from "@holokai/sdk/holo";
 
 
-export abstract class BaseProvider extends ObservableClassLogger implements IProvider {
+export abstract class BaseProvider<ReqPayload = any, Final = any> extends ObservableClassLogger implements IProvider {
     protected models: Record<string, ModelInfo> = {};
 
-    constructor(
-        protected readonly _config: ProviderConfig,
+    protected constructor(
+        public readonly name: string,
+        public readonly family: string,
+        public readonly version: string,
+        protected readonly _config: any,
     ) {
         super();
-
-        this.init().then(() => this.log.info(`Provider [${this.name}] initialized.`));
     }
-
-    abstract init(): Promise<void>;
 
     abstract getModels(): Promise<ModelInfo[]>;
 
-    async processWorkerRequest(request: HoloWorkerRequest): Promise<AIRequestStat> {
-        const {type, payload} = request;
-        return await this.wrapWithStats(
-            type,
-            this.handleRequest.bind(this),
-            type,
-            payload
-        );
+    async processWorkerRequest(
+        request: HoloWorkerRequest,
+        _opts?: { signal?: AbortSignal }
+    ): Promise<AsyncEventQueue<ProviderEvent>> {
+        const q = new AsyncEventQueue<ProviderEvent>();
+
+        const {requestId, payload} = request as any;
+        const providerPayload = payload as ReqPayload;
+
+        const start = Date.now();
+        let seq = 0;
+        let fullText = "";
+
+        const metrics = {
+            timeToFirstToken: 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            totalProcessingTime: 0,
+        };
+
+        const push = (ev: Omit<ProviderEvent, "requestId" | "seq" | "ts">) => {
+            q.push({...ev, requestId, seq: seq++, ts: Date.now()} as ProviderEvent);
+        };
+
+        const ctx = {
+            emitStreamEvent: (event: any) => push({type: "stream_event", event} as any),
+            emitTextDelta: (text: string) => {
+                if (!metrics.timeToFirstToken) metrics.timeToFirstToken = Date.now() - start;
+                fullText += text;
+                push({type: "text_delta", text} as any);
+            },
+        };
+
+        let run: { final: () => Promise<Final>; cancel?: () => void };
+
+        try {
+            run = await this.handleRequest(providerPayload, ctx);
+        } catch (e: any) {
+            push({type: "error", error: {message: e?.message ?? String(e)}} as any);
+            q.end();
+            return q;
+        }
+
+        // IMPORTANT: do not await here — return q immediately for streaming
+        void (async () => {
+            try {
+                const final = await run.final();
+
+                metrics.inputTokens = (final as any)?.usage?.input_tokens ?? 0;
+                metrics.outputTokens = (final as any)?.usage?.output_tokens ?? 0;
+                metrics.totalProcessingTime = Date.now() - start;
+
+                push({type: "done", message: final, fullText, metrics} as any);
+            } catch (e: any) {
+                push({type: "error", error: {message: e?.message ?? String(e)}} as any);
+            } finally {
+                q.end();
+            }
+        })();
+
+        return q;
     }
 
-    abstract handleRequest(request: any, type: RequestType): Promise<void>;
+    protected abstract handleRequest(
+        payload: ReqPayload,
+        ctx: ProviderContext
+    ): Promise<{ final: () => Promise<Final>; cancel?: () => void }>;
 
     get id(): string {
         return this._config.id;
-    }
-
-    get name(): string {
-        return this._config.name;
     }
 
     protected audit(response: any, _acc: any = null) {
@@ -52,48 +102,6 @@ export abstract class BaseProvider extends ObservableClassLogger implements IPro
     }
 
     protected done(response: any, _acc: any = null) {
-        this.emit('done', response);
-    }
-
-    /**
-     * Wraps provider method calls with statistics tracking, error handling, and logging.
-     * Automatically measures execution time and tracks success/error counts.
-     *
-     * @param type - The type of request being processed (GENERATE or CHAT)
-     * @param method - The provider method to execute (must be bound to provider instance)
-     * @param args - Arguments to pass to the method, first two must be sourceId and requestId
-     * @returns Promise resolving to AIRequestStat with timing and success/error metrics
-     */
-    protected async wrapWithStats<T extends [sourceId: string, requestId: string, ...any[]]>(
-        type: RequestType,
-        method: (...args: T) => Promise<void>,
-        ...args: T
-    ): Promise<AIRequestStat> {
-        const logger = this.mlog(this.wrapWithStats);
-        const startTime = Date.now();
-        let success = 0;
-        let error = 0;
-
-        // Extract sourceId and requestId from the first two arguments
-        const [sourceId, requestId] = args as [string, string, ...any[]];
-
-        logger.debug(`[${sourceId}-${requestId}] ${type.charAt(0).toUpperCase() + type.slice(1)} request: ${requestId}`);
-        try {
-            await method(...args);
-            success++;
-        } catch (e) {
-            logger.error(`[${sourceId}-${requestId}] ${type.charAt(0).toUpperCase() + type.slice(1)} error: ${(e as Error).message}`);
-            // await this.onError(sourceId, requestId, e as Error);
-            error++;
-        }
-        const endTime = Date.now();
-        return {
-            type,
-            startTime,
-            endTime,
-            duration: endTime - startTime,
-            success,
-            error
-        };
+        this.emit('done', response, _acc);
     }
 }

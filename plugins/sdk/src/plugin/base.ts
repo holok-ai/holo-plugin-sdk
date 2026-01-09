@@ -42,6 +42,8 @@ export interface IPlugin {
     /** Current plugin state */
     readonly state: PluginState;
 
+    readonly family: string;
+
     /**
      * Initialize the plugin with provided context
      * @param context Runtime context including logger, config, and environment
@@ -224,5 +226,17 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
     protected async onHealthCheck(): Promise<HealthCheckResult | void> {
         // Default implementation: no-op (host treats as healthy if READY)
         return;
+    }
+
+    get name(): string {
+        return this.manifest.name;
+    }
+
+    get family(): string {
+        return this.manifest.family ?? this.manifest.name;
+    }
+
+    get version(): string {
+        return this.manifest.version;
     }
 }

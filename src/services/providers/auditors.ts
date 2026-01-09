@@ -1,8 +1,7 @@
 import {injectable} from "tsyringe";
-import {LLMWorkerRequest, LLMWorkerResponse} from "../../types";
 import {LlmRequest, LlmResponse} from "../../db/types";
 import logger from "../../utils/logger";
-import {IAuditor} from "@holokai/sdk";
+import {HoloWorkerRequest, HoloWorkerResponse, IAuditor} from "@holokai/sdk";
 
 @injectable()
 export class AuditorRegistry {
@@ -23,7 +22,7 @@ export class AuditorRegistry {
     }
 
 
-    audit(workerRequest: LLMWorkerRequest): Omit<LlmRequest, 'id'> {
+    audit(workerRequest: HoloWorkerRequest): Omit<LlmRequest, 'id'> {
         const auditor = this.getAuditor(workerRequest.providerName || workerRequest.providerType);
 
         // Create empty LlmRequest object
@@ -50,7 +49,7 @@ export class AuditorRegistry {
     }
 
     auditResponse(
-        workerResponse: LLMWorkerResponse,
+        workerResponse: HoloWorkerResponse,
         requestContext?: { userId?: string; applicationId?: string }
     ): Omit<LlmResponse, 'id'> {
         const auditor = this.getAuditor(workerResponse.providerType);

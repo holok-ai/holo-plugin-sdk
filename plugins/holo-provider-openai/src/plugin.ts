@@ -1,19 +1,27 @@
-/**
- * OpenAI Provider Plugin Implementation
- *
- * Implements IProviderPlugin contract for OpenAI API
- */
-
 import {BasePlugin, IProviderPlugin, PluginContext} from '@holokai/sdk/plugin';
 import {manifest} from "./manifest.js";
-import {IProvider, ProviderCapabilities} from "@holokai/sdk/provider";
+import {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/sdk/provider";
 import {OpenAIProvider} from "./openai.provider";
+import {RequestType} from "@holokai/sdk";
+import {OpenAIChatWireAdapter, OpenAIResponsesWireAdapter} from "./adapters";
 
 export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin {
     manifest = manifest;
 
     async createProvider(config: any): Promise<IProvider> {
-        return new OpenAIProvider(config);
+        return new OpenAIProvider(
+            this.name,
+            this.family,
+            this.version,
+            config
+        );
+    }
+
+    createWireAdapter(params: WireAdapterParams): IWireAdapter {
+        const {requestId, isStreaming, requestType} = params;
+        return requestType === RequestType.RESPONSES
+            ? new OpenAIResponsesWireAdapter(requestId, isStreaming)
+            : new OpenAIChatWireAdapter(requestId, isStreaming);
     }
 
     getCapabilities(): ProviderCapabilities {

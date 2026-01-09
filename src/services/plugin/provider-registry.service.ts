@@ -2,55 +2,51 @@ import {injectable} from 'tsyringe';
 import type {IProviderPlugin} from '@holokai/sdk/plugin';
 import type {IPluginRegistry} from './registry.service';
 
-interface VersionedPlugin {
-    plugin: IProviderPlugin;
-    version: string;
-    isLatest: boolean;
-}
-
 @injectable()
 export class ProviderPluginRegistry implements IPluginRegistry<IProviderPlugin> {
-    // Map of providerType -> array of versioned plugins
-    private readonly plugins: Map<string, VersionedPlugin[]>;
+    private readonly latestPlugins: Map<string, IProviderPlugin>;
+    private readonly versionedPlugins: Map<string, Map<string, IProviderPlugin>>;
 
     constructor() {
-        this.plugins = new Map();
+        this.latestPlugins = new Map();
+        this.versionedPlugins = new Map();
     }
 
     registerPlugin(plugin: IProviderPlugin, version?: string, isLatest: boolean = true): void {
-        const providerType = this.getProviderType(plugin);
+        if (!plugin.family) {
+            throw new Error(`Plugin ${plugin.manifest.name} has no family defined`);
+        }
+        const family = plugin.family.toUpperCase();
         const pluginVersion = version || plugin.manifest.version;
 
-        const versionedPlugin: VersionedPlugin = {
-            plugin,
-            version: pluginVersion,
-            isLatest
-        };
-
-        const existing = this.plugins.get(providerType) || [];
-
-        // If marking as latest, unmark other versions
-        if (isLatest) {
-            existing.forEach(vp => vp.isLatest = false);
+        if (!this.versionedPlugins.has(family)) {
+            this.versionedPlugins.set(family, new Map());
         }
+        this.versionedPlugins.get(family)!.set(pluginVersion, plugin);
 
-        existing.push(versionedPlugin);
-        this.plugins.set(providerType, existing);
+        if (isLatest) {
+            this.latestPlugins.set(family, plugin);
+        }
     }
 
-    unregisterPlugin(providerType: string, version?: string): void {
+    unregisterPlugin(family: string, version?: string): void {
+        const familyKey = family.toUpperCase();
+
         if (!version) {
-            // Remove all versions
-            this.plugins.delete(providerType);
+            this.latestPlugins.delete(familyKey);
+            this.versionedPlugins.delete(familyKey);
         } else {
-            // Remove specific version
-            const existing = this.plugins.get(providerType);
-            if (existing) {
-                const filtered = existing.filter(vp => vp.version !== version);
-                if (filtered.length === 0) {
-                    this.plugins.delete(providerType);
-                } else {
-                    this.plugins.set(providerType, filtered);
+            const versions = this.versionedPlugins.get(familyKey);
+            if (versions) {
+                versions.delete(version);
+
+                const latestPlugin = this.latestPlugins.get(familyKey);
+                if (latestPlugin?.manifest.version === version) {
+                    this.latestPlugins.delete(familyKey);
+                }
+
+                if (versions.size === 0) {
+                    this.versionedPlugins.delete(familyKey);
                 }
             }
         }
@@ -58,75 +54,63 @@ export class ProviderPluginRegistry implements IPluginRegistry<IProviderPlugin> 
 
     listPlugins(): IProviderPlugin[] {
         const allPlugins: IProviderPlugin[] = [];
-        for (const versions of this.plugins.values()) {
-            allPlugins.push(...versions.map(vp => vp.plugin));
+        for (const versions of this.versionedPlugins.values()) {
+            allPlugins.push(...versions.values());
         }
         return allPlugins;
     }
 
-    getByProviderType(providerType: string, version?: string): IProviderPlugin | null {
-        const versions = this.plugins.get(providerType);
-        if (!versions || versions.length === 0) {
-            return null;
-        }
+    getByFamily(family: string, version?: string): IProviderPlugin | null {
+        const familyKey = family.toUpperCase();
 
         if (!version) {
-            // Return latest version
-            const latest = versions.find(vp => vp.isLatest);
-            return latest ? latest.plugin : versions[0].plugin;
+            return this.latestPlugins.get(familyKey) || null;
         }
 
-        // Return specific version
-        const match = versions.find(vp => vp.version === version);
-        return match ? match.plugin : null;
+        const versions = this.versionedPlugins.get(familyKey);
+        if (!versions) {
+            return null;
+        }
+        return versions.get(version) || null;
     }
 
-    async atomicReplace(providerType: string, newPlugin: IProviderPlugin, version?: string): Promise<IProviderPlugin | null> {
-        const oldPlugin = this.getByProviderType(providerType, version);
-        this.unregisterPlugin(providerType, version);
+    async atomicReplace(family: string, newPlugin: IProviderPlugin, version?: string): Promise<IProviderPlugin | null> {
+        const oldPlugin = this.getByFamily(family, version);
+        this.unregisterPlugin(family, version);
         this.registerPlugin(newPlugin, version);
         return oldPlugin;
     }
 
-    /**
-     * Get all available versions for a provider type
-     */
-    getVersions(providerType: string): string[] {
-        const versions = this.plugins.get(providerType);
+    getVersions(family: string): string[] {
+        const familyKey = family.toUpperCase();
+        const versions = this.versionedPlugins.get(familyKey);
         if (!versions) {
             return [];
         }
-        return versions.map(vp => vp.version);
+        return Array.from(versions.keys());
     }
 
-    /**
-     * Get the latest version string for a provider type
-     */
-    getLatestVersion(providerType: string): string | null {
-        const versions = this.plugins.get(providerType);
-        if (!versions) {
-            return null;
-        }
-        const latest = versions.find(vp => vp.isLatest);
-        return latest ? latest.version : null;
+    getLatestVersion(family: string): string | null {
+        const familyKey = family.toUpperCase();
+        const plugin = this.latestPlugins.get(familyKey);
+        return plugin ? plugin.manifest.version : null;
     }
 
-    /**
-     * Check if a specific version exists
-     */
-    hasVersion(providerType: string, version: string): boolean {
-        const versions = this.plugins.get(providerType);
+    getLatest(family: string): IProviderPlugin | null {
+        const familyKey = family.toUpperCase();
+        return this.latestPlugins.get(familyKey) || null;
+    }
+
+    hasVersion(family: string, version: string): boolean {
+        const familyKey = family.toUpperCase();
+        const versions = this.versionedPlugins.get(familyKey);
         if (!versions) {
             return false;
         }
-        return versions.some(vp => vp.version === version);
+        return versions.has(version);
     }
 
-    private getProviderType(plugin: IProviderPlugin): string {
-        if (plugin.manifest.custom?.providerType) {
-            return String(plugin.manifest.custom.providerType);
-        }
-        const match = plugin.manifest.name.match(/@[\w-]+\/(?:holo-)?provider-(.+)/);
-        return match ? match[1] : plugin.manifest.name;
+    getFamilies(): string[] {
+        return Array.from(this.latestPlugins.keys());
     }
 }

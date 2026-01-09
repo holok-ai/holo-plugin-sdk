@@ -5,7 +5,7 @@ import {GuardResult} from "@holokai/sdk/plugin";
 export interface HoloWorkerRequest {
     organizationId?: string;
     providerType: string;
-    providerName?: string;
+    providerName: string;
     sourceId: string;
     appSlug?: string;
     userId?: string;

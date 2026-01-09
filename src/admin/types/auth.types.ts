@@ -3,6 +3,7 @@ export interface JWTPayload {
     userId?: string;
     appSlugs?: string[];
     appSlug?: string;
+    providerName?: string;
     providerType?: string;
     iat?: number;
     exp?: number;

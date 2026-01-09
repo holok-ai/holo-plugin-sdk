@@ -1,4 +1,4 @@
-import type {IProvider, ProviderCapabilities as ProviderFeatures} from '../provider/types.js';
+import type {IProvider, IWireAdapter, ProviderCapabilities as ProviderFeatures, WireAdapterParams} from '../provider';
 import {IPlugin} from "./base";
 
 /**
@@ -36,8 +36,6 @@ import {IPlugin} from "./base";
  * ```
  */
 export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
-    family: string;
-
     /**
      * Create a provider instance with the given configuration.
      * @param config Provider configuration including API keys and model settings.
@@ -56,4 +54,6 @@ export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
      * @returns Array of supported model identifiers.
      */
     getSupportedModels(): string[];
+
+    createWireAdapter(params: WireAdapterParams): IWireAdapter;
 }

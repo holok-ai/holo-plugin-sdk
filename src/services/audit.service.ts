@@ -1,13 +1,13 @@
 import 'reflect-metadata';
-import {AuditServiceEvent, LLMWorkerRequest, LLMWorkerResponse} from '../types';
+import {AuditServiceEvent} from '../types';
 import {LlmRequest, LlmResponse, LlmStatus} from "../db/types";
 import {container, injectable} from "tsyringe";
 import {AppDB, EvaluatorDB, RequestDB, ResponseDB} from "../db";
 import logger from "../utils/logger";
 import {QueueService} from "./queue.service";
 import {env} from '../env';
-
 import {AuditorRegistry} from "./providers/auditors";
+import {HoloWorkerRequest, HoloWorkerResponse} from "@holokai/sdk";
 
 /**
  * Service for auditing and logging LLM requests and responses
@@ -28,19 +28,19 @@ export class AuditService {
 
     /**
      * Log LLM request to database with comprehensive audit trail
-     * Supports both LLMWorkerRequest and direct LlmRequest formats
-     * @param {LLMWorkerRequest | Omit<LlmRequest, 'id'>} content - Request data to log
+     * Supports both HoloWorkerRequest and direct LlmRequest formats
+     * @param {HoloWorkerRequest | Omit<LlmRequest, 'id'>} content - Request data to log
      */
-    async logRequest(content: LLMWorkerRequest | Omit<LlmRequest, 'id'>): Promise<void> {
+    async logRequest(content: HoloWorkerRequest | Omit<LlmRequest, 'id'>): Promise<void> {
         const startTime = Date.now();
 
         try {
-            // Type guard to check if it's an LLMWorkerRequest
-            if (this.isLLMWorkerRequest(content)) {
-                logger.debug(`Logging LLMWorkerRequest - requestId: ${content.requestId}, type: ${content.type}, provider: ${content.providerType}`);
+            // Type guard to check if it's an HoloWorkerRequest
+            if (this.isHoloWorkerRequest(content)) {
+                logger.debug(`Logging HoloWorkerRequest - requestId: ${content.requestId}, type: ${content.type}, provider: ${content.providerType}`);
                 const mappedRequest = this.auditRegistry.audit(content);
                 await this.insertRequest(mappedRequest);
-                logger.info(`Successfully logged LLMWorkerRequest ${content.requestId} in ${Date.now() - startTime}ms`);
+                logger.info(`Successfully logged HoloWorkerRequest ${content.requestId} in ${Date.now() - startTime}ms`);
             } else {
                 logger.debug(`Logging direct LlmRequest - requestId: ${content.request_id}, type: ${content.request_type}`);
                 await this.insertRequest(content);
@@ -48,7 +48,7 @@ export class AuditService {
             }
         } catch (error) {
             logger.error(`Failed to log request: ${error instanceof Error ? error.message : 'Unknown error'}`, {
-                requestId: this.isLLMWorkerRequest(content) ? content.requestId : content.request_id,
+                requestId: this.isHoloWorkerRequest(content) ? content.requestId : content.request_id,
                 error: error,
                 duration: Date.now() - startTime
             });
@@ -57,21 +57,21 @@ export class AuditService {
     }
 
     /**
-     * Type guard to determine if object is an LLMWorkerRequest
+     * Type guard to determine if object is an HoloWorkerRequest
      * @param {any} obj - Object to check
-     * @returns {boolean} True if object is LLMWorkerRequest
+     * @returns {boolean} True if object is HoloWorkerRequest
      * @private
      */
-    private isLLMWorkerRequest(obj: any): obj is LLMWorkerRequest {
+    private isHoloWorkerRequest(obj: any): obj is HoloWorkerRequest {
         const isWorkerRequest = obj.payload !== undefined &&
             obj.sourceId !== undefined &&
             obj.providerType !== undefined &&
             obj.type !== undefined;
-        logger.debug(`Type guard check - isLLMWorkerRequest: ${isWorkerRequest}`);
+        logger.debug(`Type guard check - isHoloWorkerRequest: ${isWorkerRequest}`);
         return isWorkerRequest;
     }
 
-    // LLMWorkerRequest mapping is now handled by the TranslatorRegistry
+    // HoloWorkerRequest mapping is now handled by the TranslatorRegistry
     // This provides better type safety and provider-specific field extraction
 
     /**
@@ -96,35 +96,35 @@ export class AuditService {
 
     /**
      * Log LLM response to database with comprehensive audit trail
-     * Supports LLMWorkerResponse and direct LlmResponse formats
-     * @param {LLMWorkerResponse | Omit<LlmResponse, 'id'>} content - Response data to log
+     * Supports HoloWorkerResponse and direct LlmResponse formats
+     * @param {HoloWorkerResponse | Omit<LlmResponse, 'id'>} content - Response data to log
      * @param requestContext - Optional context for userId and applicationId
      */
-    async logResponse(content: LLMWorkerResponse, requestContext?: {
+    async logResponse(content: HoloWorkerResponse, requestContext?: {
         userId?: string;
         applicationId?: string
     }): Promise<void>;
     async logResponse(content: Omit<LlmResponse, 'id'>): Promise<void>;
-    async logResponse(content: LLMWorkerResponse | Omit<LlmResponse, 'id'>, requestContext?: {
+    async logResponse(content: HoloWorkerResponse | Omit<LlmResponse, 'id'>, requestContext?: {
         userId?: string;
         applicationId?: string
     }): Promise<void> {
         const startTime = Date.now();
 
         try {
-            if (this.isLLMWorkerResponse(content)) {
-                logger.debug(`Logging LLMWorkerResponse - requestId: ${content.requestId}, provider: ${content.providerType}`);
+            if (this.isHoloWorkerResponse(content)) {
+                logger.debug(`Logging HoloWorkerResponse - requestId: ${content.requestId}, provider: ${content.providerType}`);
                 const mappedResponse = this.auditRegistry.auditResponse(content, requestContext);
                 const responseId = await this.insertResponse(mappedResponse);
                 if (mappedResponse.status === LlmStatus.SUCCESS && responseId) await this.sendToEvaluatorQ(responseId, mappedResponse.application_id);
-                logger.info(`Successfully logged LLMWorkerResponse ${content.requestId} (${content.providerType}) in ${Date.now() - startTime}ms`);
+                logger.info(`Successfully logged HoloWorkerResponse ${content.requestId} (${content.providerType}) in ${Date.now() - startTime}ms`);
             } else {
                 logger.debug(`Logging direct LlmResponse - requestId: ${content.request_id}`);
                 await this.insertResponse(content);
                 logger.info(`Successfully logged LlmResponse ${content.request_id} in ${Date.now() - startTime}ms`);
             }
         } catch (error) {
-            const requestId = this.isLLMWorkerResponse(content) ? content.requestId : content.request_id;
+            const requestId = this.isHoloWorkerResponse(content) ? content.requestId : content.request_id;
             logger.error(`Failed to log response: ${error instanceof Error ? error.message : 'Unknown error'}`, {
                 requestId: requestId,
                 error: error,
@@ -162,17 +162,17 @@ export class AuditService {
     }
 
     /**
-     * Type guard to determine if object is an LLMWorkerResponse
+     * Type guard to determine if object is an HoloWorkerResponse
      * @param {any} obj - Object to check
-     * @returns {boolean} True if object is LLMWorkerResponse
+     * @returns {boolean} True if object is HoloWorkerResponse
      * @private
      */
-    private isLLMWorkerResponse(obj: any): obj is LLMWorkerResponse {
+    private isHoloWorkerResponse(obj: any): obj is HoloWorkerResponse {
         const isWorkerResponse = obj.requestId !== undefined &&
             obj.providerType !== undefined &&
             obj.payload !== undefined &&
             obj.sourceId !== undefined;
-        logger.debug(`Type guard check - isLLMWorkerResponse: ${isWorkerResponse}`);
+        logger.debug(`Type guard check - isHoloWorkerResponse: ${isWorkerResponse}`);
         return isWorkerResponse;
     }
 

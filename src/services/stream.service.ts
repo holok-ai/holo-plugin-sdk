@@ -1,228 +1,187 @@
 import 'reflect-metadata';
-import {container, injectable} from 'tsyringe';
+import {injectable} from 'tsyringe';
+import {Response} from "express";
 import {ResponseStream} from "./response.service";
-import {LLMWorkerResponse} from "../types";
-import {HoloTranslator} from "./providers/holo.translator";
-import {ClassLogger, HoloResponseFactory} from "@holokai/sdk";
+import {ClassLogger, WireChunk} from "@holokai/sdk";
 
+type StreamEntry = {
+    stream: ResponseStream;
+    res: Response | null;
+
+    headersSet: boolean;
+    pendingHeaders: Record<string, string> | null;
+
+    pendingBodies: string[];
+    pendingDone: boolean;
+
+    closed: boolean;
+};
 
 @injectable()
 export class StreamService extends ClassLogger {
-    private readonly streams: Map<string, ResponseStream>;
-
-    constructor() {
-        super();
-        this.streams = new Map<string, ResponseStream>();
-    }
-
-    get activeStreamCount(): number {
-        return this.streams.size;
-    }
-
-    async createResponseStream(requestId: string, isStreaming: boolean = true): Promise<ResponseStream> {
-        const logger = this.mlog(this.createResponseStream);
-        const responseStream = new ResponseStream(requestId, isStreaming);
-
-        this.streams.set(requestId, responseStream);
-        responseStream.on('end', () => {
-            logger.debug(`Stream ended for request ${requestId}`);
-            this.removeStream(requestId)
-        });
-        responseStream.on('error', () => {
-            logger.error(`Stream error for request ${requestId}`);
-            this.removeStream(requestId)
-        });
-
-        logger.info(`Created response stream for request ${requestId}, active streams: ${this.activeStreamCount}`);
-        return responseStream;
-    }
-
-    async streamData(data: LLMWorkerResponse, res: ResponseStream) {
-        const logger = this.mlog(this.streamData);
-        const {requestId, providerType, sourceId} = data;
-
-        try {
-            // switch (providerType) {
-            //     case ProviderType.OLLAMA:
-            //         this.streamOllama(payload, res);
-            //         break;
-            //     case ProviderType.CLAUDE:
-            //         this.streamClaude(payload, res);
-            //         break;
-            //     case ProviderType.OPENAI:
-            //     case ProviderType.PERPLEXITY:
-            //         const isResponsesAPI = payload.object === 'response' || payload.type?.startsWith('response.');
-            //         logger.debug(`OpenAI routing: object=${payload.object}, type=${payload.type}, isResponsesAPI=${isResponsesAPI}, isStreaming=${res.isStreaming}`);
-            //         if (isResponsesAPI) {
-            //             this.streamOpenAIResponses(payload, res, fullResponse);
-            //         } else {
-            //             this.streamOpenAI(payload, res, fullResponse);
-            //         }
-            //         break;
-            // }
-        } catch (error) {
-            logger.error(`${providerType} streaming error: ${(error as Error).message}`, {
-                requestId,
-                providerType,
-                sourceId
-            });
-
-            try {
-                if (!res.destroyed) {
-                    res.push(`data: {"error":"Stream formatting error"}\n\n`);
-                    res.end();
-                }
-            } catch (closeError) {
-                logger.error(`Failed to close response stream: ${(closeError as Error).message}`);
-            }
-
-            throw error;
-        }
-    }
-
-    async endStream(payload: any, res: ResponseStream) {
-        res.push(JSON.stringify(payload));
-        res.end();
-    }
-
-    removeStream(requestId: string) {
-        const logger = this.mlog(this.removeStream);
-        if (this.streams.has(requestId)) {
-            this.streams.delete(requestId);
-            logger.info(`Removed response stream for request ${requestId}, active streams: ${this.activeStreamCount}`);
-        }
-    }
+    private readonly streams = new Map<string, StreamEntry>();
 
     getStream(requestId: string): ResponseStream | undefined {
-        return this.streams.get(requestId);
+        return this.streams.get(requestId)?.stream;
     }
 
-    getActiveStreams(): Map<string, ResponseStream> {
-        return this.streams;
+    async ensureStream(requestId: string, isStreaming: boolean = true): Promise<ResponseStream> {
+        const logger = this.mlog(this.ensureStream);
+
+        const existing = this.streams.get(requestId);
+        if (existing) return existing.stream;
+
+        const stream = new ResponseStream(requestId, isStreaming);
+
+        const entry: StreamEntry = {
+            stream,
+            res: null,
+
+            headersSet: false,
+            pendingHeaders: null,
+
+            pendingBodies: [],
+            pendingDone: false,
+
+            closed: false,
+        };
+
+        this.streams.set(requestId, entry);
+
+        stream.on('end', () => {
+            logger.debug(`Stream ended for request ${requestId}`);
+            this.removeStream(requestId);
+        });
+
+        stream.on('error', (err) => {
+            logger.error(`Stream error for request ${requestId}: ${(err as any)?.message ?? String(err)}`);
+            this.removeStream(requestId);
+        });
+
+        return stream;
     }
 
-    async injectStatusMessage(
-        requestId: string,
-        model: string,
-        message: string,
-        providerType: string,
-        isChatMode: boolean = true
-    ): Promise<void> {
-        const logger = this.mlog(this.injectStatusMessage);
-        const stream = this.streams.get(requestId);
+    attachResponse(requestId: string, res: Response): void {
+        const logger = this.mlog(this.attachResponse);
+        const entry = this.streams.get(requestId);
+        if (!entry) return;
 
-        if (!stream || stream.destroyed) {
-            logger.warn(`Cannot inject status: stream not found or destroyed`, {requestId});
+        if (!entry.res) entry.res = res;
+
+        if (!entry.headersSet && entry.pendingHeaders) {
+            this.applyHeadersOnce(requestId, entry, entry.pendingHeaders);
+            entry.pendingHeaders = null;
+        }
+
+        // If headers are already set (or just set), flush any buffered bodies.
+        this.flushPending(entry);
+        logger.debug(`Attached HTTP response for request ${requestId}`);
+    }
+
+    writeWire(requestId: string, wire: WireChunk): void {
+        const entry = this.streams.get(requestId);
+        if (!entry) return;
+
+        if (entry.closed) return;
+
+        const s = entry.stream;
+        if (s.destroyed || (s as any).writableEnded) {
+            entry.closed = true;
             return;
         }
 
-        if (!isChatMode) {
-            logger.debug(`Skipping status injection for API mode`, {requestId});
-            return;
-        }
-
-        try {
-            const holoChunk = HoloResponseFactory.createStatusChunk(requestId, model, message, providerType);
-            const holoTranslator = container.resolve(HoloTranslator);
-            const providerChunks = await holoTranslator.fromHoloStreamChunks([holoChunk], providerType);
-
-            if (Array.isArray(providerChunks)) {
-                for (const chunk of providerChunks) {
-                    const workerResponse: LLMWorkerResponse = {
-                        requestId,
-                        sourceId: 'status',
-                        providerType,
-                        payload: chunk,
-                        organizationId: '',
-                        workerId: 'status',
-                        providerName: model
-                    };
-                    await this.streamData(workerResponse, stream);
-                }
+        // 1) Handle headers (buffer if res not attached yet)
+        if (wire.headers) {
+            if (!entry.res) {
+                entry.pendingHeaders = wire.headers;
+            } else {
+                this.applyHeadersOnce(requestId, entry, wire.headers);
             }
-
-            logger.debug(`Injected status message`, {requestId, message, providerType});
-        } catch (error) {
-            logger.error(`Failed to inject status message: ${(error as Error).message}`, {
-                requestId,
-                message,
-                error
-            });
         }
+
+        // 2) Enforce: no body until headers are set
+        if (wire.body) {
+            if (!entry.headersSet) {
+                entry.pendingBodies.push(wire.body);
+            } else {
+                s.push(wire.body);
+            }
+        }
+
+        // 3) Terminal handling (buffer terminal if we haven't flushed yet)
+        if (wire.done) {
+            if (!entry.headersSet) {
+                entry.pendingDone = true;
+            } else {
+                entry.closed = true;
+                s.end();
+            }
+        }
+
+        // If headers became set and we have pending, flush now.
+        this.flushPending(entry);
     }
 
-    streamOllama(response: any, res: ResponseStream) {
-        const logger = this.mlog(this.streamOllama);
-        res.push(JSON.stringify(response) + '\n');
+    endWire(requestId: string): void {
+        const entry = this.streams.get(requestId);
+        if (!entry) return;
 
-        const hasError = 'error' in response;
-        if (("done" in response && response.done) || hasError) {
-            logger.debug('Closing response stream');
-            res.end();
-        }
-    }
+        if (entry.closed) return;
 
-    streamClaude(response: any, res: ResponseStream) {
-        const logger = this.mlog(this.streamClaude);
-        const payload = response as any;
-
-        const eventLine = `event: ${payload.type}\n`;
-        const dataLine = `data: ${JSON.stringify(response)}\n\n`;
-
-        logger.info(`Sending Claude SSE event: ${eventLine.trim()}`);
-        logger.debug(`Sending Claude SSE data: ${dataLine.trim()}`);
-
-        res.push(eventLine);
-        res.push(dataLine);
-
-        if (payload.type === 'message_stop' || payload.type === 'error') {
-            logger.debug('Closing response stream');
-            res.end();
-        }
-    }
-
-    streamOpenAI(response: any, res: ResponseStream, fullResponse?: string) {
-        const logger = this.mlog(this.streamOpenAI);
-        logger.debug(`opeanai stream formatter ${JSON.stringify(response)}`);
-
-        if (!res.isStreaming) {
-            res.push(JSON.stringify(response));
-            res.end();
+        const s = entry.stream;
+        if (s.destroyed || (s as any).writableEnded) {
+            entry.closed = true;
             return;
         }
 
-        res.push(`data: ${JSON.stringify(response)}\n\n`);
-
-        // const choice = response.choices?.[0];
-        const hasError = 'error' in response;
-        const hasUsage = response.usage !== null && response.usage !== undefined;
-
-        if (hasUsage || fullResponse !== undefined || hasError) {
-            if (!hasError) {
-                res.push(`data: [DONE]\n\n`);
-            }
-            logger.debug('Closing response stream');
-            res.end();
-        }
+        entry.closed = true;
+        s.end();
     }
 
-    streamOpenAIResponses(payload: any, res: ResponseStream, _fullResponse?: string) {
-        const logger = this.mlog(this.streamOpenAIResponses);
+    removeStream(requestId: string): void {
+        this.streams.delete(requestId);
+    }
 
-        if (!res.isStreaming) {
-            res.push(JSON.stringify(payload));
-            res.end();
+    private applyHeadersOnce(requestId: string, entry: StreamEntry, headers: Record<string, string>): void {
+        const logger = this.mlog(this.applyHeadersOnce);
+
+        if (entry.headersSet) return;
+        if (!entry.res) return;
+
+        const res = entry.res;
+        if (res.headersSent) {
+            logger.warn(`Headers already sent for request ${requestId}; cannot apply wire headers`);
+            entry.headersSet = true;
             return;
         }
 
-        res.push(`data: ${JSON.stringify(payload)}\n\n`);
+        for (const [k, v] of Object.entries(headers)) res.setHeader(k, v);
+        entry.headersSet = true;
 
-        if (payload.type === 'response.completed' || payload.type === 'response.failed' || payload.type === 'error') {
-            if (payload.type !== 'error') {
-                res.push(`data: [DONE]\n\n`);
-            }
-            logger.debug('Closing Responses API stream');
-            res.end();
+        // Force headers out before any body is written (important for SSE clients)
+        if (typeof (res as any).flushHeaders === 'function') {
+            (res as any).flushHeaders();
+        }
+    }
+
+    private flushPending(entry: StreamEntry): void {
+        if (!entry.headersSet) return;
+
+        const s = entry.stream;
+        if (entry.closed || s.destroyed || (s as any).writableEnded) {
+            entry.closed = true;
+            return;
+        }
+
+        while (entry.pendingBodies.length) {
+            const chunk = entry.pendingBodies.shift();
+            if (chunk) s.push(chunk);
+        }
+
+        if (entry.pendingDone) {
+            entry.pendingDone = false;
+            entry.closed = true;
+            s.end();
         }
     }
 }
