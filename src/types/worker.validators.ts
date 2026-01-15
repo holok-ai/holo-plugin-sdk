@@ -13,6 +13,7 @@ export const RequestTypeValidator = type.valueOf(RequestType);
  * Validator for LLMWorkerRequest
  * Note: payload is 'unknown' since ProviderRequest is a complex union type
  */
+
 export const LLMWorkerRequestValidator = type({
     'organizationId?': 'string',
     providerType: ProviderTypeValidator,
@@ -20,6 +21,7 @@ export const LLMWorkerRequestValidator = type({
     sourceId: 'string',
     'appSlug?': 'string',
     'userId?': 'string',
+    'thread_id?': 'string',
     requestId: 'string',
     type: RequestTypeValidator,
     payload: ProviderRequestValidator,
