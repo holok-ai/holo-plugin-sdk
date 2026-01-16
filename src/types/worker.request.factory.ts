@@ -87,6 +87,16 @@ export class WorkerRequestFactory {
                     request = OpenAIResponseCreateParamsValidator.assert(body) as ProviderRequest;
                 } else {
                     request = OpenAIChatRequestValidator.assert(body);
+                    //FOR OPENAI requests replace the depricated max_tokens parameter with max_completion_tokens
+
+                    //TODO: Account for this in future translator
+                    if(request.max_tokens){
+                        request.max_completion_tokens = request.max_tokens;
+                        delete request.max_tokens;
+                    }
+                    if(request.temperature){
+                        delete request.temperature;
+                    }
                 }
                 break;
             default:

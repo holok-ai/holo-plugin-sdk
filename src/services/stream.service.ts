@@ -135,7 +135,7 @@ export class StreamService extends ClassLogger {
             const holoChunk = HoloResponseFactory.createStatusChunk(requestId, model, message, providerType);
             const holoTranslator = container.resolve(HoloTranslater);
             const providerChunks = await holoTranslator.fromHoloStreamChunks([holoChunk], providerType);
-
+            
             if (Array.isArray(providerChunks)) {
                 for (const chunk of providerChunks) {
                     const workerResponse: LLMWorkerResponse = {
@@ -164,7 +164,7 @@ export class StreamService extends ClassLogger {
     streamOllama(response: OllamaResponse, res: ResponseStream) {
         const logger = this.mlog(this.streamOllama);
         res.push(JSON.stringify(response) + '\n');
-
+        // logger.debug(`response should push: ${res.requestId} chunk: ${JSON.stringify(response)} \n\n`);
         const hasError = 'error' in response;
         if (("done" in response && response.done) || hasError) {
             logger.debug('Closing response stream');
@@ -175,6 +175,16 @@ export class StreamService extends ClassLogger {
     streamClaude(response: ClaudeResponse, res: ResponseStream) {
         const logger = this.mlog(this.streamClaude);
         const payload = response as any;
+
+        if (res.messageStartSent && payload.type === 'message_start') {
+            logger.debug(`Filtering duplicate message_start event`, {requestId: res.requestId});
+            return;
+        }
+
+        if (res.messageStartSent && payload.type === 'content_block_start' && payload.index === 0) {
+            logger.debug(`Filtering duplicate content_block_start[0] event`, {requestId: res.requestId});
+            return;
+        }
 
         const eventLine = `event: ${payload.type}\n`;
         const dataLine = `data: ${JSON.stringify(response)}\n\n`;

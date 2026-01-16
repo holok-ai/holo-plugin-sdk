@@ -16,15 +16,29 @@ import {ProviderResponse, ProviderType} from "../providers/types";
 export class ResponseStream extends Transform {
     requestId: string;
     isStreaming: boolean;
+    private expressRes?: Response;
+    messageStartSent: boolean = false;
 
     constructor(requestId: string, isStreaming: boolean = true) {
-        super({objectMode: true});
+        super({
+            objectMode: true,
+            highWaterMark: 0  // Minimize buffering - flush immediately
+        });
         this.requestId = requestId;
         this.isStreaming = isStreaming;
     }
 
+    setExpressResponse(res: Response) {
+        this.expressRes = res;
+    }
+
     _transform(chunk: any, _encoding: BufferEncoding, callback: TransformCallback) {
         callback(null, chunk);
+
+        // Force flush after each chunk to ensure immediate delivery
+        if (this.expressRes && typeof (this.expressRes as any).flush === 'function') {
+            (this.expressRes as any).flush();
+        }
     }
 }
 
@@ -123,15 +137,50 @@ export class ResponseService extends ClassLogger {
         }
     }
 
-    async createStream(requestId: string, isStreaming: boolean): Promise<Transform> {
-        return this.streamService.createResponseStream(requestId, isStreaming);
+    async createStream(requestId: string, res: Response, isStreaming: boolean, providerType?: ProviderType, model?: string): Promise<ResponseStream> {
+         const logger = this.mlog(this.sendRequest);
+        let responseStream = await this.streamService.createResponseStream(requestId, isStreaming);
+        this.setStreamingHeaders(res, isStreaming);
+        responseStream.pipe(res);
+
+        if (isStreaming && providerType === ProviderType.CLAUDE) {
+            logger.debug(`Sending initial message_start for Claude stream`, {requestId});
+            const messageStart = {
+                type: 'message_start',
+                message: {
+                    id: `msg_${requestId}`,
+                    type: 'message',
+                    role: 'assistant',
+                    content: [],
+                    model: model || 'claude',
+                    stop_reason: null,
+                    stop_sequence: null,
+                    usage: { input_tokens: 0, output_tokens: 0 }
+                }
+            };
+
+            const contentBlockStart = {
+                type: 'content_block_start',
+                index: 0,
+                content_block: { type: 'text', text: '' }
+            };
+
+            responseStream.push(`event: message_start\n`);
+            responseStream.push(`data: ${JSON.stringify(messageStart)}\n\n`);
+            responseStream.push(`event: content_block_start\n`);
+            responseStream.push(`data: ${JSON.stringify(contentBlockStart)}\n\n`);
+
+            responseStream.messageStartSent = true;
+        }
+
+        return responseStream;
     }
 
-    async sendRequest(req: HttpApiRequest, res: Response, request: LLMWorkerRequest) {
+    async sendRequest(req: HttpApiRequest, request: LLMWorkerRequest) {
         const logger = this.mlog(this.sendRequest);
 
         const {requestId, isStreaming} = request;
-        await this.setStreamingHeaders(res, isStreaming);
+        //await this.setStreamingHeaders(res, isStreaming);
 
         let responseStream = this.streamService.getStream(requestId) || await this.streamService.createResponseStream(requestId, isStreaming);
 
@@ -141,7 +190,7 @@ export class ResponseService extends ClassLogger {
         });
 
         await this.sendRequestToExchange(request, requestId);
-        responseStream.pipe(res);
+        //responseStream.pipe(res);
     }
 
     async streamRequestOnce<T = unknown>(request: LLMWorkerRequest, timeoutMs = 60000) {
