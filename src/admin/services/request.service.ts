@@ -46,7 +46,7 @@ export class RequestService extends ClassLogger {
             errors.push(`An error occurred while trying to process your request. Please contact your administrator and refer to ${workerRequest.requestId}.`)
             workerRequest.errors = errors;
         } else if (workerRequest.isStreaming) {
-            await this.responseService.createStream(workerRequest.requestId, true);
+            await this.responseService.createStream(workerRequest.requestId, res, true, providerType, model);
         }
 
         if (provider) {
@@ -86,7 +86,7 @@ export class RequestService extends ClassLogger {
             }
         }
 
-        await this.responseService.sendRequest(req, res, workerRequest);
+        await this.responseService.sendRequest(req, workerRequest);
 
         logger.info(`Request processed: ${providerType} ${type}`, {requestId: workerRequest.requestId});
     }

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {HoloFinishReason, HoloMessage, HoloResponse, HoloResponseValidator} from "../../holo";
-import {OpenAIChatCompletion, OpenAIResponse} from "../types";
+import {OpenAIChatCompletion, OpenAIChatCompletionResponse} from "../types";
 import {OpenAIResponseMessageTranslator} from "./openai.response.message.translators";
 import {OpenAIUsageTranslator} from "./openai.usage.translators";
 import {OpenAIChatCompletionValidator} from "../validators";
@@ -9,11 +9,11 @@ import {injectable} from 'tsyringe';
 import {pickDefined} from "../../../utils";
 
 @injectable()
-export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenAIResponse> {
+export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenAIChatCompletionResponse> {
     protected holoValidator = HoloResponseValidator;
     protected providerValidator = OpenAIChatCompletionValidator; // For non-streaming responses
     protected holoDefaults: Partial<HoloResponse> = {};
-    protected providerDefaults: Partial<OpenAIResponse> = {};
+    protected providerDefaults: Partial<OpenAIChatCompletionResponse> = {};
 
     constructor(
         private readonly responseMessageTranslator: OpenAIResponseMessageTranslator,
@@ -55,7 +55,7 @@ export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenA
         }
     }
 
-    protected async fromHoloImpl(source: HoloResponse): Promise<Partial<OpenAIResponse>> {
+    protected async fromHoloImpl(source: HoloResponse): Promise<Partial<OpenAIChatCompletionResponse>> {
         // Build message (let the message translator decide content null vs empty)
         const message =
             source.messages?.length
@@ -90,10 +90,10 @@ export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenA
             model: source.model,
             choices,
             usage                                  // omit if undefined
-        }) as Partial<OpenAIResponse>;
+        }) as Partial<OpenAIChatCompletionResponse>;
     }
 
-    protected async toHoloImpl(source: OpenAIResponse): Promise<Partial<HoloResponse>> {
+    protected async toHoloImpl(source: OpenAIChatCompletionResponse): Promise<Partial<HoloResponse>> {
         if ('choices' in source && source.choices?.length) {
             const completion = source as OpenAIChatCompletion;
             const choice = completion.choices[0];

@@ -7,7 +7,7 @@ import bodyParser from 'body-parser';
 import morgan from 'morgan';
 import logger from './utils/logger';
 import {errorMiddleware, nocorsMiddleware} from "./api/middleware";
-import {InitService, ResponseService} from "./services";
+import {InitService, ResponseService, StreamService} from "./services";
 import {createRoutes} from "./api/routes";
 import {env} from "./env";
 import listEndpoints from "express-list-endpoints";
@@ -50,6 +50,7 @@ container.registerSingleton(ResponseService)
     .registerSingleton(TokenService)
     .registerSingleton(ConfigFileLoader)
     .registerSingleton(ConfigQueueLoader, ConfigQueueLoaderFactory)
+    .registerSingleton(StreamService)
 
 const configService: ConfigService = container.resolve(ConfigService);
 
@@ -179,7 +180,7 @@ process.on('uncaughtException', (error: Error): void => {
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>): void => {
-    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    logger.error(`Unhandled Rejection: ${reason}`, promise, 'reason:', reason);
     process.exit(1);
 });
 

@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import {container, injectable} from 'tsyringe';
-import {Transform} from "node:stream";
 import {ResponseStream} from "./response.service";
 import {LLMWorkerResponse} from "../types";
 import {ProviderType} from "../providers/types";
@@ -10,7 +9,7 @@ import {HoloResponseFactory} from "../providers/holo/holo.response.factory";
 import {HoloTranslater} from "../providers/holo/holo.translator";
 import {OllamaResponse} from "../providers/ollama/types";
 import {ClaudeResponse} from "../providers/claude/types";
-import {OpenAIResponse} from "../providers/openai/types";
+import {OpenAIChatCompletionResponse} from "../providers/openai/types";
 
 
 @injectable()
@@ -22,13 +21,11 @@ export class StreamService extends ClassLogger {
         this.streams = new Map<string, ResponseStream>();
     }
 
-    async createResponseStream(requestId: string, isStreaming: boolean = true): Promise<Transform> {
+    async createResponseStream(requestId: string, isStreaming: boolean = true): Promise<ResponseStream> {
         const logger = this.mlog(this.createResponseStream);
         const responseStream = new ResponseStream(requestId, isStreaming);
 
-        // Store the stream in the map
         this.streams.set(requestId, responseStream);
-        // Set up auto-cleanup on stream end or error
         responseStream.on('end', () => {
             logger.debug(`Stream ended for request ${requestId}`);
             this.removeStream(requestId)
@@ -51,7 +48,6 @@ export class StreamService extends ClassLogger {
         }
 
         try {
-            // Handle streaming responses
             switch (providerType) {
                 case ProviderType.OLLAMA:
                     this.streamOllama(payload, res);
@@ -60,10 +56,14 @@ export class StreamService extends ClassLogger {
                     this.streamClaude(payload, res);
                     break;
                 case ProviderType.OPENAI:
-                    this.streamOpenAI(payload, res, fullResponse);
-                    break;
                 case ProviderType.PERPLEXITY:
-                    this.streamOpenAI(payload, res, fullResponse);
+                    const isResponsesAPI = payload.object === 'response' || payload.type?.startsWith('response.');
+                    logger.debug(`OpenAI routing: object=${payload.object}, type=${payload.type}, isResponsesAPI=${isResponsesAPI}, isStreaming=${res.isStreaming}`);
+                    if (isResponsesAPI) {
+                        this.streamOpenAIResponses(payload, res, fullResponse);
+                    } else {
+                        this.streamOpenAI(payload, res, fullResponse);
+                    }
                     break;
             }
         } catch (error) {
@@ -135,7 +135,7 @@ export class StreamService extends ClassLogger {
             const holoChunk = HoloResponseFactory.createStatusChunk(requestId, model, message, providerType);
             const holoTranslator = container.resolve(HoloTranslater);
             const providerChunks = await holoTranslator.fromHoloStreamChunks([holoChunk], providerType);
-
+            
             if (Array.isArray(providerChunks)) {
                 for (const chunk of providerChunks) {
                     const workerResponse: LLMWorkerResponse = {
@@ -164,37 +164,84 @@ export class StreamService extends ClassLogger {
     streamOllama(response: OllamaResponse, res: ResponseStream) {
         const logger = this.mlog(this.streamOllama);
         res.push(JSON.stringify(response) + '\n');
-
-        // Close stream when Ollama indicates completion (chunk.done is true)
-        if ("done" in response && response.done) {
-            logger.debug('Ollama streaming complete: closing response stream');
+        // logger.debug(`response should push: ${res.requestId} chunk: ${JSON.stringify(response)} \n\n`);
+        const hasError = 'error' in response;
+        if (("done" in response && response.done) || hasError) {
+            logger.debug('Closing response stream');
             res.end();
         }
     }
 
     streamClaude(response: ClaudeResponse, res: ResponseStream) {
         const logger = this.mlog(this.streamClaude);
+        const payload = response as any;
 
-        res.push(`event: ${response.type}\n`);
-        res.push(`data: ${JSON.stringify(response)} \n\n`);
-        if (response.type === 'message_stop') {
-            logger.debug('message_stop_event: closing response stream');
+        if (res.messageStartSent && payload.type === 'message_start') {
+            logger.debug(`Filtering duplicate message_start event`, {requestId: res.requestId});
+            return;
+        }
+
+        if (res.messageStartSent && payload.type === 'content_block_start' && payload.index === 0) {
+            logger.debug(`Filtering duplicate content_block_start[0] event`, {requestId: res.requestId});
+            return;
+        }
+
+        const eventLine = `event: ${payload.type}\n`;
+        const dataLine = `data: ${JSON.stringify(response)}\n\n`;
+
+        logger.info(`Sending Claude SSE event: ${eventLine.trim()}`);
+        logger.debug(`Sending Claude SSE data: ${dataLine.trim()}`);
+
+        res.push(eventLine);
+        res.push(dataLine);
+
+        if (payload.type === 'message_stop' || payload.type === 'error') {
+            logger.debug('Closing response stream');
             res.end();
         }
     }
 
-    streamOpenAI(response: OpenAIResponse, res: ResponseStream, fullResponse?: string) {
+    streamOpenAI(response: OpenAIChatCompletionResponse, res: ResponseStream, fullResponse?: string) {
         const logger = this.mlog(this.streamOpenAI);
         logger.debug(`opeanai stream formatter ${JSON.stringify(response)}`);
-        // OpenAI uses SSE format with data: prefix
+
+        if (!res.isStreaming) {
+            res.push(JSON.stringify(response));
+            res.end();
+            return;
+        }
+
         res.push(`data: ${JSON.stringify(response)}\n\n`);
 
-        // Check if streaming is complete
-        const choice = response.choices?.[0];
-        if (choice?.finish_reason || fullResponse !== undefined) {
-            // Send final [DONE] message for OpenAI compatibility
-            res.push(`data: [DONE]\n\n`);
-            logger.debug('OpenAI streaming complete: closing response stream');
+        // const choice = response.choices?.[0];
+        const hasError = 'error' in response;
+        const hasUsage = response.usage !== null && response.usage !== undefined;
+
+        if (hasUsage || fullResponse !== undefined || hasError) {
+            if (!hasError) {
+                res.push(`data: [DONE]\n\n`);
+            }
+            logger.debug('Closing response stream');
+            res.end();
+        }
+    }
+
+    streamOpenAIResponses(payload: any, res: ResponseStream, _fullResponse?: string) {
+        const logger = this.mlog(this.streamOpenAIResponses);
+
+        if (!res.isStreaming) {
+            res.push(JSON.stringify(payload));
+            res.end();
+            return;
+        }
+
+        res.push(`data: ${JSON.stringify(payload)}\n\n`);
+
+        if (payload.type === 'response.completed' || payload.type === 'response.failed' || payload.type === 'error') {
+            if (payload.type !== 'error') {
+                res.push(`data: [DONE]\n\n`);
+            }
+            logger.debug('Closing Responses API stream');
             res.end();
         }
     }

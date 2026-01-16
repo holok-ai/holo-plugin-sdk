@@ -126,12 +126,24 @@ export class OllamaProvider extends AIProvider {
                     error: (error as Error).message,
                     partialResponseLength: fullResponse.length
                 });
-                throw error;
+
+                const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.OLLAMA, error);
+                await this.onResponseChunk(errorResponse, false);
             }
         } else {
-            fullResponse = response.message?.content || '';
-            const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OLLAMA, response, fullResponse);
-            await this.onResponseChunk(responseChunk, true);
+            try {
+                fullResponse = response.message?.content || '';
+                const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OLLAMA, response, fullResponse);
+                await this.onResponseChunk(responseChunk, true);
+            } catch (error) {
+                logger.error('Ollama chat error', {
+                    requestId,
+                    error: (error as Error).message
+                });
+
+                const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.OLLAMA, error);
+                await this.onResponseChunk(errorResponse, false);
+            }
         }
     }
 
@@ -178,12 +190,24 @@ export class OllamaProvider extends AIProvider {
                     error: (error as Error).message,
                     partialResponseLength: fullResponse.length
                 });
-                throw error;
+
+                const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.OLLAMA, error);
+                await this.onResponseChunk(errorResponse, false);
             }
         } else {
-            fullResponse = response.response;
-            const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OLLAMA, response, fullResponse);
-            await this.onResponseChunk(responseChunk, true);
+            try {
+                fullResponse = response.response;
+                const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.OLLAMA, response, fullResponse);
+                await this.onResponseChunk(responseChunk, true);
+            } catch (error) {
+                logger.error('Ollama generate error', {
+                    requestId,
+                    error: (error as Error).message
+                });
+
+                const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.OLLAMA, error);
+                await this.onResponseChunk(errorResponse, false);
+            }
         }
 
         logger.info(`Generated response with Ollama model ${generateRequest.model}, length: ${fullResponse.length}`);

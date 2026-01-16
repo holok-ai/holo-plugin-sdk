@@ -1,6 +1,6 @@
 import {OllamaRequestValidator, OllamaResponseValidator} from "./ollama/validators";
 import {ClaudeChatRequestValidator, ClaudeResponseValidator} from "./claude/validators";
-import {OpenAIChatRequestValidator, OpenAIResponseValidator} from "./openai/validators";
+import {OpenAIChatRequestValidator, OpenAIChatCompletionResponseValidator} from "./openai/validators";
 import {ProviderRequest, ProviderResponse} from "./types";
 import {type} from "arktype";
 
@@ -18,4 +18,4 @@ export const ProviderRequestValidator =
 export const ProviderResponseValidator =
     OllamaResponseValidator
         .or(ClaudeResponseValidator)
-        .or(OpenAIResponseValidator) satisfies type<ProviderResponse>;
+        .or(OpenAIChatCompletionResponseValidator) satisfies type<ProviderResponse>;

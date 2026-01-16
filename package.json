@@ -15,6 +15,7 @@
     "audit:dev": "nodemon --exec \"node --import ./scripts/register-ts-node.mjs\" src/servers/audit.server.ts",
     "analysis:dev": "nodemon --exec \"node --import ./scripts/register-ts-node.mjs\" src/servers/analysis.server.ts",
     "test": "jest",
+    "test:integration": "jest tests/integration --testTimeout=30000 --runInBand",
     "build": "tsc",
     "type-check": "tsc --noEmit"
   },
@@ -35,7 +36,7 @@
     "morgan": "^1.10.0",
     "node-cache": "^5.1.2",
     "ollama": "^0.6.0",
-    "openai": "^6.7.0",
+    "openai": "^6.8.1",
     "pg": "^8.11.3",
     "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.10.0",

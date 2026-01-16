@@ -42,7 +42,7 @@ export class HoloResponseFactory {
                 delta: {
                     provider,
                     type: 'content_delta',
-                    delta: { content: error }
+                    delta: { role: 'assistant', content: error }
                 }
             })),
             HoloStreamChunkValidator.assert(pickDefined({
@@ -52,7 +52,7 @@ export class HoloResponseFactory {
                 delta: {
                     provider,
                     type: 'message_stop',
-                    delta: {}
+                    delta: {role: 'assistant', content: ""}
                 },
                 finish_reason: 'stop'
             }))
@@ -67,7 +67,7 @@ export class HoloResponseFactory {
             delta: {
                 provider,
                 type: 'content_delta',
-                delta: { content: `[${message}]\n` }
+                delta: {role: 'assistant', content: `[${message}]\n` }
             }
         }));
     }

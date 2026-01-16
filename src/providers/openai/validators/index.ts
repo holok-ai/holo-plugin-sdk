@@ -1,2 +1,2 @@
-export * from './openai.requests';
-export * from './openai.responses';
+export * from './openai.chatcompletion.validators';
+export * from './openai.responses.validators';

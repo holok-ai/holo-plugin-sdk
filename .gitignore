@@ -35,3 +35,5 @@ curl.json
 
 # Application evaluators and scripts
 applications/
+.aider*
+.claude/

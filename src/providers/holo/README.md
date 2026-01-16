@@ -1,6 +1,6 @@
 # Holo (Portable Format)
 
-> **Navigation**: [Main README](../README.md) | [Architecture](../ARCHITECTURE.md) | [Types](../TYPE_REFERENCE.md) | [Translation](../TRANSLATION_GUIDE.md) | [Streaming](../STREAMING_GUIDE.md)
+> [Provider System](../README.md) | [OpenAI](../openai/README.md) | [Claude](../claude/README.md) | [Ollama](../ollama/README.md)
 
 ---
 
@@ -435,13 +435,4 @@ All providers normalize to **4 Holo event types**:
 
 ---
 
-## Related Documentation
-
-- **[TYPE_REFERENCE.md](../TYPE_REFERENCE.md)** § Holo Types (Canonical)
-- **[TRANSLATION_GUIDE.md](../TRANSLATION_GUIDE.md)** § Provider Mappings
-- **[STREAMING_GUIDE.md](../STREAMING_GUIDE.md)** § Event Lifecycle
-- **[GUARD_ERRORS.md](../GUARD_ERRORS.md)** § Error Response Factory
-
----
-
-**Last Updated**: 2025-10-05
+**Last Updated**: 2025-11-11

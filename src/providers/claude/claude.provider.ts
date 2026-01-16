@@ -114,9 +114,11 @@ export class ClaudeProvider extends AIProvider {
         if (messageRequest.stream) {
             logger.debug('Starting Claude messages stream', {requestId, model: messageRequest.model});
 
-            try {
-                this.client.messages
-                    .stream(messageRequest)
+            const stream = this.client.messages.stream(messageRequest);
+
+            // Handle stream errors properly by sending native error response to client
+            await new Promise<void>((resolve, _reject) => {
+                stream
                     .on('streamEvent', (event: MessageStreamEvent, snapshot: Message) => {
                         logger.info(`Claude Event: ${JSON.stringify(event)}`);
                         if (event.type === 'message_start') {
@@ -133,12 +135,15 @@ export class ClaudeProvider extends AIProvider {
                     .on('text', (textDelta: string) => {
                         fullResponse += textDelta;
                     })
-                    .on('error', (error) => {
-                        logger.error('Claude messages stream error', {
+                    .on('error', async (error) => {
+                        logger.error(`Claude messages stream error: ${JSON.stringify(error)}`, {
                             requestId,
                             error: error.message
                         });
-                        throw error;
+
+                        const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.CLAUDE, error);
+                        await this.onResponseChunk(errorResponse, false);
+                        resolve();
                     })
                     .on('finalMessage', (message: Message) => {
                         logger.info(`claude final message: ${JSON.stringify(message)}`);
@@ -148,25 +153,29 @@ export class ClaudeProvider extends AIProvider {
                         metrics.totalProcessingTime = Date.now() - startTime;
                         responseChunk.metrics = metrics;
                         this.responseService.sendToAuditOnly(this.workerId, responseChunk.sourceId, responseChunk);
-                    })
-                ;
+                        resolve();
+                    });
+            });
+        } else {
+            // For non-streaming, extract the text content
+            try {
+                const response = await this.client.messages.create(messageRequest);
+                const message = response as any;
+                if (message.content && message.content.length > 0) {
+                    fullResponse = message.content[0].text || '';
+                }
+
+                const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.CLAUDE, response, fullResponse);
+                await this.onResponseChunk(responseChunk, true);
             } catch (error) {
-                logger.error('Claude messages stream initialization error', {
+                logger.error('Claude messages create error', {
                     requestId,
                     error: (error as Error).message
                 });
-                throw error;
-            }
-        } else {
-            // For non-streaming, extract the text content
-            const response = await this.client.messages.create(messageRequest);
-            const message = response as any;
-            if (message.content && message.content.length > 0) {
-                fullResponse = message.content[0].text || '';
-            }
 
-            const responseChunk = this.createWorkerResponse(sourceId, requestId, ProviderType.CLAUDE, response, fullResponse);
-            await this.onResponseChunk(responseChunk, true);
+                const errorResponse = this.createWorkerResponse(sourceId, requestId, ProviderType.CLAUDE, error);
+                await this.onResponseChunk(errorResponse, false);
+            }
         }
     }
 

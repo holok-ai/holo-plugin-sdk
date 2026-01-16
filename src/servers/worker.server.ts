@@ -80,6 +80,10 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         this.stats.chatRequests++;
                         requestStats = await ai!.processRequest(llmRequest);
                         break;
+                    case RequestType.RESPONSES:
+                        this.stats.chatRequests++;
+                        requestStats = await ai!.processRequest(llmRequest);
+                        break;
                     default:
                         logger.warn(`No handler registered for message type ${llmRequest.type} - ignoring message...`);
                         break;
