@@ -1,6 +1,16 @@
 import {injectable} from 'tsyringe';
 import {ClaudeChatRequest} from "./types";
-import {BaseAuditor, LlmRequest, LlmResponse, LlmStatus, HoloWorkerRequest, HoloWorkerResponse} from "@holokai/sdk";
+import {
+    BaseAuditor,
+    HoloWorkerRequest,
+    HoloWorkerResponse,
+    LlmRequest,
+    LlmResponse,
+    LlmStatus,
+    pickDefined,
+    ProviderEnvelope
+} from "@holokai/sdk";
+import {MessageCreateParamsBase} from "@anthropic-ai/sdk/resources/messages";
 
 @injectable()
 export class ClaudeAuditor extends BaseAuditor {
@@ -37,22 +47,6 @@ export class ClaudeAuditor extends BaseAuditor {
 
         if (Object.keys(options).length > 0) {
             llmRequest.options = options;
-        }
-    }
-
-    protected mapResponseToHolo(
-        workerResponse: HoloWorkerResponse,
-        llmResponse: Omit<LlmResponse, 'id'>
-    ): void {
-        const payload = workerResponse.payload;
-        llmResponse.model_slug = payload.model || 'unknown';
-
-        if (workerResponse.fullResponse) {
-            llmResponse.response = workerResponse.fullResponse;
-        } else if (payload.content && Array.isArray(payload.content)) {
-            llmResponse.response = payload.content.map((block: any) => block.text).join('');
-        } else if (payload.delta?.text) {
-            llmResponse.response = payload.delta.text;
         }
     }
 
@@ -108,4 +102,21 @@ export class ClaudeAuditor extends BaseAuditor {
 
         return undefined;
     }
+
+    protected async createProviderEnvelope(
+        payload: MessageCreateParamsBase
+    ): Promise<ProviderEnvelope> {
+        const logger = this.mlog(this.createProviderEnvelope);
+        if (!payload.model) {
+            logger.error(`Missing model: ${JSON.stringify(payload, null, 2)}`);
+        }
+
+        return pickDefined({
+            model_slug: payload.model,
+            system_prompt: payload.system ?
+                (Array.isArray(payload.system) ? JSON.stringify(payload.system) : payload.system) : undefined
+        }) as ProviderEnvelope;
+    }
+
+
 }

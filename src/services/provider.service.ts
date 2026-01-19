@@ -71,7 +71,15 @@ export class ProviderService extends ClassLogger {
         });
     }
 
-    async matchProvider(name: string): Promise<IProvider | undefined> {
-        return this.providers.get(name);
+    async matchProvider(name: string): Promise<IProvider> {
+        const logger = this.mlog(this.matchProvider);
+        const provider = this.providers.get(name);
+
+        if (!provider) {
+            logger.error(`Provider ${name} not found. Available providers: ${JSON.stringify(this.providers, null, 2)}`);
+            throw new Error(`Provider ${name} not found`);
+        }
+
+        return provider;
     }
 }

@@ -1,6 +1,17 @@
 import {injectable} from 'tsyringe';
-import {BaseAuditor, LlmRequest, LlmResponse, LlmStatus, HoloWorkerRequest, HoloWorkerResponse} from "@holokai/sdk";
+import {
+    BaseAuditor,
+    HoloWorkerRequest,
+    HoloWorkerResponse,
+    LlmRequest,
+    LlmResponse,
+    LlmStatus,
+    pickDefined,
+    ProviderEnvelope
+} from "@holokai/sdk";
 import {OpenAIChatRequest} from "./types";
+import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
+import {ResponseCreateParamsBase} from "openai/resources/responses/responses";
 
 @injectable()
 export class OpenAIAuditor extends BaseAuditor {
@@ -143,5 +154,11 @@ export class OpenAIAuditor extends BaseAuditor {
 
         const systemMessage = messages.find(msg => msg.role === 'system');
         return systemMessage && typeof systemMessage.content === 'string' ? systemMessage.content : undefined;
+    }
+
+    protected async createProviderEnvelope(payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<ProviderEnvelope> {
+        return pickDefined({
+            model_slug: payload.model
+        }) as ProviderEnvelope
     }
 }

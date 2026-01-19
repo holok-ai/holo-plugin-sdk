@@ -1,11 +1,12 @@
-import {BaseProvider, IProvider, ModelInfo, ProviderContext} from "@holokai/sdk";
+import {BaseProvider, IAuditor, IProvider, ModelInfo, ProviderContext} from "@holokai/sdk";
 import {Anthropic} from "@anthropic-ai/sdk/client";
 import {MessageCreateParamsBase} from "@anthropic-ai/sdk/resources/messages";
-
+import {ClaudeAuditor} from "./claude.auditor";
 
 export class ClaudeProvider extends BaseProvider implements IProvider {
 
     protected readonly client: Anthropic;
+    public readonly auditor: IAuditor;
 
     constructor(
         public readonly name: string,
@@ -13,7 +14,9 @@ export class ClaudeProvider extends BaseProvider implements IProvider {
         public readonly version: string,
         protected readonly _config: any) {
         super(name, family, version, _config);
+
         this.client = new Anthropic(this._config);
+        this.auditor = new ClaudeAuditor();
     }
 
     async getModels(): Promise<ModelInfo[]> {
@@ -39,8 +42,8 @@ export class ClaudeProvider extends BaseProvider implements IProvider {
         }
     }
 
-
     protected async handleRequest(payload: MessageCreateParamsBase, ctx: ProviderContext) {
+
         if (payload.stream) {
             const s = this.client.messages.stream(payload);
             s.on("streamEvent", (event: any) => ctx.emitStreamEvent(event));

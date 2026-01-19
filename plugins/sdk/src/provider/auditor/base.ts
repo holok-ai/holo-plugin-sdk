@@ -1,117 +1,79 @@
-import {HoloWorkerRequest, HoloWorkerResponse} from "../../core/worker";
-import {LlmRequest, LlmResponse, LlmStatus} from "../../core";
+import {HoloWorkerRequest, WorkerRequestEnvelope, WorkerResponseEnvelope} from "../../core/worker";
+import {ClassLogger, LlmRequest, LlmResponse, LlmStatus, pickDefined} from "../../core";
+import {ProviderEnvelope, ProviderEvent} from "../types";
 
 
 export interface IAuditor {
     readonly provider: string;
 
-    auditRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
+    auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest>;
+
+    createWorkerResponseEnvelope(workerRequest: HoloWorkerRequest, workerId?: string): Promise<WorkerResponseEnvelope>;
 
     auditResponse(
-        workerResponse: HoloWorkerResponse,
-        llmResponse: Omit<LlmResponse, 'id'>,
-        requestContext?: { userId?: string; applicationId?: string }
-    ): void;
+        responseEnvelope: WorkerResponseEnvelope,
+        providerEvent: ProviderEvent,
+    ): Promise<LlmResponse>;
 }
 
-export abstract class BaseAuditor implements IAuditor {
+export abstract class BaseAuditor extends ClassLogger implements IAuditor {
     abstract readonly provider: string;
 
-    auditRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        this.setCommonFields(workerRequest, llmRequest);
-        this.toHoloRequest(workerRequest, llmRequest);
-        this.mapProviderPayload(workerRequest, llmRequest);
+    async createWorkerRequestEnvelope(workerRequest: HoloWorkerRequest): Promise<WorkerRequestEnvelope> {
+        const logger = this.mlog(this.createWorkerResponseEnvelope);
+        if (!workerRequest.requestId) {
+            logger.error(`No requestId for workerRequest: ${JSON.stringify(workerRequest)}`);
+        }
+        return pickDefined({
+            request_id: workerRequest.requestId,
+            request_type: workerRequest.type,
+            organization_id: workerRequest.organizationId,
+            application_id: workerRequest.appSlug ?? 'default',
+            user_id: workerRequest.userId,
+            provider_slug: workerRequest.providerName,
+            timestamp: new Date(workerRequest.timestamp).toISOString(),
+            source_id: workerRequest.sourceId,
+            thread_id: workerRequest.thread_id,
+            raw_request: workerRequest.payload,
+            ...await this.createProviderEnvelope(workerRequest.payload)
+        }) as WorkerRequestEnvelope;
     }
 
-    auditResponse(
-        workerResponse: HoloWorkerResponse,
-        llmResponse: Omit<LlmResponse, 'id'>,
-        requestContext?: { userId?: string; applicationId?: string }
-    ): void {
-        // If payload is an array, audit each chunk separately
-        if (Array.isArray(workerResponse.payload)) {
-            for (const chunk of workerResponse.payload) {
-                const chunkResponse: HoloWorkerResponse = {
-                    ...workerResponse,
-                    payload: chunk
-                };
-                this.auditResponse(chunkResponse, llmResponse, requestContext);
-            }
-            return;
-        }
-
-        // At this point, TypeScript knows payload is a single ProviderResponse
-        const singleResponse = workerResponse as HoloWorkerResponse & { payload: any };
-
-        this.setCommonResponseFields(singleResponse, llmResponse, requestContext);
-        this.mapResponseToHolo(singleResponse, llmResponse);
-        this.collectResponseMetrics(singleResponse, llmResponse);
+    async createWorkerResponseEnvelope(workerRequest: HoloWorkerRequest, workerId?: string): Promise<WorkerResponseEnvelope> {
+        return pickDefined({
+            worker_id: workerId,
+            request_id: workerRequest.requestId,
+            request_type: workerRequest.type,
+            organization_id: workerRequest.organizationId,
+            application_id: workerRequest.appSlug ?? 'default',
+            user_id: workerRequest.userId,
+            provider_slug: workerRequest.providerName,
+            ...await this.createProviderEnvelope(workerRequest.payload)
+        }) as WorkerResponseEnvelope;
     }
 
-    protected abstract toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
-
-    protected abstract mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
-
-
-    protected abstract mapResponseToHolo(
-        workerResponse: HoloWorkerResponse & { payload: any },
-        llmResponse: Omit<LlmResponse, 'id'>
-    ): void;
-
-    protected abstract collectResponseMetrics(
-        workerResponse: HoloWorkerResponse & { payload: any },
-        llmResponse: Omit<LlmResponse, 'id'>
-    ): void;
-
-    /**
-     * Set common fields that are the same across all providers for requests
-     */
-    protected setCommonFields(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        llmRequest.request_id = workerRequest.requestId;
-        llmRequest.request_type = workerRequest.type;
-        llmRequest.timestamp = new Date(workerRequest.timestamp).toISOString();
-        llmRequest.application_id = workerRequest.appSlug || 'default';
-        llmRequest.provider_slug = workerRequest.providerType;
-        llmRequest.organization_id = workerRequest.organizationId;
-
-        // Optional fields - only set if defined
-        if (workerRequest.sourceId !== undefined) {
-            llmRequest.source_id = workerRequest.sourceId;
-        }
-        if (workerRequest.userId !== undefined) {
-            llmRequest.user_id = workerRequest.userId;
-        }
-        if (workerRequest.thread_id !== undefined) {
-            llmRequest.thread_id = workerRequest.thread_id;
-        }
-        if (workerRequest.payload !== undefined) {
-            llmRequest.raw_request = workerRequest.payload;
-        }
+    async auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest> {
+        const requestEnvelope = await this.createWorkerRequestEnvelope(workerRequest);
+        return pickDefined({
+            ...requestEnvelope
+        }) as LlmRequest;
     }
 
-    /**
-     * Set common fields that are the same across all providers for responses
-     */
-    protected setCommonResponseFields(
-        workerResponse: HoloWorkerResponse,
-        llmResponse: Omit<LlmResponse, 'id'>,
-        requestContext?: { userId?: string; applicationId?: string }
-    ): void {
-        llmResponse.created_at = workerResponse.timestamp ? new Date(workerResponse.timestamp).toISOString() : new Date().toISOString();
-        llmResponse.organization_id = workerResponse.organizationId;
-        llmResponse.application_id = requestContext?.applicationId || 'default';
-        llmResponse.request_id = workerResponse.requestId;
-        llmResponse.provider_slug = workerResponse.providerType;
-        llmResponse.worker_id = workerResponse.workerId || 'unknown';
-        llmResponse.status = LlmStatus.SUCCESS; // Default, can be overridden by specific translators
-        llmResponse.cost = 0; // TODO: Implement cost calculation
-
-        // Optional fields - only set if defined
-        if (requestContext?.userId !== undefined) {
-            llmResponse.user_id = requestContext.userId;
-        }
-        if (workerResponse.payload !== undefined) {
-            llmResponse.response_raw = workerResponse.payload;
-        }
+    async auditResponse(
+        responseEnvelope: WorkerResponseEnvelope,
+        providerEvent: ProviderEvent
+    ): Promise<LlmResponse> {
+        return pickDefined({
+            ...responseEnvelope,
+            created_at: providerEvent.ts ? new Date(providerEvent.ts).toISOString() : new Date().toISOString(),
+            status: LlmStatus.SUCCESS,
+            cost: 0,
+            response: providerEvent.type === 'done' || providerEvent.type === 'text_delta' ? providerEvent.text : JSON.stringify(providerEvent),
+            response_raw: providerEvent as any
+        }) as LlmResponse;
     }
+
+    protected abstract createProviderEnvelope(
+        payload: any
+    ): Promise<ProviderEnvelope>;
 }

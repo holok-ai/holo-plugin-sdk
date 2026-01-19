@@ -1,15 +1,15 @@
 import "reflect-metadata";
 import {Channel, ChannelModel, connect, ConsumeMessage} from 'amqplib';
-import logger from '../utils/logger';
 import {RabbitConfig} from "../types";
 import {env} from "../env";
 import {injectable} from "tsyringe";
+import {ClassLogger} from "@holokai/sdk";
 
 /**
  * RabbitMQ queue management service
  */
 @injectable()
-export class QueueService {
+export class QueueService extends ClassLogger {
     private readonly config: RabbitConfig = env.queue.config
     private connection: ChannelModel | null = null;
     private channel: Channel | null = null;
@@ -17,10 +17,11 @@ export class QueueService {
     public reconnectAttempts = 0;
 
     constructor() {
-
+        super();
     }
 
     public async connect(): Promise<void> {
+        const logger = this.mlog(this.connect);
         try {
             if (this.connection && this.channel) {
                 this.isConnected = true;
@@ -62,6 +63,7 @@ export class QueueService {
     }
 
     public async reconnect(): Promise<void> {
+        const logger = this.mlog(this.reconnect);
         if (!this.isConnected) {
             if (this.reconnectAttempts >= this.config.reconnectAttempts) {
                 logger.error(`Failed to reconnect to RabbitMQ after ${this.reconnectAttempts} attempts`);
@@ -84,6 +86,7 @@ export class QueueService {
     }
 
     public async disconnect() {
+        const logger = this.mlog(this.disconnect);
         if (this.channel) {
             await this.channel.close();
         }
@@ -97,6 +100,7 @@ export class QueueService {
     }
 
     public async consume(queueName: string, callback: (messageId: string, content: any, message: ConsumeMessage) => void, ignoreErrors: boolean = false, options = {noAck: false}): Promise<void> {
+        const logger = this.mlog(this.connect);
         if (!this.isConnected) {
             await this.connect();
         }
@@ -146,6 +150,7 @@ export class QueueService {
      * @param {object} options - Message options
      */
     async sendToQueue(queue: string, message: { id: string }, options: object = {}): Promise<boolean> {
+        const logger = this.mlog(this.sendToQueue);
         if (!this.isConnected) {
             await this.connect();
         }
@@ -189,6 +194,7 @@ export class QueueService {
      * @param {object} options - Message options
      */
     async sendToExchange(exchange: string, routingKey: string, message: {}, options: object = {}): Promise<boolean> {
+        const logger = this.mlog(this.sendToExchange);
         if (!this.isConnected) {
             await this.connect();
         }
@@ -209,9 +215,7 @@ export class QueueService {
             // Send to exchange
             const sent = this.channel!.publish(exchange, routingKey, buffer, messageOptions);
 
-            if (sent) {
-                logger.debug(`Message published to exchange ${exchange} with routing key ${routingKey}`);
-            } else {
+            if (!sent) {
                 logger.warn(`Failed to publish message to exchange ${exchange}, channel back-pressured`);
                 // Handle back-pressure
             }
@@ -227,6 +231,7 @@ export class QueueService {
      * Stop consuming messages
      */
     async stop() {
+        const logger = this.mlog(this.stop);
         if (this.channel) {
             try {
                 await this.channel.cancel('Stopping consumer');
@@ -238,6 +243,7 @@ export class QueueService {
     }
 
     async assertExchange(exchange: string, type: string, options: object = {durable: true}) {
+        const logger = this.mlog(this.assertExchange);
         if (!this.isConnected) {
             await this.connect();
         }
@@ -247,6 +253,7 @@ export class QueueService {
     }
 
     async assertQueue(queue: string, options: object = {durable: true}, exchange?: string, pattern?: string) {
+        const logger = this.mlog(this.assertQueue);
         if (!this.isConnected) {
             await this.connect();
         }
@@ -259,6 +266,7 @@ export class QueueService {
     }
 
     async bindQueue(queue: string, exchange: string, pattern: string) {
+        const logger = this.mlog(this.bindQueue);
         if (!this.isConnected) {
             await this.connect();
         }

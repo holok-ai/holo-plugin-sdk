@@ -1,10 +1,14 @@
 import {AsyncEventQueue, IProvider, ModelInfo, ProviderContext, ProviderEvent} from "./types";
-import {HoloWorkerRequest} from "../core/worker";
-import {ObservableClassLogger} from "@holokai/sdk/core";
+import {HoloWorkerRequest, WorkerRequestEnvelope} from "../core/worker";
+import {ClassLogger, LlmRequest, LlmResponse} from "@holokai/sdk/core";
+import {IAuditor} from "./auditor";
 
 
-export abstract class BaseProvider<ReqPayload = any, Final = any> extends ObservableClassLogger implements IProvider {
+export type ProviderRunner<Final = any> = { final: () => Promise<Final>; cancel?: () => void };
+
+export abstract class BaseProvider<RequestPayload = any, Final = any> extends ClassLogger implements IProvider {
     protected models: Record<string, ModelInfo> = {};
+    public readonly abstract auditor: IAuditor;
 
     protected constructor(
         public readonly name: string,
@@ -17,6 +21,17 @@ export abstract class BaseProvider<ReqPayload = any, Final = any> extends Observ
 
     abstract getModels(): Promise<ModelInfo[]>;
 
+    async auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest> {
+        return this.auditor.auditRequest(workerRequest);
+    }
+
+    async auditResponse(
+        workerEnvelope: WorkerRequestEnvelope,
+        providerEvent: ProviderEvent
+    ): Promise<LlmResponse> {
+        return this.auditor.auditResponse(workerEnvelope, providerEvent);
+    }
+
     async processWorkerRequest(
         request: HoloWorkerRequest,
         _opts?: { signal?: AbortSignal }
@@ -24,7 +39,7 @@ export abstract class BaseProvider<ReqPayload = any, Final = any> extends Observ
         const q = new AsyncEventQueue<ProviderEvent>();
 
         const {requestId, payload} = request as any;
-        const providerPayload = payload as ReqPayload;
+        const requestPayload = payload as RequestPayload;
 
         const start = Date.now();
         let seq = 0;
@@ -42,20 +57,21 @@ export abstract class BaseProvider<ReqPayload = any, Final = any> extends Observ
         };
 
         const ctx = {
-            emitStreamEvent: (event: any) => push({type: "stream_event", event} as any),
+            emitStreamEvent: (event: any) =>
+                push({type: "stream_event", event} as ProviderEvent),
             emitTextDelta: (text: string) => {
                 if (!metrics.timeToFirstToken) metrics.timeToFirstToken = Date.now() - start;
                 fullText += text;
-                push({type: "text_delta", text} as any);
+                push({type: "text_delta", text} as ProviderEvent);
             },
         };
 
-        let run: { final: () => Promise<Final>; cancel?: () => void };
+        let run: ProviderRunner<Final>;
 
         try {
-            run = await this.handleRequest(providerPayload, ctx);
+            run = await this.handleRequest(requestPayload, ctx);
         } catch (e: any) {
-            push({type: "error", error: {message: e?.message ?? String(e)}} as any);
+            push({type: "error", error: {message: e?.message ?? String(e)}} as ProviderEvent);
             q.end();
             return q;
         }
@@ -69,9 +85,9 @@ export abstract class BaseProvider<ReqPayload = any, Final = any> extends Observ
                 metrics.outputTokens = (final as any)?.usage?.output_tokens ?? 0;
                 metrics.totalProcessingTime = Date.now() - start;
 
-                push({type: "done", message: final, fullText, metrics} as any);
+                push({type: "done", message: final, text: fullText, metrics} as ProviderEvent);
             } catch (e: any) {
-                push({type: "error", error: {message: e?.message ?? String(e)}} as any);
+                push({type: "error", error: {message: e?.message ?? String(e)}} as ProviderEvent);
             } finally {
                 q.end();
             }
@@ -81,27 +97,11 @@ export abstract class BaseProvider<ReqPayload = any, Final = any> extends Observ
     }
 
     protected abstract handleRequest(
-        payload: ReqPayload,
+        payload: RequestPayload,
         ctx: ProviderContext
-    ): Promise<{ final: () => Promise<Final>; cancel?: () => void }>;
+    ): Promise<ProviderRunner<Final>>;
 
     get id(): string {
         return this._config.id;
-    }
-
-    protected audit(response: any, _acc: any = null) {
-        this.emit('audit', response);
-    }
-
-    protected data(response: any, _acc: any = null) {
-        this.emit('data', response);
-    }
-
-    protected error(response: any) {
-        this.emit('error', response);
-    }
-
-    protected done(response: any, _acc: any = null) {
-        this.emit('done', response, _acc);
     }
 }

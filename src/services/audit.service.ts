@@ -1,28 +1,29 @@
 import 'reflect-metadata';
 import {AuditServiceEvent} from '../types';
-import {LlmRequest, LlmResponse, LlmStatus} from "../db/types";
+import {LlmRequest, LlmResponse} from "../db/types";
 import {container, injectable} from "tsyringe";
 import {AppDB, EvaluatorDB, RequestDB, ResponseDB} from "../db";
 import logger from "../utils/logger";
 import {QueueService} from "./queue.service";
 import {env} from '../env';
-import {AuditorRegistry} from "./providers/auditors";
-import {HoloWorkerRequest, HoloWorkerResponse} from "@holokai/sdk";
+import {ClassLogger, HoloWorkerRequest, HoloWorkerResponse} from "@holokai/sdk";
+import {ProviderService} from "./provider.service";
 
 /**
  * Service for auditing and logging LLM requests and responses
  * Handles mapping between proxy types and database types, with comprehensive logging
  */
 @injectable()
-export class AuditService {
+export class AuditService extends ClassLogger {
 
     constructor(
+        private readonly providerService: ProviderService,
         private evaluatorDB: EvaluatorDB,
         private requestDB: RequestDB,
         private responseDB: ResponseDB,
-        private auditRegistry: AuditorRegistry,
         private queueService: QueueService
     ) {
+        super();
         logger.info('AuditService initialized');
     }
 
@@ -37,8 +38,9 @@ export class AuditService {
         try {
             // Type guard to check if it's an HoloWorkerRequest
             if (this.isHoloWorkerRequest(content)) {
-                logger.debug(`Logging HoloWorkerRequest - requestId: ${content.requestId}, type: ${content.type}, provider: ${content.providerType}`);
-                const mappedRequest = this.auditRegistry.audit(content);
+                logger.debug(`Logging HoloWorkerRequest - requestId: ${content.requestId}, type: ${content.type}, provider: ${content.providerName}`);
+                const ai = await this.providerService.matchProvider(content.providerName);
+                const mappedRequest = await ai.auditRequest(content);
                 await this.insertRequest(mappedRequest);
                 logger.info(`Successfully logged HoloWorkerRequest ${content.requestId} in ${Date.now() - startTime}ms`);
             } else {
@@ -47,7 +49,7 @@ export class AuditService {
                 logger.info(`Successfully logged LlmRequest ${content.request_id} in ${Date.now() - startTime}ms`);
             }
         } catch (error) {
-            logger.error(`Failed to log request: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+            logger.error(`Failed to log request: ${error instanceof Error ? error.message : 'Unknown error'}: ${JSON.stringify(content, null, 2)}`, {
                 requestId: this.isHoloWorkerRequest(content) ? content.requestId : content.request_id,
                 error: error,
                 duration: Date.now() - startTime
@@ -100,29 +102,12 @@ export class AuditService {
      * @param {HoloWorkerResponse | Omit<LlmResponse, 'id'>} content - Response data to log
      * @param requestContext - Optional context for userId and applicationId
      */
-    async logResponse(content: HoloWorkerResponse, requestContext?: {
-        userId?: string;
-        applicationId?: string
-    }): Promise<void>;
-    async logResponse(content: Omit<LlmResponse, 'id'>): Promise<void>;
-    async logResponse(content: HoloWorkerResponse | Omit<LlmResponse, 'id'>, requestContext?: {
-        userId?: string;
-        applicationId?: string
-    }): Promise<void> {
+
+    async logResponse(content: Omit<LlmResponse, 'id'>): Promise<void> {
         const startTime = Date.now();
 
         try {
-            if (this.isHoloWorkerResponse(content)) {
-                logger.debug(`Logging HoloWorkerResponse - requestId: ${content.requestId}, provider: ${content.providerType}`);
-                const mappedResponse = this.auditRegistry.auditResponse(content, requestContext);
-                const responseId = await this.insertResponse(mappedResponse);
-                if (mappedResponse.status === LlmStatus.SUCCESS && responseId) await this.sendToEvaluatorQ(responseId, mappedResponse.application_id);
-                logger.info(`Successfully logged HoloWorkerResponse ${content.requestId} (${content.providerType}) in ${Date.now() - startTime}ms`);
-            } else {
-                logger.debug(`Logging direct LlmResponse - requestId: ${content.request_id}`);
-                await this.insertResponse(content);
-                logger.info(`Successfully logged LlmResponse ${content.request_id} in ${Date.now() - startTime}ms`);
-            }
+            await this.insertResponse(content);
         } catch (error) {
             const requestId = this.isHoloWorkerResponse(content) ? content.requestId : content.request_id;
             logger.error(`Failed to log response: ${error instanceof Error ? error.message : 'Unknown error'}`, {
@@ -189,7 +174,7 @@ export class AuditService {
             logger.debug(`Database insert successful for response ${content.request_id} new id ${result?.id} in ${Date.now() - startTime}ms`);
             return result ? result.id : null;
         } catch (error) {
-            logger.error(`Database insert failed for response ${content.request_id}: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+            logger.error(`Database insert failed for response ${content.request_id}: ${error instanceof Error ? error.message : 'Unknown error'}\n\n ${JSON.stringify(content)}`, {
                 requestId: content.request_id,
                 status: content.status,
                 error: error,

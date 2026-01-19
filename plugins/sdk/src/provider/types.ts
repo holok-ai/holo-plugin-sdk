@@ -1,13 +1,19 @@
 import {RequestType} from "@holokai/sdk/holo";
-import {HoloWorkerRequest} from "../core/worker";
+import {HoloWorkerRequest, WorkerResponseEnvelope} from "../core/worker";
+import {LlmRequest, LlmResponse} from "@holokai/sdk/core";
+import {IAuditor} from "./auditor";
 
 export type ProviderEvent =
     | { type: "provider_start"; requestId: string; provider: string; ts: number }
     | { type: "stream_event"; requestId: string; seq: number; event: any; ts: number }
     | { type: "text_delta"; requestId: string; seq: number; text: string; ts: number }
-    | { type: "done"; requestId: string; seq: number; message: any; fullText?: string; metrics?: any; ts: number }
+    | { type: "done"; requestId: string; seq: number; message: any; text: string; metrics?: any; ts: number }
     | { type: "error"; requestId: string; seq: number; error: { message: string; code?: string }; ts: number };
 
+export type ProviderEnvelope = {
+    model_slug: string;
+    system_prompt?: string;
+}
 
 export class AsyncEventQueue<T> implements AsyncIterable<T> {
     private q: T[] = [];
@@ -59,25 +65,6 @@ export type RunHandle<Final> = {
     cancel?: () => void;
 };
 
-export interface ProviderConfig {
-    id: string;
-    name: string;
-    provider_type: string;
-    api_key: string;
-    model: string;
-    plugin_id: string | null; // null for legacy hardcoded providers
-    base_url?: string;
-    headers?: Record<string, string>;
-    timeout?: number;
-    max_tokens?: number;
-    temperature?: number;
-    top_p?: number;
-    retry?: {
-        max_attempts?: number;
-        backoff?: 'exponential' | 'linear';
-    };
-}
-
 export interface ProviderCapabilities {
     streaming: boolean;
     tools: boolean;
@@ -119,9 +106,17 @@ export interface IProvider {
     name: string;
     family: string;
     version: string;
+    auditor: IAuditor;
 
     processWorkerRequest(
         request: HoloWorkerRequest,
         opts?: { signal?: AbortSignal }
     ): Promise<AsyncEventQueue<ProviderEvent>>;
+
+    auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest>;
+
+    auditResponse(
+        workerEnvelope: WorkerResponseEnvelope,
+        providerEvent: ProviderEvent
+    ): Promise<LlmResponse>;
 }

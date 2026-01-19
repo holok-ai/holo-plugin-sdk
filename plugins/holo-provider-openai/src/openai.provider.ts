@@ -1,13 +1,15 @@
 import OpenAI from 'openai';
-import {BaseProvider, ModelInfo, ProviderContext, RequestType, RunHandle} from "@holokai/sdk";
+import {BaseProvider, IAuditor, ModelInfo, ProviderContext, RequestType, RunHandle} from "@holokai/sdk";
 import {ResponseCreateParamsBase} from "openai/resources/responses/responses";
 import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
+import {OpenAIAuditor} from "./openai.auditor";
 
 /**
  * OpenAI provider for connecting to OpenAI API
  */
 export class OpenAIProvider extends BaseProvider {
     protected readonly client: OpenAI;
+    public readonly auditor: IAuditor;
 
     // need to initialize client on constructor since blank OpenAI will throw error
     constructor(
@@ -17,6 +19,7 @@ export class OpenAIProvider extends BaseProvider {
         protected readonly _config: any) {
         super(name, family, version, _config);
         this.client = new OpenAI(this._config);
+        this.auditor = new OpenAIAuditor();
     }
 
     async getModels(): Promise<ModelInfo[]> {

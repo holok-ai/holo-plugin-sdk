@@ -1,10 +1,6 @@
 import {ProviderEvent} from "../types";
 import {RequestType} from "../../holo";
 
-export type WireEnvelope =
-    | { kind: "wire_start"; wire: WireChunk }   // wire.headers populated
-    | { kind: "wire"; wire: WireChunk };        // wire.body populated (and wire.done maybe true)
-
 export type WireChunk = {
     requestId: string;
     seq: number;
@@ -14,6 +10,9 @@ export type WireChunk = {
 };
 
 export interface IWireAdapter {
+    requestId: string;
+    isStreaming: boolean;
+
     start(): WireChunk;
 
     fromProviderEvent(ev: ProviderEvent): WireChunk[];    // produce 0..n wire chunks
@@ -27,8 +26,8 @@ export interface WireAdapterParams {
 
 export abstract class BaseWireAdapter implements IWireAdapter {
     constructor(
-        protected readonly requestId: string,
-        protected readonly isStreaming: boolean
+        public readonly requestId: string,
+        public readonly isStreaming: boolean
     ) {
     }
 
@@ -46,7 +45,7 @@ export abstract class BaseWireAdapter implements IWireAdapter {
             requestId: this.requestId,
             seq: 0,
             headers: this.nonStreamingHeaders(),
-            body: "",
+            body: ""
         };
     }
 
@@ -55,7 +54,7 @@ export abstract class BaseWireAdapter implements IWireAdapter {
             requestId: this.requestId,
             seq: 0,
             headers: this.streamingHeaders(),
-            body: "",
+            body: ""
         };
     }
 
@@ -77,7 +76,7 @@ export abstract class BaseWireAdapter implements IWireAdapter {
                 requestId: ev.requestId,
                 seq: ev.seq,
                 body: JSON.stringify(this.nonStreamingDoneBody(ev)),
-                done: true,
+                done: true
             }];
         }
 
@@ -86,7 +85,7 @@ export abstract class BaseWireAdapter implements IWireAdapter {
                 requestId: ev.requestId,
                 seq: ev.seq,
                 body: JSON.stringify(this.nonStreamingErrorBody(ev)),
-                done: true,
+                done: true
             }];
         }
 
@@ -120,7 +119,7 @@ export abstract class BaseWireAdapter implements IWireAdapter {
             requestId: ev.requestId,
             seq: ev.seq,
             body: "",
-            done: true,
+            done: true
         }];
     }
 
@@ -129,7 +128,7 @@ export abstract class BaseWireAdapter implements IWireAdapter {
             requestId: ev.requestId,
             seq: ev.seq,
             body: "",
-            done: true,
+            done: true
         }];
     }
 

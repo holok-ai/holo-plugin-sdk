@@ -8,7 +8,7 @@ import {env} from "../env";
 import {StreamService} from "./stream.service";
 import {ClassLogger} from "../types/class.logger";
 import {HoloTranslator} from "./providers/holo.translator";
-import {HoloWorkerRequest, HoloWorkerResponse, WireChunk, WireEnvelope} from "@holokai/sdk";
+import {HoloWorkerRequest, LlmResponse, WireChunk} from "@holokai/sdk";
 import {WorkerResponseFactory} from "../types";
 
 
@@ -44,30 +44,16 @@ export class ResponseService extends ClassLogger {
 
         await this.queueService.consume(
             queueName,
-            async (id: string, content: any) => this.handleLLMResponseMessage(id, content),
+            async (id: string, content: any) => this.processWireChunk(id, content),
             true
         );
     }
 
-    private requireWire(payload: any): WireChunk {
-        if (!payload || typeof payload !== "object") throw new Error("Missing payload object");
+    async processWireChunk(_id: string, wire: WireChunk) {
+        const logger = this.mlog(this.processWireChunk);
+        logger.info(JSON.stringify(wire));
 
-        // Your current producer shape: { type: "wire", wire: { ... } }
-        if ("type" in payload && (payload.type === "wire" || payload.type === "wire_start") && "wire" in payload) {
-            const env = payload as WireEnvelope;
-            if (!env.wire || typeof env.wire !== "object") throw new Error("Missing payload.wire");
-            return env.wire;
-        }
-
-        // If you later standardize to payload = { wire: ... } you can add it here
-        throw new Error(`Non-wire payload received (expected {type:'wire', wire:{...}}). Got: ${JSON.stringify(payload)}`);
-    }
-
-    async handleLLMResponseMessage(_id: string, content: HoloWorkerResponse) {
-        const logger = this.mlog(this.handleLLMResponseMessage);
-        logger.info(JSON.stringify(content));
-
-        const {requestId} = content;
+        const {requestId} = wire;
         const stream = this.streamService.getStream(requestId);
 
         if (!stream) {
@@ -75,7 +61,6 @@ export class ResponseService extends ClassLogger {
             return;
         }
 
-        const wire = this.requireWire(content.payload);
         this.streamService.writeWire(requestId, wire);
     }
 
@@ -150,29 +135,15 @@ export class ResponseService extends ClassLogger {
         await this.queueService.sendToExchange(exchange, "", request, {correlationId});
     }
 
-    async sendResponseChunk(workerId: string, sourceId: string, requestId: string, data: object, auditEnabled: boolean) {
-        const logger = this.mlog(this.sendResponseChunk);
-        logger.debug(`Sending response chunk: ${sourceId}, ${requestId}, ${JSON.stringify(data)}`);
-
-        await this.queueService.sendToExchange(env.queue.responseExchange, sourceId, data, {correlationId: requestId});
-
-        if (auditEnabled) {
-            await this.queueService.sendToExchange(
-                env.queue.responseExchange,
-                "audit",
-                {timestamp: Date.now(), workerId, ...data},
-                {correlationId: requestId}
-            );
-        }
+    async sendWireChunk(sourceId: string, requestId: string, chunk: WireChunk) {
+        await this.queueService.sendToExchange(env.queue.responseExchange, sourceId, chunk, {correlationId: requestId});
     }
 
-    async sendToAuditOnly(workerId: string, requestId: string, data: HoloWorkerResponse) {
-        const logger = this.mlog(this.sendToAuditOnly);
-        logger.debug(`Sending audit-only data: ${requestId}, ${JSON.stringify(data)}`);
+    async sendResponseChunk(sourceId: string, requestId: string, data: object) {
+        await this.queueService.sendToExchange(env.queue.responseExchange, sourceId, data, {correlationId: requestId});
+    }
 
-        (data as any).workerId = workerId;
-        (data as any).timestamp = Date.now();
-
+    async sendToAudit(requestId: string, data: LlmResponse) {
         await this.queueService.sendToExchange(env.queue.responseExchange, "audit", data, {correlationId: requestId});
     }
 
@@ -198,7 +169,7 @@ export class ResponseService extends ClassLogger {
             holoTranslator
         );
 
-        await this.sendResponseChunk(options.workerId, request.sourceId, request.requestId, workerResponse, auditEnabled);
+        await this.sendResponseChunk(request.sourceId, request.requestId, workerResponse);
 
         logger.info(`${options.errorType} error response sent for request ${request.requestId}`, {
             errorType: options.errorType,

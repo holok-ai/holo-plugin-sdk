@@ -12,7 +12,6 @@ import {PluginDiscoveryService} from "../services/plugin/discovery.service";
 import {PluginLoaderService} from "../services/plugin/loader.service";
 import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
 import {AIRequestStat, HoloWorkerRequest, IProvider} from "@holokai/sdk";
-import {WorkerResponseFactory} from "../types";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -36,7 +35,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
         const logger = this.mlog('workerConsume')
         await this.queueService.consume(requestQueue, async (requestId, workerRequest: HoloWorkerRequest) => {
             this.stats.totalRequests++;
-            logger.info(`Worker ${this.id} handling request: ${requestId} provider: ${workerRequest.providerType} from server ${workerRequest.sourceId} and queue ${requestQueue}...`);
+            logger.info(`Worker ${this.id} handling request: ${requestId} provider: ${workerRequest.providerName} from server ${workerRequest.sourceId} and queue ${requestQueue}...`);
             try {
                 // Check for upstream errors (validation/permission issues)
                 if (workerRequest.errors?.length) {
@@ -63,35 +62,33 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
 
                 // Guards passed - proceed with normal provider processing
                 logger.info(`Guards passed for request ${requestId}, proceeding to provider`);
-                const ai: IProvider | undefined = await this.providerService.matchProvider(workerRequest.providerName);
+                const ai: IProvider = await this.providerService.matchProvider(workerRequest.providerName);
 
-                logger.info(`resolved ai provider: ${ai?.name}`);
-                if (!ai) {
-                    throw new Error('No AI Provider Found to handle request.');
-                }
+                logger.info(`resolved ai provider: ${ai.name}`);
+                const envelope = await ai.auditor.createWorkerResponseEnvelope(workerRequest, this.id);
 
+                // Setup the over-the-wire response for client-native streaming
                 const wire = await this.providerService.matchWireAdapter(workerRequest.providerName, {
                     requestId,
                     isStreaming: workerRequest.isStreaming,
                     requestType: workerRequest.type,
                 });
                 const {sourceId} = workerRequest;
-                await this.responseService.sendResponseChunk(this.id, sourceId, requestId, WorkerResponseFactory.create(sourceId, requestId, ai.family, {
-                    type: 'wire',
-                    wire: wire.start()
-                }), true);
+                await this.responseService.sendWireChunk(sourceId, requestId, wire.start());
 
                 const q = await ai.processWorkerRequest(workerRequest);
 
                 for await (const evt of q) {
-                    for (const wc of wire.fromProviderEvent(evt)) {
-                        const chunk = WorkerResponseFactory.create(sourceId, requestId, ai.family, {
-                            type: "wire",
-                            wire: wc
-                        });
-                        await this.responseService.sendResponseChunk(this.id, sourceId, requestId, chunk, true);
+                    if (evt.type == 'done') {
+                        await this.responseService.sendToAudit(requestId,
+                            await ai.auditResponse(envelope, evt)
+                        );
+                        if (workerRequest.isStreaming) break;
                     }
-                    if (evt.type === "done" || evt.type === "error") break;
+                    for (const wc of wire.fromProviderEvent(evt)) {
+                        await this.responseService.sendResponseChunk(sourceId, requestId, wc);
+                    }
+                    if (evt.type === "error") break; // is this necessary?
                 }
             } catch (error) {
                 logger.error(`Error handling request (${requestId}): ${(error as Error).message}`);
@@ -134,7 +131,8 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
 container.registerSingleton(PluginService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
-    .registerSingleton(ProviderPluginRegistry);
+    .registerSingleton(ProviderPluginRegistry)
+    .registerSingleton(ProviderService);
 
 let workerInstance: WorkerServer | null = null;
 

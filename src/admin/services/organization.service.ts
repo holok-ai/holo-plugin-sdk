@@ -3,6 +3,7 @@ import {injectable} from 'tsyringe';
 import {OrganizationCacheService} from "./organization.cache.service";
 import {Application, Model, OrganizationCache, Prompt, Provider} from "../../cache";
 import {ClassLogger} from "../../types/class.logger";
+import {HoloLoggerError} from "@holokai/sdk";
 
 @injectable()
 export class OrganizationService extends ClassLogger {
@@ -25,18 +26,32 @@ export class OrganizationService extends ClassLogger {
         return this.orgCacheService.getFirstProviderOfType(providerType);
     }
 
-    getProviderByModel(orgId: string, slug: string, modelName: string): Provider | undefined {
+    getProviderByModel(orgId: string, slug: string, modelName: string): Provider {
         const logger = this.mlog(this.getProviderByModel);
         const models = this.getModels(orgId, slug);
-        logger.info(`Models: ${JSON.stringify(models, null, 2)}`);
-        logger.info(`Model name: ${modelName}`);
-        if (!models) return;
+        if (!models) {
+            let msg = `[${orgId}](${slug}) No models found application.`;
+            logger.error(msg);
+            throw new HoloLoggerError(msg);
+        }
 
         const model = models.find(m => m.name === modelName || m.accessModel === modelName);
-        logger.info(`Model: ${JSON.stringify(model, null, 2)}`);
-        if (!model) return;
 
-        return this.getProvider(orgId, model.providerName);
+        if (!model) {
+            let msg = `[${orgId}](${slug}) Model not found: ${modelName}`;
+            logger.error(msg);
+            throw new HoloLoggerError(msg);
+        }
+
+        const provider = this.getProvider(orgId, model.providerName);
+
+        if (!provider) {
+            let msg = `[${orgId}](${slug}) No provider found with model.`;
+            logger.error(msg);
+            throw new HoloLoggerError(msg);
+        }
+
+        return provider;
     }
 
 
