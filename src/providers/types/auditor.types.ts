@@ -83,12 +83,60 @@ export abstract class BaseAuditor implements IAuditor {
         if (workerRequest.userId !== undefined) {
             llmRequest.user_id = workerRequest.userId;
         }
-        if (workerRequest.thread_id !== undefined) {
-            llmRequest.thread_id = workerRequest.thread_id;
-        }
         if (workerRequest.payload !== undefined) {
             llmRequest.raw_request = workerRequest.payload;
         }
+        // Extract system prompt from Prompt object
+        if (workerRequest.systemPrompt?.systemPrompt !== undefined) {
+            llmRequest.system_prompt = workerRequest.systemPrompt.systemPrompt;
+        }
+    }
+
+    /**
+     * Set desktop fields for processing tuples from desktop app - same across all providers for requests
+     * thread_id is saved in db field
+     * other options when present (branch_id and continue_after)
+     */
+    protected setDesktopRequestFields(workerRequest: LLMWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
+        if (workerRequest.thread_id !== undefined) {
+            const { threadId, params } = this.splitThreadValue(workerRequest.thread_id);
+            if (threadId !== undefined) {
+                llmRequest.thread_id = threadId;
+            }
+            if (Object.keys(params).length > 0) {
+                llmRequest.options = {
+                    ...(llmRequest.options ?? {}),
+                    ...params
+                }
+            }
+            // console.log('[AUDITOR.DESKTOP_FIELDS] thread value:', workerRequest.thread_id,' thread_id:', threadId,' options:',  llmRequest.options);
+        }
+    }
+
+    /**
+     * Splits a thread_id string from the desktop into threadId and key=value params
+     * @returns Object with threadId (string | undefined) and params (object with parsed key=value pairs)
+     */
+    protected splitThreadValue(threadString: string): {
+        threadId: string | undefined,
+        params: { [key: string]: string }
+    } {
+        if (!threadString || threadString.trim() === '') {
+            return { threadId: undefined, params: {} };
+        }
+
+        const parts = threadString.split(',');
+        const params: { [key: string]: string } = {};
+
+        // Parse key=value pairs from remaining elements
+        for (let i = 1; i < parts.length; i++) {
+            const [key, value] = parts[i].split('=');
+            if (key && value) {
+                params[key.trim()] = value.trim();
+            }
+        }
+
+        return { threadId: parts[0].trim(), params };
     }
 
     /**

@@ -35,6 +35,14 @@ export class RequestService extends ClassLogger {
 
         const workerRequest = await this.parseRequest(providerType, provider?.name, type, req);
 
+        // Load and attach system prompt from application configuration
+        if (auth?.organizationId && auth?.appSlug) {
+            const systemPrompt = this.organizationService.getSystemPrompt(auth.organizationId, auth.appSlug);
+            if (systemPrompt) {
+                workerRequest.systemPrompt = systemPrompt;
+            }
+        }
+
         const responseFormat = (body && typeof body === 'object' && 'response_format' in body)
             ? (body as { response_format?: { type: string } }).response_format
             : undefined;

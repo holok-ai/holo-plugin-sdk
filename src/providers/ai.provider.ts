@@ -53,8 +53,19 @@ export abstract class AIProvider extends ClassLogger implements IProvider {
 
     async processRequest(request: LLMWorkerRequest): Promise<AIRequestStat | null> {
         const logger = this.mlog(this.processRequest);
-        const {sourceId, requestId, payload, type} = request;
+        const {sourceId, requestId, payload, type, systemPrompt} = request;
         ProviderRequestValidator.assert(payload);
+
+        // Inject system prompt into payload if present
+        if (systemPrompt) {
+            // For chat requests, inject the system prompt text into the payload's system field
+            if ('messages' in payload) {
+                const systemPromptText = systemPrompt.systemPrompt;
+                if (systemPromptText) {
+                    (payload as any).system = systemPromptText;
+                }
+            }
+        }
 
         try {
             return this.handleLLMRequest(sourceId, requestId, payload, type);
