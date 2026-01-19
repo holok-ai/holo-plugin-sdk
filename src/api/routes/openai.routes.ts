@@ -12,6 +12,7 @@ export function createOpenAIRoutes(): express.Router {
     const tokenService = container.resolve(TokenService);
 
     openAIRouter.post('/chat/completions', makeJwtAuthMiddleware(tokenService, {useCache: true}), openAIController.chatCompletions);
+    openAIRouter.post('/responses', makeJwtAuthMiddleware(tokenService, {useCache: true}), openAIController.responses);
     openAIRouter.get('/models', makeJwtAuthMiddleware(tokenService, {useCache: true}), openAIController.models);
     return openAIRouter;
 }

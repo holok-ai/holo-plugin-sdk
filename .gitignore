@@ -35,6 +35,8 @@ curl.json
 
 # Application evaluators and scripts
 applications/
+.aider*
+.claude/
 
 # TypeScript build info and compiled files
 *.tsbuildinfo

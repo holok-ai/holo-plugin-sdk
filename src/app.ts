@@ -7,7 +7,7 @@ import bodyParser from 'body-parser';
 import morgan from 'morgan';
 import logger from './utils/logger';
 import {errorMiddleware, nocorsMiddleware} from "./api/middleware";
-import {InitService, ResponseService} from "./services";
+import {InitService, ResponseService, StreamService} from "./services";
 import {createRoutes} from "./api/routes";
 import {env} from "./env";
 import listEndpoints from "express-list-endpoints";
@@ -58,9 +58,9 @@ container.registerSingleton(ResponseService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry)
+    .registerSingleton(StreamService)
 
 const configService: ConfigService = container.resolve(ConfigService);
-
 
 async function waitForInitialConfig(timeoutMs: number = 60000) {
     return new Promise<void>((resolve, reject) => {
