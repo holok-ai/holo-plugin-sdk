@@ -48,14 +48,14 @@ export class RequestService extends ClassLogger {
             );
             workerRequest.errors = errors;
         } else if (workerRequest.isStreaming) {
-            await this.responseService.createStream(workerRequest.requestId, res, true, providerType, model);
+            await this.responseService.createStream(workerRequest.requestId, true);
         }
 
         if (provider) {
             await this.guardService.guard(providerType, type, workerRequest, auth);
         }
 
-        await this.responseService.sendRequest(req, workerRequest);
+        await this.responseService.sendRequest(req, res, workerRequest);
 
         logger.info(`Request processed: ${providerType} ${type}`, {requestId: workerRequest.requestId});
     }

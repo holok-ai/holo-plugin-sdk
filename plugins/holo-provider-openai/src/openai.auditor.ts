@@ -9,7 +9,6 @@ import {
     pickDefined,
     ProviderEnvelope
 } from "@holokai/sdk";
-import {OpenAIChatRequest} from "./types";
 import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
 import {ResponseCreateParamsBase} from "openai/resources/responses/responses";
 
@@ -18,7 +17,7 @@ export class OpenAIAuditor extends BaseAuditor {
     readonly provider = 'openai';
 
     protected toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as OpenAIChatRequest;
+        const payload = workerRequest.payload as ChatCompletionCreateParamsBase;
 
         // Set model
         llmRequest.model_slug = payload.model;
@@ -37,7 +36,7 @@ export class OpenAIAuditor extends BaseAuditor {
     }
 
     protected mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as OpenAIChatRequest;
+        const payload = workerRequest.payload as ChatCompletionCreateParamsBase;
         // Set options (OpenAI-specific parameters)
         const options: Record<string, any> = {};
         if (payload.max_tokens !== undefined) options.max_tokens = payload.max_tokens;

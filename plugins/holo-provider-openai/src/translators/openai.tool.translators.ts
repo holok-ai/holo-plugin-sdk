@@ -1,19 +1,19 @@
 import 'reflect-metadata';
 import {HoloTool, HoloToolChoice, pickDefined} from "@holokai/sdk";
-import {OpenAIChatCompletionTool, OpenAIChatCompletionToolChoiceOption} from "../types";
 import {injectable} from 'tsyringe';
 import {BaseTranslator} from "@holokai/sdk/provider";
+import {ChatCompletionTool, ChatCompletionToolChoiceOption} from "openai/resources/chat/completions/completions";
 
 @injectable()
-export class OpenAIToolTranslator extends BaseTranslator<HoloTool, OpenAIChatCompletionTool> {
+export class OpenAIToolTranslator extends BaseTranslator<HoloTool, ChatCompletionTool> {
     protected holoDefaults: Partial<HoloTool> = {};
-    protected providerDefaults: Partial<OpenAIChatCompletionTool> = {};
+    protected providerDefaults: Partial<ChatCompletionTool> = {};
 
     constructor() {
         super();
     }
 
-    protected async fromHoloImpl(source: HoloTool): Promise<Partial<OpenAIChatCompletionTool>> {
+    protected async fromHoloImpl(source: HoloTool): Promise<Partial<ChatCompletionTool>> {
         return {
             type: 'function' as const,
             function: {
@@ -26,7 +26,7 @@ export class OpenAIToolTranslator extends BaseTranslator<HoloTool, OpenAIChatCom
         };
     }
 
-    protected async toHoloImpl(source: OpenAIChatCompletionTool): Promise<Partial<HoloTool>> {
+    protected async toHoloImpl(source: ChatCompletionTool): Promise<Partial<HoloTool>> {
         // Handle union type: only process function tools
         if (source.type === 'function') {
             return pickDefined({
@@ -41,15 +41,15 @@ export class OpenAIToolTranslator extends BaseTranslator<HoloTool, OpenAIChatCom
 }
 
 @injectable()
-export class OpenAIToolChoiceTranslator extends BaseTranslator<HoloToolChoice, OpenAIChatCompletionToolChoiceOption> {
+export class OpenAIToolChoiceTranslator extends BaseTranslator<HoloToolChoice, ChatCompletionToolChoiceOption> {
     protected holoDefaults: Partial<HoloToolChoice> = {};
-    protected providerDefaults: Partial<OpenAIChatCompletionToolChoiceOption> = {};
+    protected providerDefaults: Partial<ChatCompletionToolChoiceOption> = {};
 
     constructor() {
         super();
     }
 
-    protected async fromHoloImpl(source: HoloToolChoice): Promise<Partial<OpenAIChatCompletionToolChoiceOption>> {
+    protected async fromHoloImpl(source: HoloToolChoice): Promise<Partial<ChatCompletionToolChoiceOption>> {
         if (source.type === "specific") {
             return {
                 type: "function",
@@ -59,7 +59,7 @@ export class OpenAIToolChoiceTranslator extends BaseTranslator<HoloToolChoice, O
         return source.type as any; // 'auto' | 'none' | 'required'
     }
 
-    protected async toHoloImpl(source: OpenAIChatCompletionToolChoiceOption): Promise<Partial<HoloToolChoice>> {
+    protected async toHoloImpl(source: ChatCompletionToolChoiceOption): Promise<Partial<HoloToolChoice>> {
         if (typeof source === 'object' && source.type === "function") {
             return {
                 type: "specific",

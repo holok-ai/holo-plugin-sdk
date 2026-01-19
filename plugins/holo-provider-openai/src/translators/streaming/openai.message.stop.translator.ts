@@ -1,20 +1,20 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {v4 as uuidv4} from 'uuid';
-import {OpenAIChatCompletionChunk} from '../../types';
 import {HoloFinishReason, HoloStreamChunk, pickDefined} from '@holokai/sdk';
 import {StreamTranslator} from "@holokai/sdk/provider";
+import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 
 @injectable()
-export class OpenAIMessageStopTranslator extends StreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {
+export class OpenAIMessageStopTranslator extends StreamTranslator<HoloStreamChunk, ChatCompletionChunk> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
-    protected providerDefaults: Partial<OpenAIChatCompletionChunk> = {};
+    protected providerDefaults: Partial<ChatCompletionChunk> = {};
 
     constructor() {
         super();
     }
 
-    protected async toHoloManyImpl(source: OpenAIChatCompletionChunk): Promise<Partial<HoloStreamChunk>[]> {
+    protected async toHoloManyImpl(source: ChatCompletionChunk): Promise<Partial<HoloStreamChunk>[]> {
         const results: Partial<HoloStreamChunk>[] = [];
 
         // Emit a message_stop per choice that has a finish_reason
@@ -42,7 +42,7 @@ export class OpenAIMessageStopTranslator extends StreamTranslator<HoloStreamChun
         return results;
     }
 
-    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<OpenAIChatCompletionChunk>[]> {
+    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<ChatCompletionChunk>[]> {
         const d = source.delta;
         if (!d || d.type !== 'message_stop') return [];
 
@@ -71,7 +71,7 @@ export class OpenAIMessageStopTranslator extends StreamTranslator<HoloStreamChun
             }],
             system_fingerprint: this.providerDefaults.system_fingerprint,
             service_tier: this.providerDefaults.service_tier
-        }) as Partial<OpenAIChatCompletionChunk>];
+        }) as Partial<ChatCompletionChunk>];
     }
 
     private mapOpenAIFinishReason(

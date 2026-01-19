@@ -1,17 +1,17 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {OpenAIChatCompletionChunk} from '../../types';
 import {OpenAIMessageStartTranslator} from './openai.message.start.translator';
 import {OpenAIContentDeltaTranslator} from './openai.content.delta.translator';
 import {OpenAIMessageDeltaTranslator} from './openai.message.delta.translator';
 import {OpenAIMessageStopTranslator} from './openai.message.stop.translator';
 import {HoloStreamChunk} from "@holokai/sdk";
 import {StreamTranslator} from "@holokai/sdk/provider";
+import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 
 @injectable()
-export class OpenAIStreamTranslator extends StreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {
+export class OpenAIStreamTranslator extends StreamTranslator<HoloStreamChunk, ChatCompletionChunk> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
-    protected providerDefaults: Partial<OpenAIChatCompletionChunk> = {};
+    protected providerDefaults: Partial<ChatCompletionChunk> = {};
 
     constructor(
         private readonly messageStartTranslator: OpenAIMessageStartTranslator,
@@ -22,7 +22,7 @@ export class OpenAIStreamTranslator extends StreamTranslator<HoloStreamChunk, Op
         super();
     }
 
-    protected async toHoloManyImpl(source: OpenAIChatCompletionChunk): Promise<Partial<HoloStreamChunk>[]> {
+    protected async toHoloManyImpl(source: ChatCompletionChunk): Promise<Partial<HoloStreamChunk>[]> {
         const results: Partial<HoloStreamChunk>[] = [];
 
         // 1. Check for message_start (first chunk with role)
@@ -52,7 +52,7 @@ export class OpenAIStreamTranslator extends StreamTranslator<HoloStreamChunk, Op
         return results;
     }
 
-    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<OpenAIChatCompletionChunk>[]> {
+    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<ChatCompletionChunk>[]> {
         const d = source.delta;
         if (!d) return [];
 

@@ -1,27 +1,27 @@
 import 'reflect-metadata';
 import {OpenAIContentTranslator} from "./openai.content.translators";
-import {OpenAIRequestMessage} from "../types";
 import {injectable} from 'tsyringe';
 import {createStableId, HoloMessage, pickDefined, safeParse} from "@holokai/sdk";
 import {BaseTranslator} from "@holokai/sdk/provider";
+import {ChatCompletionMessageParam} from "openai/resources/chat/completions/completions";
 
 @injectable()
-export class OpenAIMessageTranslator extends BaseTranslator<HoloMessage, OpenAIRequestMessage> {
+export class OpenAIMessageTranslator extends BaseTranslator<HoloMessage, ChatCompletionMessageParam> {
     protected holoDefaults: Partial<HoloMessage> = {};
-    protected providerDefaults: Partial<OpenAIRequestMessage> = {};
+    protected providerDefaults: Partial<ChatCompletionMessageParam> = {};
 
     constructor(private readonly contentTranslator: OpenAIContentTranslator) {
         super();
     }
 
-    public async flattenText(parts: OpenAIRequestMessage["content"]): Promise<string> {
+    public async flattenText(parts: ChatCompletionMessageParam["content"]): Promise<string> {
         if (!Array.isArray(parts)) return typeof parts === 'string' ? parts : '';
         const holoBlocks = await this.contentTranslator.toHoloArray(parts as any[]);
         return holoBlocks.filter(b => (b as any).type === 'text').map(b => (b as any).text).join('\n');
     }
 
-    protected async fromHoloImpl(holoMessage: HoloMessage): Promise<Partial<OpenAIRequestMessage>> {
-        let content: OpenAIRequestMessage["content"] | undefined;
+    protected async fromHoloImpl(holoMessage: HoloMessage): Promise<Partial<ChatCompletionMessageParam>> {
+        let content: ChatCompletionMessageParam["content"] | undefined;
 
         if (typeof holoMessage.content === 'string') {
             content = holoMessage.content;
@@ -46,7 +46,7 @@ export class OpenAIMessageTranslator extends BaseTranslator<HoloMessage, OpenAIR
                     role: 'assistant' as const,
                     content,
                     ...(tool_calls && tool_calls.length ? {tool_calls} : {})
-                }) as Partial<OpenAIRequestMessage>;
+                }) as Partial<ChatCompletionMessageParam>;
             }
 
             case 'tool': {
@@ -54,7 +54,7 @@ export class OpenAIMessageTranslator extends BaseTranslator<HoloMessage, OpenAIR
                     role: 'tool' as const,
                     content: typeof content === 'string' ? content : JSON.stringify(content ?? ''),
                     tool_call_id: holoMessage.tool_call_id
-                }) as Partial<OpenAIRequestMessage>;
+                }) as Partial<ChatCompletionMessageParam>;
             }
 
             default: { // 'user'
@@ -62,12 +62,12 @@ export class OpenAIMessageTranslator extends BaseTranslator<HoloMessage, OpenAIR
                     role: 'user' as const,
                     content,
                     name: holoMessage.name
-                }) as Partial<OpenAIRequestMessage>;
+                }) as Partial<ChatCompletionMessageParam>;
             }
         }
     }
 
-    protected async toHoloImpl(openaiMessage: OpenAIRequestMessage): Promise<Partial<HoloMessage>> {
+    protected async toHoloImpl(openaiMessage: ChatCompletionMessageParam): Promise<Partial<HoloMessage>> {
         if (openaiMessage.role === 'system') return {};
 
         let content: HoloMessage["content"] | undefined;

@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
-import {OpenAIChatRequest} from '../types';
 import {HoloWorkerResponse} from "@holokai/sdk";
+import type {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
 
 export class OpenAIChatCompletionsService {
     constructor(
@@ -20,7 +20,7 @@ export class OpenAIChatCompletionsService {
     async execute(
         sourceId: string,
         requestId: string,
-        chatRequest: OpenAIChatRequest
+        chatRequest: ChatCompletionCreateParamsBase
     ): Promise<void> {
         this.validateModel(chatRequest.model);
 

@@ -1,19 +1,19 @@
 import 'reflect-metadata';
-import {OpenAIChatCompletionMessage} from "../types";
 import {injectable} from 'tsyringe';
 import {createStableId, HoloContent, HoloMessage, pickDefined, safeParse} from "@holokai/sdk";
 import {BaseTranslator} from "@holokai/sdk/provider";
+import {ChatCompletionMessage} from "openai/resources/chat/completions/completions";
 
 @injectable()
-export class OpenAIResponseMessageTranslator extends BaseTranslator<HoloMessage, OpenAIChatCompletionMessage> {
+export class OpenAIResponseMessageTranslator extends BaseTranslator<HoloMessage, ChatCompletionMessage> {
     protected holoDefaults: Partial<HoloMessage> = {};
-    protected providerDefaults: Partial<OpenAIChatCompletionMessage> = {};
+    protected providerDefaults: Partial<ChatCompletionMessage> = {};
 
     constructor() {
         super();
     }
 
-    protected async fromHoloImpl(source: HoloMessage): Promise<Partial<OpenAIChatCompletionMessage>> {
+    protected async fromHoloImpl(source: HoloMessage): Promise<Partial<ChatCompletionMessage>> {
         if (source.role !== 'assistant') return {};
 
         // Gather text content (if any)
@@ -49,10 +49,10 @@ export class OpenAIResponseMessageTranslator extends BaseTranslator<HoloMessage,
             role: 'assistant',
             content,
             tool_calls
-        }) as Partial<OpenAIChatCompletionMessage>;
+        }) as Partial<ChatCompletionMessage>;
     }
 
-    protected async toHoloImpl(source: OpenAIChatCompletionMessage): Promise<Partial<HoloMessage>> {
+    protected async toHoloImpl(source: ChatCompletionMessage): Promise<Partial<HoloMessage>> {
         // Collect tool calls from either modern tool_calls[] or legacy function_call
         const tool_calls: HoloMessage["tool_calls"] = [];
 

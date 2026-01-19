@@ -1,18 +1,18 @@
-import {
-    OpenAIEasyInputMessage,
-    OpenAIResponseCreateParams,
-    OpenAIResponseInput,
-    OpenAIResponseInputContent,
-    OpenAITool
-} from "../types";
 import {HoloContent, HoloMessage, HoloRequest, HoloTool, pickDefined} from "@holokai/sdk";
 import {BaseTranslator} from "@holokai/sdk/provider";
+import {
+    EasyInputMessage,
+    ResponseCreateParams,
+    ResponseInput,
+    ResponseInputContent,
+    Tool
+} from "openai/resources/responses/responses";
 
-export class OpenAIResponseRequestTranslator extends BaseTranslator<HoloRequest, OpenAIResponseCreateParams> {
+export class OpenAIResponseRequestTranslator extends BaseTranslator<HoloRequest, ResponseCreateParams> {
     protected holoDefaults: Partial<HoloRequest> = {};
-    protected providerDefaults: Partial<OpenAIResponseCreateParams> = {};
+    protected providerDefaults: Partial<ResponseCreateParams> = {};
 
-    protected async fromHoloImpl(source: HoloRequest): Promise<Partial<OpenAIResponseCreateParams>> {
+    protected async fromHoloImpl(source: HoloRequest): Promise<Partial<ResponseCreateParams>> {
         const result = pickDefined({
             model: source.model,
             max_output_tokens: source.max_tokens,
@@ -20,9 +20,9 @@ export class OpenAIResponseRequestTranslator extends BaseTranslator<HoloRequest,
             top_p: source.top_p,
             stream: source.stream,
             metadata: source.metadata ? {user_id: source.metadata.user_id} : undefined
-        }) as Partial<OpenAIResponseCreateParams>;
+        }) as Partial<ResponseCreateParams>;
 
-        const inputMessages: OpenAIEasyInputMessage[] = [];
+        const inputMessages: EasyInputMessage[] = [];
 
         if (source.system) {
             inputMessages.push({
@@ -40,7 +40,7 @@ export class OpenAIResponseRequestTranslator extends BaseTranslator<HoloRequest,
                             content: message.content
                         });
                     } else {
-                        const mappedContent: OpenAIResponseInputContent[] = message.content.map(c => {
+                        const mappedContent: ResponseInputContent[] = message.content.map(c => {
                             if (c.type === 'text') {
                                 return {type: 'input_text' as const, text: c.text};
                             } else if (c.type === 'image') {
@@ -62,11 +62,11 @@ export class OpenAIResponseRequestTranslator extends BaseTranslator<HoloRequest,
         }
 
         if (inputMessages.length > 0) {
-            result.input = inputMessages as OpenAIResponseInput;
+            result.input = inputMessages as ResponseInput;
         }
 
         if (source.tools?.length) {
-            result.tools = source.tools.map((tool): OpenAITool => ({
+            result.tools = source.tools.map((tool): Tool => ({
                 type: 'function' as const,
                 name: tool.name,
                 description: tool.description || null,
@@ -93,7 +93,7 @@ export class OpenAIResponseRequestTranslator extends BaseTranslator<HoloRequest,
         return result;
     }
 
-    protected async toHoloImpl(source: OpenAIResponseCreateParams): Promise<Partial<HoloRequest>> {
+    protected async toHoloImpl(source: ResponseCreateParams): Promise<Partial<HoloRequest>> {
         const result = pickDefined({
             model: source.model,
             max_tokens: source.max_output_tokens,

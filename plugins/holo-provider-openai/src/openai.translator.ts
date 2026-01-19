@@ -7,8 +7,13 @@ import {
     OpenAIResponseTranslator,
     OpenAIStreamTranslator
 } from "./translators";
-import {OpenAIChatCompletionResponse, OpenAIChatRequest, OpenAIRequestMessage} from "./types";
 import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "@holokai/sdk";
+import {
+    ChatCompletion,
+    ChatCompletionChunk,
+    ChatCompletionMessageParam
+} from "openai/resources/chat/completions/completions";
+import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
 
 @injectable()
 export class OpenAITranslator implements IProviderTranslator {
@@ -20,27 +25,27 @@ export class OpenAITranslator implements IProviderTranslator {
     ) {
     }
 
-    async fromHoloResponse(response: HoloResponse): Promise<Partial<OpenAIChatCompletionResponse>> {
+    async fromHoloResponse(response: HoloResponse): Promise<Partial<ChatCompletion | ChatCompletionChunk>> {
         return this.responseTranslator.fromHolo(response);
     }
 
-    async toHoloResponse(response: OpenAIChatCompletionResponse): Promise<Partial<HoloResponse>> {
+    async toHoloResponse(response: ChatCompletion | ChatCompletionChunk): Promise<Partial<HoloResponse>> {
         return this.responseTranslator.toHolo(response);
     }
 
-    async fromHoloRequest(request: HoloRequest): Promise<Partial<OpenAIChatRequest>> {
+    async fromHoloRequest(request: HoloRequest): Promise<Partial<ChatCompletionCreateParamsBase>> {
         return this.requestTranslator.fromHolo(request);
     }
 
-    async toHoloRequest(request: OpenAIChatRequest): Promise<Partial<HoloRequest>> {
+    async toHoloRequest(request: ChatCompletionCreateParamsBase): Promise<Partial<HoloRequest>> {
         return this.requestTranslator.toHolo(request);
     }
 
-    async fromHoloMessages(messages: HoloMessage[]): Promise<Partial<OpenAIRequestMessage>[]> {
+    async fromHoloMessages(messages: HoloMessage[]): Promise<Partial<ChatCompletionMessageParam>[]> {
         return this.messageTranslator.fromHoloArray(messages);
     }
 
-    async toHoloMessages(messages: OpenAIRequestMessage[]): Promise<Partial<HoloMessage>[]> {
+    async toHoloMessages(messages: ChatCompletionMessageParam[]): Promise<Partial<HoloMessage>[]> {
         return this.messageTranslator.toHoloArray(messages);
     }
 

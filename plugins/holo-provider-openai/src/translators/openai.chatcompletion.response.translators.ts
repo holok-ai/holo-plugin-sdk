@@ -1,15 +1,15 @@
 import 'reflect-metadata';
-import {OpenAIChatCompletion, OpenAIChatCompletionResponse} from "../types";
 import {OpenAIResponseMessageTranslator} from "./openai.response.message.translators";
 import {OpenAIUsageTranslator} from "./openai.usage.translators";
 import {injectable} from 'tsyringe';
 import {HoloFinishReason, HoloMessage, HoloResponse, pickDefined} from "@holokai/sdk";
 import {BaseTranslator} from "@holokai/sdk/provider";
+import {ChatCompletion, ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 
 @injectable()
-export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenAIChatCompletionResponse> {
+export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, ChatCompletion | ChatCompletionChunk> {
     protected holoDefaults: Partial<HoloResponse> = {};
-    protected providerDefaults: Partial<OpenAIChatCompletionResponse> = {};
+    protected providerDefaults: Partial<ChatCompletion | ChatCompletionChunk> = {};
 
     constructor(
         private readonly responseMessageTranslator: OpenAIResponseMessageTranslator,
@@ -18,7 +18,7 @@ export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenA
         super();
     }
 
-    protected async fromHoloImpl(source: HoloResponse): Promise<Partial<OpenAIChatCompletionResponse>> {
+    protected async fromHoloImpl(source: HoloResponse): Promise<Partial<ChatCompletion | ChatCompletionChunk>> {
         // Build message (let the message translator decide content null vs empty)
         const message =
             source.messages?.length
@@ -30,7 +30,7 @@ export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenA
             : undefined;
 
         // Choice
-        const choice: OpenAIChatCompletion["choices"][number] = pickDefined({
+        const choice: ChatCompletion["choices"][number] = pickDefined({
             index: 0,
             message, // omit if undefined
             finish_reason: this.mapFinishReasonFromHolo(source.finish_reason),
@@ -53,12 +53,12 @@ export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenA
             model: source.model,
             choices,
             usage                                  // omit if undefined
-        }) as Partial<OpenAIChatCompletionResponse>;
+        }) as Partial<ChatCompletion | ChatCompletionChunk>;
     }
 
-    protected async toHoloImpl(source: OpenAIChatCompletionResponse): Promise<Partial<HoloResponse>> {
+    protected async toHoloImpl(source: ChatCompletion | ChatCompletionChunk): Promise<Partial<HoloResponse>> {
         if ('choices' in source && source.choices?.length) {
-            const completion = source as OpenAIChatCompletion;
+            const completion = source as ChatCompletion;
             const choice = completion.choices[0];
 
             if (!choice?.message) return {};
@@ -84,7 +84,7 @@ export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, OpenA
         return {};
     }
 
-    private mapFinishReasonFromHolo(reason?: HoloFinishReason | null): OpenAIChatCompletion["choices"][0]["finish_reason"] {
+    private mapFinishReasonFromHolo(reason?: HoloFinishReason | null): ChatCompletion["choices"][0]["finish_reason"] {
         switch (reason) {
             case 'stop':
                 return 'stop';

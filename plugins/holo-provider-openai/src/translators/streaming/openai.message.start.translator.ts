@@ -1,20 +1,20 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {v4 as uuidv4} from 'uuid';
-import {OpenAIChatCompletionChunk} from '../../types';
 import {HoloStreamChunk, pickDefined} from '@holokai/sdk';
 import {StreamTranslator} from "@holokai/sdk/provider";
+import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 
 @injectable()
-export class OpenAIMessageStartTranslator extends StreamTranslator<HoloStreamChunk, OpenAIChatCompletionChunk> {
+export class OpenAIMessageStartTranslator extends StreamTranslator<HoloStreamChunk, ChatCompletionChunk> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
-    protected providerDefaults: Partial<OpenAIChatCompletionChunk> = {};
+    protected providerDefaults: Partial<ChatCompletionChunk> = {};
 
     constructor() {
         super();
     }
 
-    protected async toHoloManyImpl(source: OpenAIChatCompletionChunk): Promise<Partial<HoloStreamChunk>[]> {
+    protected async toHoloManyImpl(source: ChatCompletionChunk): Promise<Partial<HoloStreamChunk>[]> {
         // OpenAI signals start when a choice delta has role
         const roleChoices = source.choices.filter(c => c.delta?.role);
         if (roleChoices.length === 0) return [];
@@ -41,7 +41,7 @@ export class OpenAIMessageStartTranslator extends StreamTranslator<HoloStreamChu
         });
     }
 
-    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<OpenAIChatCompletionChunk>[]> {
+    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<ChatCompletionChunk>[]> {
         const d = source.delta;
         if (!d || d.type !== 'message_start') return [];
 
@@ -70,6 +70,6 @@ export class OpenAIMessageStartTranslator extends StreamTranslator<HoloStreamChu
                 },
                 finish_reason: null
             }]
-        }) as Partial<OpenAIChatCompletionChunk>];
+        }) as Partial<ChatCompletionChunk>];
     }
 }

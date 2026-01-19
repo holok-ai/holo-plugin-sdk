@@ -1,12 +1,5 @@
 import {OpenAIMessageTranslator} from "./openai.message.translators";
 import {OpenAIToolChoiceTranslator, OpenAIToolTranslator} from "./openai.tool.translators";
-import {
-    OpenAIChatCompletionTool,
-    OpenAIChatCompletionToolChoiceOption,
-    OpenAIChatRequest,
-    OpenAIRequestMessage,
-    OpenAIResponseFormat
-} from "../types";
 import {injectable} from 'tsyringe';
 import {
     BaseTranslator,
@@ -17,19 +10,26 @@ import {
     HoloToolChoice,
     pickDefined
 } from "@holokai/sdk";
+import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
+import {ResponseFormatJSONObject, ResponseFormatJSONSchema, ResponseFormatText} from "openai/resources/shared";
+import {
+    ChatCompletionMessageParam,
+    ChatCompletionTool,
+    ChatCompletionToolChoiceOption
+} from "openai/resources/chat/completions/completions";
 
 /**
  * OpenAI Request Translator
  *
  * Validator alignment requirements:
- * - OpenAIChatRequestValidator should include max_completion_tokens? and safety_identifier?
+ * - ChatCompletionCreateParamsBaseValidator should include max_completion_tokens? and safety_identifier?
  * - Legacy max_tokens? and user? can be accepted for backward compatibility
  * - HoloRequestValidator remains unchanged
  */
 @injectable()
-export class OpenAIRequestTranslator extends BaseTranslator<HoloRequest, OpenAIChatRequest> {
+export class OpenAIRequestTranslator extends BaseTranslator<HoloRequest, ChatCompletionCreateParamsBase> {
     protected holoDefaults: Partial<HoloRequest> = {};
-    protected providerDefaults: Partial<OpenAIChatRequest> = {};
+    protected providerDefaults: Partial<ChatCompletionCreateParamsBase> = {};
 
     constructor(
         private readonly messageTranslator: OpenAIMessageTranslator,
@@ -39,7 +39,7 @@ export class OpenAIRequestTranslator extends BaseTranslator<HoloRequest, OpenAIC
         super();
     }
 
-    protected async fromHoloImpl(source: HoloRequest): Promise<Partial<OpenAIChatRequest>> {
+    protected async fromHoloImpl(source: HoloRequest): Promise<Partial<ChatCompletionCreateParamsBase>> {
         // Map service tier (only 'auto' | 'default' forwarded to OpenAI, 'standard_only' dropped)
         const serviceTierMap: Record<string, 'auto' | 'default'> = {
             'auto': 'auto',
@@ -48,7 +48,7 @@ export class OpenAIRequestTranslator extends BaseTranslator<HoloRequest, OpenAIC
         const mappedServiceTier = source.service_tier ? serviceTierMap[source.service_tier] : undefined;
 
         // Handle response format
-        let response_format: OpenAIResponseFormat | undefined;
+        let response_format: ResponseFormatJSONObject | ResponseFormatText | ResponseFormatJSONSchema | undefined;
         if (source.response_format) {
             const format = source.response_format;
             if (format.type === 'json_object') {
@@ -82,10 +82,10 @@ export class OpenAIRequestTranslator extends BaseTranslator<HoloRequest, OpenAIC
             stop: source.stop_sequences,
             response_format
 
-        }) as Partial<OpenAIChatRequest>;
+        }) as Partial<ChatCompletionCreateParamsBase>;
 
         // Handle messages and system (build locally, then assign)
-        const messages: NonNullable<OpenAIChatRequest["messages"]> = [];
+        const messages: NonNullable<ChatCompletionCreateParamsBase["messages"]> = [];
         if (source.system) {
             messages.push({
                 role: 'system',
@@ -98,7 +98,7 @@ export class OpenAIRequestTranslator extends BaseTranslator<HoloRequest, OpenAIC
                     await this.messageTranslator.fromHolo(message)
                 )
             );
-            const validMessages = openaiMessages.filter(msg => Object.keys(msg).length > 0) as NonNullable<OpenAIChatRequest["messages"]>;
+            const validMessages = openaiMessages.filter((msg: {}) => Object.keys(msg).length > 0) as NonNullable<ChatCompletionCreateParamsBase["messages"]>;
             if (validMessages.length > 0) {
                 messages.push(...validMessages);
             }
@@ -112,9 +112,9 @@ export class OpenAIRequestTranslator extends BaseTranslator<HoloRequest, OpenAIC
             const mapped = await Promise.all(
                 source.tools.map(tool => this.toolTranslator.fromHolo(tool))
             );
-            const validTools = mapped.filter(tool => Object.keys(tool).length > 0);
+            const validTools = mapped.filter((tool: {}) => Object.keys(tool).length > 0);
             if (validTools.length > 0) {
-                result.tools = validTools as OpenAIChatCompletionTool[];
+                result.tools = validTools as ChatCompletionTool[];
             }
         }
 
@@ -122,14 +122,14 @@ export class OpenAIRequestTranslator extends BaseTranslator<HoloRequest, OpenAIC
         if (source.tool_choice) {
             const toolChoice = await this.toolChoiceTranslator.fromHolo(source.tool_choice);
             if (Object.keys(toolChoice).length > 0) {
-                result.tool_choice = toolChoice as OpenAIChatCompletionToolChoiceOption;
+                result.tool_choice = toolChoice as ChatCompletionToolChoiceOption;
             }
         }
 
-        return result as Partial<OpenAIChatRequest>;
+        return result as Partial<ChatCompletionCreateParamsBase>;
     }
 
-    protected async toHoloImpl(source: OpenAIChatRequest): Promise<Partial<HoloRequest>> {
+    protected async toHoloImpl(source: ChatCompletionCreateParamsBase): Promise<Partial<HoloRequest>> {
         // Handle stop sequences
         const stopSequences = source.stop ?
             (Array.isArray(source.stop) ? source.stop : [source.stop]) :
@@ -172,7 +172,7 @@ export class OpenAIRequestTranslator extends BaseTranslator<HoloRequest, OpenAIC
         // Handle messages and system
         if (source.messages?.length) {
             let system: string | undefined;
-            const regular: OpenAIRequestMessage[] = [];
+            const regular: ChatCompletionMessageParam[] = [];
 
             for (const message of source.messages) {
                 if (message.role === 'system' && system == null) {
