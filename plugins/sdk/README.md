@@ -125,7 +125,7 @@ When creating a new provider plugin, follow this standardized package structure:
 ### Directory Structure
 
 ```
-packages/provider-{name}/
+plugins/holo-provider-{name}/
 ├── src/
 │   ├── index.ts            # Default export of plugin (REQUIRED)
 │   ├── plugin.ts           # IProviderPlugin implementation (REQUIRED)
@@ -159,8 +159,7 @@ packages/provider-{name}/
     "node": ">=18.0.0"
   },
   "peerDependencies": {
-    "@holokai/common": "^1.0.0",
-    "arktype": "^2.0.0"
+    "@holokai/common": "^1.0.0"
   },
   "dependencies": {
     "{provider-sdk}": "x.y.z"
@@ -183,7 +182,7 @@ packages/provider-{name}/
 **Important package.json rules:**
 
 - **Naming**: MUST follow `@holokai/provider-{name}` convention
-- **peerDependencies**: MUST include `@holokai/common` and `arktype` (shared versions)
+- **peerDependencies**: MUST include `@holokai/common` (shared version)
 - **dependencies**: Provider SDK with **EXACT version** (e.g., `"openai": "4.73.1"`, NOT `"^4.73.1"`)
 - **engines**: MUST specify `node >= 18.0.0`
 
@@ -206,7 +205,6 @@ export {OpenAITranslator} from './translator';
 import { IProviderPlugin, PluginManifest, PluginContext } from '@holokai/common/plugin';
 import { ProviderConfig, ProviderCapabilities } from '@holokai/common/provider';
 import { OpenAIProvider } from './provider';
-import { type } from 'arktype';
 
 class OpenAIProviderPlugin implements IProviderPlugin {
   public manifest: PluginManifest = {
@@ -250,14 +248,8 @@ class OpenAIProviderPlugin implements IProviderPlugin {
   }
 
   validateConfig(config: unknown): boolean {
-    const validator = type({
-      api_key: 'string',
-      model: 'string',
-      provider_type: '"openai"'
-    });
-
-    const result = validator(config);
-    return !(result instanceof type.errors);
+    // Basic validation - plugins are lightweight
+    return typeof config === 'object' && config !== null;
   }
 
   getCapabilities(): ProviderCapabilities {
@@ -385,11 +377,11 @@ export class OpenAITranslator {
 
 ### Complete Example
 
-See [packages/provider-openai](../provider-openai) for a complete reference implementation following this template.
+See [plugins/holo-provider-openai](../holo-provider-openai) for a complete reference implementation following this template.
 
 ## Examples
 
-See the [OpenAI Provider Plugin](../provider-openai) for a complete reference implementation.
+See the [OpenAI Provider Plugin](../holo-provider-openai) for a complete reference implementation.
 
 ## API Reference
 

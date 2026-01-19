@@ -41,11 +41,12 @@ Holo follows a distributed microservices architecture with queue-based request/r
    - Routes to provider translators or generates errors
    - Publishes responses to response exchange
 4. **Audit Server** (`src/servers/audit.server.ts`): Logs all requests and responses for compliance
-5. **Provider Translation System** (`src/providers/`):
+5. **Provider Plugin System** (`plugins/`):
    - **Holo Format**: Universal abstraction layer (hub-and-spoke architecture)
    - **Bidirectional Translators**: Convert between Holo ↔ Provider formats
    - **Streaming Support**: Real-time event translation with lossless round-tripping
-   - See [Provider Documentation](src/providers/README.md) for details
+   - **Plugin Architecture**: Independently versioned, hot-reloadable provider plugins
+   - See [SDK Documentation](plugins/sdk/README.md) for plugin development details
 6. **Queue Service** (`src/services/queue.service.ts`): RabbitMQ message handling
 7. **Response Service** (`src/services/response.service.ts`):
    - Listens on response exchange, filters by request_id
@@ -217,12 +218,13 @@ The audit server provides comprehensive logging for compliance and monitoring:
 ## 🚀 Key Features
 
 ### Multi-Provider Support
-- **OpenAI**: Full GPT model family support with streaming
-- **Claude**: Anthropic's Claude models with extended thinking & tools
-- **Ollama**: Local model hosting integration
+- **OpenAI**: Full GPT model family support with streaming (via plugin)
+- **Claude**: Anthropic's Claude models with extended thinking & tools (via plugin)
+- **Ollama**: Local model hosting integration (via plugin)
 - **Holo Translation Layer**: Universal abstraction for cross-provider compatibility
-- **Extensible**: Easy to add new providers via translator pattern
-  - See [Provider Implementation Guide](src/providers/IMPLEMENTATION_GUIDE.md)
+- **Plugin Architecture**: Independently versioned, hot-reloadable provider plugins
+- **Extensible**: Easy to add new providers via plugin development
+  - See [SDK Plugin Development Guide](plugins/sdk/README.md)
 
 ### API Compatibility
 - **OpenAI-Compatible**: `/api/openai/v1/chat/completions`
@@ -249,7 +251,7 @@ The audit server provides comprehensive logging for compliance and monitoring:
 - **Holo Format**: Canonical abstraction layer for provider-agnostic requests/responses
 - **Bidirectional Translators**: Convert between Holo ↔ Provider formats (N translations vs N²)
 - **Streaming Support**: Real-time event translation with lossless round-tripping
-- **Type Safety**: ArkType validators + TypeScript for runtime & compile-time validation
+- **Type Safety**: TypeScript for compile-time validation
 - **Stateless Design**: No shared state; orchestrator handles accumulation where needed
 
 ### Universal Model Access
@@ -571,44 +573,40 @@ npm run audit      # Audit service
 
 ### Adding a New Provider
 
-The system uses a **Holo translation layer** for universal provider abstraction. Adding a new provider involves implementing bidirectional translators between Holo (canonical format) and your provider's native format.
+The system uses a **plugin-based architecture** with a **Holo translation layer** for universal provider abstraction. Adding a new provider involves creating a standalone plugin package that implements bidirectional translators between Holo (canonical format) and your provider's native format.
 
-**📚 Complete Implementation Guide**: See [src/providers/IMPLEMENTATION_GUIDE.md](src/providers/IMPLEMENTATION_GUIDE.md) for step-by-step instructions.
+**📚 Complete Plugin Development Guide**: See [plugins/sdk/README.md](plugins/sdk/README.md) for step-by-step instructions.
 
 #### Quick Overview
 
-1. **Define Types**: Create provider-specific request/response types
-2. **Implement Translators**:
+1. **Create Plugin Package**: Follow the standardized plugin structure in `plugins/holo-provider-{name}/`
+2. **Implement Plugin Interface**:
+   - Plugin entrypoint with manifest
+   - Provider implementation
+   - Holo format translators
+3. **Implement Translators**:
    - Request translator (Holo ↔ Provider requests)
    - Response translator (Holo ↔ Provider responses)
    - Message/Tool/Usage translators (reusable components)
    - Streaming translators (real-time event conversion)
-3. **Add Validators**: ArkType schemas for runtime validation
-4. **Register Provider**: Hook into provider service
-5. **Test**: Verify bidirectional translation and streaming
+4. **Test**: Write integration tests with real API calls (primary) and unit tests (contract validation)
 
 #### Key Concepts
 
+- **Plugin Architecture**: Independently versioned, hot-reloadable packages
 - **Hub-and-Spoke Architecture**: Holo as universal format (N translations vs N²)
 - **Stateless Translators**: No state between calls; orchestrator handles accumulation
-- **Lossless Round-Tripping**: `provider_delta` preserves raw events
-- **Validator-First Design**: ArkType validation before processing
+- **SDK Integration**: Use `@holokai/sdk` types for strict type safety
+- **Lightweight Design**: Minimal dependencies for fast loading
 
-#### Documentation Structure
+#### Documentation
 
 | Document | Purpose |
 |----------|---------|
-| [IMPLEMENTATION_GUIDE.md](src/providers/IMPLEMENTATION_GUIDE.md) | Step-by-step provider integration |
-| [ARCHITECTURE.md](src/providers/ARCHITECTURE.md) | System design & base patterns |
-| [TYPE_REFERENCE.md](src/providers/TYPE_REFERENCE.md) | Complete type definitions |
-| [TRANSLATION_GUIDE.md](src/providers/TRANSLATION_GUIDE.md) | Field mapping tables (Holo ↔ Provider) |
-| [STREAMING_GUIDE.md](src/providers/STREAMING_GUIDE.md) | Streaming architecture & event lifecycle |
-
-#### Provider-Specific Examples
-
-- **[Claude README](plugins/holo-provider-claude/src/README.md)** - 6-event streaming lifecycle, content blocks
-- **[OpenAI README](src/providers/openai/README.md)** - Multi-choice support, tool call streaming
-- **[Ollama README](src/providers/ollama/README.md)** - Generate vs Chat endpoints, frame-based streaming
+| [SDK README](plugins/sdk/README.md) | Complete plugin development guide with templates |
+| [Claude Plugin](plugins/holo-provider-claude/README.md) | Reference implementation - 6-event streaming lifecycle, content blocks |
+| [OpenAI Plugin](plugins/holo-provider-openai/README.md) | Reference implementation - Multi-choice support, dual API support |
+| [Ollama Plugin](plugins/holo-provider-ollama/README.md) | Reference implementation - Generate vs Chat endpoints, frame-based streaming |
 
 ## 📊 Monitoring & Observability
 

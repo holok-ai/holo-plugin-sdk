@@ -35,7 +35,6 @@ npm install @holokai/holo-provider-openai
 
 This plugin requires:
 - `@holokai/sdk` ^0.1.0 - Holo universal format types and plugin contracts
-- `arktype` ^2.0.0 - Runtime type validation
 - `openai` ^6.9.1 - Official OpenAI SDK
 
 ---
@@ -257,8 +256,6 @@ This plugin implements the official Holo format mappings as documented in the SD
 - `parallel_tool_calls` - Allow parallel execution (not in Holo spec)
 - `service_tier` - Priority tier (optional in Holo)
 
-See [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#openai--holo-requests) for complete details.
-
 ### Request Mapping: Holo → OpenAI (Responses API)
 
 | Holo Field | OpenAI Field | Transformation | Notes |
@@ -311,8 +308,6 @@ See [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#openai-
 | `'tool_calls'` | `'tool_calls'` | Model called tools |
 | `'content_filter'` | `'content_filter'` | Content filtered |
 | `'function_call'` | `'tool_calls'` | Legacy function calling |
-
-See [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#openai--holo-responses) for complete details.
 
 ### Content Mapping
 
@@ -602,33 +597,9 @@ interface HoloTool {
 }
 ```
 
-### Runtime Validation
+### Type Safety
 
-All translations validate with ArkType:
-
-```typescript
-import { validateHoloRequest } from '@holokai/sdk/validators';
-
-const result = validateHoloRequest(untrustedInput);
-if (result.problems) {
-  throw new ValidationError(result.problems);
-}
-
-const safeRequest: HoloRequest = result.data;
-```
-
-### ArkType Standards
-
-From CLAUDE.md requirements:
-
-1. ✅ ALWAYS use `satisfies Type<TypeName>` on every validator
-2. ✅ NEVER use `Record<string, unknown>` - create proper validators
-3. ✅ NEVER use `type('string')` for union types - look up actual enum values
-4. ✅ ALWAYS look at actual SDK `.d.ts` files before implementing
-5. ✅ Start with basic types first, build up to complex dependent types
-6. ✅ Copy exact structure from SDK types - never guess
-7. ✅ Required vs optional: No `?` means required
-8. ✅ Fix validators to match types - never change to `any`
+All interfaces use strict TypeScript types from `@holokai/sdk` for compile-time validation.
 
 ---
 
@@ -738,10 +709,7 @@ npm run clean
 ## Related Documentation
 
 ### SDK Documentation
-- [Holo Format Overview](../../packages/sdk/docs/HOLO_FORMAT.md)
-- [Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md) - Complete OpenAI mappings
-- [Capability Analysis](../../packages/sdk/docs/CAPABILITY_ANALYSIS.md) - Coverage verification
-- [SDK README](../../packages/sdk/README.md) - Plugin development guide
+- [SDK README](../sdk/README.md) - Plugin development guide and templates
 
 ### OpenAI Documentation
 - [Official API Reference](https://platform.openai.com/docs/api-reference)
@@ -752,9 +720,9 @@ npm run clean
 - [Vision](https://platform.openai.com/docs/guides/vision)
 - [Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs)
 
-### Legacy Documentation (Archived)
-- `src/providers/docs/archive/` - Original monolithic provider docs
-- Migration from these to plugin architecture is complete
+### Migration Notes
+- This plugin was extracted from the monolithic `src/providers/openai/` codebase
+- Migration to plugin architecture is complete
 
 ---
 
@@ -764,9 +732,8 @@ npm run clean
 
 1. Update types in `@holokai/sdk` first (if needed)
 2. Implement translator logic
-3. Add validators with ArkType
-4. Write tests (unit + integration)
-5. Update this README
+3. Write tests (unit + integration)
+4. Update this README
 
 ### Reporting Issues
 

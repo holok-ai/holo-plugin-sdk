@@ -34,7 +34,6 @@ npm install @holokai/holo-provider-claude
 
 This plugin requires:
 - `@holokai/sdk` ^0.1.0 - Holo universal format types and plugin contracts
-- `arktype` ^2.0.0 - Runtime type validation
 
 ---
 
@@ -258,8 +257,6 @@ See [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#claude-
 | `refusal` | `content_filter` |
 | `pause_turn` | `stop` (preserve in metadata) |
 
-See [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#claude--holo-responses) for complete details.
-
 ### Content Mapping
 
 #### Text Content
@@ -457,20 +454,9 @@ interface HoloTool {
 }
 ```
 
-### Runtime Validation
+### Type Safety
 
-All translations validate with ArkType:
-
-```typescript
-import { validateHoloRequest } from '@holokai/sdk/validators';
-
-const result = validateHoloRequest(untrustedInput);
-if (result.problems) {
-  throw new ValidationError(result.problems);
-}
-
-const safeRequest: HoloRequest = result.data;
-```
+All interfaces use strict TypeScript types from `@holokai/sdk` for compile-time validation.
 
 ---
 
@@ -545,10 +531,7 @@ npm run clean
 ## Related Documentation
 
 ### SDK Documentation
-- [Holo Format Overview](../../packages/sdk/docs/HOLO_FORMAT.md)
-- [Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md) - Complete Claude mappings
-- [Capability Analysis](../../packages/sdk/docs/CAPABILITY_ANALYSIS.md) - Coverage verification
-- [SDK README](../../packages/sdk/README.md) - Plugin development guide
+- [SDK README](../sdk/README.md) - Plugin development guide and templates
 
 ### Claude API Documentation
 - [Official API Reference](https://docs.anthropic.com/claude/reference)
@@ -557,9 +540,9 @@ npm run clean
 - [Vision](https://docs.anthropic.com/claude/docs/vision)
 - [Prompt Caching](https://docs.anthropic.com/claude/docs/prompt-caching)
 
-### Legacy Documentation (Archived)
-- `src/providers/docs/archive/` - Original monolithic provider docs
-- Migration from these to plugin architecture is complete
+### Migration Notes
+- This plugin was extracted from the monolithic `src/providers/claude/` codebase
+- Migration to plugin architecture is complete
 
 ---
 
@@ -569,9 +552,8 @@ npm run clean
 
 1. Update types in `@holokai/sdk` first (if needed)
 2. Implement translator logic
-3. Add validators with ArkType
-4. Write tests (unit + integration)
-5. Update this README
+3. Write tests (unit + integration)
+4. Update this README
 
 ### Reporting Issues
 

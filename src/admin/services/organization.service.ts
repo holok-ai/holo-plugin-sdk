@@ -3,7 +3,6 @@ import {injectable} from 'tsyringe';
 import {OrganizationCacheService} from "./organization.cache.service";
 import {Application, Model, OrganizationCache, Prompt, Provider} from "../../cache";
 import {ClassLogger} from "../../types/class.logger";
-import {HoloLoggerError} from "@holokai/sdk";
 
 @injectable()
 export class OrganizationService extends ClassLogger {
@@ -32,7 +31,7 @@ export class OrganizationService extends ClassLogger {
         if (!models) {
             let msg = `[${orgId}](${slug}) No models found application.`;
             logger.error(msg);
-            throw new HoloLoggerError(msg);
+            throw new Error(msg);
         }
 
         const model = models.find(m => m.name === modelName || m.accessModel === modelName);
@@ -40,7 +39,8 @@ export class OrganizationService extends ClassLogger {
         if (!model) {
             let msg = `[${orgId}](${slug}) Model not found: ${modelName}`;
             logger.error(msg);
-            throw new HoloLoggerError(msg);
+            logger.error(`Available models: ${JSON.stringify(models)}`);
+            throw new Error(msg);
         }
 
         const provider = this.getProvider(orgId, model.providerName);
@@ -48,7 +48,7 @@ export class OrganizationService extends ClassLogger {
         if (!provider) {
             let msg = `[${orgId}](${slug}) No provider found with model.`;
             logger.error(msg);
-            throw new HoloLoggerError(msg);
+            throw new Error(msg);
         }
 
         return provider;

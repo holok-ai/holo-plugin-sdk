@@ -30,9 +30,16 @@ export class RequestService extends ClassLogger {
 
         let provider: any = undefined;
 
-        if (auth?.organizationId && auth.appSlugs) {
+        if (auth?.appSlug) {
+            provider = this.organizationService.getProviderByModel(auth.organizationId, auth.appSlug, model);
+        } else if (auth?.organizationId && auth.appSlugs) {
             for (const appSlug of auth.appSlugs) {
-                provider = this.organizationService.getProviderByModel(auth.organizationId, appSlug, model);
+                try {
+                    provider = this.organizationService.getProviderByModel(auth.organizationId, appSlug, model);
+                } catch (ex) {
+                    //no-op since we're looping through all providers that user has access to
+                }
+
                 if (provider) break;
             }
         }
