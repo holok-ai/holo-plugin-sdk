@@ -84,9 +84,9 @@ export class WorkerRequestFactory {
             case ProviderType.OPENAI:
             case ProviderType.PERPLEXITY:
                 if (type === RequestType.RESPONSES) {
-                    request = OpenAIResponseCreateParamsValidator.assert(body) as ProviderRequest;
+                    request = OpenAIResponseCreateParamsValidator.assert(providerBody) as ProviderRequest;
                 } else {
-                    request = OpenAIChatRequestValidator.assert(body);
+                    request = OpenAIChatRequestValidator.assert(providerBody);
                     //FOR OPENAI requests replace the depricated max_tokens parameter with max_completion_tokens
 
                     //TODO: Account for this in future translator
