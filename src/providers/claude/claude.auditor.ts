@@ -68,12 +68,17 @@ export class ClaudeAuditor extends BaseAuditor {
         const payload = workerResponse.payload;
         llmResponse.model_slug = payload.model || 'unknown';
 
-        if (workerResponse.fullResponse) {
+        if (workerResponse.fullResponse !== undefined) {
             llmResponse.response = workerResponse.fullResponse;
         } else if (payload.content && Array.isArray(payload.content)) {
             llmResponse.response = payload.content.map((block: any) => block.text).join('');
-        } else if (payload.delta?.text) {
+        } else if (payload.delta?.text !== undefined) {
             llmResponse.response = payload.delta.text;
+        }
+
+        // Ensure response is never undefined for successful completions
+        if (llmResponse.response === undefined) {
+            llmResponse.response = '';
         }
     }
 

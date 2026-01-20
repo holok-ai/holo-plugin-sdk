@@ -86,20 +86,25 @@ export class OpenAIAuditor extends BaseAuditor {
         llmResponse.model_slug = payload.model || 'unknown';
 
         // Extract response text from final response
-        if (workerResponse.fullResponse) {
+        if (workerResponse.fullResponse !== undefined) {
             llmResponse.response = workerResponse.fullResponse;
         } else if (payload.object === 'chat.completion') {
             // Non-streaming completion
             const choice = payload.choices?.[0];
-            if (choice?.message?.content) {
+            if (choice?.message?.content !== undefined) {
                 llmResponse.response = choice.message.content;
             }
         } else if (payload.object === 'chat.completion.chunk') {
             // Streaming chunk
             const choice = payload.choices?.[0];
-            if (choice?.delta?.content) {
+            if (choice?.delta?.content !== undefined) {
                 llmResponse.response = choice.delta.content;
             }
+        }
+
+        // Ensure response is never undefined for successful completions
+        if (llmResponse.response === undefined) {
+            llmResponse.response = '';
         }
     }
 
