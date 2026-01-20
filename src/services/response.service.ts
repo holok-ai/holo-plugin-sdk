@@ -22,7 +22,7 @@ export class ResponseStream extends Transform {
     constructor(requestId: string, isStreaming: boolean = true) {
         super({
             objectMode: true,
-            highWaterMark: 0  // Minimize buffering - flush immediately
+            highWaterMark: 0
         });
         this.requestId = requestId;
         this.isStreaming = isStreaming;
@@ -115,6 +115,7 @@ export class ResponseService extends ClassLogger {
 
         if (!res.isStreaming) {
             try {
+                logger.debug(`non streaming response: ${responseChunk.payload}`)
                 return this.streamService.endStream(responseChunk.payload, res);
             } catch (error) {
                 logger.error(`Non-streaming response error: ${(error as Error).message}`, {
@@ -140,8 +141,10 @@ export class ResponseService extends ClassLogger {
     async createStream(requestId: string, res: Response, isStreaming: boolean, providerType?: ProviderType, model?: string): Promise<ResponseStream> {
          const logger = this.mlog(this.sendRequest);
         let responseStream = await this.streamService.createResponseStream(requestId, isStreaming);
-        this.setStreamingHeaders(res, isStreaming);
         responseStream.pipe(res);
+        responseStream.setExpressResponse(res);
+        this.setStreamingHeaders(res, isStreaming);
+        
 
         if (isStreaming && providerType === ProviderType.CLAUDE) {
             logger.debug(`Sending initial message_start for Claude stream`, {requestId});
