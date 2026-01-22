@@ -1,15 +1,8 @@
 import {injectable} from 'tsyringe';
-import type {IPlugin, PluginContext, PluginType} from '@holokai/sdk/plugin';
+import type {IPlugin, IPluginRegistry, PluginContext, PluginType} from '@holokai/sdk/plugin';
 import {HoloLogger} from "@holokai/sdk";
 import logger from "../../utils/logger";
 
-export interface IPluginRegistry<T extends IPlugin> {
-    registerPlugin(plugin: T, version?: string, isLatest?: boolean): void;
-
-    unregisterPlugin(id: string, version?: string): void;
-
-    listPlugins(): T[];
-}
 
 @injectable()
 export class PluginRegistryService {

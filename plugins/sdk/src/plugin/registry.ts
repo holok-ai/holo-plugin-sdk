@@ -1,15 +1,9 @@
 import {IPlugin} from "./base";
 
-/**
- * Plugin registry interface (read-only access)
- */
-export interface PluginRegistry {
-    /** Get a plugin by name */
-    getPlugin(name: string): IPlugin | undefined;
+export interface IPluginRegistry<T extends IPlugin> {
+    registerPlugin(plugin: T, version?: string, isLatest?: boolean): void;
 
-    /** List all registered plugins */
-    listPlugins(): ReadonlyArray<string>;
+    unregisterPlugin(id: string, version?: string): void;
 
-    /** Check if a plugin is registered */
-    hasPlugin(name: string): boolean;
+    listPlugins(): T[];
 }

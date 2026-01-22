@@ -1,49 +1,36 @@
 import OpenAI from 'openai';
-import {BaseProvider, IAuditor, ModelInfo, ProviderContext, RequestType, RunHandle} from "@holokai/sdk";
+import {BaseProvider, IAuditor, IProviderTranslator, ProviderContext, RequestType, RunHandle} from "@holokai/sdk";
 import {ResponseCreateParamsBase} from "openai/resources/responses/responses";
 import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
 import {OpenAIAuditor} from "./openai.auditor";
+import {ModelsPage} from "openai/resources/models";
+import {OpenAITranslator} from "./openai.translator";
 
 /**
  * OpenAI provider for connecting to OpenAI API
  */
-export class OpenAIProvider extends BaseProvider {
-    protected readonly client: OpenAI;
-    public readonly auditor: IAuditor;
+export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBase | ChatCompletionCreateParamsBase> {
 
-    // need to initialize client on constructor since blank OpenAI will throw error
-    constructor(
-        public readonly name: string,
-        public readonly family: string,
-        public readonly version: string,
-        protected readonly _config: any) {
-        super(name, family, version, _config);
-        this.client = new OpenAI(this._config);
-        this.auditor = new OpenAIAuditor();
+    protected createAuditor(): IAuditor {
+        return new OpenAIAuditor();
     }
 
-    async getModels(): Promise<ModelInfo[]> {
-        const logger = this.mlog(this.getModels);
-        try {
-            const response = await this.client.models.list();
-            const modelList = response.data.map(model => ({
-                id: model.id,
-                name: model.id,
-                modified_at: new Date(model.created * 1000).toISOString()
-            }));
+    protected createClient(): OpenAI {
+        return new OpenAI(this._config);
+    }
 
-            // Update internal models cache
-            this.models = modelList.reduce((acc, model) => {
-                acc[model.id] = model;
-                return acc;
-            }, {} as Record<string, ModelInfo>);
+    protected createTranslator(): IProviderTranslator {
+        return OpenAITranslator.Instance();
+    }
 
-            logger.debug(`OpenAI models: ${Object.keys(this.models)}`);
-            return modelList;
-        } catch (error) {
-            logger.error(`Error fetching OpenAI models: ${(error as Error).message}`);
-            throw error;
+    async getModels(allowedModels: string[] | true): Promise<ModelsPage> {
+        const response = await this.client.models.list();
+        if (allowedModels === true) {
+            return response;
         }
+
+        response.data = response.data.filter(model => allowedModels.includes(model.id));
+        return response;
     }
 
     protected async handleRequest(

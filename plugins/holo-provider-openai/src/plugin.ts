@@ -2,11 +2,13 @@ import {BasePlugin, IProviderPlugin, PluginContext} from '@holokai/sdk/plugin';
 import {manifest} from "./manifest.js";
 import {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/sdk/provider";
 import {OpenAIProvider} from "./openai.provider";
-import {RequestType} from "@holokai/sdk";
+import {RequestType, RouteHandler, RouteTree, RouteTreeNode} from "@holokai/sdk";
 import {OpenAIChatWireAdapter, OpenAIResponsesWireAdapter} from "./adapters";
+import {OpenAITranslator} from "./openai.translator";
 
 export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin {
     manifest = manifest;
+    translator = OpenAITranslator.Instance();
 
     async createProvider(config: any): Promise<IProvider> {
         return new OpenAIProvider(
@@ -34,14 +36,29 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
         };
     }
 
-    getSupportedModels(): string[] {
-        return [
-            'gpt-4o',
-            'gpt-4o-mini',
-            'gpt-4-turbo',
-            'gpt-4',
-            'gpt-3.5-turbo'
-        ];
+    getRoutes(): RouteTree {
+        const routes: RouteTreeNode = {
+            models: {
+                method: 'GET',
+                handler: RouteHandler.MODELS
+            },
+            chat: {
+                completions: {
+                    method: 'POST',
+                    requestType: RequestType.CHAT,
+                    handler: RouteHandler.REQUEST
+                }
+            },
+            response: {
+                method: 'POST',
+                requestType: RequestType.RESPONSES,
+                handler: RouteHandler.REQUEST
+            }
+        };
+        return {
+            ...routes,
+            v1: routes
+        }
     }
 
     protected onInitialize(_context: PluginContext): Promise<void> {

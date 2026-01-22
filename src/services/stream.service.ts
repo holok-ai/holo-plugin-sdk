@@ -90,6 +90,18 @@ export class StreamService extends ClassLogger {
             return;
         }
 
+        // For non-streaming (no HTTP response), write directly without header coordination
+        if (!s.isStreaming && !entry.res) {
+            if (wire.body) {
+                s.push(wire.body);
+            }
+            if (wire.done) {
+                entry.closed = true;
+                s.end();
+            }
+            return;
+        }
+
         // 1) Handle headers (buffer if res not attached yet)
         if (wire.headers) {
             if (!entry.res) {

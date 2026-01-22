@@ -20,11 +20,6 @@ export class OrganizationService extends ClassLogger {
         return this.orgCacheService.getApplication(orgId, appId);
     }
 
-    /** @deprecated **/
-    getFirstProviderByType(providerType: string): Provider | undefined {
-        return this.orgCacheService.getFirstProviderOfType(providerType);
-    }
-
     getProviderByModel(orgId: string, slug: string, modelName: string): Provider {
         const logger = this.mlog(this.getProviderByModel);
         const models = this.getModels(orgId, slug);
@@ -78,14 +73,14 @@ export class OrganizationService extends ClassLogger {
     }
 
     getGuards(orgId: string, urlSlug: string): Prompt[] | undefined {
-        return this.orgCacheService.getApplication(orgId, urlSlug)?.guards;
+        return this.orgCacheService.getApplication(orgId, urlSlug)!.guards;
     }
 
     getSystemPrompt(orgId: string, urlSlug: string): Prompt | undefined {
-        return this.orgCacheService.getApplication(orgId, urlSlug)?.systemPrompt;
+        return this.orgCacheService.getApplication(orgId, urlSlug)!.systemPrompt;
     }
 
     getEvaluators(orgId: string, urlSlug: string): Prompt[] | undefined {
-        return this.orgCacheService.getApplication(orgId, urlSlug)?.evaluators;
+        return this.orgCacheService.getApplication(orgId, urlSlug)!.evaluators;
     }
 }

@@ -1,5 +1,12 @@
-import type {IProvider, IWireAdapter, ProviderCapabilities as ProviderFeatures, WireAdapterParams} from '../provider';
+import {
+    IProvider,
+    IProviderTranslator,
+    IWireAdapter,
+    ProviderCapabilities as ProviderFeatures,
+    WireAdapterParams
+} from '../provider';
 import {IPlugin} from "./base";
+import {RouteTree} from "@holokai/sdk/core";
 
 /**
  * Provider plugin interface for LLM integrations.
@@ -36,6 +43,8 @@ import {IPlugin} from "./base";
  * ```
  */
 export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
+    translator: IProviderTranslator
+
     /**
      * Create a provider instance with the given configuration.
      * @param config Provider configuration including API keys and model settings.
@@ -49,11 +58,7 @@ export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
      */
     getCapabilities(): ProviderFeatures;
 
-    /**
-     * Get list of supported models.
-     * @returns Array of supported model identifiers.
-     */
-    getSupportedModels(): string[];
+    getRoutes(): RouteTree;
 
     createWireAdapter(params: WireAdapterParams): IWireAdapter;
 }

@@ -1,10 +1,9 @@
-import {Response} from 'express';
-import {ApiResponse} from "../types";
-import {ClassLogger} from "../../types/class.logger";
+import {ApiResponse} from "./types";
+import {ClassLogger} from "../logger";
 
 export abstract class BaseController extends ClassLogger {
     protected handleError(
-        res: Response,
+        res: ApiResponse,
         error: Error,
         message: string = 'Internal server error',
         statusCode: number = 500
@@ -24,7 +23,7 @@ export abstract class BaseController extends ClassLogger {
         });
     }
 
-    protected success<T>(res: Response, data: T, statusCode: number = 200): void {
+    protected success<T>(res: ApiResponse, data: T, statusCode: number = 200): void {
         res.status(statusCode).json({
             success: true,
             data,

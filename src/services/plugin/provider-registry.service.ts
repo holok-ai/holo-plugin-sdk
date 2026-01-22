@@ -1,13 +1,19 @@
+import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import type {IProviderPlugin} from '@holokai/sdk/plugin';
-import type {IPluginRegistry} from './registry.service';
+import type {IPluginRegistry, IProviderPlugin} from '@holokai/sdk/plugin';
+import express, {NextFunction, Router} from 'express';
+import {RequestType, RouteDefinition, RouteHandler, RouteTree} from '@holokai/sdk';
+import {ProviderHandlers} from '../../api/handlers/provider.handlers';
+import {ClassLogger} from '../../types/class.logger';
+import {HttpApiRequest} from "../../api/types";
 
 @injectable()
-export class ProviderPluginRegistry implements IPluginRegistry<IProviderPlugin> {
+export class ProviderPluginRegistry extends ClassLogger implements IPluginRegistry<IProviderPlugin> {
     private readonly latestPlugins: Map<string, IProviderPlugin>;
     private readonly versionedPlugins: Map<string, Map<string, IProviderPlugin>>;
 
     constructor() {
+        super();
         this.latestPlugins = new Map();
         this.versionedPlugins = new Map();
     }
@@ -74,43 +80,69 @@ export class ProviderPluginRegistry implements IPluginRegistry<IProviderPlugin> 
         return versions.get(version) || null;
     }
 
-    async atomicReplace(family: string, newPlugin: IProviderPlugin, version?: string): Promise<IProviderPlugin | null> {
-        const oldPlugin = this.getByFamily(family, version);
-        this.unregisterPlugin(family, version);
-        this.registerPlugin(newPlugin, version);
-        return oldPlugin;
-    }
+    private buildRoutesFromTree(
+        router: Router,
+        tree: RouteTree,
+        handlers: { modelsHandler: any; requestHandler: (rt: RequestType) => any },
+        authMiddleware: (req: HttpApiRequest, res: express.Response, next: NextFunction) => Promise<void>,
+        providerFamily: string,
+        basePath: string = ''
+    ): void {
+        const logger = this.mlog(this.buildRoutesFromTree);
 
-    getVersions(family: string): string[] {
-        const familyKey = family.toUpperCase();
-        const versions = this.versionedPlugins.get(familyKey);
-        if (!versions) {
-            return [];
+        for (const [key, value] of Object.entries(tree)) {
+            const currentPath = `${basePath}/${key}`;
+
+            if (this.isRouteDefinition(value)) {
+                const routeDef = value as RouteDefinition;
+
+                const handler = routeDef.handler === RouteHandler.MODELS
+                    ? handlers.modelsHandler
+                    : handlers.requestHandler(routeDef.requestType!);
+
+                const method = routeDef.method.toLowerCase() as 'get' | 'post';
+                router[method](currentPath, authMiddleware, handler);
+
+                logger.info(`  ${routeDef.method} /api/${providerFamily}${currentPath}`);
+            } else {
+                this.buildRoutesFromTree(router, value as RouteTree, handlers, authMiddleware, providerFamily, currentPath);
+            }
         }
-        return Array.from(versions.keys());
     }
 
-    getLatestVersion(family: string): string | null {
-        const familyKey = family.toUpperCase();
-        const plugin = this.latestPlugins.get(familyKey);
-        return plugin ? plugin.manifest.version : null;
+    private isRouteDefinition(value: any): value is RouteDefinition {
+        return value && typeof value === 'object' && 'method' in value && 'handler' in value;
     }
 
-    getLatest(family: string): IProviderPlugin | null {
-        const familyKey = family.toUpperCase();
-        return this.latestPlugins.get(familyKey) || null;
-    }
+    registerRoutes(
+        router: Router,
+        providerHandlers: ProviderHandlers
+    ): void {
+        const logger = this.mlog(this.registerRoutes);
+        const plugins = this.listPlugins();
 
-    hasVersion(family: string, version: string): boolean {
-        const familyKey = family.toUpperCase();
-        const versions = this.versionedPlugins.get(familyKey);
-        if (!versions) {
-            return false;
+        logger.info(`Registering routes for ${plugins.length} provider plugins`);
+
+        for (const plugin of plugins) {
+            const family = plugin.family.toLowerCase();
+
+            logger.info(`Registering routes for ${plugin.family}`);
+
+            const pluginRouter = Router();
+
+            const pluginHandlers = {
+                modelsHandler: providerHandlers.createModelsHandler(),
+                requestHandler: (requestType: RequestType) =>
+                    providerHandlers.createRequestHandler(plugin.family, requestType)
+            };
+
+            const routeTree = plugin.getRoutes();
+
+            this.buildRoutesFromTree(pluginRouter, routeTree, pluginHandlers, providerHandlers.createMiddleware(family), family);
+
+            router.use(`/${family}`, pluginRouter);
         }
-        return versions.has(version);
-    }
 
-    getFamilies(): string[] {
-        return Array.from(this.latestPlugins.keys());
+        logger.info('All provider routes registered');
     }
 }

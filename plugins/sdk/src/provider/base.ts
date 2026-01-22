@@ -2,24 +2,37 @@ import {AsyncEventQueue, IProvider, ModelInfo, ProviderContext, ProviderEvent} f
 import {HoloWorkerRequest, WorkerRequestEnvelope} from "../core/worker";
 import {ClassLogger, LlmRequest, LlmResponse} from "@holokai/sdk/core";
 import {IAuditor} from "./auditor";
+import {IProviderTranslator} from "./translator";
 
 
 export type ProviderRunner<Final = any> = { final: () => Promise<Final>; cancel?: () => void };
 
-export abstract class BaseProvider<RequestPayload = any, Final = any> extends ClassLogger implements IProvider {
+export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, Final = any> extends ClassLogger implements IProvider {
     protected models: Record<string, ModelInfo> = {};
-    public readonly abstract auditor: IAuditor;
+    protected readonly client: ProviderClient;
+    public readonly auditor: IAuditor;
+    public readonly translator: IProviderTranslator;
 
-    protected constructor(
+    constructor(
         public readonly name: string,
         public readonly family: string,
         public readonly version: string,
-        protected readonly _config: any,
+        protected readonly _config: any
     ) {
         super();
+
+        this.client = this.createClient();
+        this.auditor = this.createAuditor();
+        this.translator = this.createTranslator();
     }
 
-    abstract getModels(): Promise<ModelInfo[]>;
+    protected abstract createClient(): ProviderClient;
+
+    protected abstract createAuditor(): IAuditor;
+
+    protected abstract createTranslator(): IProviderTranslator;
+
+    abstract getModels(allowedModels: string[] | true): Promise<any>;
 
     async auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest> {
         return this.auditor.auditRequest(workerRequest);

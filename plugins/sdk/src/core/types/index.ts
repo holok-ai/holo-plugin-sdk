@@ -110,31 +110,6 @@ export interface LlmResponse {
     worker_id: string;
 }
 
-// export interface Prompt extends BaseEntity {
-//     organization_id: string;
-//     name: string;
-//     description?: string;
-//     provider?: string;  // Added to match database field
-//     providerType: 'ollama' | 'claude' | 'openai' | 'gemini' | 'grok';
-//     prompt_type: 'chat' | 'completion' | 'image' | 'audio' | 'vision';
-//     system_prompt?: string;
-//     user_prompt: string;
-//     parameters: Record<string, any>;
-//     temperature?: number;
-//     top_p?: number;
-//     top_k?: number;
-//     max_tokens?: number;
-//     presence_penalty?: number;
-//     frequency_penalty?: number;
-//     stop_sequences: string[];
-//     model?: string;
-//     safety_settings?: Record<string, any>;
-//     grok_settings?: Record<string, any>;
-//     tags: string[];
-//     version: string;
-//     is_active: boolean;
-// }
-
 export interface AnalysisResult {
     id: string;  // uuid
     created_at: Date;

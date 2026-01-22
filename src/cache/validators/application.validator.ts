@@ -6,6 +6,7 @@ import {Application} from "../types";
 export const ApplicationValidator = type({
     urlSlug: 'string',
     organizationId: 'string',
+    providerName: 'string',
     providerType: 'string', // ProviderType from providers/types
     models: ModelValidator.array(),
     'systemPrompt?': PromptValidator,

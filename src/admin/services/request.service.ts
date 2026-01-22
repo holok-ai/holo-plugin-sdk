@@ -6,7 +6,6 @@ import {ResponseService} from "../../services";
 import {env} from "../../env";
 import {GuardService} from "./guard.service";
 import {WorkerRequestFactory} from "../../types";
-import {OrganizationService} from "./organization.service";
 import {ClassLogger, RequestType} from "@holokai/sdk";
 
 
@@ -16,50 +15,30 @@ export class RequestService extends ClassLogger {
 
     constructor(
         private readonly responseService: ResponseService,
-        private readonly guardService: GuardService,
-        private organizationService: OrganizationService
+        private readonly guardService: GuardService
     ) {
         super();
     }
 
     async processRequest(providerType: string, type: RequestType, req: HttpApiRequest, res: Response) {
         const logger = this.mlog(this.processRequest);
-        const errors: string[] = [];
-        const {auth, body} = req;
-        const {model = "unknown"} = body;
+        const {auth} = req;
 
-        let provider: any = undefined;
-
-        if (auth?.appSlug) {
-            provider = this.organizationService.getProviderByModel(auth.organizationId, auth.appSlug, model);
-        } else if (auth?.organizationId && auth.appSlugs) {
-            for (const appSlug of auth.appSlugs) {
-                try {
-                    provider = this.organizationService.getProviderByModel(auth.organizationId, appSlug, model);
-                } catch (ex) {
-                    //no-op since we're looping through all providers that user has access to
-                }
-
-                if (provider) break;
-            }
+        if (!auth || !auth.app) {
+            throw new Error('Unauthorized request. No auth object found.');
         }
 
-        const workerRequest = await this.parseRequest(providerType, provider?.name, type, req);
+        const {providerName, app} = auth;
 
-        if (!provider) {
-            logger.error(`Provider not found for ${providerType} ${type}, auth: ${JSON.stringify(auth, null, 2)}`, {
-                requestId: workerRequest.requestId,
-            });
-            errors.push(
-                `An error occurred while trying to process your request. Please contact your administrator and refer to ${workerRequest.requestId}.`
-            );
-            workerRequest.errors = errors;
-        } else if (workerRequest.isStreaming) {
+        const workerRequest = await this.parseRequest(providerType, providerName, type, req);
+
+        if (workerRequest.isStreaming) {
             await this.responseService.createStream(workerRequest.requestId, true);
         }
 
-        if (provider) {
-            await this.guardService.guard(providerType, type, workerRequest, auth);
+        if (app.guards && app.guards.length) {
+            logger.info(`Guards found: ${JSON.stringify(app.guards, null, 2)}`);
+            await this.guardService.guard(workerRequest, app.guards, auth);
         }
 
         await this.responseService.sendRequest(req, res, workerRequest);

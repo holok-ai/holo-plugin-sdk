@@ -1,12 +1,13 @@
 import 'reflect-metadata';
-import {OrganizationService} from "./organization.service";
 import {injectable} from 'tsyringe';
-import {GuardResult, GuardResultSchema, JWTPayload} from "../types";
+import {Auth, GuardResult, GuardResultSchema} from "../types";
 import {WorkerRequestFactory} from "../../types";
 import {env} from "../../env";
 import {ResponseService} from "../../services";
-import {HoloTranslator} from "../../services/providers/holo.translator";
-import {ClassLogger, HoloContentText, HoloRequest, HoloWorkerRequest, pickDefined, RequestType} from "@holokai/sdk";
+import {ClassLogger, HoloRequest, HoloWorkerRequest, pickDefined, RequestType} from "@holokai/sdk";
+import {Prompt} from "../../cache";
+import {ProviderPluginRegistry} from "../../services/plugin/provider-registry.service";
+import {OrganizationService} from "./organization.service";
 
 
 @injectable()
@@ -14,56 +15,35 @@ export class GuardService extends ClassLogger {
     private serverId: string = env.api.apiServerId;
 
     constructor(
-        private organizationService: OrganizationService,
         private responseService: ResponseService,
-        private holoTranslator: HoloTranslator
+        private organizationService: OrganizationService,
+        private providerRegistry: ProviderPluginRegistry
     ) {
         super();
     }
 
-    async guard(providerType: string, type: RequestType, workerRequest: HoloWorkerRequest, auth: JWTPayload | undefined) {
+    async guard(workerRequest: HoloWorkerRequest, guards: Prompt[], auth: Auth) {
         const logger = this.mlog(this.guard);
 
-        if (!auth?.appSlug) {
-            logger.warn(`No app slug found for guard`, {requestId: workerRequest.requestId});
+        if (!guards.length) {
+            logger.warn('No guards found for request.');
             return;
         }
 
-        let lastMessage = "";
-        if (type === RequestType.GENERATE && providerType === "ollama") {
-            lastMessage = workerRequest.payload.prompt;
-        } else {
-            const payload = workerRequest.payload;
-            const messages = "messages" in payload ? payload.messages : undefined;
-            if (!messages) {
-                logger.warn(`No messages to guard`, {requestId: workerRequest.requestId});
-                return;
-            }
-
-            const lastHoloMessage = (await this.holoTranslator.toHoloMessages(messages, providerType)).pop();
-            if (!lastHoloMessage?.content?.length) {
-                logger.warn(`No message to guard`, {requestId: workerRequest.requestId});
-                return;
-            }
-
-            const content = lastHoloMessage.content;
-            if (Array.isArray(content)) {
-                for (const c of content) {
-                    if (c.type === "text") lastMessage += "\n\n" + (c as HoloContentText).text;
-                }
-            } else {
-                lastMessage = content;
-            }
+        let provider = this.providerRegistry.getByFamily(workerRequest.providerType)
+        if (!provider) {
+            throw new Error(`No provider found: ${workerRequest.providerName}`);
         }
 
-        if (!lastMessage.length) {
+        const request = await provider.translator.toHoloRequest(workerRequest.payload);
+        const holoMessages = request.messages;
+        const lastMessage = holoMessages?.pop();
+
+        if (!lastMessage) {
             logger.warn(`No message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
             return;
         }
 
-        const guards = this.organizationService.getGuards(auth.organizationId, auth.appSlug);
-
-        // logger.debug(`Found guards: ${JSON.stringify(guards, null, 2)} for ${providerType} ${type}, auth: ${JSON.stringify(auth, null, 2)}`);
         if (guards) {
             try {
                 //set guards onto request for auditing
@@ -71,22 +51,26 @@ export class GuardService extends ClassLogger {
                 const results = await Promise.all(
                     guards.map(async (guard) => {
                         try {
-                            const provider = this.organizationService.getProvider(auth.organizationId, guard.providerName);
+                            const p = this.organizationService.getProvider(workerRequest.organizationId!, guard.providerName);
+                            provider = this.providerRegistry.getByFamily(p!.type);
                             if (!provider) return {passed: true};
 
                             const holoRequest: HoloRequest = pickDefined({
                                 request_type: "generate",
                                 model: guard.modelName,
-                                messages: [{role: "user", content: guard.userPrompt + "\n\n" + lastMessage}],
+                                messages: [{
+                                    role: "user",
+                                    content: guard.userPrompt + "\n\n" + JSON.stringify(lastMessage)
+                                }],
                                 response_format: {type: "json_schema", schema: GuardResultSchema, strict: true},
                                 stream: false,
                                 ...(guard.systemPrompt && {system: guard.systemPrompt}),
                             }) as HoloRequest;
 
-                            const payload = await this.holoTranslator.fromHoloRequest(holoRequest, provider.type);
+                            const payload = await provider.translator.fromHoloRequest(holoRequest);
                             const guardRequest = WorkerRequestFactory.create(
-                                provider.type,
-                                provider.name,
+                                provider.family,
+                                guard.providerName,
                                 RequestType.GENERATE,
                                 payload,
                                 this.serverId,
@@ -96,7 +80,8 @@ export class GuardService extends ClassLogger {
                             const response = await this.responseService.requestOnce<string>(guardRequest);
 
                             const raw = JSON.parse(response as string);
-                            const holoResponse = await this.holoTranslator.toHoloResponse(raw, provider.type);
+                            logger.info(JSON.stringify(raw, null, 2));
+                            const holoResponse = await provider.translator.toHoloResponse(raw);
                             if (!holoResponse.messages) return {
                                 passed: false,
                                 errors: ["Guard response is missing messages"]
@@ -133,7 +118,6 @@ export class GuardService extends ClassLogger {
                 return {passed: false, errors: [(e as Error).message]};
             }
         }
-        logger.info(`Finished running guards for: ${providerType} ${type}`);
         return {passed: true};
     }
 

@@ -1,10 +1,10 @@
+import {Application} from "../../cache";
+
 export interface JWTPayload {
     organizationId: string;
     userId?: string;
     appSlugs?: string[];
     appSlug?: string;
-    providerName?: string;
-    providerType?: string;
     iat?: number;
     exp?: number;
 }
@@ -19,7 +19,7 @@ export interface TokenRefreshResponse {
 
 export interface Auth {
     organizationId: string;
-    userId?: string;
-    urlSlugs?: string[];
-    urlSlug?: string;
+    userId: string;
+    providerName: string;
+    app: Application;
 }

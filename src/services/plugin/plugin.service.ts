@@ -13,6 +13,7 @@ import logger from "../../utils/logger";
  */
 @injectable()
 export class PluginService extends ClassLogger {
+
     constructor(
         private readonly discovery: PluginDiscoveryService,
         private readonly loader: PluginLoaderService,

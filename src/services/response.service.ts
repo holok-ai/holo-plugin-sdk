@@ -7,9 +7,9 @@ import {Response} from "express";
 import {env} from "../env";
 import {StreamService} from "./stream.service";
 import {ClassLogger} from "../types/class.logger";
-import {HoloTranslator} from "./providers/holo.translator";
 import {HoloWorkerRequest, LlmResponse, WireChunk} from "@holokai/sdk";
 import {WorkerResponseFactory} from "../types";
+import {ProviderPluginRegistry} from "./plugin/provider-registry.service";
 
 
 export class ResponseStream extends Transform {
@@ -34,7 +34,10 @@ export class ResponseService extends ClassLogger {
     private readonly responseQueue = env.queue.responseQueue;
     private readonly requestExchange = env.queue.requestExchange;
 
-    constructor(private queueService: QueueService, private streamService: StreamService) {
+    constructor(
+        private providerRegistry: ProviderPluginRegistry,
+        private queueService: QueueService,
+        private streamService: StreamService) {
         super();
     }
 
@@ -88,7 +91,7 @@ export class ResponseService extends ClassLogger {
         // const logger = this.mlog(this.requestOnce);
 
         const {requestId} = request;
-        const stream = (await this.streamService.ensureStream(requestId, false)) as ResponseStream;
+        const stream = await this.streamService.ensureStream(requestId, false);
 
         await this.sendRequestToExchange(request, requestId);
 
@@ -157,7 +160,9 @@ export class ResponseService extends ClassLogger {
         }
     ): Promise<void> {
         const logger = this.mlog(this.sendError);
-        const holoTranslator = container.resolve(HoloTranslator);
+        const provider = this.providerRegistry.getByFamily(request.providerType);
+        const holoTranslator = provider!.translator;
+
 
         const errorMessages = Array.isArray(options.errors) ? options.errors : [options.errors.message];
         const auditEnabled = options.auditEnabled ?? (options.errorType !== "general");

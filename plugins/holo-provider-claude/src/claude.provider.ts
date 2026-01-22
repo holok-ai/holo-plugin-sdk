@@ -1,45 +1,33 @@
-import {BaseProvider, IAuditor, IProvider, ModelInfo, ProviderContext} from "@holokai/sdk";
+import {BaseProvider, IAuditor, IProviderTranslator, ProviderContext} from "@holokai/sdk";
 import {Anthropic} from "@anthropic-ai/sdk/client";
 import {MessageCreateParamsBase} from "@anthropic-ai/sdk/resources/messages";
+import {ModelInfosPage} from "@anthropic-ai/sdk/resources/models";
 import {ClaudeAuditor} from "./claude.auditor";
+import {Message} from "@anthropic-ai/sdk/resources/messages/messages";
+import {ClaudeTranslator} from "./claude.translator";
 
-export class ClaudeProvider extends BaseProvider implements IProvider {
+export class ClaudeProvider extends BaseProvider<Anthropic, MessageCreateParamsBase> {
 
-    protected readonly client: Anthropic;
-    public readonly auditor: IAuditor;
-
-    constructor(
-        public readonly name: string,
-        public readonly family: string,
-        public readonly version: string,
-        protected readonly _config: any) {
-        super(name, family, version, _config);
-
-        this.client = new Anthropic(this._config);
-        this.auditor = new ClaudeAuditor();
+    protected createAuditor(): IAuditor {
+        return new ClaudeAuditor();
     }
 
-    async getModels(): Promise<ModelInfo[]> {
-        try {
-            const logger = this.mlog(this.getModels);
-            const response = await this.client!.models.list();
-            logger.debug(`Claude models: ${JSON.stringify(response.data)}`);
-            const modelList = response.data.map(model => ({
-                id: model.id,
-                name: model.display_name,
-                modified_at: model.created_at
-            }));
+    protected createClient(): Anthropic {
+        return new Anthropic(this._config);
+    }
 
-            // Update internal models cache
-            this.models = modelList.reduce((acc, model) => {
-                acc[model.id] = model;
-                return acc;
-            }, {} as Record<string, ModelInfo>);
+    protected createTranslator(): IProviderTranslator {
+        return ClaudeTranslator.Instance();
+    }
 
-            return modelList;
-        } catch (error) {
-            throw error;
+    async getModels(allowedModels: string[] | true): Promise<ModelInfosPage> {
+        const response = await this.client.models.list({limit: 100});
+        if (allowedModels === true) {
+            return response;
         }
+
+        response.data = response.data.filter(model => allowedModels.includes(model.id));
+        return response;
     }
 
     protected async handleRequest(payload: MessageCreateParamsBase, ctx: ProviderContext) {
@@ -53,6 +41,6 @@ export class ClaudeProvider extends BaseProvider implements IProvider {
 
         // Non-streaming
         const req = {...payload, stream: false};
-        return {final: () => this.client.messages.create(req)};
+        return {final: () => this.client.messages.create(req) as Promise<Message>};
     }
 }

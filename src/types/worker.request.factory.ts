@@ -1,5 +1,5 @@
 import {HttpApiRequest} from "../api/types";
-import {JWTPayload} from "../admin/types";
+import {Auth} from "../admin/types";
 import {v4 as uuidv4} from "uuid";
 import logger from "../utils/logger";
 import {HoloWorkerRequest, pickDefined, RequestType} from "@holokai/sdk";
@@ -29,14 +29,18 @@ export class WorkerRequestFactory {
         type: RequestType,
         payload: any,
         sourceId: string,
-        auth?: JWTPayload,
+        auth?: Auth,
         thread_id?: string,
     ) {
         let sanitizedAuth = {};
 
         if (auth) {
-            const {providerType, iat, appSlugs, exp, ...rest} = auth;
-            sanitizedAuth = rest || {};
+            const {organizationId, userId, app} = auth;
+            sanitizedAuth = {
+                organizationId,
+                userId,
+                app: app.urlSlug
+            };
         }
 
         return pickDefined({
@@ -50,7 +54,6 @@ export class WorkerRequestFactory {
             timestamp: Date.now(),
             thread_id,
             ...sanitizedAuth
-
         }) as HoloWorkerRequest;
     }
 }

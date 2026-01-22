@@ -1,6 +1,12 @@
 import {env} from "../env";
-import {HoloTranslator} from "../services/providers/holo.translator";
-import {HoloResponse, HoloResponseFactory, HoloWorkerRequest, HoloWorkerResponse, pickDefined} from "@holokai/sdk";
+import {
+    HoloResponse,
+    HoloResponseFactory,
+    HoloWorkerRequest,
+    HoloWorkerResponse,
+    IProviderTranslator,
+    pickDefined
+} from "@holokai/sdk";
 
 export class WorkerResponseFactory {
     /**
@@ -43,7 +49,7 @@ export class WorkerResponseFactory {
         request: HoloWorkerRequest,
         errors: string[],
         workerId: string,
-        holoTranslator: HoloTranslator
+        holoTranslator: IProviderTranslator
     ): Promise<HoloWorkerResponse> {
         const payload = request.payload;
         const model = (payload && typeof payload === 'object' && 'model' in payload)
@@ -74,7 +80,7 @@ export class WorkerResponseFactory {
                 formattedError,
                 request.providerType
             );
-            const providerChunks = await holoTranslator.fromHoloStreamChunks(chunks, request.providerType) as any[];
+            const providerChunks = await holoTranslator.fromHoloStreamChunks(chunks) as any[];
 
             return this.create(
                 request.sourceId,
@@ -92,7 +98,7 @@ export class WorkerResponseFactory {
                 model || 'unknown',
                 formattedError
             ) as HoloResponse;
-            const providerPayload = await holoTranslator.fromHoloResponse(holoError, request.providerType);
+            const providerPayload = await holoTranslator.fromHoloResponse(holoError);
 
             return this.create(
                 request.sourceId,

@@ -1,14 +1,17 @@
-import {createOpenAIRoutes} from "./openai.routes";
 import express from "express";
-import {createApiRoutes} from "./ollama.routes";
-import {createClaudeRoutes} from "./claude.routes";
+import {container} from 'tsyringe';
 import {createCustomApplicationRoutes} from "./app.routes";
+import {ProviderHandlers} from "../handlers/provider.handlers";
+import {ProviderPluginRegistry} from "../../services/plugin/provider-registry.service";
 
 export function createRoutes(): express.Router {
     const router = express.Router();
-    router.use('/', createApiRoutes());
-    router.use('/openai/v1', createOpenAIRoutes());
-    router.use('/claude/v1', createClaudeRoutes());
+
+    const providerHandlers = container.resolve(ProviderHandlers);
+    const providerRegistry = container.resolve(ProviderPluginRegistry);
+
+    providerRegistry.registerRoutes(router, providerHandlers);
+
     router.use('/custom/', createCustomApplicationRoutes());
     return router;
 }

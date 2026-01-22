@@ -37,6 +37,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
             this.stats.totalRequests++;
             logger.info(`Worker ${this.id} handling request: ${requestId} provider: ${workerRequest.providerName} from server ${workerRequest.sourceId} and queue ${requestQueue}...`);
             try {
+                logger.info(JSON.stringify(workerRequest, null, 2));
                 // Check for upstream errors (validation/permission issues)
                 if (workerRequest.errors?.length) {
                     logger.warn(`Request ${requestId} has upstream validation errors, sending error response: ${JSON.stringify(workerRequest.errors)}`);

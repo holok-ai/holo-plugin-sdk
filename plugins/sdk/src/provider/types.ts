@@ -2,6 +2,7 @@ import {RequestType} from "@holokai/sdk/holo";
 import {HoloWorkerRequest, WorkerResponseEnvelope} from "../core/worker";
 import {LlmRequest, LlmResponse} from "@holokai/sdk/core";
 import {IAuditor} from "./auditor";
+import {IProviderTranslator} from "./translator";
 
 export type ProviderEvent =
     | { type: "provider_start"; requestId: string; provider: string; ts: number }
@@ -107,6 +108,9 @@ export interface IProvider {
     family: string;
     version: string;
     auditor: IAuditor;
+    translator: IProviderTranslator
+
+    getModels(allowedModels: string[] | true): Promise<any>;
 
     processWorkerRequest(
         request: HoloWorkerRequest,
