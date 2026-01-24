@@ -11,7 +11,7 @@ import {
 import {ResponseCreateParamsBase, ResponseErrorEvent} from 'openai/resources/responses/responses';
 import {ChatCompletionCreateParamsBase} from 'openai/resources/chat/completions';
 import {OpenAIAuditor} from './openai.auditor';
-import {ModelsPage} from 'openai/resources/models';
+import {Model, ModelsPage} from 'openai/resources/models';
 import {OpenAITranslator} from './openai.translator';
 import {OpenAIResponseFactory} from './openai.response.factory';
 import {APIError} from "openai/core/error";
@@ -38,15 +38,17 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         return OpenAIResponseFactory.instance();
     }
 
-    async getModels(allowedModels: string[] | true): Promise<ModelsPage> {
+    async getModels(allowedModels: string[] | true): Promise<{ object: string, data: Model[] }> {
         const response = await this.client.models.list() as ModelsPage;
         if (allowedModels === true) {
             return response;
         }
-        this.log.info(JSON.stringify(response, null, 2));
-        response.data = response.data.filter(model => allowedModels.includes(model.id));
-        this.log.info(JSON.stringify(response, null, 2));
-        return response;
+        const data = response.data.filter(model => allowedModels.includes(model.id));
+
+        return {
+            object: response.object,
+            data
+        };
     }
 
     protected async handleError(error: APIError): Promise<ResponseErrorEvent> {
