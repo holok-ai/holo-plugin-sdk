@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import {ApiResponse, RequestType} from '@holokai/sdk';
+import {ApiResponse, ClassLogger, RequestType} from '@holokai/sdk';
 import {RequestService} from '../../admin/services/request.service';
 import {HttpApiRequest} from '../types';
 import {injectable} from "tsyringe";
@@ -8,13 +8,13 @@ import {AuthService} from "../../admin/services/auth.service";
 import {ProviderService} from "../../services";
 
 @injectable()
-export class ProviderHandlers {
+export class ProviderHandlers extends ClassLogger {
     constructor(
         private authService: AuthService,
         private providerService: ProviderService,
         private requestService: RequestService
     ) {
-
+        super();
     }
 
     createMiddleware(providerFamily: string) {
@@ -29,9 +29,14 @@ export class ProviderHandlers {
                 return;
             }
 
-            const provider = await this.providerService.matchProvider(auth.providerName);
+            try {
+                const provider = await this.providerService.matchProvider(auth.providerName);
 
-            return provider.getModels(auth.app.models.map(model => model.name));
+                const models = await provider.getModels(auth.app.models.map(model => model.name));
+                res.status(200).json(models);
+            } catch (error) {
+                res.status(500).json({error: (error as Error).message});
+            }
         };
     }
 

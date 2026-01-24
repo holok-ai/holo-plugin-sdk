@@ -15,6 +15,7 @@ import {ModelsPage} from 'openai/resources/models';
 import {OpenAITranslator} from './openai.translator';
 import {OpenAIResponseFactory} from './openai.response.factory';
 import {APIError} from "openai/core/error";
+import {ChatCompletionCreateParamsStreaming} from "openai/resources/chat/completions/completions";
 
 /**
  * OpenAI provider for connecting to OpenAI API
@@ -38,12 +39,13 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
     }
 
     async getModels(allowedModels: string[] | true): Promise<ModelsPage> {
-        const response = await this.client.models.list();
+        const response = await this.client.models.list() as ModelsPage;
         if (allowedModels === true) {
             return response;
         }
-
+        this.log.info(JSON.stringify(response, null, 2));
         response.data = response.data.filter(model => allowedModels.includes(model.id));
+        this.log.info(JSON.stringify(response, null, 2));
         return response;
     }
 
@@ -127,7 +129,7 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
     private async runChatCompletions(
         req: ChatCompletionCreateParamsBase,
         ctx: ProviderContext
-    ): Promise<RunHandle<any>> {
+    ) {
         if (!req.stream) {
             return {
                 final: async () => {
@@ -136,18 +138,20 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
             };
         }
 
-        const streamingReq: any = {
+        const streamingReq = {
             ...req,
             stream: true,
             stream_options: {include_usage: true},
-        };
+        } as ChatCompletionCreateParamsStreaming;
+
+        this.client.chat.completions.create(streamingReq);
 
         const finalPromise = (async () => {
             const stream = await this.client.chat.completions.create(streamingReq);
 
-            let finalChunk: any = null;
+            let finalChunk;
 
-            for await (const chunk of stream as any) {
+            for await (const chunk of stream) {
                 ctx.emitStreamEvent(chunk);
 
                 const delta = chunk?.choices?.[0]?.delta?.content;
@@ -157,8 +161,7 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
 
                 if (chunk?.usage) finalChunk = chunk;
             }
-
-            return finalChunk ?? {ok: true};
+            return finalChunk;
         })();
 
         return {final: () => finalPromise};

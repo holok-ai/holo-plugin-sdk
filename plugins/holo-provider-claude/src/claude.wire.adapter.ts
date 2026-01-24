@@ -13,15 +13,15 @@ export class ClaudeWireAdapter extends BaseWireAdapter {
             body: eventLine + dataLine,
         }];
 
-        const t = event?.type;
-        if (t === "message_stop" || t === "error") {
-            out.push({
-                requestId: ev.requestId,
-                seq: ev.seq + 1,
-                body: "",
-                done: true,
-            });
-        }
+        // const t = event?.type;
+        // if (t === "message_stop" || t === "error") {
+        //     out.push({
+        //         requestId: ev.requestId,
+        //         seq: ev.seq + 1,
+        //         body: "",
+        //         done: true,
+        //     });
+        // }
 
         return out;
     }

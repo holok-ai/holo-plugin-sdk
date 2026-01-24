@@ -88,18 +88,11 @@ async function waitForInitialConfig(timeoutMs: number = 60000) {
 // Initialize app with async components
 async function initApp(): Promise<void> {
     try {
-        // Initialize plugin system first
-        const pluginService = container.resolve(PluginService);
-        await pluginService.initializePluginSystem();
-
         // const queueService = container.resolve(QueueService);
         const initService = container.resolve(InitService);
-        const responseService: ResponseService = container.resolve(ResponseService);
-
 
         logger.debug(`Creating API Server with id ${env.api.apiServerId}`);
-        await initService.setupQueues(env.api.apiServerId);
-        await responseService.startLLMResponseConsumer();
+        await initService.init(env.api.apiServerId);
 
         // wait for initial config, or throw error for visibility
         try {

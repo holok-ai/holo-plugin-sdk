@@ -36,6 +36,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
         await this.queueService.consume(requestQueue, async (requestId, workerRequest: HoloWorkerRequest) => {
             this.stats.totalRequests++;
             logger.info(`Worker ${this.id} handling request: ${requestId} provider: ${workerRequest.providerName} from server ${workerRequest.sourceId} and queue ${requestQueue}...`);
+            logger.debug(JSON.stringify(workerRequest));
             try {
                 const ai: IProvider = await this.providerService.matchProvider(workerRequest.providerName);
                 logger.info(`resolved ai provider: ${ai.name}`);
@@ -83,16 +84,11 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                     const q = await ai.processWorkerRequest(workerRequest);
 
                     for await (const evt of q) {
-                        if (evt.type == 'done') {
-                            await this.responseService.sendToAudit(requestId,
-                                await ai.auditResponse(envelope, evt)
-                            );
-                            if (workerRequest.isStreaming) break;
-                        }
+                        logger.debug(JSON.stringify(evt));
                         for (const wireChunk of wire.fromProviderEvent(evt)) {
                             await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                         }
-                        if (evt.type === "error") {
+                        if (evt.type in ['done', 'error']) {
                             await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt))
                             break; // is this necessary?
                         }

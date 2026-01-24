@@ -8,6 +8,7 @@ import {Provider} from "@holokai/sdk/dist/core/entities";
 @injectable()
 export class ProviderService extends ClassLogger {
     private providers: Map<string, IProvider> = new Map();
+    serverId: string | undefined;
 
     constructor(
         private providerRegistry: ProviderPluginRegistry,
@@ -17,17 +18,22 @@ export class ProviderService extends ClassLogger {
     }
 
     async init(serverId: string): Promise<void> {
+        this.serverId = serverId;
         const logger = this.mlog(this.init);
         const plugins = this.providerRegistry.listPlugins();
         logger.debug(`Registered plugins: ${plugins.map(p => `${p.manifest.name}@${p.manifest.version}`).join(', ')}`);
-        await this.refreshAvailableProviders(serverId);
+        await this.refreshAvailableProviders();
     }
 
     async getProviders(): Promise<Provider[]> {
         return this.providerDB.list();
     }
 
-    async refreshAvailableProviders(_serverId: string) {
+    get availableProviders(): string[] {
+        return this.providers.keys().toArray();
+    }
+
+    async refreshAvailableProviders() {
         const logger = this.mlog(this.refreshAvailableProviders);
         const providers: Provider[] = await this.getProviders();
         logger.debug(`Refreshing available providers: ${providers.map(p => p.name)}`);
