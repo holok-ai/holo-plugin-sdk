@@ -1,8 +1,8 @@
 import {EvaluatorEvent, EvaluatorResult, IEvaluator} from '../../types';
-import {Evaluator} from '../../db/types';
 import {spawn} from 'child_process';
 import * as path from 'path';
 import logger from '../../utils/logger';
+import {Evaluator} from "@holokai/sdk/dist/core/entities";
 
 export class ApplicationEvaluator implements IEvaluator {
     evaluatorId: string;

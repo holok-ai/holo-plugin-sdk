@@ -58,7 +58,6 @@ export class ClaudeContentTranslator extends BaseTranslator<HoloContent, ClaudeC
                 return {type: 'image', url: s.url};
             }
         }
-
         return {};
     }
 }

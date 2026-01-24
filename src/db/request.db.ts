@@ -1,6 +1,6 @@
 import {injectable} from "tsyringe";
 import {AppDB} from "./app.db";
-import {LlmRequest} from "./types";
+import {LlmRequest} from "@holokai/sdk/dist/core/entities";
 
 @injectable()
 export class RequestDB {
@@ -28,7 +28,8 @@ export class RequestDB {
 
         const query = `
             INSERT INTO llm_requests
-            (organization_id, request_id, request_type, model_slug, user_prompt, options, source_id, user_id, thread_id, timestamp, raw_request, application_id, provider_slug, system_prompt)
+            (organization_id, request_id, request_type, model_slug, user_prompt, options, source_id, user_id, thread_id,
+             timestamp, raw_request, application_id, provider_slug, system_prompt)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         `;
 

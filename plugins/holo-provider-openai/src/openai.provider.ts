@@ -1,10 +1,20 @@
 import OpenAI from 'openai';
-import {BaseProvider, IAuditor, IProviderTranslator, ProviderContext, RequestType, RunHandle} from "@holokai/sdk";
-import {ResponseCreateParamsBase} from "openai/resources/responses/responses";
-import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
-import {OpenAIAuditor} from "./openai.auditor";
-import {ModelsPage} from "openai/resources/models";
-import {OpenAITranslator} from "./openai.translator";
+import {
+    BaseProvider,
+    IAuditor,
+    IProviderTranslator,
+    IResponseFactory,
+    ProviderContext,
+    RequestType,
+    RunHandle
+} from '@holokai/sdk';
+import {ResponseCreateParamsBase, ResponseErrorEvent} from 'openai/resources/responses/responses';
+import {ChatCompletionCreateParamsBase} from 'openai/resources/chat/completions';
+import {OpenAIAuditor} from './openai.auditor';
+import {ModelsPage} from 'openai/resources/models';
+import {OpenAITranslator} from './openai.translator';
+import {OpenAIResponseFactory} from './openai.response.factory';
+import {APIError} from "openai/core/error";
 
 /**
  * OpenAI provider for connecting to OpenAI API
@@ -20,7 +30,11 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
     }
 
     protected createTranslator(): IProviderTranslator {
-        return OpenAITranslator.Instance();
+        return OpenAITranslator.instance();
+    }
+
+    protected createResponseFactory(): IResponseFactory {
+        return OpenAIResponseFactory.instance();
     }
 
     async getModels(allowedModels: string[] | true): Promise<ModelsPage> {
@@ -31,6 +45,15 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
 
         response.data = response.data.filter(model => allowedModels.includes(model.id));
         return response;
+    }
+
+    protected async handleError(error: APIError): Promise<ResponseErrorEvent> {
+        if (error.error) {
+            // may need to validate what the error is
+            return error.error as ResponseErrorEvent;
+        }
+
+        return this.responseFactory.createError(error.message, error.code ? error.code : undefined);
     }
 
     protected async handleRequest(
@@ -74,15 +97,15 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
                 if (event?.response?.status) status = event.response.status;
                 if (event?.response?.usage) usage = event.response.usage;
 
-                if (event?.type === "response.output_text.delta" && typeof event.delta === "string") {
+                if (event?.type === 'response.output_text.delta' && typeof event.delta === 'string') {
                     ctx.emitTextDelta(event.delta);
                 }
 
                 if (
-                    event?.type === "response.completed" ||
-                    event?.type === "response.failed" ||
-                    event?.type === "response.incomplete" ||
-                    event?.type === "error"
+                    event?.type === 'response.completed' ||
+                    event?.type === 'response.failed' ||
+                    event?.type === 'response.incomplete' ||
+                    event?.type === 'error'
                 ) {
                     terminalEvent = event;
                 }
@@ -128,7 +151,7 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
                 ctx.emitStreamEvent(chunk);
 
                 const delta = chunk?.choices?.[0]?.delta?.content;
-                if (typeof delta === "string" && delta.length) {
+                if (typeof delta === 'string' && delta.length) {
                     ctx.emitTextDelta(delta);
                 }
 

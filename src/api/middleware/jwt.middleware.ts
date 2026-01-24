@@ -12,8 +12,6 @@ export const makeJwtAuthMiddleware = (authService: AuthService, providerFamily: 
     async function authenticateJWTInternal(req: HttpApiRequest, res: Response, next: NextFunction): Promise<void> {
         try {
             req.auth = await authService.populateAuth(providerFamily, req, opts.useCache ?? true);
-
-            logger.debug(`User authenticated: ${JSON.stringify(req.auth)}`);
             next();
         } catch (error) {
             logger.warn('Authentication failed: Invalid token', {

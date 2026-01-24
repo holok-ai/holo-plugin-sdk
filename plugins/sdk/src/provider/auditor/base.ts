@@ -1,6 +1,7 @@
 import {HoloWorkerRequest, WorkerRequestEnvelope, WorkerResponseEnvelope} from "../../core/worker";
-import {ClassLogger, LlmRequest, LlmResponse, LlmStatus, pickDefined} from "../../core";
+import {ClassLogger, pickDefined} from "../../core";
 import {ProviderEnvelope, ProviderEvent} from "../types";
+import {LlmRequest, LlmResponse, LlmStatus} from "../../core/entities";
 
 
 export interface IAuditor {

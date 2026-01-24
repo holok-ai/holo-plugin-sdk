@@ -8,7 +8,7 @@ import {OpenAITranslator} from "./openai.translator";
 
 export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin {
     manifest = manifest;
-    translator = OpenAITranslator.Instance();
+    translator = OpenAITranslator.instance();
 
     async createProvider(config: any): Promise<IProvider> {
         return new OpenAIProvider(

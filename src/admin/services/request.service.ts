@@ -32,12 +32,7 @@ export class RequestService extends ClassLogger {
 
         const workerRequest = await this.parseRequest(providerType, providerName, type, req);
 
-        if (workerRequest.isStreaming) {
-            await this.responseService.createStream(workerRequest.requestId, true);
-        }
-
         if (app.guards && app.guards.length) {
-            logger.info(`Guards found: ${JSON.stringify(app.guards, null, 2)}`);
             await this.guardService.guard(workerRequest, app.guards, auth);
         }
 

@@ -10,9 +10,33 @@ import {
     ClaudeTextDelta,
     ClaudeUsage
 } from './types';
-import {pickDefined} from "@holokai/sdk";
+import {IResponseFactory, pickDefined} from '@holokai/sdk';
+import {ErrorResponse} from '@anthropic-ai/sdk/resources/shared';
 
-export class ClaudeResponseFactory {
+export type ClaudeResponseTypes =
+    'timeout_error'
+    | 'invalid_request_error'
+    | 'not_found_error'
+    | 'overloaded_error'
+    | 'permission_error'
+    | 'rate_limit_error'
+    | 'authentication_error'
+    | 'billing_error'
+    | 'api_error';
+
+export class ClaudeResponseFactory implements IResponseFactory {
+
+    createError(message: string, code: ClaudeResponseTypes): ErrorResponse {
+        return {
+            request_id: null,
+            type: 'error',
+            error: {
+                type: code,
+                message
+            }
+        };
+    }
+
     static streamResponseMessage(text: string | string[] = '') {
         const messages = [];
         const responseMessage = this.createResponseMessage(text) as ClaudeResponseMessage;
@@ -143,5 +167,9 @@ export class ClaudeResponseFactory {
         return pickDefined({
             type: 'message_stop'
         });
+    }
+
+    static instance(): ClaudeResponseFactory {
+        return new ClaudeResponseFactory();
     }
 }

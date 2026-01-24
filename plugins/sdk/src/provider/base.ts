@@ -1,8 +1,9 @@
-import {AsyncEventQueue, IProvider, ModelInfo, ProviderContext, ProviderEvent} from "./types";
+import {AsyncEventQueue, IProvider, IResponseFactory, ModelInfo, ProviderContext, ProviderEvent} from "./types";
 import {HoloWorkerRequest, WorkerRequestEnvelope} from "../core/worker";
-import {ClassLogger, LlmRequest, LlmResponse} from "@holokai/sdk/core";
+import {ClassLogger} from "@holokai/sdk/core";
 import {IAuditor} from "./auditor";
 import {IProviderTranslator} from "./translator";
+import {LlmRequest, LlmResponse} from "../core/entities";
 
 
 export type ProviderRunner<Final = any> = { final: () => Promise<Final>; cancel?: () => void };
@@ -12,6 +13,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
     protected readonly client: ProviderClient;
     public readonly auditor: IAuditor;
     public readonly translator: IProviderTranslator;
+    public readonly responseFactory: IResponseFactory;
 
     constructor(
         public readonly name: string,
@@ -24,6 +26,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         this.client = this.createClient();
         this.auditor = this.createAuditor();
         this.translator = this.createTranslator();
+        this.responseFactory = this.createResponseFactory();
     }
 
     protected abstract createClient(): ProviderClient;
@@ -31,6 +34,8 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
     protected abstract createAuditor(): IAuditor;
 
     protected abstract createTranslator(): IProviderTranslator;
+
+    protected abstract createResponseFactory(): IResponseFactory
 
     abstract getModels(allowedModels: string[] | true): Promise<any>;
 
@@ -84,7 +89,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         try {
             run = await this.handleRequest(requestPayload, ctx);
         } catch (e: any) {
-            push({type: "error", error: {message: e?.message ?? String(e)}} as ProviderEvent);
+            push({type: "error", error: await this.handleError(e)} as ProviderEvent);
             q.end();
             return q;
         }
@@ -100,7 +105,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
 
                 push({type: "done", message: final, text: fullText, metrics} as ProviderEvent);
             } catch (e: any) {
-                push({type: "error", error: {message: e?.message ?? String(e)}} as ProviderEvent);
+                push({type: "error", error: await this.handleError(e)} as ProviderEvent);
             } finally {
                 q.end();
             }
@@ -108,6 +113,8 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
 
         return q;
     }
+
+    protected abstract handleError(error: any): Promise<any>;
 
     protected abstract handleRequest(
         payload: RequestPayload,

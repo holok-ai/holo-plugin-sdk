@@ -1,6 +1,7 @@
 import {EvaluatorEvent, EvaluatorResult, IEvaluator} from '../../types';
-import {Evaluator, EvaluatorData, LlmResponse, Prompt, Provider} from '../../db/types';
+import {Prompt} from '@holokai/sdk';
 import {EvaluatorDB} from '../../db';
+import {Evaluator, EvaluatorData, LlmResponse, Provider} from "@holokai/sdk/dist/core/entities";
 
 export class PromptEvaluator implements IEvaluator {
     evaluatorId: string;
@@ -33,10 +34,10 @@ export class PromptEvaluator implements IEvaluator {
         }
 
         // Set evaluator name from prompt name
-        this.evaluatorName = this.prompt.name || "";
+        this.evaluatorName = this.prompt.id || "";
 
-        if (this.prompt.provider) {
-            this.provider = await this.evaluatorDb.getProvider(this.prompt.provider);
+        if (this.prompt.providerName) {
+            this.provider = await this.evaluatorDb.getProvider(this.prompt.providerName);
             if (!this.provider || !(this.provider.name.toLowerCase() === 'ollama')) {
                 throw new Error(`Provider ${(!this.provider ? "was not found" : "must be OLLAMA.")}`);
             }

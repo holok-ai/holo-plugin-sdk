@@ -6,12 +6,12 @@ import {ProviderService, ResponseService} from "../services";
 import {container, injectable} from "tsyringe";
 import {withStats} from "./mixins/withStats";
 import {env} from "../env";
-import {GuardService} from "../admin/services";
 import {PluginService} from "../services/plugin/plugin.service";
 import {PluginDiscoveryService} from "../services/plugin/discovery.service";
 import {PluginLoaderService} from "../services/plugin/loader.service";
 import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
-import {AIRequestStat, HoloWorkerRequest, IProvider} from "@holokai/sdk";
+import {AIRequestStat, HoloWorkerRequest, IProvider, ProviderEvent} from "@holokai/sdk";
+import {WireService} from "../services/wire.service";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -20,8 +20,8 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
 
     constructor(
         private providerService: ProviderService,
-        private guardService: GuardService,
-        private responseService: ResponseService
+        private responseService: ResponseService,
+        private wireService: WireService
     ) {
         super(env.worker.serverId);
     }
@@ -37,60 +37,69 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
             this.stats.totalRequests++;
             logger.info(`Worker ${this.id} handling request: ${requestId} provider: ${workerRequest.providerName} from server ${workerRequest.sourceId} and queue ${requestQueue}...`);
             try {
-                logger.info(JSON.stringify(workerRequest, null, 2));
-                // Check for upstream errors (validation/permission issues)
-                if (workerRequest.errors?.length) {
-                    logger.warn(`Request ${requestId} has upstream validation errors, sending error response: ${JSON.stringify(workerRequest.errors)}`);
-
-                    await this.responseService.sendError(workerRequest, {
-                        errorType: 'validation',
-                        errors: workerRequest.errors,
-                        workerId: this.id,
-                        auditEnabled: true
-                    });
-
-                    logger.info(`Validation error response sent for request ${requestId}`);
-                    return;
-                }
-
-                // Check guard results (PII/security checks)
-                const shouldProceed = await this.guardService.processGuardResult(workerRequest, this.id);
-
-                if (!shouldProceed) {
-                    logger.info(`Guard check blocked request ${requestId}, error response sent`);
-                    return; // Exit early - do not call provider
-                }
-
-                // Guards passed - proceed with normal provider processing
-                logger.info(`Guards passed for request ${requestId}, proceeding to provider`);
                 const ai: IProvider = await this.providerService.matchProvider(workerRequest.providerName);
-
                 logger.info(`resolved ai provider: ${ai.name}`);
-                const envelope = await ai.auditor.createWorkerResponseEnvelope(workerRequest, this.id);
+
+                const {sourceId, guardResult} = workerRequest;
 
                 // Setup the over-the-wire response for client-native streaming
-                const wire = await this.providerService.matchWireAdapter(workerRequest.providerName, {
-                    requestId,
-                    isStreaming: workerRequest.isStreaming,
-                    requestType: workerRequest.type,
-                });
-                const {sourceId} = workerRequest;
-                await this.responseService.sendWireChunk(sourceId, requestId, wire.start());
 
-                const q = await ai.processWorkerRequest(workerRequest);
 
-                for await (const evt of q) {
-                    if (evt.type == 'done') {
-                        await this.responseService.sendToAudit(requestId,
-                            await ai.auditResponse(envelope, evt)
-                        );
-                        if (workerRequest.isStreaming) break;
+                const envelope = await ai.auditor.createWorkerResponseEnvelope(workerRequest, this.id);
+
+                if (guardResult && !guardResult.passed) {
+                    logger.info('Guards failed. Sending back guard errors.');
+
+                    const wire = await this.wireService.matchWireAdapter(ai.family, ai.version, {
+                        requestId,
+                        isStreaming: false,
+                        requestType: workerRequest.type,
+                    });
+
+                    const errorMessage = guardResult.errors?.join('\n\n') || 'Policy violation';
+
+                    const evt = {
+                        type: 'error',
+                        requestId,
+                        seq: 1,
+                        ts: Date.now(),
+                        error: ai.responseFactory.createError(workerRequest.type, errorMessage)
+                    } as ProviderEvent;
+
+                    await this.responseService.sendWireChunk(sourceId, requestId, wire.start(400));
+                    for (const wireChunk of wire.fromProviderEvent(evt)) {
+                        logger.info(JSON.stringify(wireChunk));
+                        await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt));
+                        await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                     }
-                    for (const wc of wire.fromProviderEvent(evt)) {
-                        await this.responseService.sendResponseChunk(sourceId, requestId, wc);
+                } else {
+                    const wire = await this.wireService.matchWireAdapter(ai.family, ai.version, {
+                        requestId,
+                        isStreaming: workerRequest.isStreaming,
+                        requestType: workerRequest.type,
+                    });
+
+                    await this.responseService.sendWireChunk(sourceId, requestId, wire.start());
+                    const q = await ai.processWorkerRequest(workerRequest);
+
+                    for await (const evt of q) {
+                        if (evt.type == 'done') {
+                            await this.responseService.sendToAudit(requestId,
+                                await ai.auditResponse(envelope, evt)
+                            );
+                            if (workerRequest.isStreaming) break;
+                        }
+                        for (const wireChunk of wire.fromProviderEvent(evt)) {
+                            await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
+                        }
+                        if (evt.type === "error") {
+                            await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt))
+                            break; // is this necessary?
+                        }
                     }
-                    if (evt.type === "error") break; // is this necessary?
                 }
+
+
             } catch (error) {
                 logger.error(`Error handling request (${requestId}): ${(error as Error).message}`);
                 logger.error(JSON.stringify(workerRequest, null, 2));

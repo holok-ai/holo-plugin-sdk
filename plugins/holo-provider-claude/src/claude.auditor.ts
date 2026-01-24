@@ -1,16 +1,8 @@
 import {injectable} from 'tsyringe';
 import {ClaudeChatRequest} from "./types";
-import {
-    BaseAuditor,
-    HoloWorkerRequest,
-    HoloWorkerResponse,
-    LlmRequest,
-    LlmResponse,
-    LlmStatus,
-    pickDefined,
-    ProviderEnvelope
-} from "@holokai/sdk";
+import {BaseAuditor, HoloWorkerRequest, HoloWorkerResponse, pickDefined, ProviderEnvelope} from "@holokai/sdk";
 import {MessageCreateParamsBase} from "@anthropic-ai/sdk/resources/messages";
+import {LlmRequest, LlmResponse, LlmStatus} from "@holokai/sdk/core/entities";
 
 @injectable()
 export class ClaudeAuditor extends BaseAuditor {

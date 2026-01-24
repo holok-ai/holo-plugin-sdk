@@ -34,7 +34,7 @@ export class ClaudeTranslator extends ClassLogger implements IProviderTranslator
         super();
     }
 
-    static Instance(): IProviderTranslator {
+    static instance(): IProviderTranslator {
         const contentTranslator = new ClaudeContentTranslator();
         const toolTranslator = new ClaudeToolTranslator();
         const toolChoiceTranslator = new ClaudeToolChoiceTranslator();

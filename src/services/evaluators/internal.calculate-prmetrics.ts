@@ -1,12 +1,19 @@
-import { InternalEvaluatorBase } from './internal.base';
-import { EvaluatorResult, EvaluatorsDataResults, EvaluatorServiceEvent } from '../../types/evaluator.types';
-import { PRFile, PrMetricSummary, ExtractedChanges, UnifiedDiffBlock } from '../../types/evaluator-pr.types';
-import { EvaluatorData } from '../../db/types';
-import { AnalysisResultsRepository } from './internal.update-prmetrics';
+import {InternalEvaluatorBase} from './internal.base';
+import {
+    EvaluatorResult,
+    EvaluatorsDataResults,
+    EvaluatorServiceEvent,
+    ExtractedChanges,
+    PRFile,
+    PrMetricSummary,
+    UnifiedDiffBlock
+} from '../../types';
+import {AnalysisResultsRepository} from './internal.update-prmetrics';
 
 import * as Diff from 'diff';
 
 import logger from '../../utils/logger';
+import {EvaluatorData} from "@holokai/sdk/dist/core/entities";
 
 
 export class CalculatePrMetrics extends InternalEvaluatorBase {
@@ -53,7 +60,7 @@ export class CalculatePrMetrics extends InternalEvaluatorBase {
                 }
             }
 
-            changesByFile.set(file.filename, { additions, deletions });
+            changesByFile.set(file.filename, {additions, deletions});
         }
 
         return changesByFile;
@@ -90,7 +97,7 @@ export class CalculatePrMetrics extends InternalEvaluatorBase {
                 }
             }
 
-            changesByFile.set(filename, { additions, deletions });
+            changesByFile.set(filename, {additions, deletions});
         }
 
         return changesByFile;
@@ -123,9 +130,9 @@ export class CalculatePrMetrics extends InternalEvaluatorBase {
                     }
                 }
                 // if this was created by a prompt, it has a synthetic name and no path
-                if (!localDiff.filePath && this.isSyntheticFile(localDiff.fileName)) return true; 
+                if (!localDiff.filePath && this.isSyntheticFile(localDiff.fileName)) return true;
                 // exact match 
-                return localDiff.fileName === prFilename; 
+                return localDiff.fileName === prFilename;
             });
 
             // Aggregate all local changes for this PR file
@@ -184,8 +191,8 @@ export class CalculatePrMetrics extends InternalEvaluatorBase {
 
     async loadLocalPrs(userId: string, startDate: Date, endDate: Date): Promise<UnifiedDiffBlock[]> {
         let blocks = [];
-        const checkedEnd: Date = (!endDate) ? new Date() : endDate; 
-        const checkedStart: Date = (!startDate || startDate >= endDate) ? new Date(checkedEnd.getTime() - (21 * 24 * 60 * 60 * 1000)) : startDate; 
+        const checkedEnd: Date = (!endDate) ? new Date() : endDate;
+        const checkedStart: Date = (!startDate || startDate >= endDate) ? new Date(checkedEnd.getTime() - (21 * 24 * 60 * 60 * 1000)) : startDate;
 
         const dataRecs = await this.evaluatorDb.getDataByDateRange(checkedStart, checkedEnd, userId, "response-complete");
         if (dataRecs) {
@@ -195,7 +202,7 @@ export class CalculatePrMetrics extends InternalEvaluatorBase {
         }
         return blocks;
     }
- 
+
     /**
      * Calculates AI-related metrics for closed pull requests
      * @param evalEvent The evaluator service event containing previous GitHub PR data
@@ -231,25 +238,25 @@ export class CalculatePrMetrics extends InternalEvaluatorBase {
         const prChangesByFile = this.extractPRChanges(prData);
         let prCompareResult = this.compareLocalDiffsToPR(localChanges, prChangesByFile);
 
-        prCompareResult.source = previousData?.data.source; 
+        prCompareResult.source = previousData?.data.source;
         prCompareResult.organization = previousData?.data.organization;
-        prCompareResult.repository =  previousData?.data.repository;
-        prCompareResult.prid =  previousData?.data.pr_id;
+        prCompareResult.repository = previousData?.data.repository;
+        prCompareResult.prid = previousData?.data.pr_id;
 
         // save this to the summary record in the analysis_results table
         try {
             const analyisEvents = new AnalysisResultsRepository(this.evaluatorDb);
-            analyisEvents.upsertMetric(prCompareResult); 
+            analyisEvents.upsertMetric(prCompareResult);
         } catch (error) {
-            logger.error(`Failed to update analysis results : ${error instanceof Error ? error.message : 'Unknown error'}`); 
+            logger.error(`Failed to update analysis results : ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
 
         results = {
             status: "ok",
             message: `Calculated AI metrics for PR ${prData.results.data.pr_id}`,
-            userId: userId, 
+            userId: userId,
             next_events: [],
-            result: { key: "output", value: { metrics: prCompareResult } }
+            result: {key: "output", value: {metrics: prCompareResult}}
         };
         return Promise.resolve(results);
     }

@@ -1,10 +1,12 @@
 import {ProviderEvent} from "../types";
 import {RequestType} from "../../holo";
+import {ClassLogger, pickDefined} from "@holokai/sdk/core";
 
 export type WireChunk = {
     requestId: string;
     seq: number;
     headers?: Record<string, string>; // first chunk only
+    status?: number; // first chunk only HTTP Status
     body: string;                    // bytes to write
     done?: true;
 };
@@ -13,7 +15,7 @@ export interface IWireAdapter {
     requestId: string;
     isStreaming: boolean;
 
-    start(): WireChunk;
+    start(status?: number): WireChunk;
 
     fromProviderEvent(ev: ProviderEvent): WireChunk[];    // produce 0..n wire chunks
 }
@@ -24,38 +26,32 @@ export interface WireAdapterParams {
     requestType: RequestType;
 }
 
-export abstract class BaseWireAdapter implements IWireAdapter {
+export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapter {
+
     constructor(
         public readonly requestId: string,
         public readonly isStreaming: boolean
     ) {
+        super();
     }
 
-    start(): WireChunk {
-        return this.isStreaming ? this.startStreaming() : this.startNonStreaming();
+    start(status: number = 200): WireChunk {
+
+        const headers = this.isStreaming ? this.streamingHeaders() : this.nonStreamingHeaders();
+
+        return {
+            requestId: this.requestId,
+            seq: 0,
+            headers,
+            status,
+            body: ""
+        };
+
     }
 
     fromProviderEvent(ev: ProviderEvent): WireChunk[] {
         if (!this.isStreaming) return this.fromNonStreaming(ev);
         return this.fromStreaming(ev);
-    }
-
-    protected startNonStreaming(): WireChunk {
-        return {
-            requestId: this.requestId,
-            seq: 0,
-            headers: this.nonStreamingHeaders(),
-            body: ""
-        };
-    }
-
-    protected startStreaming(): WireChunk {
-        return {
-            requestId: this.requestId,
-            seq: 0,
-            headers: this.streamingHeaders(),
-            body: ""
-        };
     }
 
     protected nonStreamingHeaders(): Record<string, string> {
@@ -75,18 +71,19 @@ export abstract class BaseWireAdapter implements IWireAdapter {
             return [{
                 requestId: ev.requestId,
                 seq: ev.seq,
-                body: JSON.stringify(this.nonStreamingDoneBody(ev)),
+                body: JSON.stringify(ev.message),
                 done: true
             }];
         }
 
         if (ev.type === "error") {
-            return [{
+            return [pickDefined({
                 requestId: ev.requestId,
                 seq: ev.seq,
-                body: JSON.stringify(this.nonStreamingErrorBody(ev)),
+                status: ev.status,
+                body: JSON.stringify(ev.error),
                 done: true
-            }];
+            }) as WireChunk];
         }
 
         return [];
@@ -127,22 +124,8 @@ export abstract class BaseWireAdapter implements IWireAdapter {
         return [{
             requestId: ev.requestId,
             seq: ev.seq,
-            body: "",
+            body: ev.error,
             done: true
         }];
-    }
-
-    protected nonStreamingDoneBody(ev: Extract<ProviderEvent, { type: "done" }>): any {
-        return ev.message;
-    }
-
-    protected nonStreamingErrorBody(ev: Extract<ProviderEvent, { type: "error" }>): any {
-        return {
-            error: {
-                message: ev.error.message,
-                type: "internal_error",
-                code: ev.error.code,
-            },
-        };
     }
 }

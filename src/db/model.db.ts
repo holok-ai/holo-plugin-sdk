@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {AppDB} from "./app.db";
-import {Model} from "./types";
 import {injectable} from "tsyringe";
+import {Model} from "@holokai/sdk/dist/core/entities";
 
 @injectable()
 export class ModelDB {

@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import {AuditServiceEvent} from '../types';
-import {LlmRequest, LlmResponse} from "../db/types";
 import {container, injectable} from "tsyringe";
 import {AppDB, EvaluatorDB, RequestDB, ResponseDB} from "../db";
 import logger from "../utils/logger";
@@ -8,6 +7,7 @@ import {QueueService} from "./queue.service";
 import {env} from '../env';
 import {ClassLogger, HoloWorkerRequest, HoloWorkerResponse} from "@holokai/sdk";
 import {ProviderService} from "./provider.service";
+import {LlmRequest, LlmResponse} from "@holokai/sdk/dist/core/entities";
 
 /**
  * Service for auditing and logging LLM requests and responses

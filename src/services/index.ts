@@ -5,5 +5,4 @@ export {InitService} from './init.service';
 export {ProviderService} from './provider.service';
 export {QueueService} from './queue.service';
 export {ResponseService} from './response.service';
-export {StreamService} from './stream.service';
 export {WorkerService} from './worker.service';

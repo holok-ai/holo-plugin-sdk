@@ -1,16 +1,8 @@
 import {injectable} from 'tsyringe';
-import {
-    BaseAuditor,
-    HoloWorkerRequest,
-    HoloWorkerResponse,
-    LlmRequest,
-    LlmResponse,
-    LlmStatus,
-    pickDefined,
-    ProviderEnvelope
-} from "@holokai/sdk";
+import {BaseAuditor, HoloWorkerRequest, HoloWorkerResponse, pickDefined, ProviderEnvelope} from "@holokai/sdk";
 import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
 import {ResponseCreateParamsBase} from "openai/resources/responses/responses";
+import {LlmRequest, LlmResponse, LlmStatus} from "@holokai/sdk/core/entities";
 
 @injectable()
 export class OpenAIAuditor extends BaseAuditor {

@@ -38,7 +38,7 @@ export class OpenAITranslator implements IProviderTranslator {
     ) {
     }
 
-    static Instance(): IProviderTranslator {
+    static instance(): IProviderTranslator {
         const textContentTranslator = new OpenAITextContentTranslator();
         const imageContentTranslator = new OpenAIImageContentTranslator();
         const contentTranslator = new OpenAIContentTranslator(textContentTranslator, imageContentTranslator);

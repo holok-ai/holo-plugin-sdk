@@ -2,7 +2,10 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "lib": ["ESNext", "ESNext.Intl"],
+    "lib": [
+      "ESNext",
+      "ESNext.Intl"
+    ],
     "outDir": "./dist",
     "rootDir": "./src",
     "composite": true,
@@ -27,11 +30,24 @@
     "exactOptionalPropertyTypes": true,
     "baseUrl": ".",
     "paths": {
-      "@holokai/sdk": ["./plugins/sdk/src/index.ts"],
-      "@holokai/sdk/core": ["./plugins/sdk/src/core/index.ts"],
-      "@holokai/sdk/plugin": ["./plugins/sdk/src/plugin/index.ts"],
-      "@holokai/sdk/provider": ["./plugins/sdk/src/provider/index.ts"],
-      "@holokai/sdk/holo": ["./plugins/sdk/src/holo/index.ts"]
+      "@holokai/sdk": [
+        "./plugins/sdk/src/index.ts"
+      ],
+      "@holokai/sdk/core": [
+        "./plugins/sdk/src/core/index.ts"
+      ],
+      "@holokai/sdk/core/entities": [
+        "./plugins/sdk/src/core/entities/index.ts"
+      ],
+      "@holokai/sdk/plugin": [
+        "./plugins/sdk/src/plugin/index.ts"
+      ],
+      "@holokai/sdk/provider": [
+        "./plugins/sdk/src/provider/index.ts"
+      ],
+      "@holokai/sdk/holo": [
+        "./plugins/sdk/src/holo/index.ts"
+      ]
     }
   },
   "ts-node": {
@@ -45,10 +61,18 @@
     "files": false,
     "emit": false
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist",
-    "plugins", "tests"],
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "plugins",
+    "tests"
+  ],
   "references": [
-    { "path": "./plugins/sdk"}
+    {
+      "path": "./plugins/sdk"
+    }
   ]
 }

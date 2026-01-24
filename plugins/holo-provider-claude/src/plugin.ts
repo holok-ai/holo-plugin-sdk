@@ -14,7 +14,7 @@ import {ClaudeTranslator} from "./claude.translator";
 
 export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin {
     manifest = manifest;
-    translator = ClaudeTranslator.Instance();
+    translator = ClaudeTranslator.instance();
 
     async createProvider(config: any): Promise<IProvider> {
         return new ClaudeProvider(

@@ -5,6 +5,7 @@ import {createStableId} from "../utils/stable-id.js";
 import {injectable} from 'tsyringe';
 import {HoloContent, HoloMessage} from "@holokai/sdk";
 import {BaseTranslator} from "@holokai/sdk/provider";
+import {ContentBlockParam} from "@anthropic-ai/sdk/resources/messages/messages";
 
 @injectable()
 export class ClaudeMessageTranslator extends BaseTranslator<HoloMessage, ClaudeRequestMessage> {
@@ -84,7 +85,7 @@ export class ClaudeMessageTranslator extends BaseTranslator<HoloMessage, ClaudeR
         const tool_calls: NonNullable<HoloMessage["tool_calls"]> = [];
 
         for (const block of source.content) {
-            const type = (block as any).type;
+            const type = (block as ContentBlockParam).type;
 
             if (type === 'text' || type === 'image') {
                 const holoContent = await this.contentTranslator.toHolo(block);

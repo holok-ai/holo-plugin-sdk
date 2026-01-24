@@ -95,14 +95,16 @@ export class ClaudeRequestTranslator extends BaseTranslator<HoloRequest, ClaudeC
         if (system?.trim()) parts.push(system.trim());
 
         if (rf.type === "json_schema") {
+            const schemaStr = JSON.stringify(rf.schema, null, 2);
             parts.push(
-                `You must respond with valid JSON that matches this exact schema: ${JSON.stringify(rf.schema)}.`
+                `CRITICAL: You MUST respond with ONLY valid JSON that exactly matches this schema. Do not include any text before or after the JSON.\n\nSchema:\n${schemaStr}`
             );
             if (rf.strict) {
-                parts.push("You must strictly adhere to this schema with no additional properties.");
+                parts.push("\nSTRICT MODE: No additional properties allowed. Every field must match the schema exactly.");
             }
+            parts.push("\nYour entire response must be parseable JSON with no additional commentary, explanation, or markdown formatting.");
         } else if (rf.type === "json_object") {
-            parts.push("You must respond with a valid JSON object.");
+            parts.push("You must respond with a valid JSON object. Do not include any text before or after the JSON.");
         }
         return parts.length ? parts.join(" ") : undefined;
     }

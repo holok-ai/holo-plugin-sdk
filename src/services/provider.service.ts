@@ -1,8 +1,9 @@
 import 'reflect-metadata';
 import {ProviderDB} from "../db";
 import {injectable} from "tsyringe";
-import {ClassLogger, IProvider, IWireAdapter, Provider, WireAdapterParams} from "@holokai/sdk";
+import {ClassLogger, IProvider} from "@holokai/sdk";
 import {ProviderPluginRegistry} from "./plugin/provider-registry.service";
+import {Provider} from "@holokai/sdk/dist/core/entities";
 
 @injectable()
 export class ProviderService extends ClassLogger {
@@ -46,29 +47,6 @@ export class ProviderService extends ClassLogger {
             }
         }
         logger.debug(`Available providers: ${Array.from(this.providers.keys())}`);
-    }
-
-    async matchWireAdapter(providerName: string, args: WireAdapterParams): Promise<IWireAdapter> {
-        const provider = this.providers.get(providerName);
-        if (!provider) throw new Error(`Unknown providerName=${providerName}`);
-
-        const plugin =
-            this.providerRegistry.getByFamily(provider.family, provider.version) ??
-            this.providerRegistry.getByFamily(provider.family);
-
-        if (!plugin) {
-            throw new Error(`No plugin found for family=${provider.family} version=${provider.version}`);
-        }
-
-        if (!plugin.createWireAdapter) {
-            throw new Error(`Plugin ${plugin.manifest?.name ?? provider.family} does not implement createWireAdapter()`);
-        }
-
-        return plugin.createWireAdapter({
-            requestId: args.requestId,
-            isStreaming: args.isStreaming,
-            requestType: args.requestType,
-        });
     }
 
     async matchProvider(name: string): Promise<IProvider> {
