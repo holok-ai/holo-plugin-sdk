@@ -84,7 +84,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                     const q = await ai.processWorkerRequest(workerRequest);
 
                     for await (const evt of q) {
-                        logger.debug(JSON.stringify(evt));
+                        logger.debug(`Provider event: ${JSON.stringify(evt)}`, {requestId});
                         for (const wireChunk of wire.fromProviderEvent(evt)) {
                             await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                         }

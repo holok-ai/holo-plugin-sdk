@@ -20,6 +20,7 @@ export class AppController extends BaseController {
             req.appSlug = appSlug;
             req.url = `/api/${provider.toLowerCase()}/${remainingPath}`;
 
+            logger.debug(`Rerouting to: ${req.url}`);
 
             // Forward to Express routing
             (req.app as any).handle(req, res, (err: any) => {

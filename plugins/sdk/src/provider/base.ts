@@ -75,6 +75,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         };
 
         const ctx = {
+            requestType: request.type,
             emitStreamEvent: (event: any) =>
                 push({type: "stream_event", event} as ProviderEvent),
             emitTextDelta: (text: string) => {
