@@ -1,8 +1,8 @@
-import { IEvaluator, EvaluatorEvent, EvaluatorResult } from '../../types/evaluator.types';
-import { Evaluator } from '../../db/types';
-import { spawn } from 'child_process';
+import {EvaluatorEvent, EvaluatorResult, IEvaluator} from '../../types';
+import {spawn} from 'child_process';
 import * as path from 'path';
 import logger from '../../utils/logger';
+import {Evaluator} from "@holokai/sdk/dist/core/entities";
 
 export class ApplicationEvaluator implements IEvaluator {
     evaluatorId: string;
@@ -20,7 +20,7 @@ export class ApplicationEvaluator implements IEvaluator {
         if (!config) {
             throw new Error('No config found for application evaluator');
         }
-        
+
         this.evaluatorId = evaluator.id || '';
         this.handlesEventName = evaluator.evaluator_type || '';
         this.allowUserOverride = false;
@@ -28,14 +28,14 @@ export class ApplicationEvaluator implements IEvaluator {
         this.args = config.args || [];
         this.env = config.env || {};
         this.cwd = config.cwd || '';
-        
+
         // Extract filename from args (typically the script filename is in the first arg)
         this.evaluatorName = this.extractFilename(this.args);
     }
 
     private extractFilename(args: string[]): string {
         const scriptExtensions = ['.py', '.js', '.ts', '.sh', '.go', '.bat', '.ps', '.exe'];
-        
+
         // Look for a filename in the args (usually first arg contains the script path)
         for (const arg of args) {
             if (scriptExtensions.some(ext => arg.includes(ext))) {
@@ -54,7 +54,7 @@ export class ApplicationEvaluator implements IEvaluator {
             const adjustedArgs = this.args.map((arg: string) =>
                 arg.replace(/\{\{appdir\}\}/gi, rootAppDir)
             );
-            const adjustedCwd = this.cwd ? 
+            const adjustedCwd = this.cwd ?
                 this.cwd.replace(/\{\{appdir\}\}/gi, rootAppDir) : rootAppDir;
             const eventJson = JSON.stringify(event);
             logger.debug(`Running ${this.command} with args ${JSON.stringify(adjustedArgs)} \n\nJSON data: ${eventJson}`);
@@ -62,7 +62,7 @@ export class ApplicationEvaluator implements IEvaluator {
             const output = await new Promise<string>((resolve, reject) => {
                 const proc = spawn(this.command, adjustedArgs, {
                     stdio: ["pipe", "pipe", "pipe"],
-                    env: { ...process.env, ...this.env },
+                    env: {...process.env, ...this.env},
                     cwd: adjustedCwd
                 });
 
@@ -92,7 +92,7 @@ export class ApplicationEvaluator implements IEvaluator {
                 value = JSON.parse(output);
             } catch {
                 // If not JSON, wrap in an object
-                value = { data: output };
+                value = {data: output};
             }
 
             // Python script returns EvaluatorResult structure

@@ -1,16 +1,23 @@
 import 'reflect-metadata';
-import {OrganizationService} from "./organization.service";
 import {injectable} from 'tsyringe';
-import {GuardResult, GuardResultSchema, JWTPayload} from "../types";
-import {LLMWorkerRequest, WorkerRequestFactory} from "../../types";
-import {HoloContentText, HoloRequest, HoloRequestValidator} from "../../providers/holo";
-import {ProviderChatRequest, ProviderMessage, ProviderRequest, ProviderType, RequestType} from "../../providers/types";
+import {Auth, GuardResult, GuardResultSchema} from "../types";
+import {WorkerRequestFactory} from "../../types";
 import {env} from "../../env";
 import {ResponseService} from "../../services";
-import {HoloTranslater} from "../../providers/holo/holo.translator";
-import {ArkErrors} from "arktype";
-import {ClassLogger} from "../../types/class.logger";
-import {OllamaGenerateRequest} from "../../providers/ollama/types";
+import {
+    ClassLogger,
+    filterJoin,
+    findLast,
+    HoloContent,
+    HoloContentText,
+    HoloRequest,
+    HoloWorkerRequest,
+    pickDefined,
+    RequestType
+} from "@holokai/sdk";
+import {Prompt} from "../../cache";
+import {ProviderPluginRegistry} from "../../services/plugin/provider-registry.service";
+import {OrganizationService} from "./organization.service";
 
 
 @injectable()
@@ -18,187 +25,111 @@ export class GuardService extends ClassLogger {
     private serverId: string = env.api.apiServerId;
 
     constructor(
-        private organizationService: OrganizationService,
         private responseService: ResponseService,
-        private holoTranslator: HoloTranslater
+        private organizationService: OrganizationService,
+        private providerRegistry: ProviderPluginRegistry
     ) {
         super();
     }
 
-    async guard(providerType: ProviderType, type: RequestType, workerRequest: LLMWorkerRequest, auth: JWTPayload | undefined) {
+    async guard(workerRequest: HoloWorkerRequest, guards: Prompt[], auth: Auth) {
         const logger = this.mlog(this.guard);
-        // if no slug or auth
-        if (!auth?.appSlug) {
-            logger.warn(`No app slug found for guard`, {methodName: 'guard', requestId: workerRequest.requestId});
+
+        if (!guards || !guards.length) return;
+
+        let provider = this.providerRegistry.getByFamily(workerRequest.providerType)
+        if (!provider) {
+            throw new Error(`No provider found: ${workerRequest.providerName}`);
+        }
+
+        const request = await provider.translator.toHoloRequest(workerRequest.payload);
+
+        const holoMessages = request.messages;
+        if (!holoMessages || !holoMessages.length) return;
+
+        const lastMessage = findLast(holoMessages, m => m.role === 'user');
+
+        if (!lastMessage) {
+            logger.warn(`No user message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
             return;
         }
 
-        let lastMessage = '';
-        if (type === RequestType.GENERATE && providerType === ProviderType.OLLAMA) {
-            lastMessage = (workerRequest.payload as OllamaGenerateRequest).prompt;
-        } else {
-            const payload = workerRequest.payload as ProviderChatRequest;
-            const messages = 'messages' in payload ? payload.messages : undefined;
-            if (!messages) {
-                logger.warn(`No messages to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
-                return;
-            }
-            const lastHoloMessage = (await this.holoTranslator.toHoloMessages(messages as ProviderMessage[], providerType)).pop();
-            if (!lastHoloMessage || !lastHoloMessage.content || !lastHoloMessage.content.length) {
-                logger.warn(`No message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
-                return;
-            }
-            const content = lastHoloMessage.content
-            if (Array.isArray(content)) {
-                for (let i = 0; i < content.length; i++) {
-                    if (content[i].type === 'text') {
-                        lastMessage += '\n\n' + (content[i] as HoloContentText).text;
-                    }
-                }
-            } else {
-                lastMessage = content;
-            }
-        }
+        const lastContent = Array.isArray(lastMessage.content) ?
+            filterJoin<HoloContent>(lastMessage.content, x => x.type === 'text', x => (x as HoloContentText).text, '\n\n') :
+            lastMessage.content;
 
-        if (!lastMessage.length) {
-            logger.warn(`No message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
-            return;
-        }
-
-        const guards = this.organizationService.getGuards(auth.organizationId, auth.appSlug);
-
-        // logger.debug(`Found guards: ${JSON.stringify(guards, null, 2)} for ${providerType} ${type}, auth: ${JSON.stringify(auth, null, 2)}`);
-        if (guards) {
-            try {
-                //set guards onto request for auditing
-                workerRequest.guards = guards;
-                const results = await Promise.all(
-                    guards.map(async (guard) => {
-                        try {
-                            const provider = this.organizationService.getProvider(auth.organizationId, guard.providerName);
-                            logger.info(`Guard Provider: ${guard.providerName}: ${provider?.type}`, {
-                                methodName: 'guard',
-                                requestId: workerRequest.requestId
-                            });
-                            if (!provider) {
-                                logger.warn(`Guard Provider ${guard.providerName} not found`, {
-                                    methodName: 'guard',
-                                    requestId: workerRequest.requestId
-                                });
-                                //TODO: More robust error handling
-                                return {passed: true}
-                            }
-                            const holoRequest: HoloRequest = HoloRequestValidator.assert({
-                                request_type: 'generate',
-                                model: guard.modelName,
-                                messages: [
-                                    {role: 'user', content: guard.userPrompt + '\n\n' + lastMessage},
-                                ],
-                                response_format: {
-                                    type: 'json_schema',
-                                    schema: GuardResultSchema,
-                                    strict: true
-                                },
-                                stream: false,
-                                ...(guard.systemPrompt && {system: guard.systemPrompt})
-                            });
-
-                            const payload = await this.holoTranslator.fromHoloRequest(holoRequest, provider.type);
-                            if (payload instanceof ArkErrors) {
-                                logger.warn(`Guard translation failed: ${JSON.stringify(payload.summary, null, 2)}`, {
-                                    methodName: 'guard',
-                                    requestId: workerRequest.requestId
-                                });
-                                return {passed: true}
-                            }
-
-                            const guardRequest = WorkerRequestFactory.create(provider.type, provider.name, RequestType.GENERATE, payload as ProviderRequest, this.serverId, auth);
-
-                            const response = await this.responseService.streamRequestOnce(guardRequest);
-
-                            const resultMessage = JSON.parse(response as string);
-                            const holoResponse = await this.holoTranslator.toHoloResponse(resultMessage, provider.type);
-
-                            // logger.info(`Guard response: ${JSON.stringify(holoResponse, null, 2)}`);
-                            if (!holoResponse.messages) {
-                                return {passed: false, errors: ['Guard response is missing messages']};
-                            }
-                            const guardResponse = holoResponse.messages[0].content as string;
-
-                            return JSON.parse(guardResponse);
-                        } catch (e) {
-                            logger.error(`Failed to process guard: ${(e as Error).message}`, {
-                                methodName: 'guard',
-                                requestId: workerRequest.requestId
-                            });
-                            return {passed: true, errors: [e as Error]};
-                        }
-                    })
-                );
-
-                return workerRequest.guardResult = results.reduce<GuardResult>(
-                    (acc, r: GuardResult) => {
-                        acc.passed = acc.passed && r.passed;
-                        if (!acc.passed && !r.passed && r.errors.length) {
-                            if (!acc.errors) acc.errors = [];
-                            acc.errors.push(...r.errors);
-                        }
-                        return acc;
-                    },
-                    {passed: true}
-                );
-            } catch (e) {
-                logger.error(`Failed to process guard: ${(e as Error).message}`, {
-                    methodName: 'guard',
-                    requestId: workerRequest.requestId
-                });
-                return {passed: false, errors: [(e as Error).message]};
-            }
-        }
-        logger.info(`Finished running guards for: ${providerType} ${type}`);
-        return {passed: true};
-    }
-
-    /**
-     * Checks guard results on a worker request and sends error response if guards failed.
-     * Returns true if request should proceed to provider, false if guards failed.
-     */
-    async processGuardResult(request: LLMWorkerRequest, workerId: string): Promise<boolean> {
-        const logger = this.mlog(this.processGuardResult);
-
-        // If no guard results or guards passed, proceed
-        if (!request.guardResult || request.guardResult.passed) {
-            return true;
-        }
-
-        // Guards failed - generate error response
-        logger.warn(`Guard validation failed for request ${request.requestId}`, {
-            providerType: request.providerType,
-            errors: request.guardResult.errors
-        });
+        if (!lastContent.length) return;
 
         try {
-            // Extract errors - only GuardResultFail has errors property
-            const errors = request.guardResult?.passed === false
-                ? request.guardResult.errors
-                : ['Guard validation failed'];
+            //set guards onto request for auditing
+            workerRequest.guards = guards;
+            const results = await Promise.all(
+                guards.map(async (guard) => {
+                    try {
+                        const p = this.organizationService.getProvider(workerRequest.organizationId!, guard.providerName);
+                        provider = this.providerRegistry.getByFamily(p!.type);
+                        if (!provider) return {passed: true};
 
-            // Send guard error response using unified method
-            await this.responseService.sendError(request, {
-                errorType: 'guard',
-                errors,
-                workerId,
-                auditEnabled: true
-            });
+                        const holoRequest: HoloRequest = pickDefined({
+                            request_type: "generate",
+                            model: guard.modelName,
+                            messages: [{
+                                role: "user",
+                                content: guard.userPrompt + "\n\n" + lastContent
+                            }],
+                            response_format: {type: "json_schema", schema: GuardResultSchema, strict: true},
+                            stream: false,
+                            ...(guard.systemPrompt && {system: guard.systemPrompt}),
+                        }) as HoloRequest;
 
-            return false; // Do not proceed to provider
-        } catch (error) {
-            logger.error(`Failed to send guard failure response: ${(error as Error).message}`, {
-                requestId: request.requestId,
-                error
+                        const payload = await provider.translator.fromHoloRequest(holoRequest);
+                        const guardRequest = WorkerRequestFactory.create(
+                            provider.family,
+                            guard.providerName,
+                            RequestType.GENERATE,
+                            payload,
+                            this.serverId,
+                            auth
+                        );
+
+                        const response = await this.responseService.requestOnce<string>(guardRequest);
+
+                        const raw = JSON.parse(response as string);
+                        const holoResponse = await provider.translator.toHoloResponse(raw);
+                        if (!holoResponse.messages) return {
+                            passed: false,
+                            errors: ["Guard response is missing messages"]
+                        };
+
+                        const guardResponse = holoResponse.messages[0].content as string;
+                        return JSON.parse(guardResponse);
+                    } catch (e: any) {
+                        logger.error(`Failed to process guard: ${e?.message ?? String(e)} for messages: ${JSON.stringify(lastMessage)}`, {requestId: workerRequest.requestId});
+                        return {passed: true, errors: [e?.message ?? String(e)]};
+                    }
+                })
+            );
+
+            const reduced = results.reduce<GuardResult>(
+                (acc, r: any) => {
+                    acc.passed = acc.passed && !!r.passed;
+                    if (!acc.passed && r?.passed === false && r.errors?.length) {
+                        if (!acc.errors) acc.errors = [];
+                        acc.errors.push(...r.errors);
+                    }
+                    return acc;
+                },
+                {passed: true} as any
+            );
+
+            workerRequest.guardResult = reduced;
+            return reduced;
+        } catch (e) {
+            logger.error(`Failed to process guard: ${(e as Error).message}`, {
+                methodName: 'guard',
+                requestId: workerRequest.requestId
             });
-            // Still block the request even if we fail to send error response
-            return false;
+            return {passed: false, errors: [(e as Error).message]};
         }
     }
 }

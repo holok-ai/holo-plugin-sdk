@@ -1,65 +1,69 @@
 import 'reflect-metadata';
-import {ClaudeProvider, OllamaProvider, OpenAIProvider} from "../providers";
-import logger from "../utils/logger";
-import {Provider} from "../db/types";
 import {ProviderDB} from "../db";
 import {injectable} from "tsyringe";
-import {ProviderType} from "../providers/types";
-import {ResponseService} from "./response.service";
-import {PerplexityProvider} from "../providers/perplexity/perplexity.provider";
-import {IProvider} from "../providers/ai.provider";
+import {ClassLogger, IProvider} from "@holokai/sdk";
+import {ProviderPluginRegistry} from "./plugin/provider-registry.service";
+import {Provider} from "@holokai/sdk/dist/core/entities";
 
 @injectable()
-export class ProviderService {
-    private aiProviders: Map<string, IProvider> = new Map();
+export class ProviderService extends ClassLogger {
+    private providers: Map<string, IProvider> = new Map();
+    serverId: string | undefined;
 
     constructor(
-        private providerDB: ProviderDB,
-        private responseService: ResponseService) {
+        private providerRegistry: ProviderPluginRegistry,
+        private providerDB: ProviderDB) {
+        super();
 
     }
 
     async init(serverId: string): Promise<void> {
-        await this.refreshAvailableProviders(serverId);
+        this.serverId = serverId;
+        const logger = this.mlog(this.init);
+        const plugins = this.providerRegistry.listPlugins();
+        logger.debug(`Registered plugins: ${plugins.map(p => `${p.manifest.name}@${p.manifest.version}`).join(', ')}`);
+        await this.refreshAvailableProviders();
     }
 
     async getProviders(): Promise<Provider[]> {
         return this.providerDB.list();
     }
 
-    async refreshAvailableProviders(serverId: string) {
+    get availableProviders(): string[] {
+        return this.providers.keys().toArray();
+    }
+
+    async refreshAvailableProviders() {
+        const logger = this.mlog(this.refreshAvailableProviders);
         const providers: Provider[] = await this.getProviders();
         logger.debug(`Refreshing available providers: ${providers.map(p => p.name)}`);
         if (providers.length === 0) return;
-        let aiProvider;
         for (const provider of providers) {
-            switch (provider.type) {
-                case ProviderType.OPENAI:
-                    aiProvider = new OpenAIProvider(provider, this.responseService, serverId);
-                    break;
-                case ProviderType.CLAUDE:
-                    aiProvider = new ClaudeProvider(provider, this.responseService, serverId);
-                    break;
-                case ProviderType.OLLAMA:
-                    aiProvider = new OllamaProvider(provider, this.responseService, serverId);
-                    break;
-                case ProviderType.PERPLEXITY:
-                    aiProvider = new PerplexityProvider(provider, this.responseService, serverId);
-                    break;
-                default:
-                    break;
+            let plugin = this.providerRegistry.getByFamily(provider.type);
+            if (plugin) {
+                try {
+                    let p = await plugin.createProvider(provider.config);
+                    this.providers.set(provider.name, p);
+                } catch (e) {
+                    logger.error(e);
+                    logger.error(`Error while creating provider ${provider.name}, config: ${JSON.stringify(provider.config)}`);
+                }
+            } else {
+                logger.warn(`Unable to find plugin for provider ${provider.name}`);
             }
-            if (!aiProvider) {
-                logger.warn(`No provider found for ${provider.name} (${provider.id}) with type ${provider.type}. Skipping...`);
-                continue;
-            }
-            await aiProvider.init();
-            this.aiProviders.set(provider.type, aiProvider);
         }
-        logger.debug(`Available providers: ${Array.from(this.aiProviders.keys())}`);
+        logger.debug(`Available providers: ${Array.from(this.providers.keys())}`);
     }
 
-    async matchProvider(key: string): Promise<IProvider | undefined> {
-        return this.aiProviders.get(key);
+    async matchProvider(name: string): Promise<IProvider> {
+        const logger = this.mlog(this.matchProvider);
+        const provider = this.providers.get(name);
+
+        if (!provider) {
+            logger.error(`Provider ${name} not found. Available providers: ${JSON.stringify(this.providers, null, 2)}`);
+            throw new Error(`Provider ${name} not found`);
+        }
+
+        return provider;
     }
 }

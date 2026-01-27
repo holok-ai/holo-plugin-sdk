@@ -1,10 +1,12 @@
-import {ProviderResponse, ProviderType} from "../providers/types";
-import {LLMWorkerResponse} from "./index";
-import {pickDefined} from "../utils";
 import {env} from "../env";
-import {HoloResponseFactory} from "../providers/holo/holo.response.factory";
-import {HoloTranslater} from "../providers/holo/holo.translator";
-import {LLMWorkerRequest} from "./worker.types";
+import {
+    HoloResponse,
+    HoloResponseFactory,
+    HoloWorkerRequest,
+    HoloWorkerResponse,
+    IProviderTranslator,
+    pickDefined
+} from "@holokai/sdk";
 
 export class WorkerResponseFactory {
     /**
@@ -13,14 +15,14 @@ export class WorkerResponseFactory {
     static create(
         sourceId: string,
         requestId: string,
-        providerType: ProviderType,
-        payload: ProviderResponse | ProviderResponse[],
+        providerType: string,
+        payload: any | any[],
         organizationId?: string,
         fullResponse?: string,
         workerId?: string,
         providerName?: string,
-    ): LLMWorkerResponse {
-        const response = pickDefined({
+    ): HoloWorkerResponse {
+        return pickDefined({
             organizationId,
             sourceId,
             requestId,
@@ -30,18 +32,7 @@ export class WorkerResponseFactory {
             payload,
             fullResponse,
             timestamp: Date.now()
-        }) as LLMWorkerResponse;
-
-        // Validate the response
-        // const validated = LLMWorkerResponseValidator(response);
-        // if (validated instanceof ArkErrors) {
-        //     logger.error('Worker response validation failed', {
-        //         errors: validated.summary,
-        //         response
-        //     });
-        // }
-
-        return response as LLMWorkerResponse;
+        }) as HoloWorkerResponse;
     }
 
     /**
@@ -55,11 +46,11 @@ export class WorkerResponseFactory {
      * Handles both streaming and non-streaming responses.
      */
     static async createGuardError(
-        request: LLMWorkerRequest,
+        request: HoloWorkerRequest,
         errors: string[],
         workerId: string,
-        holoTranslator: HoloTranslater
-    ): Promise<LLMWorkerResponse> {
+        holoTranslator: IProviderTranslator
+    ): Promise<HoloWorkerResponse> {
         const payload = request.payload;
         const model = (payload && typeof payload === 'object' && 'model' in payload)
             ? (payload as { model?: string }).model
@@ -78,7 +69,7 @@ export class WorkerResponseFactory {
         // For programmatic API calls (JSON schema/object), return structured error
         // For chat clients, return natural language error message
         const formattedError = isStructuredResponse
-            ? JSON.stringify({ error: 'guard_failure', message: errorMessage, errors })
+            ? JSON.stringify({error: 'guard_failure', message: errorMessage, errors})
             : `I could not complete your request due to the following guard issues: ${errorMessage}`;
 
         if (request.isStreaming) {
@@ -89,7 +80,7 @@ export class WorkerResponseFactory {
                 formattedError,
                 request.providerType
             );
-            const providerChunks = await holoTranslator.fromHoloStreamChunks(chunks, request.providerType) as ProviderResponse[];
+            const providerChunks = await holoTranslator.fromHoloStreamChunks(chunks) as any[];
 
             return this.create(
                 request.sourceId,
@@ -106,8 +97,8 @@ export class WorkerResponseFactory {
                 errorId,
                 model || 'unknown',
                 formattedError
-            );
-            const providerPayload = await holoTranslator.fromHoloResponse(holoError, request.providerType) as ProviderResponse;
+            ) as HoloResponse;
+            const providerPayload = await holoTranslator.fromHoloResponse(holoError);
 
             return this.create(
                 request.sourceId,

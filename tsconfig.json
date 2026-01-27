@@ -3,9 +3,12 @@
     "target": "ESNext",
     "module": "ESNext",
     "lib": [
-      "ESNext"
+      "ESNext",
+      "ESNext.Intl"
     ],
     "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true,
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -15,7 +18,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "resolveJsonModule": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
@@ -24,11 +27,39 @@
     "noImplicitThis": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": true,
+    "baseUrl": ".",
+    "paths": {
+      "@holokai/sdk": [
+        "./plugins/sdk/src/index.ts"
+      ],
+      "@holokai/sdk/core": [
+        "./plugins/sdk/src/core/index.ts"
+      ],
+      "@holokai/sdk/core/entities": [
+        "./plugins/sdk/src/core/entities/index.ts"
+      ],
+      "@holokai/sdk/plugin": [
+        "./plugins/sdk/src/plugin/index.ts"
+      ],
+      "@holokai/sdk/provider": [
+        "./plugins/sdk/src/provider/index.ts"
+      ],
+      "@holokai/sdk/holo": [
+        "./plugins/sdk/src/holo/index.ts"
+      ]
+    }
   },
   "ts-node": {
     "esm": true,
-    "experimentalSpecifierResolution": "node"
+    "experimentalSpecifierResolution": "node",
+    "compilerOptions": {
+      "module": "ESNext",
+      "moduleResolution": "node"
+    },
+    "transpileOnly": true,
+    "files": false,
+    "emit": false
   },
   "include": [
     "src/**/*"
@@ -36,7 +67,12 @@
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts"
+    "plugins",
+    "tests"
+  ],
+  "references": [
+    {
+      "path": "./plugins/sdk"
+    }
   ]
 }

@@ -1,7 +1,6 @@
 import winston from "winston";
-import {LoggerFactoryToken} from "../utils";
 import {container} from "tsyringe";
-import logger from "../utils/logger";
+import logger, {LoggerFactoryToken} from "../utils/logger";
 
 
 export abstract class ClassLogger {

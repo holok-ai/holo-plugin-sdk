@@ -1,14 +1,12 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {ProviderType, RequestType} from "../../providers/types";
 import {HttpApiRequest} from "../../api/types";
 import {Response} from "express";
-import {ResponseService, StreamService} from "../../services";
+import {ResponseService} from "../../services";
 import {env} from "../../env";
 import {GuardService} from "./guard.service";
-import {ClassLogger} from "../../types/class.logger";
 import {WorkerRequestFactory} from "../../types";
-import {OrganizationService} from "./organization.service";
+import {ClassLogger, RequestType} from "@holokai/sdk";
 
 
 @injectable()
@@ -17,81 +15,33 @@ export class RequestService extends ClassLogger {
 
     constructor(
         private readonly responseService: ResponseService,
-        private readonly streamService: StreamService,
-        private readonly guardService: GuardService,
-        private organizationService: OrganizationService,
+        private readonly guardService: GuardService
     ) {
         super();
     }
 
-    async processRequest(providerType: ProviderType, type: RequestType, req: HttpApiRequest, res: Response) {
+    async processRequest(providerType: string, type: RequestType, req: HttpApiRequest, res: Response) {
         const logger = this.mlog(this.processRequest);
-        const errors: string[] = [];
-        const {auth, body} = req;
-        const {model = 'unknown'} = body;
-        const provider = (auth?.organizationId === undefined || auth?.appSlug === undefined) ?
-            this.organizationService.getFirstProviderByType(providerType) :
-            this.organizationService.getProviderByModel(auth?.organizationId, auth?.appSlug, model);
+        const {auth} = req;
 
-        const workerRequest = await this.parseRequest(providerType, provider?.name, type, req);
-
-        const responseFormat = (body && typeof body === 'object' && 'response_format' in body)
-            ? (body as { response_format?: { type: string } }).response_format
-            : undefined;
-        const isChatMode = !(responseFormat?.type === 'json_schema' || responseFormat?.type === 'json_object');
-
-        if (!provider) {
-            logger.error(`Provider not found for ${providerType} ${type}, auth: ${JSON.stringify(auth, null, 2)}`,
-                {requestId: workerRequest.requestId});
-            errors.push(`An error occurred while trying to process your request. Please contact your administrator and refer to ${workerRequest.requestId}.`)
-            workerRequest.errors = errors;
-        } else {
-            await this.responseService.createStream(workerRequest.requestId, res, workerRequest.isStreaming, providerType, model);
+        if (!auth || !auth.app) {
+            throw new Error('Unauthorized request. No auth object found.');
         }
 
-        if (provider) {
-            logger.info(`Processing request: ${providerType} ${type}`, {requestId: workerRequest.requestId});
+        const {providerName, app} = auth;
 
-            if (workerRequest.isStreaming && isChatMode) {
-                await this.streamService.injectStatusMessage(
-                    workerRequest.requestId,
-                    model,
-                    'Validating request and running security checks...',
-                    providerType,
-                    isChatMode
-                );
-            }
+        const workerRequest = await this.parseRequest(providerType, providerName, type, req);
 
-            await this.guardService.guard(providerType, type, workerRequest, auth);
-
-            if (workerRequest.isStreaming && isChatMode) {
-                if (workerRequest.guardResult?.passed === false) {
-                    const errorMsg = workerRequest.guardResult.errors?.join(', ') || 'Security check failed';
-                    await this.streamService.injectStatusMessage(
-                        workerRequest.requestId,
-                        model,
-                        `Security check failed: ${errorMsg}`,
-                        providerType,
-                        isChatMode
-                    );
-                } else {
-                    await this.streamService.injectStatusMessage(
-                        workerRequest.requestId,
-                        model,
-                        'Security checks passed, processing your request...',
-                        providerType,
-                        isChatMode
-                    );
-                }
-            }
+        if (app.guards && app.guards.length) {
+            await this.guardService.guard(workerRequest, app.guards, auth);
         }
 
-        await this.responseService.sendRequest(req, workerRequest);
+        await this.responseService.sendRequest(req, res, workerRequest);
 
         logger.info(`Request processed: ${providerType} ${type}`, {requestId: workerRequest.requestId});
     }
 
-    async parseRequest(providerType: ProviderType, providerName: string | undefined, type: RequestType, req: HttpApiRequest) {
+    async parseRequest(providerType: string, providerName: string | undefined, type: RequestType, req: HttpApiRequest) {
         return WorkerRequestFactory.fromRequest(providerType, providerName, type, req, this.serverId);
     }
 }

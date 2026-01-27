@@ -1,7 +1,7 @@
 import 'reflect-metadata';
-import {Constructor} from "../../types";
 import {injectable} from "tsyringe";
 import {IAppServer} from "../base.server";
+import {Constructor} from "@holokai/sdk";
 
 
 export interface ServerStats {

@@ -1,0 +1,91 @@
+{
+  "name": "@holokai/sdk",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Common SDK for Holo plugin system - contracts, types, and validators",
+  "author": "Holokai",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/holokai/holo-plugin-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/holokai/holo-plugin-sdk/issues"
+  },
+  "homepage": "https://github.com/holokai/holo-plugin-sdk#readme",
+  "keywords": [
+    "holokai",
+    "holo",
+    "plugin",
+    "sdk",
+    "ai",
+    "llm"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./dist/plugin/index.d.ts",
+      "import": "./dist/plugin/index.js",
+      "require": "./dist/plugin/index.js"
+    },
+    "./provider": {
+      "types": "./dist/provider/index.d.ts",
+      "import": "./dist/provider/index.js",
+      "require": "./dist/provider/index.js"
+    },
+    "./holo": {
+      "types": "./dist/holo/index.d.ts",
+      "import": "./dist/holo/index.js",
+      "require": "./dist/holo/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js",
+      "require": "./dist/core/index.js"
+    },
+    "./core/entities": {
+      "types": "./dist/core/entities/index.d.ts",
+      "import": "./dist/core/entities/index.js",
+      "require": "./dist/core/entities/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js",
+      "require": "./dist/utils/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*",
+    "!dist/**/*.spec.*",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc --build",
+    "build:watch": "tsc --build --watch",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "prepublishOnly": "npm run clean && npm run build && npm run test"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

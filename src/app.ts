@@ -7,7 +7,7 @@ import bodyParser from 'body-parser';
 import morgan from 'morgan';
 import logger from './utils/logger';
 import {errorMiddleware, nocorsMiddleware} from "./api/middleware";
-import {InitService, ResponseService, StreamService} from "./services";
+import {InitService, ProviderService, ResponseService} from "./services";
 import {createRoutes} from "./api/routes";
 import {env} from "./env";
 import listEndpoints from "express-list-endpoints";
@@ -15,6 +15,10 @@ import {AppDB} from "./db";
 import {ConfigService, OrganizationCacheService, TokenService} from './admin/services';
 import {ConfigFileLoader} from "./admin/services/config.file.loader";
 import {ConfigQueueLoader, ConfigQueueLoaderFactory} from "./admin/services/config.queue.loader";
+import {PluginService} from "./services/plugin/plugin.service";
+import {PluginDiscoveryService} from "./services/plugin/discovery.service";
+import {PluginLoaderService} from "./services/plugin/loader.service";
+import {ProviderPluginRegistry} from "./services/plugin/provider-registry.service";
 
 // Initialize Express app
 const app: Application = express();
@@ -50,7 +54,11 @@ container.registerSingleton(ResponseService)
     .registerSingleton(TokenService)
     .registerSingleton(ConfigFileLoader)
     .registerSingleton(ConfigQueueLoader, ConfigQueueLoaderFactory)
-    .registerSingleton(StreamService)
+    .registerSingleton(PluginService)
+    .registerSingleton(PluginDiscoveryService)
+    .registerSingleton(PluginLoaderService)
+    .registerSingleton(ProviderPluginRegistry)
+    .registerSingleton(ProviderService)
 
 const configService: ConfigService = container.resolve(ConfigService);
 
@@ -82,12 +90,9 @@ async function initApp(): Promise<void> {
     try {
         // const queueService = container.resolve(QueueService);
         const initService = container.resolve(InitService);
-        const responseService: ResponseService = container.resolve(ResponseService);
-
 
         logger.debug(`Creating API Server with id ${env.api.apiServerId}`);
-        await initService.setupQueues(env.api.apiServerId);
-        await responseService.startLLMResponseConsumer();
+        await initService.init(env.api.apiServerId);
 
         // wait for initial config, or throw error for visibility
         try {
@@ -109,7 +114,7 @@ async function initApp(): Promise<void> {
         });
 
         // Handle server errors
-        server.on('error', (error: NodeJS.ErrnoException): void => {
+        server.on('error', (error: Error & { code?: string; syscall?: string }): void => {
             logger.error(`Server error: ${error.message}`);
             if (error.syscall !== 'listen') {
                 throw error;

@@ -150,8 +150,6 @@ export class TokenService {
                 const ttl = Math.max(1, auth.exp - Math.floor(Date.now() / 1000));
                 this.cache.set(accessToken, slugs, ttl);
             }
-
-            logger.debug('Extracted appSlugs', {appSlugsCount: slugs.length});
             return slugs;
         } catch (e) {
             const err = e as Error;

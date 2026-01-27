@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import {QueueService} from "../../services";
-import {Constructor} from "../../types";
 import logger from "../../utils/logger";
 import {container, injectable} from "tsyringe";
 import {IAppServer} from "../base.server";
+import {Constructor} from "@holokai/sdk";
 
 /**
  * Mixin to add queue functionality to a class

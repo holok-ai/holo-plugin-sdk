@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {OrganizationCacheService} from "./organization.cache.service";
 import {Application, Model, OrganizationCache, Prompt, Provider} from "../../cache";
-import {ProviderType} from "../../providers/types";
 import {ClassLogger} from "../../types/class.logger";
 
 @injectable()
@@ -21,23 +20,33 @@ export class OrganizationService extends ClassLogger {
         return this.orgCacheService.getApplication(orgId, appId);
     }
 
-    /** @deprecated **/
-    getFirstProviderByType(providerType: ProviderType): Provider | undefined {
-        return this.orgCacheService.getFirstProviderOfType(providerType);
-    }
-
-    getProviderByModel(orgId: string, slug: string, modelName: string): Provider | undefined {
+    getProviderByModel(orgId: string, slug: string, modelName: string): Provider {
         const logger = this.mlog(this.getProviderByModel);
         const models = this.getModels(orgId, slug);
-        logger.info(`Models: ${JSON.stringify(models, null, 2)}`);
-        logger.info(`Model name: ${modelName}`);
-        if (!models) return;
+        if (!models) {
+            let msg = `[${orgId}](${slug}) No models found application.`;
+            logger.error(msg);
+            throw new Error(msg);
+        }
 
         const model = models.find(m => m.name === modelName || m.accessModel === modelName);
-        logger.info(`Model: ${JSON.stringify(model, null, 2)}`);
-        if (!model) return;
 
-        return this.getProvider(orgId, model.providerName);
+        if (!model) {
+            let msg = `[${orgId}](${slug}) Model not found: ${modelName}`;
+            logger.error(msg);
+            logger.error(`Available models: ${JSON.stringify(models)}`);
+            throw new Error(msg);
+        }
+
+        const provider = this.getProvider(orgId, model.providerName);
+
+        if (!provider) {
+            let msg = `[${orgId}](${slug}) No provider found with model.`;
+            logger.error(msg);
+            throw new Error(msg);
+        }
+
+        return provider;
     }
 
 
@@ -64,14 +73,14 @@ export class OrganizationService extends ClassLogger {
     }
 
     getGuards(orgId: string, urlSlug: string): Prompt[] | undefined {
-        return this.orgCacheService.getApplication(orgId, urlSlug)?.guards;
+        return this.orgCacheService.getApplication(orgId, urlSlug)!.guards;
     }
 
     getSystemPrompt(orgId: string, urlSlug: string): Prompt | undefined {
-        return this.orgCacheService.getApplication(orgId, urlSlug)?.systemPrompt;
+        return this.orgCacheService.getApplication(orgId, urlSlug)!.systemPrompt;
     }
 
     getEvaluators(orgId: string, urlSlug: string): Prompt[] | undefined {
-        return this.orgCacheService.getApplication(orgId, urlSlug)?.evaluators;
+        return this.orgCacheService.getApplication(orgId, urlSlug)!.evaluators;
     }
 }

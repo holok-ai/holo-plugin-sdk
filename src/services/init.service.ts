@@ -3,14 +3,28 @@ import {QueueService} from "./queue.service";
 import {injectable} from "tsyringe";
 import {env} from "../env";
 import logger from "../utils/logger";
+import {ProviderService} from "./provider.service";
+import {PluginService} from "./plugin/plugin.service";
+import {ResponseService} from "./response.service";
 
 @injectable()
 export class InitService {
     private serverId: string = env.worker.serverId;
     constructor(
+        private pluginService: PluginService,
+        private providerService: ProviderService,
+        private responseService: ResponseService,
         private queueService: QueueService) {
 
     }
+
+    async init(serverId: string): Promise<void>  {
+        await this.pluginService.initializePluginSystem();
+        await this.providerService.init(serverId);
+        await this.setupQueues(serverId);
+        await this.responseService.startLLMResponseConsumer()
+    }
+
     // TODO: Move exchange and queue configuration to a dedicated config service or external config file
     // This would allow for better separation of concerns and easier configuration management
     //to create and validate on every startup

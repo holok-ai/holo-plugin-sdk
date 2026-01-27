@@ -1,7 +1,7 @@
-import { InternalEvaluatorBase } from './internal.base';
-import { AuditServiceEvent, EvaluatorResult } from '../../types/evaluator.types';
-import { LlmResponse } from '../../db/types';
+import {InternalEvaluatorBase} from './internal.base';
+import {AuditServiceEvent, EvaluatorResult} from '../../types';
 import logger from '../../utils/logger';
+import {LlmResponse} from "@holokai/sdk/dist/core/entities";
 
 class CodeBlock {
     language!: string;
@@ -13,7 +13,7 @@ interface UnifiedDiffBlock {
     tool: string,
     originalBlock: string;
     diffBlock: string;
-    filePath: string, 
+    filePath: string,
     fileName: string;
 }
 
@@ -61,7 +61,7 @@ export class ResponseCompleteEvaluator extends InternalEvaluatorBase {
                 tool: "text",
                 originalBlock: codeBlock.block,
                 diffBlock: diffLines.join('\n'),
-                filePath: filename, 
+                filePath: filename,
                 fileName: filename
             };
             diffBlocks.push(diffBlock);
@@ -149,7 +149,7 @@ export class ResponseCompleteEvaluator extends InternalEvaluatorBase {
             tool: responseRaw.tool_name,
             originalBlock: originalContent,
             diffBlock: diffLines.join('\n'),
-            filePath: filePath, 
+            filePath: filePath,
             fileName: filename
         });
 
@@ -207,7 +207,7 @@ export class ResponseCompleteEvaluator extends InternalEvaluatorBase {
             message: "",
             userId: userId,
             next_events: [],
-            result: { key: "output", value: { diff_blocks: diffBlocks } }
+            result: {key: "output", value: {diff_blocks: diffBlocks}}
         };
 
         return Promise.resolve(results);

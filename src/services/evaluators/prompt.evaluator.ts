@@ -1,9 +1,7 @@
 import {EvaluatorEvent, EvaluatorResult, IEvaluator} from '../../types';
-import {Evaluator, EvaluatorData, LlmResponse, Prompt, Provider} from '../../db/types';
-import {OllamaProvider} from '../../providers';
+import {Prompt} from '@holokai/sdk';
 import {EvaluatorDB} from '../../db';
-import logger from '../../utils/logger';
-import {OllamaChatRequest} from "../../providers/ollama/types";
+import {Evaluator, EvaluatorData, LlmResponse, Provider} from "@holokai/sdk/dist/core/entities";
 
 export class PromptEvaluator implements IEvaluator {
     evaluatorId: string;
@@ -36,95 +34,95 @@ export class PromptEvaluator implements IEvaluator {
         }
 
         // Set evaluator name from prompt name
-        this.evaluatorName = this.prompt.name || "";
+        this.evaluatorName = this.prompt.id || "";
 
-        if (this.prompt.provider) {
-            this.provider = await this.evaluatorDb.getProvider(this.prompt.provider);
+        if (this.prompt.providerName) {
+            this.provider = await this.evaluatorDb.getProvider(this.prompt.providerName);
             if (!this.provider || !(this.provider.name.toLowerCase() === 'ollama')) {
                 throw new Error(`Provider ${(!this.provider ? "was not found" : "must be OLLAMA.")}`);
             }
         }
     }
 
-    async evaluate(event: EvaluatorEvent): Promise<EvaluatorResult> {
-        try {
-            if (!this.prompt || !this.provider) {
-                throw new Error('Prompt and Provider are not configured for this evaluator');
-            }
+    async evaluate(_event: EvaluatorEvent): Promise<EvaluatorResult> {
+        // try {
+        //     if (!this.prompt || !this.provider) {
+        throw new Error('Prompt and Provider are not configured for this evaluator');
+        // }
 
-            // Extract LlmResponse and EvaluatorData from context if available
-            let llmResponse: LlmResponse | null = null;
-            let evaluatorData: EvaluatorData | null = null;
+        // // Extract LlmResponse and EvaluatorData from context if available
+        // let llmResponse: LlmResponse | null = null;
+        // let evaluatorData: EvaluatorData | null = null;
+        //
+        // if (event.context) {
+        //     const llmResponseData = event.context.find(c => c.key === "llm_responses")?.value as any;
+        //     if (llmResponseData) {
+        //         llmResponse = llmResponseData;
+        //     }
+        //
+        //     const evalDataContext = event.context.find(c => c.key === "evaluators_data")?.value as any;
+        //     if (evalDataContext) {
+        //         evaluatorData = evalDataContext;
+        //     }
+        // }
+        //
+        // // const modelName = this.prompt.model || '';
+        // const structuredOutput = this.prompt.parameters?.output_format;
+        // const systemPrompt = this.substituteTags(this.prompt.system_prompt || '', this.prompt, llmResponse, evaluatorData);
+        // const userPrompt = this.substituteTags(this.prompt.user_prompt, this.prompt, llmResponse, evaluatorData);
+        //
+        // logger.debug(`Running prompt evaluation with model ${modelName}`);
+        //
+        // const aiProvider: OllamaProvider = new OllamaProvider(this.provider, null as any, 'evaluator-worker');
+        // await aiProvider.init();
+        //
+        // const chatRequest: OllamaChatRequest = {
+        //     model: modelName,
+        //     messages: [
+        //         {role: 'system', content: systemPrompt || 'You are a helpful assistant.'},
+        //         {role: 'user', content: userPrompt}
+        //     ],
+        //     format: structuredOutput,
+        //     stream: false
+        // };
+        //
+        // // @ts-ignore
+        // const response = await aiProvider.client.chat(chatRequest);
+        // const content = response.message.content;
+        //
+        // // Check if content is valid JSON
+        // let value;
+        // try {
+        //     value = JSON.parse(content);
+        // } catch {
+        //     // If not JSON, wrap in an object
+        //     value = {data: content};
+        // }
 
-            if (event.context) {
-                const llmResponseData = event.context.find(c => c.key === "llm_responses")?.value as any;
-                if (llmResponseData) {
-                    llmResponse = llmResponseData;
-                }
-
-                const evalDataContext = event.context.find(c => c.key === "evaluators_data")?.value as any;
-                if (evalDataContext) {
-                    evaluatorData = evalDataContext;
-                }
-            }
-
-            const modelName = this.prompt.model || '';
-            const structuredOutput = this.prompt.parameters?.output_format;
-            const systemPrompt = this.substituteTags(this.prompt.system_prompt || '', this.prompt, llmResponse, evaluatorData);
-            const userPrompt = this.substituteTags(this.prompt.user_prompt, this.prompt, llmResponse, evaluatorData);
-
-            logger.debug(`Running prompt evaluation with model ${modelName}`);
-
-            const aiProvider: OllamaProvider = new OllamaProvider(this.provider, null as any, 'evaluator-worker');
-            await aiProvider.init();
-
-            const chatRequest: OllamaChatRequest = {
-                model: modelName,
-                messages: [
-                    {role: 'system', content: systemPrompt || 'You are a helpful assistant.'},
-                    {role: 'user', content: userPrompt}
-                ],
-                format: structuredOutput,
-                stream: false
-            };
-
-            // @ts-ignore
-            const response = await aiProvider.client.chat(chatRequest);
-            const content = response.message.content;
-
-            // Check if content is valid JSON
-            let value;
-            try {
-                value = JSON.parse(content);
-            } catch {
-                // If not JSON, wrap in an object
-                value = {data: content};
-            }
-
-            return {
-                status: "ok",
-                message: "Prompt evaluated successfully",
-                next_events: [],
-                result: {key: "output", value: value},
-                userId: llmResponse?.user_id || '',
-                organizationId: llmResponse?.organization_id || '',
-                applicationId: llmResponse?.application_id || ''
-            };
-
-        } catch (error) {
-            logger.error('Failed to evaluate prompt:', error);
-            return {
-                status: "error",
-                message: error instanceof Error ? error.message : String(error),
-                next_events: []
-            };
-        }
+        // return {
+        //     status: "ok",
+        //     message: "Prompt evaluated successfully",
+        //     next_events: [],
+        //     result: {key: "output", value: value},
+        //     userId: llmResponse?.user_id || '',
+        //     organizationId: llmResponse?.organization_id || '',
+        //     applicationId: llmResponse?.application_id || ''
+        // };
+        //
+        // } catch (error) {
+        //     logger.error('Failed to evaluate prompt:', error);
+        //     return {
+        //         status: "error",
+        //         message: error instanceof Error ? error.message : String(error),
+        //         next_events: []
+        //     };
+        // }
     }
 
     /**
      * Substitutes handlebar-style tags in a template string with values from db table objects.
      */
-    private substituteTags(
+    protected substituteTags(
         template: string,
         prompt: Prompt,
         llmResponse: LlmResponse | null,
