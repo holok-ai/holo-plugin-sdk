@@ -62,17 +62,17 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                     const evt = {
                         type: 'error',
                         requestId,
-                        seq: 1,
+                        seq: 0,
                         ts: Date.now(),
+                        status: 400,
                         error: ai.responseFactory.createError(workerRequest.type, errorMessage)
                     } as ProviderEvent;
 
-                    await this.responseService.sendWireChunk(sourceId, requestId, wire.start(400));
                     for (const wireChunk of wire.fromProviderEvent(evt)) {
                         logger.info(JSON.stringify(wireChunk));
-                        await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt));
                         await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                     }
+                    await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt));
                 } else {
                     const wire = await this.wireService.matchWireAdapter(ai.family, ai.version, {
                         requestId,
@@ -80,7 +80,6 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         requestType: workerRequest.type,
                     });
 
-                    await this.responseService.sendWireChunk(sourceId, requestId, wire.start());
                     const q = await ai.processWorkerRequest(workerRequest);
 
                     for await (const evt of q) {
@@ -88,14 +87,12 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         for (const wireChunk of wire.fromProviderEvent(evt)) {
                             await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                         }
-                        if (evt.type in ['done', 'error']) {
+                        if (evt.type === "done" || evt.type === "error") {
                             await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt))
-                            break; // is this necessary?
+                            break;
                         }
                     }
                 }
-
-
             } catch (error) {
                 logger.error(`Error handling request (${requestId}): ${(error as Error).message}`);
                 logger.error(JSON.stringify(workerRequest, null, 2));

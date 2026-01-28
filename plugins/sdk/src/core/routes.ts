@@ -2,7 +2,9 @@ import {RequestType} from "../holo";
 
 export enum RouteHandler {
     MODELS = 'models',
-    REQUEST = 'request'
+    REQUEST = 'request',
+    PASSTHROUGH = 'passthrough',
+    NOOP = 'noop',
 }
 
 export type RouteDefinition = {

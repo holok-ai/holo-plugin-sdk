@@ -130,10 +130,6 @@ export class ResponseService extends ClassLogger {
         await this.queueService.sendToExchange(exchange, "", request, {correlationId});
     }
 
-    async sendWireChunk(sourceId: string, requestId: string, chunk: WireChunk) {
-        await this.queueService.sendToExchange(env.queue.responseExchange, sourceId, chunk, {correlationId: requestId});
-    }
-
     async sendResponseChunk(sourceId: string, requestId: string, data: object) {
         await this.queueService.sendToExchange(env.queue.responseExchange, sourceId, data, {correlationId: requestId});
     }

@@ -15,12 +15,13 @@ export class AppController extends BaseController {
         try {
             const {provider, appSlug} = req.params;
             const remainingPath = req.params[0];
+            const method = req.method;
 
             // Rewrite the URL to match the provider route
             req.appSlug = appSlug;
             req.url = `/api/${provider.toLowerCase()}/${remainingPath}`;
 
-            logger.debug(`Rerouting to: ${req.url}`);
+            logger.debug(`Rerouting ${method} request to: ${req.url}`);
 
             // Forward to Express routing
             (req.app as any).handle(req, res, (err: any) => {

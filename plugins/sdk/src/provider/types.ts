@@ -5,11 +5,10 @@ import {IProviderTranslator} from "./translator";
 import {LlmRequest, LlmResponse} from "../core/entities";
 
 export type ProviderEvent =
-    | { type: "provider_start"; requestId: string; provider: string; ts: number }
     | { type: "stream_event"; requestId: string; seq: number; event: any; ts: number }
     | { type: "text_delta"; requestId: string; seq: number; text: string; ts: number }
     | { type: "done"; requestId: string; seq: number; message: any; text: string; metrics?: any; ts: number }
-    | { type: "error"; requestId: string; seq: number; error: any; status?: number, ts: number };
+    | { type: "error"; requestId: string; seq: number; error: any; status?: number; headers?: Record<string, string>; ts: number };
 
 export type ProviderEnvelope = {
     model_slug: string;

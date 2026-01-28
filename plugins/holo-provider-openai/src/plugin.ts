@@ -3,8 +3,8 @@ import {manifest} from "./manifest.js";
 import {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/sdk/provider";
 import {OpenAIProvider} from "./openai.provider";
 import {RequestType, RouteHandler, RouteTree, RouteTreeNode} from "@holokai/sdk";
-import {OpenAIChatWireAdapter, OpenAIResponsesWireAdapter} from "./adapters";
 import {OpenAITranslator} from "./openai.translator";
+import {OpenAIWireAdapter} from "./openai.wire.adapter";
 
 export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin {
     manifest = manifest;
@@ -20,10 +20,8 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
     }
 
     createWireAdapter(params: WireAdapterParams): IWireAdapter {
-        const {requestId, isStreaming, requestType} = params;
-        return requestType === RequestType.RESPONSES
-            ? new OpenAIResponsesWireAdapter(requestId, isStreaming)
-            : new OpenAIChatWireAdapter(requestId, isStreaming);
+        const {requestId, isStreaming} = params;
+        return new OpenAIWireAdapter(requestId, isStreaming);
     }
 
     getCapabilities(): ProviderCapabilities {

@@ -7,7 +7,7 @@ import {Message} from '@anthropic-ai/sdk/resources/messages/messages';
 import {ClaudeTranslator} from './claude.translator';
 import {ClaudeResponseFactory} from './claude.response.factory';
 import {APIError} from "@anthropic-ai/sdk";
-import {ErrorResponse, ErrorObject} from "@anthropic-ai/sdk/resources/shared";
+import {ErrorObject, ErrorResponse} from "@anthropic-ai/sdk/resources/shared";
 
 export class ClaudeProvider extends BaseProvider<Anthropic, MessageCreateParamsBase> {
 
@@ -38,7 +38,6 @@ export class ClaudeProvider extends BaseProvider<Anthropic, MessageCreateParamsB
     }
 
     protected async handleRequest(payload: MessageCreateParamsBase, ctx: ProviderContext) {
-
         if (payload.stream) {
             const s = this.client.messages.stream(payload);
             s.on('streamEvent', (event: any) => ctx.emitStreamEvent(event));

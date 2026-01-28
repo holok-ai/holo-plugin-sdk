@@ -49,4 +49,12 @@ export class ProviderHandlers extends ClassLogger {
             }
         };
     }
+
+    createNoOpHandler(providerFamily: string) {
+        return async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+            const logger = this.mlog(`${providerFamily}NoOpHandler`);
+            logger.debug(`Received data: ${JSON.stringify(req.body)}`);
+            res.status(204);
+        }
+    }
 }

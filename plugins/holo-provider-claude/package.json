@@ -59,8 +59,7 @@
     "prepublishOnly": "npm run clean && npm run build && npm run test"
   },
   "peerDependencies": {
-    "@holokai/sdk": "^0.1.0",
-    "arktype": "^2.0.0"
+    "@holokai/sdk": "^0.1.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.1"

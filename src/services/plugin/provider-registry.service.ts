@@ -83,7 +83,7 @@ export class ProviderPluginRegistry extends ClassLogger implements IPluginRegist
     private buildRoutesFromTree(
         router: Router,
         tree: RouteTree,
-        handlers: { modelsHandler: any; requestHandler: (rt: RequestType) => any },
+        handlers: { noOpHandler: any; modelsHandler: any; requestHandler: (rt: RequestType) => any },
         authMiddleware: (req: HttpApiRequest, res: express.Response, next: NextFunction) => Promise<void>,
         providerFamily: string,
         basePath: string = ''
@@ -96,9 +96,18 @@ export class ProviderPluginRegistry extends ClassLogger implements IPluginRegist
             if (this.isRouteDefinition(value)) {
                 const routeDef = value as RouteDefinition;
 
-                const handler = routeDef.handler === RouteHandler.MODELS
-                    ? handlers.modelsHandler
-                    : handlers.requestHandler(routeDef.requestType!);
+                let handler;
+                switch (routeDef.handler) {
+                    case RouteHandler.MODELS:
+                        handler = handlers.modelsHandler;
+                        break;
+                    case RouteHandler.REQUEST:
+                        handler = handlers.requestHandler(routeDef.requestType!);
+                        break;
+                    default:
+                        handler = handlers.noOpHandler;
+                        break;
+                }
 
                 const method = routeDef.method.toLowerCase() as 'get' | 'post';
                 router[method](currentPath, authMiddleware, handler);
@@ -131,6 +140,7 @@ export class ProviderPluginRegistry extends ClassLogger implements IPluginRegist
             const pluginRouter = Router();
 
             const pluginHandlers = {
+                noOpHandler: providerHandlers.createNoOpHandler(plugin.family),
                 modelsHandler: providerHandlers.createModelsHandler(),
                 requestHandler: (requestType: RequestType) =>
                     providerHandlers.createRequestHandler(plugin.family, requestType)

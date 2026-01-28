@@ -51,7 +51,15 @@ export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin 
                     requestType: RequestType.CHAT,
                     handler: RouteHandler.REQUEST
                 }
-            }
+            },
+            // api: {
+            //     event_logging: {
+            //         batch: {
+            //             method: 'POST',
+            //             handler: RouteHandler.NOOP
+            //         }
+            //     }
+            // }
         }
     }
 
