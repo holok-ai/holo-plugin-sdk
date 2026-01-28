@@ -8,7 +8,7 @@ import {
     RequestType,
     RunHandle
 } from '@holokai/sdk';
-import {ResponseCreateParamsBase, ResponseErrorEvent} from 'openai/resources/responses/responses';
+import {ResponseCreateParamsBase, ResponseErrorEvent, ResponseStreamEvent} from 'openai/resources/responses/responses';
 import {ChatCompletionCreateParamsBase} from 'openai/resources/chat/completions';
 import {OpenAIAuditor} from './openai.auditor';
 import {Model, ModelsPage} from 'openai/resources/models';
@@ -16,6 +16,7 @@ import {OpenAITranslator} from './openai.translator';
 import {OpenAIResponseFactory} from './openai.response.factory';
 import {APIError} from "openai/core/error";
 import {ChatCompletionCreateParamsStreaming} from "openai/resources/chat/completions/completions";
+import {Stream} from "openai/core/streaming";
 
 /**
  * OpenAI provider for connecting to OpenAI API
@@ -80,48 +81,37 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         if (!req.stream) {
             return {
                 final: async () => {
-                    return this.client.responses.create({...req, stream: false} as any);
+                    return this.client.responses.create({...req, stream: false});
                 },
             };
         }
 
         const finalPromise = (async () => {
-            const stream = await this.client.responses.create({...req, stream: true} as any);
+            const stream = await this.client.responses.create({
+                ...req,
+                stream: true
+            } as ResponseCreateParamsBase) as Stream<ResponseStreamEvent>;
 
-            let terminalEvent: any = null;
-            let responseId: string | null = null;
-            let usage: any = null;
-            let status: string | null = null;
+            let finalChunk;
 
-            for await (const event of stream as any) {
+            for await (const event of stream) {
                 ctx.emitStreamEvent(event);
 
-                // Often you can capture id/status as they appear
-                if (event?.response?.id) responseId = event.response.id;
-                if (event?.response?.status) status = event.response.status;
-                if (event?.response?.usage) usage = event.response.usage;
-
-                if (event?.type === 'response.output_text.delta' && typeof event.delta === 'string') {
+                if (event.type === 'response.output_text.delta') {
                     ctx.emitTextDelta(event.delta);
                 }
 
                 if (
-                    event?.type === 'response.completed' ||
-                    event?.type === 'response.failed' ||
-                    event?.type === 'response.incomplete' ||
-                    event?.type === 'error'
+                    event.type === 'response.completed' ||
+                    event.type === 'response.failed' ||
+                    event.type === 'response.incomplete' ||
+                    event.type === 'error'
                 ) {
-                    terminalEvent = event;
+                    finalChunk = event;
                 }
             }
 
-            // Return something meaningful
-            return {
-                responseId,
-                status,
-                usage,
-                terminalEvent,
-            };
+            return finalChunk;
         })();
 
         return {final: () => finalPromise};

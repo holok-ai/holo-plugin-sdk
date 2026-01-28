@@ -4,7 +4,7 @@ import {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "
 import {OpenAIProvider} from "./openai.provider";
 import {RequestType, RouteHandler, RouteTree, RouteTreeNode} from "@holokai/sdk";
 import {OpenAITranslator} from "./openai.translator";
-import {OpenAIWireAdapter} from "./openai.wire.adapter";
+import {OpenAICompletionsWireAdapter, OpenAIResponsesWireAdapter} from "./openai.wire.adapter";
 
 export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin {
     manifest = manifest;
@@ -20,8 +20,10 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
     }
 
     createWireAdapter(params: WireAdapterParams): IWireAdapter {
-        const {requestId, isStreaming} = params;
-        return new OpenAIWireAdapter(requestId, isStreaming);
+        const {requestId, isStreaming, requestType} = params;
+        return requestType === RequestType.RESPONSES
+            ? new OpenAIResponsesWireAdapter(requestId, isStreaming)
+            : new OpenAICompletionsWireAdapter(requestId, isStreaming);
     }
 
     getCapabilities(): ProviderCapabilities {
@@ -47,7 +49,7 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
                     handler: RouteHandler.REQUEST
                 }
             },
-            response: {
+            responses: {
                 method: 'POST',
                 requestType: RequestType.RESPONSES,
                 handler: RouteHandler.REQUEST
