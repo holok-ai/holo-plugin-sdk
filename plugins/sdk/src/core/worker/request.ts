@@ -10,6 +10,7 @@ export interface HoloWorkerRequest {
     appSlug?: string;
     userId?: string;
     thread_id?: string;
+    branch_id?: string;
     requestId: string;
     type: RequestType;
     payload: any;

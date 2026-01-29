@@ -25,7 +25,10 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
         if (!workerRequest.requestId) {
             logger.error(`No requestId for workerRequest: ${JSON.stringify(workerRequest)}`);
         }
-        return pickDefined({
+
+        const providerEnvelope = await this.createProviderEnvelope(workerRequest.payload);
+
+        const envelope = {
             request_id: workerRequest.requestId,
             request_type: workerRequest.type,
             organization_id: workerRequest.organizationId,
@@ -35,9 +38,14 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
             timestamp: new Date(workerRequest.timestamp).toISOString(),
             source_id: workerRequest.sourceId,
             thread_id: workerRequest.thread_id,
+            branch_id: workerRequest.branch_id,
             raw_request: workerRequest.payload,
-            ...await this.createProviderEnvelope(workerRequest.payload)
-        }) as WorkerRequestEnvelope;
+            ...providerEnvelope
+        };
+
+        const result = pickDefined(envelope) as WorkerRequestEnvelope;
+
+        return result;
     }
 
     async createWorkerResponseEnvelope(workerRequest: HoloWorkerRequest, workerId?: string): Promise<WorkerResponseEnvelope> {
@@ -55,10 +63,23 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
 
     async auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest> {
         const requestEnvelope = await this.createWorkerRequestEnvelope(workerRequest);
-        return pickDefined({
+
+        const llmRequest: Omit<LlmRequest, 'id'> = {
             ...requestEnvelope
-        }) as LlmRequest;
+        } as Omit<LlmRequest, 'id'>;
+
+        // Call provider-specific mapping methods to extract user_prompt, options, etc.
+        this.toHoloRequest(workerRequest, llmRequest);
+        this.mapProviderPayload(workerRequest, llmRequest);
+
+        const finalResult = pickDefined(llmRequest) as LlmRequest;
+
+        return finalResult;
     }
+
+    // Abstract methods that provider-specific auditors must implement
+    protected abstract toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
+    protected abstract mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
 
     async auditResponse(
         responseEnvelope: WorkerResponseEnvelope,

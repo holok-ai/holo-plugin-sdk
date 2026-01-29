@@ -10,6 +10,7 @@ export interface LlmRequest {
     source_id?: string;
     user_id?: string;
     thread_id?: string;
+    branch_id?: string;
     timestamp: string;
     raw_request?: Record<string, any>;
     application_id: string;

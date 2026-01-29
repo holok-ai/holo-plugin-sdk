@@ -6,6 +6,7 @@ export interface WorkerRequestEnvelope {
     source_id?: string;
     user_id?: string;
     thread_id?: string;
+    branch_id?: string;
     timestamp: string;
     model_slug: string;
     provider_slug: string;
