@@ -24,7 +24,11 @@ export class ConfigService extends EventEmitter {
     async processConfig(holoConfig: HoloConfig): Promise<boolean> {
 
         logger.info(`Processing config: ${holoConfig.configType} with ${holoConfig.data.length} entries`);
-        const config = await this.validateConfig(holoConfig);
+
+        // Transform old format to new format before validation
+        const transformedConfig = this.transformConfig(holoConfig);
+
+        const config = await this.validateConfig(transformedConfig);
 
         try {
             if (config instanceof ArkErrors) {
@@ -70,5 +74,38 @@ export class ConfigService extends EventEmitter {
 
     isInitialized(): boolean {
         return this.initialized;
+    }
+
+    private transformConfig(config: HoloConfig): HoloConfig {
+        // Only transform ORGANIZATION and APPLICATION configs
+        if (config.configType !== HoloConfigType.ORGANIZATION && config.configType !== HoloConfigType.APPLICATION) {
+            return config;
+        }
+
+        const transformedData = config.data.map((item: any) => {
+            if (item.applications) {
+                // ORGANIZATION config - transform nested applications
+                return {
+                    ...item,
+                    applications: item.applications.map((app: any) => {
+                        if (!app.providerName && app.providerType) {
+                            return { ...app, providerName: app.providerType.toLowerCase() };
+                        }
+                        return app;
+                    })
+                };
+            } else if (item.urlSlug) {
+                // APPLICATION config - transform application directly
+                if (!item.providerName && item.providerType) {
+                    return { ...item, providerName: item.providerType.toLowerCase() };
+                }
+            }
+            return item;
+        });
+
+        return {
+            ...config,
+            data: transformedData
+        };
     }
 }

@@ -38,15 +38,11 @@ export class AuditService extends ClassLogger {
         try {
             // Type guard to check if it's an HoloWorkerRequest
             if (this.isHoloWorkerRequest(content)) {
-                logger.debug(`Logging HoloWorkerRequest - requestId: ${content.requestId}, type: ${content.type}, provider: ${content.providerName}`);
                 const ai = await this.providerService.matchProvider(content.providerName);
                 const mappedRequest = await ai.auditRequest(content);
                 await this.insertRequest(mappedRequest);
-                logger.info(`Successfully logged HoloWorkerRequest ${content.requestId} in ${Date.now() - startTime}ms`);
             } else {
-                logger.debug(`Logging direct LlmRequest - requestId: ${content.request_id}, type: ${content.request_type}`);
                 await this.insertRequest(content);
-                logger.info(`Successfully logged LlmRequest ${content.request_id} in ${Date.now() - startTime}ms`);
             }
         } catch (error) {
             logger.error(`Failed to log request: ${error instanceof Error ? error.message : 'Unknown error'}: ${JSON.stringify(content, null, 2)}`, {
@@ -85,7 +81,7 @@ export class AuditService extends ClassLogger {
         const startTime = Date.now();
         try {
             await this.requestDB.insert(content);
-            logger.debug(`Database insert successful for request ${content.request_id} in ${Date.now() - startTime}ms`);
+            logger.info(`Successfully logged LlmRequest ${content.request_id} in ${Date.now() - startTime}ms`);
         } catch (error) {
             logger.error(`Database insert failed for request ${content.request_id}: ${error instanceof Error ? error.message : 'Unknown error'}`, {
                 requestId: content.request_id,
