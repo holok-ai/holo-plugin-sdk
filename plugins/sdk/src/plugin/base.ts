@@ -128,6 +128,7 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
     }
 
     async initialize(context: PluginContext): Promise<void> {
+        const logger = this.mlog(this.initialize);
         if (this._state !== PluginState.UNINITIALIZED) {
             throw new PluginError(
                 `Cannot initialize plugin in state ${this._state}`,
@@ -140,13 +141,13 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
         this._context = context;
 
         try {
-            this.log.debug('Initializing plugin');
+            logger.debug('Initializing plugin');
             await this.onInitialize(context);
             this._state = PluginState.READY;
-            this.log.info('Plugin initialized successfully');
+            logger.info('Plugin initialized successfully');
         } catch (error) {
             this._state = PluginState.ERROR;
-            this.log.error('Plugin initialization failed', {error});
+            logger.error('Plugin initialization failed', {error});
             throw new PluginError(
                 'Failed to initialize plugin',
                 PluginErrorCode.INITIALIZATION_FAILED,
@@ -157,6 +158,7 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
     }
 
     async destroy(): Promise<void> {
+        const logger = this.mlog(this.destroy);
         if (this._state === PluginState.DESTROYED) {
             return;
         }
@@ -169,7 +171,7 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
         this._state = PluginState.DESTROYING;
 
         try {
-            this.log.info('Destroying plugin');
+            logger.info('Destroying plugin');
             await this.onDestroy();
             this._state = PluginState.DESTROYED;
             this._context = undefined;
@@ -177,7 +179,7 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
             this._state = PluginState.ERROR;
             // Fall back to console if logger is gone
             try {
-                this.log.error('Plugin destruction failed', {error});
+                logger.error('Plugin destruction failed', {error});
             } catch {
                 console.error(`[${this.manifest.name}] Plugin destruction failed`, error);
             }
@@ -191,6 +193,7 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
     }
 
     async healthCheck(): Promise<HealthCheckResult> {
+        const logger = this.mlog(this.healthCheck);
         const timestamp = Date.now();
 
         if (this._state !== PluginState.READY) {
@@ -210,7 +213,7 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
                 }
             );
         } catch (error) {
-            this.log.warn('Health check failed', {error});
+            logger.warn('Health check failed', {error});
             return {
                 healthy: false,
                 message: error instanceof Error ? error.message : 'Health check failed',

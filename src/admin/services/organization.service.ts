@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {OrganizationCacheService} from "./organization.cache.service";
 import {Application, Model, OrganizationCache, Prompt, Provider} from "../../cache";
-import {ClassLogger} from "../../types/class.logger";
+import {ClassLogger} from "@holokai/sdk";
 
 @injectable()
 export class OrganizationService extends ClassLogger {

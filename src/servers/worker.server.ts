@@ -36,7 +36,6 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
         await this.queueService.consume(requestQueue, async (requestId, workerRequest: HoloWorkerRequest) => {
             this.stats.totalRequests++;
             logger.info(`Worker ${this.id} handling request: ${requestId} provider: ${workerRequest.providerName} from server ${workerRequest.sourceId} and queue ${requestQueue}...`);
-            logger.debug(JSON.stringify(workerRequest));
             try {
                 const ai: IProvider = await this.providerService.matchProvider(workerRequest.providerName);
                 logger.info(`resolved ai provider: ${ai.name}`);
@@ -69,7 +68,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                     } as ProviderEvent;
 
                     for (const wireChunk of wire.fromProviderEvent(evt)) {
-                        logger.info(JSON.stringify(wireChunk));
+                        logger.debug(`Guard failed response: ${JSON.stringify(wireChunk)}`);
                         await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                     }
                     await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt));
@@ -83,11 +82,15 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                     const q = await ai.processWorkerRequest(workerRequest);
 
                     for await (const evt of q) {
-                        logger.debug(`Provider event: ${JSON.stringify(evt)}`, {requestId});
                         for (const wireChunk of wire.fromProviderEvent(evt)) {
                             await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                         }
                         if (evt.type === "done" || evt.type === "error") {
+                            if (evt.type === "error") {
+                                logger.error(`Error response: ${JSON.stringify(evt.error)}`, {requestId});
+                            } else {
+                                logger.debug(`Final response: ${JSON.stringify(evt.message)}`, {requestId});
+                            }
                             await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt))
                             break;
                         }

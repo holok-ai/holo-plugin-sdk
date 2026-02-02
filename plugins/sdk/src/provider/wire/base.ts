@@ -27,7 +27,6 @@ export interface WireAdapterParams {
 
 export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapter {
     wireSeq = 0;
-    isFirst = this.wireSeq == 0;
 
 
     constructor(
@@ -59,7 +58,7 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
         return (ev.type === 'error' || !this.isStreaming) ? this.nonStreamingHeaders() : this.streamingHeaders();
     }
 
-    protected stringifyError(err: string | Error): string {
+    protected stringifyResponse(err: string | Error): string {
         return typeof err === 'string' ? err : JSON.stringify(err);
     }
 
@@ -67,9 +66,10 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
         status?: number;
         headers?: Record<string, string>
     }): WireChunk {
+        const isFirst = this.wireSeq == 0;
         const seq = this.wireSeq++;
         const body = response === undefined ? '' :
-            ev.type === 'error' ? this.stringifyError(response) : this.formatWire(response);
+            ev.type === 'error' || ev.type === 'done' ? this.stringifyResponse(response) : this.formatWire(response);
 
         const chunk = pickDefined({
             requestId: this.requestId,
@@ -79,7 +79,7 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
             done,
         }) as WireChunk;
 
-        if (this.isFirst) {
+        if (isFirst) {
             const status = override?.status ?? (ev.type === 'error' ? (ev.status ?? 400) : 200);
             const headers =
                 override?.headers ??
@@ -127,11 +127,11 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
     }
 
     protected onDoneStreaming(ev: Extract<ProviderEvent, { type: 'done' }>): WireChunk[] {
-        return [this.chunkify(undefined, ev, true)];
+        return [this.chunkify(ev.text, ev, true)];
     }
 
     protected onErrorStreaming(ev: Extract<ProviderEvent, { type: 'error' }>): WireChunk[] {
-        if (this.isFirst) {
+        if (this.wireSeq === 0) {
             return this.fromNonStreaming(ev);
         }
         // Mid-stream: default behavior (provider adapters should usually override)

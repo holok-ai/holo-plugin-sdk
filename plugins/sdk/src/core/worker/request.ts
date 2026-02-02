@@ -21,4 +21,6 @@ export interface HoloWorkerRequest {
     guards?: Prompt[];
     guardResult?: GuardResult;
     errors?: string[];
+    headers?: Record<string, any>;
+    query?: Record<string, any>;
 }

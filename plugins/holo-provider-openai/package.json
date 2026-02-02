@@ -61,7 +61,7 @@
     "@holokai/sdk": "^0.1.0"
   },
   "dependencies": {
-    "openai": "^6.9.1"
+    "openai": "^6.17.0"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

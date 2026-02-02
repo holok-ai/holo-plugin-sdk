@@ -4,8 +4,7 @@ import {container, injectable} from "tsyringe";
 import {HttpApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
-import {ClassLogger} from "../types/class.logger";
-import {AsyncEventQueue, HoloWorkerRequest, WireChunk} from "@holokai/sdk";
+import {AsyncEventQueue, ClassLogger, HoloWorkerRequest, WireChunk} from "@holokai/sdk";
 import {LlmResponse} from "@holokai/sdk/dist/core/entities";
 
 @injectable()
@@ -34,7 +33,6 @@ export class ResponseService extends ClassLogger {
 
     async processWireChunk(_id: string, wire: WireChunk) {
         const logger = this.mlog(this.processWireChunk);
-        logger.info(JSON.stringify(wire));
 
         const {requestId} = wire;
         const queue = this.queues.get(requestId);
@@ -46,6 +44,7 @@ export class ResponseService extends ClassLogger {
 
         queue.push(wire);
         if (wire.done) {
+            logger.debug(`Finished processing wire: ${wire.body}`);
             queue.end();
             this.queues.delete(requestId);
         }
@@ -79,11 +78,11 @@ export class ResponseService extends ClassLogger {
                     if (!res.write(wire.body)) {
                         await new Promise<void>(resolve => res.once('drain', resolve));
                     }
+
                 }
 
                 if (wire.done) {
                     res.end();
-                    break;
                 }
             }
         } catch (error) {

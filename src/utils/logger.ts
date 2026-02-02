@@ -39,15 +39,80 @@ export const colors = {
 // Add colors to winston
 winston.addColors(colors);
 
+function formatTime(ts: any): string {
+    const d = new Date(ts);
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    const ss = String(d.getSeconds()).padStart(2, "0");
+    const ms = String(d.getMilliseconds()).padStart(3, "0");
+    return `${hh}:${mm}:${ss}.${ms}`;
+}
+
+function initialism(name: string): string {
+    const caps = name.match(/[A-Z]/g);
+    if (caps && caps.length >= 2) return caps.join("");
+    return name.slice(0, 2);
+}
+
+function truncate(s: string, width: number): string {
+    if (s.length <= width) return s.padEnd(width, " ");
+    return s.slice(0, Math.max(0, width - 1)) + "…";
+}
+
+function shortRid(rid?: string, n = 6) {
+    if (!rid) return "";
+    const s = String(rid);
+    return `rid=${s.length <= n ? s : s.slice(-n)}`;
+}
+
+function formatLocation(cls?: string, mth?: string, width = 26): string {
+    const c = cls ? String(cls) : "";
+    const m = mth ? String(mth) : "";
+    if (!c && !m) return "";
+
+    const full = c && m ? `${c}.${m}` : (c || m);
+    if (full.length <= width) return full;
+
+    if (c && m) {
+        const init = `${initialism(c)}.${m}`;
+        if (init.length <= width) return init;
+
+        // truncate class to fit
+        const roomForClass = Math.max(1, width - (m.length + 1));
+        const truncCls = truncate(c, roomForClass).trim();
+        return `${truncCls}.${m}`.slice(0, width);
+    }
+
+    return full.slice(0, width);
+}
+
 export function createLoggerFormat(serverId: string) {
+    const W_LVL = 3;
+    const W_SRV = 10;
+    const W_LOC = 28;
+    const W_RID = 12;
+
+    const lvl3 = (lvl: string) => {
+        const l = lvl.toLowerCase();
+        if (l === "error") return "ERR";
+        if (l === "warn") return "WRN";
+        if (l === "info") return "INF";
+        if (l === "debug") return "DBG";
+        if (l === "http") return "HTP";
+        return l.slice(0, 3).toUpperCase();
+    };
+
     return winston.format.combine(
-        winston.format.timestamp({format: 'YYYY-MM-DD HH:mm:ss:ms'}),
+        winston.format.timestamp(),
         winston.format.colorize({all: true}),
-        winston.format.printf((info) => {
-            const cls = info.className ? `[${info.className}]` : '';
-            const mth = info.methodName ? `[${info.methodName}]` : '';
-            const requestId = info.requestId ? `[RequestId: ${info.requestId}]` : '';
-            return `${info.timestamp} ${info.level}: [${serverId}]${cls}${mth}${requestId} ${info.message}`;
+        winston.format.printf((info: any) => {
+            const time = formatTime(info.timestamp);
+            const level = truncate(lvl3(info.level), W_LVL).trim();
+            const srv = truncate(serverId, W_SRV).trim();
+            const loc = truncate(formatLocation(info.className, info.methodName, W_LOC), W_LOC).trimEnd();
+            const rid = truncate(shortRid(info.requestId, 6), W_RID).trim();
+
+            return `${time}|${level}|${srv}|${loc}|${rid}|${info.message}`;
         })
     );
 }

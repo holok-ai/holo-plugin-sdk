@@ -62,7 +62,7 @@
     "@holokai/sdk": "^0.1.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.70.1"
+    "@anthropic-ai/sdk": "^0.72.1"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

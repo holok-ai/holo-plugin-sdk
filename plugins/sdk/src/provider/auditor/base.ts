@@ -28,7 +28,7 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
 
         const providerEnvelope = await this.createProviderEnvelope(workerRequest.payload);
 
-        const envelope = {
+        return pickDefined({
             request_id: workerRequest.requestId,
             request_type: workerRequest.type,
             organization_id: workerRequest.organizationId,
@@ -41,11 +41,9 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
             branch_id: workerRequest.branch_id,
             raw_request: workerRequest.payload,
             ...providerEnvelope
-        };
+        }) as WorkerRequestEnvelope;
 
-        const result = pickDefined(envelope) as WorkerRequestEnvelope;
 
-        return result;
     }
 
     async createWorkerResponseEnvelope(workerRequest: HoloWorkerRequest, workerId?: string): Promise<WorkerResponseEnvelope> {
@@ -72,13 +70,12 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
         this.toHoloRequest(workerRequest, llmRequest);
         this.mapProviderPayload(workerRequest, llmRequest);
 
-        const finalResult = pickDefined(llmRequest) as LlmRequest;
-
-        return finalResult;
+        return pickDefined(llmRequest) as LlmRequest;
     }
 
     // Abstract methods that provider-specific auditors must implement
     protected abstract toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
+
     protected abstract mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void;
 
     async auditResponse(

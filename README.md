@@ -1,57 +1,86 @@
 # HoloKai Holo
 
-A scalable, distributed LLM proxy server built with TypeScript that provides unified access to multiple Large Language Model providers through standardized APIs. The system uses RabbitMQ for distributed processing and PostgreSQL for audit logging.
+A scalable, distributed LLM proxy server built with TypeScript that provides unified access to multiple Large Language Model providers through a plugin-based architecture. The system uses RabbitMQ for distributed processing and PostgreSQL for audit logging.
 
 ## 🏗️ Architecture Overview
 
-Holo follows a distributed microservices architecture with queue-based request/response handling and a universal translation layer:
+Holo follows a distributed microservices architecture with queue-based request/response handling and an extensible plugin system:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   API Server    │    │   RabbitMQ      │    │   Worker Nodes  │
-│   (Express)     │◄──►│   (Message      │◄──►│   (Translator   │
-│   + Guards      │    │    Broker)      │    │    + Provider)  │
+│   API Server    │    │   RabbitMQ      │    │  Worker Servers │
+│   (Express)     │◄──►│   (Message      │◄──►│   + Plugins     │
+│   + Auth        │    │    Broker)      │    │   (Provider)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          │                       │              ┌────────▼────────┐
-         │                       │              │ Holo (Universal │
-         │                       │              │  Translation)   │
+         │                       │              │     Plugins     │
+         │                       │              │  Wire Adapters  │
+         │                       │              │    Auditors     │
+         │                       │              │     Routes      │
          │                       │              └────────┬────────┘
          │                       │                       │
          │                       │       ┌───────────────┼───────────────┐
          │                       │       │               │               │
          ▼                       ▼       ▼               ▼               ▼
 ┌─────────────────┐    ┌─────────────────┐  ┌─────────┐   ┌─────────┐   ┌─────────┐
-│   PostgreSQL    │    │   Audit Service │  │ OpenAI  │   │ Claude  │   │ Ollama  │
+│   PostgreSQL    │    │   Audit Server  │  │ OpenAI  │   │ Claude  │   │ Ollama  │
 │   (Database)    │    │   (Logging)     │  │   API   │   │   API   │   │   API   │
 └─────────────────┘    └─────────────────┘  └─────────┘   └─────────┘   └─────────┘
 ```
 
 ### Core Components
 
-1. **API Server** (`src/app.ts`): Express.js application handling requests and responses
-   - JWT authentication and request validation
-   - Listens on response exchange for worker responses
-   - Streams responses to clients via SSE
-2. **Guard System** (`src/admin/`): App-level authorization guards run on LLM requests
+1. **API Server** (`src/app.ts`): Express.js application handling incoming requests
+   - JWT authentication and app slug validation
+   - Parses requests and enforces authorization guards
+   - Submits requests to message queue
+   - Streams responses from queue back to clients via SSE
+
+2. **Auth Middleware** (`src/admin/services/auth.service.ts`): App-level authorization
+   - Validates JWT tokens and extracts user permissions
+   - Verifies user's App slug has access to requested providers, models, guards
+   - Validates before request enters queue
+
+3. **Guard System** (`src/admin/`): Policy enforcement on LLM requests
+   - Runs synchronous guard checks before queueing
+   - Attaches guard results to worker request
    - Smart error formatting (JSON for API calls, natural language for chat)
-3. **Worker Server** (`src/servers/worker.server.ts`):
+
+4. **Request Queue** (RabbitMQ): Distributed work distribution
+   - API publishes to request exchange (fanout)
+   - Workers and audit server consume from queue
+   - Each request tagged with unique requestId and sourceId
+
+5. **Worker Server** (`src/servers/worker.server.ts`):
+   - Loads plugins at startup (providers, wire adapters, auditors)
    - Consumes requests from request queue
-   - Enforces guard results and validation errors
-   - Routes to provider translators or generates errors
-   - Publishes responses to response exchange
-4. **Audit Server** (`src/servers/audit.server.ts`): Logs all requests and responses for compliance
-5. **Provider Plugin System** (`plugins/`):
-   - **Holo Format**: Universal abstraction layer (hub-and-spoke architecture)
-   - **Bidirectional Translators**: Convert between Holo ↔ Provider formats
-   - **Streaming Support**: Real-time event translation with lossless round-tripping
-   - **Plugin Architecture**: Independently versioned, hot-reloadable provider plugins
-   - See [SDK Documentation](plugins/sdk/README.md) for plugin development details
-6. **Queue Service** (`src/services/queue.service.ts`): RabbitMQ message handling
+   - Matches provider by provider name from loaded plugins
+   - Enforces guard results (blocks unauthorized requests)
+   - Processes request via plugin's request handler
+   - Converts provider responses to wire format via plugin's wire adapter
+   - Publishes wire chunks to response exchange
+
+6. **Audit Server** (`src/servers/audit.server.ts`): Compliance logging
+   - Consumes from audit request queue (all incoming requests)
+   - Consumes from audit response queue (all responses)
+   - Uses plugin auditors for native logging format
+   - Writes to PostgreSQL for compliance trail
+
 7. **Response Service** (`src/services/response.service.ts`):
-   - Listens on response exchange, filters by request_id
-   - Unified error handling with smart formatting
-8. **Stream Service** (`src/services/stream.service.ts`): Formats and streams responses to client
+   - Creates async event queue per requestId
+   - Subscribes to response exchange filtered by sourceId
+   - Receives wire chunks from queue
+   - Sets HTTP headers/status from first wire chunk
+   - Pipes subsequent chunks to HTTP response stream
+
+8. **Plugin System** (`plugins/`):
+   - **Wire Adapters**: Convert provider events to wire format for HTTP streaming
+   - **Auditors**: Provide native logging format for requests/responses
+   - **Request Handlers**: Process requests for specific providers
+   - **Routes**: Define provider-specific API endpoints
+   - Loaded by both API server (for routes) and worker servers (for processing)
+   - See [SDK Documentation](plugins/sdk/README.md) for plugin development
 
 ---
 
@@ -63,81 +92,115 @@ The following diagram shows the complete request/response flow:
 ┌──────────┐
 │  Client  │
 └────┬─────┘
-     │ 1. HTTP Request
+     │ 1. HTTP Request (POST /openai/my-app/chat/completions)
      ▼
 ┌────────────────────────────────────────────────┐
 │          API Server (app.controller.ts)        │
 ├────────────────────────────────────────────────┤
-│  2. JWT Middleware (jwt.middleware.ts)         │
-│     └─► Validates JWT token                    │
-│     └─► Adds auth object to request            │
-│         (apps, providers user has access to)   │
+│  2. App Controller extracts:                   │
+│     - provider (openai)                        │
+│     - appSlug (my-app)                         │
+│     - Sets req.appSlug for auth                │
+│     - Rewrites URL to /api/openai/...          │
 └────┬───────────────────────────────────────────┘
-     │ 3. Parse request params
-     │    Create LLM-specific request
+     │ 3. Route to provider handler (from plugin routes)
+     ▼
+┌────────────────────────────────────────────────┐
+│         Auth Middleware (jwt.middleware.ts)    │
+├────────────────────────────────────────────────┤
+│  4. JWT Middleware (auth.service.ts)           │
+│     └─► Validates JWT token                    │
+│     └─► Decodes: organizationId, userId,       │
+│         appSlugs                               │
+│     └─► Verifies appSlug in user's appSlugs   │
+│     └─► Loads app from cache                   │
+│     └─► Validates app.providerType matches     │
+│     └─► Checks app has providers, models,      │
+│         guards configured                      │
+│     └─► Adds auth object to request            │
+└────┬───────────────────────────────────────────┘
+     │ 5. Parse request params
+     │    Create provider-specific request
      ▼
 ┌────────────────────────────────────────────────┐
 │         Guard Execution (admin/guards)         │
 ├────────────────────────────────────────────────┤
-│  4. Run app guards on LLM request              │
-│     └─► Check permissions from auth object     │
+│  6. Run app guards on LLM request (if any)     │
+│     └─► Execute guard prompts as sync requests │
 │     └─► Validate request against app rules     │
-│     └─► Attach guard results to LLM request    │
+│     └─► Attach guard results to request        │
 └────┬───────────────────────────────────────────┘
-     │ 5. Open response stream (response.service, stream.service)
-     │    Generate unique request_id
+     │ 7. Open response stream (response.service)
+     │    Generate unique requestId, use sourceId
      ▼
 ┌────────────────────────────────────────────────┐
 │    Queue Service (queue.service.ts)            │
 ├────────────────────────────────────────────────┤
-│  6. Publish LLM request to request exchange    │
+│  8. Publish request to request exchange        │
 │     └─► Request contains guard results         │
-│     └─► Request contains unique request_id     │
+│     └─► Request contains unique requestId      │
+│     └─► Request contains sourceId (api-server) │
 └────┬───────────────────────────────────────────┘
      │
-     │ RabbitMQ Request Exchange
-     │
-     ▼
-┌────────────────────────────────────────────────┐
-│      Worker Server (worker.server.ts)          │
-├────────────────────────────────────────────────┤
-│  7. Consume request from queue                 │
-│  8. Check guard results on request             │
-│     ├─► If guards PASSED:                      │
-│     │   └─► Route to provider API              │
-│     │   └─► Stream provider response           │
-│     └─► If guards FAILED:                      │
-│         └─► Generate provider-native error     │
-│         └─► Block call to actual provider      │
-│  9. Publish response chunks to exchange        │
-│     └─► Each chunk tagged with request_id      │
-└────┬───────────────────────────────────────────┘
-     │
-     │ RabbitMQ Response Exchange
+     │ RabbitMQ Request Exchange (fanout)
      │
      ├──────────────────┬─────────────────────────┐
      │                  │                         │
      ▼                  ▼                         ▼
 ┌─────────────────────────────────┐  ┌──────────────────────┐
+│  Worker Server (worker.server)  │  │   Audit Server       │
+│                                 │  │ (audit.server.ts)    │
+├─────────────────────────────────┤  ├──────────────────────┤
+│  9. Consume request from queue  │  │ • Listens on request │
+│ 10. Load plugins at startup:    │  │   exchange (audits   │
+│     - Providers                 │  │   incoming requests) │
+│     - Wire adapters             │  │ • Uses plugin        │
+│     - Auditors                  │  │   auditors for       │
+│     - Request handlers          │  │   native logging     │
+│ 11. Match provider by name      │  │ • Writes to          │
+│ 12. Check guard results:        │  │   PostgreSQL         │
+│     ├─► If guards FAILED:       │  └──────────────────────┘
+│     │   └─► Generate error      │
+│     │   └─► Block provider call │
+│     └─► If guards PASSED:       │
+│         └─► Process via plugin  │
+│ 13. Convert events to wire      │
+│     format via wire adapter     │
+│ 14. Publish wire chunks to      │
+│     response exchange           │
+│     └─► Routing key = sourceId  │
+└─────┬───────────────────────────┘
+      │
+      │ RabbitMQ Response Exchange (direct)
+      │
+      ├──────────────────┬─────────────────────────┐
+      │                  │                         │
+      ▼                  ▼                         ▼
+┌─────────────────────────────────┐  ┌──────────────────────┐
 │  API Server (response.service)  │  │   Audit Server       │
 │                                 │  │ (audit.server.ts)    │
 ├─────────────────────────────────┤  ├──────────────────────┤
-│ 11. Listen on response exchange │  │ • Listens on request │
-│ 12. Filter by request_id        │  │   exchange (audits   │
-│ 13. Parse provider responses    │  │   incoming requests) │
-│ 14. Push to response stream     │  │ • Listens on response│
-│     (stream.service.ts)         │  │   exchange (audits   │
-└─────┬───────────────────────────┘  │   all responses)     │
-      │                              │ • Writes to          │
-      ▼                              │   PostgreSQL         │
-┌────────────────────────────────────────────────┐──────────┘
+│ 15. Listen on response exchange │  │ • Listens on response│
+│     (queue: responseQueue.      │  │   exchange (routing  │
+│     {sourceId})                 │  │   key: audit)        │
+│ 16. Filter by sourceId routing  │  │ • Logs all responses │
+│ 17. Pick up wire chunks from    │  │   to PostgreSQL      │
+│     queue                       │  └──────────────────────┘
+│ 18. Push to async event queue   │
+│     for this requestId          │
+└─────┬───────────────────────────┘
+      │
+      ▼
+┌────────────────────────────────────────────────┐
 │      Stream Service (stream.service.ts)        │
 ├────────────────────────────────────────────────┤
-│ 15. Format provider-specific chunks            │
-│ 16. Write to HTTP response stream              │
-│ 17. Handle client disconnect                   │
+│ 19. Read from async event queue               │
+│ 20. First chunk: Set HTTP status and headers  │
+│ 21. Subsequent chunks: Write to HTTP response │
+│ 22. On wire.done: End HTTP response           │
+│ 23. Handle client disconnect                  │
 └────┬───────────────────────────────────────────┘
-     │ 18. Server-Sent Events (SSE)
+     │ 24. Server-Sent Events (SSE)
      ▼
 ┌──────────┐
 │  Client  │
@@ -146,19 +209,28 @@ The following diagram shows the complete request/response flow:
 
 ### Key Lifecycle Stages
 
-1. **Authentication**: JWT middleware validates token and extracts user permissions (apps, providers)
-2. **Request Parsing**: Controller extracts params and creates provider-specific LLM request
-3. **Authorization**: App-level guards validate request against user's app permissions
-4. **Response Setup**: Response stream opened before queueing (identified by unique `request_id`)
-5. **Request Queueing**: LLM request (with guard results) published to RabbitMQ request exchange
-6. **Request Auditing**: Audit server listens on request exchange and logs all requests to PostgreSQL
-7. **Worker Processing**: Worker consumes request and checks guard results
-   - **Guards Passed**: Routes to provider API (OpenAI/Claude/Ollama) and receives streaming response
-   - **Guards Failed**: Generates provider-native error response, blocks actual provider call
-8. **Worker Response Publishing**: Worker pipes provider response chunks to response exchange with originating `request_id`
-9. **Response Auditing**: Audit server listens on response exchange and logs all responses to PostgreSQL
-10. **API Response Handling**: API server listens on response exchange, filters by `request_id`, parses provider responses
-11. **Stream Piping**: Parsed chunks pushed to HTTP response stream and piped to client via SSE
+1. **Request Routing**: App controller extracts provider, appSlug, and rewrites URL
+2. **Authentication**: JWT middleware validates token, extracts user permissions, verifies appSlug access
+3. **App Slug Validation**: Checks user's app has providers, models, guards configured
+4. **Request Parsing**: Controller creates provider-specific request with metadata
+5. **Authorization**: App-level guards validate request against policies
+6. **Response Setup**: Response service creates async event queue and subscribes to wire chunks
+7. **Request Queueing**: Request (with guard results) published to RabbitMQ request exchange (fanout)
+8. **Request Auditing**: Audit server consumes request and logs to PostgreSQL
+9. **Worker Processing**:
+   - Worker consumes request from queue
+   - Loads plugin for provider (at startup)
+   - Checks guard results
+   - **Guards Failed**: Generate error in wire format, send to response queue, audit, stop
+   - **Guards Passed**: Process via plugin's request handler
+   - Convert provider events to wire format via plugin's wire adapter
+10. **Wire Publishing**: Worker publishes wire chunks to response exchange with routing key = sourceId
+11. **Response Auditing**: Audit server consumes response (routing key: audit) and logs to PostgreSQL
+12. **API Response Handling**: API server picks up wire chunks from queue (filtered by sourceId)
+13. **Stream Piping**: Response service pipes wire chunks to HTTP response stream
+    - First chunk: Sets HTTP status and headers
+    - Subsequent chunks: Writes body
+    - On wire.done: Ends response
 
 ### Guard System
 
@@ -168,21 +240,21 @@ Guards provide multi-stage authorization with execution split between API and Wo
 Guards run **after** authentication but **before** request queueing:
 
 - **Input**: LLM request + auth object (from JWT middleware)
-- **Process**: Validate request against app-specific rules and user permissions
-- **Output**: Guard results attached to LLM request and sent to queue
+- **Process**: Execute guard prompts as synchronous LLM requests
+- **Output**: Guard results attached to worker request and sent to queue
 - **Purpose**: Pre-validate user permissions for apps/providers/models
 
 #### Guard Enforcement (Worker Server)
 Workers validate guard results **before** calling provider APIs:
 
-- **Input**: LLM request with attached guard results from queue
+- **Input**: Worker request with attached guard results from queue
 - **Guard Check**:
-  - **If Passed**: Forward request to provider translator → provider API
+  - **If Passed**: Forward request to plugin's request handler → provider API
   - **If Failed**: Generate provider-native error response without calling provider
 - **Response Format**:
   - **API Calls** (with `response_format: json_schema|json_object`): Structured JSON errors
   - **Chat Clients**: Natural language error messages
-  - Errors returned in provider-specific format (OpenAI/Claude/Ollama structure)
+  - Errors returned in wire format via plugin's wire adapter
 - **Purpose**: Prevent unauthorized API calls while maintaining provider compatibility
 
 This two-stage approach ensures:
@@ -194,16 +266,19 @@ This two-stage approach ensures:
 
 ### Response Stream Coordination
 
-The response flow uses a pub/sub pattern with request_id correlation through the API server:
+The response flow uses a pub/sub pattern with requestId correlation and sourceId routing:
 
-1. **Before queueing**: API server opens SSE stream and generates unique `request_id`
-2. **Response listening**: API server's response service subscribes to response exchange filtering by `request_id`
-3. **Worker response publishing**: Worker receives provider response, pipes chunks to response exchange with `request_id`
-4. **API response handling**: API server picks up response from exchange, parses provider-specific format
-5. **Stream piping**: Parsed chunks pushed to HTTP response stream via stream service
-6. **Stream completion**: When provider signals done, response stream closed and client connection terminated
+1. **Before queueing**: API server creates async event queue and generates unique `requestId`
+2. **Request publishing**: API server publishes request to request exchange with `requestId` and `sourceId`
+3. **Response listening**: API server subscribes to response exchange filtering by `sourceId` routing key
+4. **Worker processing**: Worker receives request, processes via plugin, converts events to wire format
+5. **Wire publishing**: Worker publishes wire chunks to response exchange with routing key = `sourceId`
+6. **API picks up**: Response service consumes from queue `responseQueue.{sourceId}`
+7. **Stream piping**: Pushes wire chunks to async event queue for this `requestId`
+8. **HTTP delivery**: Reads from queue and pipes to HTTP response stream
+9. **Stream completion**: When `wire.done === true`, response stream closed and client connection terminated
 
-**Key Flow**: Provider → Worker → Response Exchange → API Server (parse) → Stream Service → Client
+**Key Flow**: Provider → Worker (via plugin) → Wire Adapter → Response Exchange → API Server (via queue) → HTTP Stream → Client
 
 ### Audit Service
 
@@ -212,235 +287,112 @@ The audit server provides comprehensive logging for compliance and monitoring:
 - **Dual Exchange Monitoring**: Listens on both request and response exchanges
 - **Request Auditing**: Captures all incoming requests with full payload and guard results
 - **Response Auditing**: Captures all provider responses including streaming chunks
+- **Native Logging**: Uses plugin auditors to log in provider-specific format
 - **Database Persistence**: Writes audit trails to PostgreSQL with timestamps and metadata
 - **Independent Operation**: Runs as separate service for reliability and scalability
 
+---
+
 ## 🚀 Key Features
 
-### Multi-Provider Support
-- **OpenAI**: Full GPT model family support with streaming (via plugin)
-- **Claude**: Anthropic's Claude models with extended thinking & tools (via plugin)
-- **Ollama**: Local model hosting integration (via plugin)
-- **Holo Translation Layer**: Universal abstraction for cross-provider compatibility
-- **Plugin Architecture**: Independently versioned, hot-reloadable provider plugins
+### Plugin Architecture
+
+Holo uses a modular plugin system where all provider integrations are loaded dynamically:
+
+- **Plugin Discovery**: Scans `node_modules/@holokai` scope for plugin packages at startup
+- **Plugin Loading**: Dynamically imports plugins and validates plugin interface
+- **Plugin Registration**: Registers plugins with provider registry and route system
+- **Components Provided by Plugins**:
+  - **Wire Adapters**: Convert provider events to wire format for HTTP streaming
+  - **Auditors**: Provide native logging format for compliance
+  - **Request Handlers**: Process requests for specific providers
+  - **Routes**: Define provider-specific API endpoints
+- **Loaded By**: API server (routes, middleware) and worker servers (request handlers, wire adapters, auditors)
 - **Extensible**: Easy to add new providers via plugin development
   - See [SDK Plugin Development Guide](plugins/sdk/README.md)
 
+### Multi-Provider Support
+
+- **OpenAI**: Full GPT model family support with streaming (via plugin)
+- **Claude**: Anthropic's Claude models with extended thinking & tools (via plugin)
+- **Ollama**: Local model hosting integration (via plugin)
+- **Plugin Architecture**: Independently versioned, hot-reloadable provider plugins
+- **Extensible**: Easy to add new providers via plugin development
+
 ### API Compatibility
+
 - **OpenAI-Compatible**: `/api/openai/v1/chat/completions`
 - **Claude-Compatible**: `/api/claude/v1/messages`
-- **Custom Endpoints**: `/api/generate`, `/api/chat`
+- **Ollama-Compatible**: `/api/tags`, `/api/generate`, `/api/chat`
+- **Custom App Routes**: `/:provider/:appSlug/*` (routes to specific app configurations)
 
 ### Streaming Responses
+
 - Server-Sent Events (SSE) for real-time streaming
-- Efficient connection pooling and routing
+- Wire format abstraction for provider-agnostic streaming
+- Efficient connection pooling and routing via sourceId
 - Client disconnect handling
 
 ### Horizontal Scaling
-- Queue-based work distribution
+
+- Queue-based work distribution (fanout pattern)
 - Stateless worker nodes
 - Load balancing across multiple workers
+- Source-based response routing (direct exchange with sourceId routing key)
 
 ### Audit & Compliance
-- Complete request/response logging
+
+- Complete request/response logging via separate audit server
 - PostgreSQL-backed audit trails
-- Configurable audit levels
+- Plugin-based auditors for native logging format
 - Provider-agnostic request translation system
 
-### Universal Translation System
-- **Holo Format**: Canonical abstraction layer for provider-agnostic requests/responses
-- **Bidirectional Translators**: Convert between Holo ↔ Provider formats (N translations vs N²)
-- **Streaming Support**: Real-time event translation with lossless round-tripping
-- **Type Safety**: TypeScript for compile-time validation
-- **Stateless Design**: No shared state; orchestrator handles accumulation where needed
-
 ### Universal Model Access
+
 - **Provider-Agnostic Discovery**: List all available models through any provider's API format
 - **Cross-Provider Usage**: Use any model (e.g., `gpt-4`, `claude-sonnet-4`, `llama3:8b`) through any endpoint
-- **Automatic Translation**: Holo translates requests/responses between provider formats seamlessly
+- **Automatic Translation**: Plugins handle format translation between providers seamlessly
 - **Example**: Call `claude-sonnet-4` using OpenAI SDK, and Holo handles the translation automatically
+
+---
 
 ## 📡 API Endpoints
 
-### Standard Endpoints
+### Custom App Routes
 
-#### Generate Text
+All custom routes follow the pattern: `/:provider/:appSlug/*`
+
+**Example**:
 ```http
-POST /api/generate
-Content-Type: application/json
-
-{
-  "model": "gpt-4",
-  "prompt": "Write a haiku about programming",
-  "stream": true,
-  "options": {
-    "temperature": 0.7,
-    "max_tokens": 100
-  }
-}
+POST /openai/my-app/v1/chat/completions
+POST /claude/my-app/v1/messages
+GET /openai/my-app/v1/models
 ```
 
-#### Chat Completion
-```http
-POST /api/chat
-Content-Type: application/json
+These routes:
+1. Extract provider and appSlug from URL
+2. Validate user has access to appSlug via JWT
+3. Rewrite to standard provider route: `/api/{provider}/{path}`
+4. Apply provider-specific middleware and authentication
 
-{
-  "model": "gpt-4",
-  "messages": [
-    {
-      "role": "user",
-      "content": "Explain quantum computing"
-    }
-  ],
-  "stream": true,
-  "options": {
-    "temperature": 0.5
-  }
-}
-```
+### Provider Endpoints
 
-### OpenAI-Compatible Endpoints
+All provider-specific routes are registered dynamically by plugins at startup. Each plugin defines its own API endpoints, request/response formats, and compatibility layers.
 
-#### Chat Completions
-```http
-POST /api/openai/v1/chat/completions
-Content-Type: application/json
+**Supported Providers**:
+- **OpenAI**: OpenAI-compatible endpoints (chat completions, models, etc.)
+  - See [OpenAI Plugin Documentation](plugins/holo-provider-openai/README.md)
+- **Claude**: Anthropic-compatible endpoints (messages, models, etc.)
+  - See [Claude Plugin Documentation](plugins/holo-provider-claude/README.md)
+- **Ollama**: Ollama-compatible endpoints (generate, chat, tags, etc.)
+  - See [Ollama Plugin Documentation](plugins/holo-provider-ollama/README.md)
 
-{
-  "model": "gpt-4",
-  "messages": [
-    {
-      "role": "user",
-      "content": "Hello, world!"
-    }
-  ],
-  "stream": true
-}
-```
-
-#### List Models
-```http
-GET /api/openai/v1/models
-```
-
-**Response Format**:
-```json
-{
-  "object": "list",
-  "data": [
-    {
-      "id": "gpt-4",
-      "object": "model",
-      "created": 1687882410,
-      "owned_by": "openai"
-    }
-  ]
-}
-```
-
-**Note**: Returns **all models** the user has access to (across all providers) in OpenAI format. This enables provider-agnostic model access through the Holo universal translator. For example, you can call `claude-sonnet-4` through the OpenAI endpoint, and Holo will translate the request/response automatically.
-
-### Claude-Compatible Endpoints
-
-#### Messages
-```http
-POST /api/claude/v1/messages
-Content-Type: application/json
-
-{
-  "model": "claude-3-5-sonnet-20241022",
-  "messages": [
-    {
-      "role": "user",
-      "content": "Explain machine learning"
-    }
-  ],
-  "max_tokens": 1000,
-  "temperature": 0.7,
-  "stream": true,
-  "system": "You are a helpful AI assistant",
-  "tools": [...],               // Optional: Tool definitions
-  "tool_choice": "auto",        // Optional: Tool usage preference
-  "container": "my-session",    // Optional: Session container
-  "service_tier": "auto",       // Optional: 'auto' or 'standard_only'
-  "thinking": {                 // Optional: Extended thinking configuration
-    "enabled": true
-  },
-  "mcp_servers": [...],         // Optional: MCP server configurations
-  "stop_sequences": ["END"],    // Optional: Custom stop sequences
-  "metadata": {                 // Optional: Request metadata
-    "user_id": "user123"
-  }
-}
-```
-
-**Supported Claude API Fields:**
-- `model`, `messages`, `max_tokens` (required)
-- `temperature`, `top_p`, `top_k`, `stream`, `system` (optional)
-- `tools`, `tool_choice`, `metadata`, `stop_sequences` (optional)
-- `container`, `mcp_servers`, `service_tier` (optional, new)
-- `thinking`, `betas` (optional, advanced features)
-
-#### List Models
-```http
-GET /api/claude/v1/models
-```
-
-**Response Format**:
-```json
-{
-  "data": [
-    {
-      "id": "claude-sonnet-4-20250514",
-      "created_at": "2025-02-19T00:00:00Z",
-      "display_name": "Claude Sonnet 4",
-      "type": "model"
-    }
-  ],
-  "has_more": false,
-  "first_id": "claude-sonnet-4-20250514",
-  "last_id": "claude-3-5-sonnet-20241022"
-}
-```
-
-**Note**: Returns **all models** the user has access to (across all providers) in Claude format. This enables provider-agnostic model access through the Holo universal translator.
-
-### Ollama-Compatible Endpoints
-
-#### List Models (Tags)
-```http
-GET /api/tags
-```
-
-**Response Format**:
-```json
-{
-  "models": [
-    {
-      "name": "llama3:8b",
-      "model": "llama3:8b",
-      "modified_at": "2025-05-10T08:06:48.639712648-07:00",
-      "size": 4683075271,
-      "digest": "0a8c266910232fd3291e71e5ba1e058cc5af9d411192cf88b6d30e92b6e73163",
-      "details": {
-        "parent_model": "",
-        "format": "gguf",
-        "family": "llama",
-        "families": ["llama"],
-        "parameter_size": "8B",
-        "quantization_level": "Q4_K_M"
-      }
-    }
-  ]
-}
-```
-
-**Note**: Returns **all models** the user has access to (across all providers) in Ollama format. This enables provider-agnostic model access through the Holo universal translator.
+**Universal Model Access**:
+All model listing endpoints return **all models** the user has access to (across all providers) in the provider-specific format. This enables provider-agnostic model access through any endpoint.
 
 ### Health & Status
 
-#### Health Check
+**Health Check**:
 ```http
 GET /health
 ```
@@ -455,32 +407,32 @@ Response:
 }
 ```
 
+---
+
 ## 🔧 Configuration
 
 ### Environment Variables
 
-**Important**: Environment variables must be loaded before application startup. The application uses dotenv to load variables from a `.env` file in the project root. This is automatically configured in the main server files (`src/app.ts`, `src/servers/worker.server.ts`, `src/servers/audit.server.ts`).
+**Important**: Environment variables must be loaded before application startup. The application uses dotenv to load variables from a `.env` file in the project root.
 
-#### API Server Configuration
+#### Server Configuration
 ```bash
-# Server settings
+# API Server
 PORT=3000
 NODE_ENV=production
 API_SERVER_ID=api_server_001    # Used to identify the API server instance
 
-# Worker settings
+# Worker Server
 WORKER_ID=worker_001            # Used to identify the worker instance
 
-# Audit settings
+# Audit Server
 AUDIT_ID=audit_001              # Used to identify the audit server instance
 ```
-
-**Note**: The API server ID was previously configured as `SERVER_ID` but has been renamed to `API_SERVER_ID` for clarity.
 
 #### Database Configuration
 ```bash
 # PostgreSQL settings
-DATABASE_URL="postgresql://user:password@localhost:5432/llm_proxy"
+DATABASE_URL="postgresql://user:password@localhost:5432/holo"
 APP_PG_HOST=localhost
 APP_PG_PORT=5432
 APP_PG_DATABASE=holo
@@ -500,6 +452,14 @@ RABBITMQ_AUDIT_REQUEST_QUEUE=llm_requests_audit
 RABBITMQ_AUDIT_RESPONSE_QUEUE=llm_responses_audit
 ```
 
+**Queue Architecture**:
+- **Request Exchange** (fanout): Distributes requests to all workers and audit server
+- **Response Exchange** (direct): Routes responses by sourceId (e.g., `api_server_001`)
+- **Request Queue**: Shared by all workers (load balancing)
+- **Response Queues**: Per-server queues (e.g., `llm_responses.api_server_001`)
+- **Audit Request Queue**: Bound to request exchange for logging all requests
+- **Audit Response Queue**: Bound to response exchange with routing key `audit` for logging all responses
+
 #### Provider Configuration
 ```bash
 # OpenAI
@@ -512,6 +472,8 @@ ANTHROPIC_API_KEY=your_anthropic_api_key
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_TIMEOUT=60000
 ```
+
+---
 
 ## 🏃‍♂️ Getting Started
 
@@ -535,6 +497,8 @@ docker-compose up -d --scale worker=3
 
 # View logs
 docker-compose logs -f api
+docker-compose logs -f worker
+docker-compose logs -f audit
 ```
 
 ### Development Setup
@@ -555,7 +519,6 @@ npx prisma generate
 npm run api:dev       # API server
 npm run worker:dev    # Worker node
 npm run audit:dev     # Audit service
-npm run analysis:dev  # Analysis service
 ```
 
 ### Production Deployment
@@ -569,44 +532,56 @@ npm run worker     # Worker node
 npm run audit      # Audit service
 ```
 
-## 🔌 Provider Integration
+---
 
-### Adding a New Provider
+## 🔌 Plugin Development
 
-The system uses a **plugin-based architecture** with a **Holo translation layer** for universal provider abstraction. Adding a new provider involves creating a standalone plugin package that implements bidirectional translators between Holo (canonical format) and your provider's native format.
+### Overview
+
+The plugin system is the core of Holo's extensibility. All provider integrations are implemented as standalone plugin packages that are loaded dynamically at startup.
 
 **📚 Complete Plugin Development Guide**: See [plugins/sdk/README.md](plugins/sdk/README.md) for step-by-step instructions.
 
-#### Quick Overview
+### Quick Start
 
 1. **Create Plugin Package**: Follow the standardized plugin structure in `plugins/holo-provider-{name}/`
 2. **Implement Plugin Interface**:
    - Plugin entrypoint with manifest
    - Provider implementation
-   - Holo format translators
-3. **Implement Translators**:
-   - Request translator (Holo ↔ Provider requests)
-   - Response translator (Holo ↔ Provider responses)
-   - Message/Tool/Usage translators (reusable components)
-   - Streaming translators (real-time event conversion)
-4. **Test**: Write integration tests with real API calls (primary) and unit tests (contract validation)
+   - Wire adapter for streaming
+   - Auditor for logging
+   - Request handler
+   - Routes definition
+3. **Register Plugin**: Export plugin from entrypoint with all required components
+4. **Test**: Write integration tests with real API calls
 
-#### Key Concepts
+### Plugin Components
+
+Each plugin provides the following components:
+
+- **Provider**: Implements request processing logic for the provider
+- **Wire Adapter**: Converts provider events to wire format for HTTP streaming
+- **Auditor**: Provides native logging format for audit trail
+- **Request Handler**: Processes incoming requests from queue
+- **Routes**: Defines provider-specific API endpoints
+
+### Key Concepts
 
 - **Plugin Architecture**: Independently versioned, hot-reloadable packages
-- **Hub-and-Spoke Architecture**: Holo as universal format (N translations vs N²)
-- **Stateless Translators**: No state between calls; orchestrator handles accumulation
+- **Dynamic Loading**: Plugins discovered and loaded at startup from `node_modules/@holokai`
 - **SDK Integration**: Use `@holokai/sdk` types for strict type safety
 - **Lightweight Design**: Minimal dependencies for fast loading
+- **Loaded By**: Both API servers (for routes) and worker servers (for processing)
 
-#### Documentation
+### Reference Implementations
 
-| Document | Purpose |
-|----------|---------|
-| [SDK README](plugins/sdk/README.md) | Complete plugin development guide with templates |
-| [Claude Plugin](plugins/holo-provider-claude/README.md) | Reference implementation - 6-event streaming lifecycle, content blocks |
-| [OpenAI Plugin](plugins/holo-provider-openai/README.md) | Reference implementation - Multi-choice support, dual API support |
-| [Ollama Plugin](plugins/holo-provider-ollama/README.md) | Reference implementation - Generate vs Chat endpoints, frame-based streaming |
+| Plugin | Purpose | Key Features |
+|--------|---------|--------------|
+| [Claude Plugin](plugins/holo-provider-claude/README.md) | Anthropic integration | 6-event streaming lifecycle, content blocks, thinking support |
+| [OpenAI Plugin](plugins/holo-provider-openai/README.md) | OpenAI integration | Multi-choice support, dual API support, tool calling |
+| [Ollama Plugin](plugins/holo-provider-ollama/README.md) | Local model hosting | Generate vs Chat endpoints, frame-based streaming |
+
+---
 
 ## 📊 Monitoring & Observability
 
@@ -630,17 +605,25 @@ Key metrics to monitor:
 - RabbitMQ connection status
 - Provider API availability
 
+---
+
 ## 🔒 Security Considerations
 
 ### API Security
+- JWT authentication with app slug validation
 - Input validation and sanitization
 - Rate limiting (implement as needed)
 - API key management for providers
 - Request/response size limits
 
+### Authorization
+- App-level guards for policy enforcement
+- User permission validation (apps, providers, models, guards)
+- Guard results enforced at worker level before provider calls
+
 ### Data Privacy
-- Audit logging configuration
-- Provider data handling policies
+- Audit logging via separate audit server
+- Plugin auditors for native logging format
 - Request data retention policies
 - SSL/TLS encryption in transit
 
@@ -649,6 +632,8 @@ Key metrics to monitor:
 - RabbitMQ authentication
 - Container security best practices
 - Environment variable protection
+
+---
 
 ## 🧪 Testing
 
@@ -663,39 +648,49 @@ npm test -- --testNamePattern="API"
 ```
 
 ### Testing Endpoints
-```bash
-# Test OpenAI compatibility
-curl -X POST http://localhost:3000/api/openai/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-3.5-turbo",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "stream": true
-  }'
 
-# Test Claude compatibility
-curl -X POST http://localhost:3000/api/claude/v1/messages \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "claude-3-sonnet-20240229",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "max_tokens": 100
-  }'
+**Testing Health Check**:
+```bash
+# Test basic health endpoint
+curl -X GET http://localhost:3000/health
 ```
+
+**Testing Custom App Routes**:
+```bash
+# Test custom app route pattern
+curl -X POST http://localhost:3000/{provider}/{appSlug}/{endpoint} \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: YOUR_JWT_TOKEN" \
+  -d '{...}'
+```
+
+**Testing Provider Endpoints**:
+For provider-specific endpoint testing and examples, see the respective plugin documentation:
+- [OpenAI Plugin - Testing Examples](plugins/holo-provider-openai/README.md#testing)
+- [Claude Plugin - Testing Examples](plugins/holo-provider-claude/README.md#testing)
+- [Ollama Plugin - Testing Examples](plugins/holo-provider-ollama/README.md#testing)
+
+---
 
 ## 🚀 Performance Optimization
 
 ### Scaling Strategies
 1. **Horizontal Scaling**: Add more worker nodes
+   - Workers consume from shared request queue
+   - Load balanced automatically via RabbitMQ
+   - Responses routed back via sourceId
 2. **Provider Optimization**: Implement connection pooling
 3. **Caching**: Cache model lists and configurations
-4. **Load Balancing**: Distribute API requests
+4. **Load Balancing**: Distribute API requests across multiple API servers
 
 ### Resource Management
 - Configure appropriate queue sizes
 - Monitor memory usage in workers
 - Optimize database connection pools
 - Implement request timeouts
+- Use plugin lazy loading where appropriate
+
+---
 
 ## 📋 Troubleshooting
 
@@ -708,15 +703,22 @@ docker-compose logs rabbitmq
 
 # Verify database connectivity
 npx prisma db push
+
+# Check response queue bindings
+# Ensure responseQueue.{sourceId} is properly bound to responseExchange
 ```
 
 #### Provider Issues
 ```bash
 # Test provider connectivity
-curl -X GET http://localhost:3000/api/models
+curl -X GET http://localhost:3000/api/openai/v1/models \
+  -H "x-api-key: YOUR_JWT_TOKEN"
 
-# Check provider configuration
+# Check worker logs for plugin loading
 docker-compose logs worker
+
+# Verify plugins are loaded
+# Look for "plugin:loaded" events in worker logs
 ```
 
 #### Performance Issues
@@ -724,16 +726,28 @@ docker-compose logs worker
 # Monitor queue depths
 # Check worker logs for processing times
 # Verify database query performance
+# Check for backpressure in response streaming
 ```
+
+#### Authentication Issues
+```bash
+# Verify JWT token is valid
+# Check appSlug is in user's appSlugs array
+# Verify app.providerType matches requested provider
+# Check app has configured providers, models, guards
+```
+
+---
 
 ## 🛠️ Development Guidelines
 
 ### Code Structure
 - **Controllers**: Handle HTTP requests and responses
 - **Services**: Business logic and external integrations
-- **Providers**: LLM API implementations
+- **Plugins**: Provider implementations (wire adapters, auditors, routes, request handlers)
 - **Types**: TypeScript type definitions
 - **Utils**: Shared utility functions
+- **Middleware**: Authentication, authorization, validation
 
 ### Best Practices
 - Use dependency injection (TSyringe)
@@ -742,10 +756,22 @@ docker-compose logs worker
 - Write unit and integration tests
 - Follow TypeScript strict mode
 - Use environment-based configuration
+- Follow plugin development guide for new providers
+
+### Plugin Development
+- See [plugins/sdk/README.md](plugins/sdk/README.md) for complete guide
+- Follow reference implementations (Claude, OpenAI, Ollama)
+- Implement all required components (provider, wire adapter, auditor, routes)
+- Write integration tests with real API calls
+- Use `@holokai/sdk` types for strict type safety
+
+---
 
 ## 📄 License
 
 MIT License - see LICENSE file for details.
+
+---
 
 ## 🤝 Contributing
 

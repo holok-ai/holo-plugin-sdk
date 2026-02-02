@@ -1,4 +1,11 @@
-import {BaseProvider, IAuditor, IProviderTranslator, IResponseFactory, ProviderContext} from '@holokai/sdk';
+import {
+    BaseProvider,
+    IAuditor,
+    IProviderTranslator,
+    IResponseFactory,
+    pickHeadersByPrefix,
+    ProviderContext
+} from '@holokai/sdk';
 import {Anthropic} from '@anthropic-ai/sdk/client';
 import {MessageCreateParamsBase} from '@anthropic-ai/sdk/resources/messages';
 import {ModelInfosPage} from '@anthropic-ai/sdk/resources/models';
@@ -38,8 +45,12 @@ export class ClaudeProvider extends BaseProvider<Anthropic, MessageCreateParamsB
     }
 
     protected async handleRequest(payload: MessageCreateParamsBase, ctx: ProviderContext) {
+        const headers = ctx.headers ? pickHeadersByPrefix(ctx.headers, ['anthropic-']) : [];
+        const options = {
+            headers
+        };
         if (payload.stream) {
-            const s = this.client.messages.stream(payload);
+            const s = this.client.messages.stream(payload, options);
             s.on('streamEvent', (event: any) => ctx.emitStreamEvent(event));
             s.on('text', (delta: string) => ctx.emitTextDelta(delta));
             return {final: () => s.finalMessage()};
@@ -47,7 +58,7 @@ export class ClaudeProvider extends BaseProvider<Anthropic, MessageCreateParamsB
 
         // Non-streaming
         const req = {...payload, stream: false};
-        return {final: () => this.client.messages.create(req) as Promise<Message>};
+        return {final: () => this.client.messages.create(req, options) as Promise<Message>};
     }
 
     protected async handleError(error: APIError): Promise<ErrorResponse> {

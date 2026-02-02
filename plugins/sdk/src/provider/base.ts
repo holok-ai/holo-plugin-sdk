@@ -1,6 +1,6 @@
 import {AsyncEventQueue, IProvider, IResponseFactory, ModelInfo, ProviderContext, ProviderEvent} from "./types";
 import {HoloWorkerRequest, WorkerRequestEnvelope} from "../core/worker";
-import {ClassLogger} from "@holokai/sdk/core";
+import {ClassLogger, pickDefined} from "@holokai/sdk/core";
 import {IAuditor} from "./auditor";
 import {IProviderTranslator} from "./translator";
 import {LlmRequest, LlmResponse} from "../core/entities";
@@ -56,7 +56,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
     ): Promise<AsyncEventQueue<ProviderEvent>> {
         const q = new AsyncEventQueue<ProviderEvent>();
 
-        const {requestId, payload} = request as any;
+        const {requestId, payload, headers, query} = request;
         const requestPayload = payload as RequestPayload;
 
         const start = Date.now();
@@ -74,8 +74,10 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
             q.push({...ev, requestId, seq: seq++, ts: Date.now()} as ProviderEvent);
         };
 
-        const ctx = {
+        const ctx = pickDefined({
             requestType: request.type,
+            headers,
+            query,
             emitStreamEvent: (event: any) =>
                 push({type: "stream_event", event} as ProviderEvent),
             emitTextDelta: (text: string) => {
@@ -83,7 +85,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
                 fullText += text;
                 push({type: "text_delta", text} as ProviderEvent);
             },
-        };
+        }) as ProviderContext;
 
         let run: ProviderRunner<Final>;
 
@@ -104,7 +106,12 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
                 metrics.outputTokens = (final as any)?.usage?.output_tokens ?? 0;
                 metrics.totalProcessingTime = Date.now() - start;
 
-                push({type: "done", message: final, text: fullText, metrics} as ProviderEvent);
+                push({
+                    type: "done",
+                    message: final,
+                    text: fullText.length ? fullText : JSON.stringify(final),
+                    metrics
+                } as ProviderEvent);
             } catch (e: any) {
                 push({type: "error", error: await this.handleError(e)} as ProviderEvent);
             } finally {

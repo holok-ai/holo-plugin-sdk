@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import {ClassLogger} from "../types/class.logger";
+import {ClassLogger} from "@holokai/sdk";
 
 export interface IAppServer {
     onError(error: Error): Promise<void>;

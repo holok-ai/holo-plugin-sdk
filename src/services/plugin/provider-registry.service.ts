@@ -2,9 +2,8 @@ import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import type {IPluginRegistry, IProviderPlugin} from '@holokai/sdk/plugin';
 import express, {NextFunction, Router} from 'express';
-import {RequestType, RouteDefinition, RouteHandler, RouteTree} from '@holokai/sdk';
+import {ClassLogger, RequestType, RouteDefinition, RouteHandler, RouteTree} from '@holokai/sdk';
 import {ProviderHandlers} from '../../api/handlers/provider.handlers';
-import {ClassLogger} from '../../types/class.logger';
 import {HttpApiRequest} from "../../api/types";
 
 @injectable()

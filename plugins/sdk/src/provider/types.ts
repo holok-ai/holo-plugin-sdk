@@ -52,6 +52,8 @@ export class AsyncEventQueue<T> implements AsyncIterable<T> {
 
 export type ProviderContext = {
     requestType?: RequestType;
+    headers?: Record<string, string | string[]>;
+    query?: Record<string, string>;
     // stream: boolean;
     // signal?: AbortSignal;
 
