@@ -2,6 +2,13 @@ import {RequestType} from "@holokai/sdk/holo";
 import {Prompt} from "./prompt";
 import {GuardResult} from "@holokai/sdk/plugin";
 
+export interface RawRequest {
+    path: string;
+    method: string;
+    headers: Record<string, any>;
+    query: Record<string, any>;
+}
+
 export interface HoloWorkerRequest {
     organizationId?: string;
     providerType: string;
@@ -21,6 +28,7 @@ export interface HoloWorkerRequest {
     guards?: Prompt[];
     guardResult?: GuardResult;
     errors?: string[];
-    headers?: Record<string, any>;
-    query?: Record<string, any>;
+    rawRequest: RawRequest;
+    isPassthrough?: boolean;
+    passthroughPath?: string;
 }

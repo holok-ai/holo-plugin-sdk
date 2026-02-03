@@ -6,7 +6,7 @@ import {
     WireAdapterParams
 } from '../provider';
 import {IPlugin} from "./base";
-import {RouteTree} from "@holokai/sdk/core";
+import {RouteHandler, RouteTree} from "@holokai/sdk/core";
 
 /**
  * Provider plugin interface for LLM integrations.
@@ -44,6 +44,7 @@ import {RouteTree} from "@holokai/sdk/core";
  */
 export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
     translator: IProviderTranslator
+    defaultRouteHandler?: RouteHandler
 
     /**
      * Create a provider instance with the given configuration.
@@ -61,4 +62,5 @@ export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
     getRoutes(): RouteTree;
 
     createWireAdapter(params: WireAdapterParams): IWireAdapter;
+
 }

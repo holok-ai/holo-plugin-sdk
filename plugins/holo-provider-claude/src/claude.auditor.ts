@@ -100,7 +100,7 @@ export class ClaudeAuditor extends BaseAuditor {
     ): Promise<ProviderEnvelope> {
         const logger = this.mlog(this.createProviderEnvelope);
         if (!payload.model) {
-            logger.error(`Missing model: ${JSON.stringify(payload, null, 2)}`);
+            logger.error(`Missing model: ${JSON.stringify(payload)}`);
         }
 
         return pickDefined({

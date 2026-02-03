@@ -15,6 +15,7 @@ import {ClaudeTranslator} from "./claude.translator";
 export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin {
     manifest = manifest;
     translator = ClaudeTranslator.instance();
+    defaultRouteHandler = RouteHandler.PASSTHROUGH;
 
     async createProvider(config: any): Promise<IProvider> {
         return new ClaudeProvider(
@@ -51,15 +52,7 @@ export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin 
                     requestType: RequestType.CHAT,
                     handler: RouteHandler.REQUEST
                 }
-            },
-            // api: {
-            //     event_logging: {
-            //         batch: {
-            //             method: 'POST',
-            //             handler: RouteHandler.NOOP
-            //         }
-            //     }
-            // }
+            }
         }
     }
 

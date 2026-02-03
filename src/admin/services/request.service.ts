@@ -20,7 +20,7 @@ export class RequestService extends ClassLogger {
         super();
     }
 
-    async processRequest(providerType: string, type: RequestType, req: HttpApiRequest, res: Response) {
+    async processRequest(providerType: string, type: RequestType, req: HttpApiRequest, res: Response, isPassthrough: boolean = false) {
         const logger = this.mlog(this.processRequest);
         const {auth} = req;
 
@@ -30,7 +30,7 @@ export class RequestService extends ClassLogger {
 
         const {providerName, app} = auth;
 
-        const workerRequest = await this.parseRequest(providerType, providerName, type, req);
+        const workerRequest = await this.parseRequest(providerType, providerName, type, req, isPassthrough);
 
         if (app.guards && app.guards.length) {
             await this.guardService.guard(workerRequest, app.guards, auth);
@@ -38,10 +38,10 @@ export class RequestService extends ClassLogger {
 
         await this.responseService.sendRequest(req, res, workerRequest);
 
-        logger.info(`Request processed: ${providerType} ${type}`, {requestId: workerRequest.requestId});
+        logger.info(`Request processed: ${providerType} ${type}`, {requestId: workerRequest.requestId, isPassthrough});
     }
 
-    async parseRequest(providerType: string, providerName: string | undefined, type: RequestType, req: HttpApiRequest) {
-        return WorkerRequestFactory.fromRequest(providerType, providerName, type, req, this.serverId);
+    async parseRequest(providerType: string, providerName: string | undefined, type: RequestType, req: HttpApiRequest, isPassthrough: boolean = false) {
+        return WorkerRequestFactory.fromRequest(providerType, providerName, type, req, this.serverId, isPassthrough);
     }
 }

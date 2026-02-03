@@ -1,6 +1,6 @@
 import {AsyncEventQueue, IProvider, IResponseFactory, ModelInfo, ProviderContext, ProviderEvent} from "./types";
 import {HoloWorkerRequest, WorkerRequestEnvelope} from "../core/worker";
-import {ClassLogger, pickDefined} from "@holokai/sdk/core";
+import {ClassLogger, pickDefined, pickHeadersByPrefix, filterForwardableHeaders} from "@holokai/sdk/core";
 import {IAuditor} from "./auditor";
 import {IProviderTranslator} from "./translator";
 import {LlmRequest, LlmResponse} from "../core/entities";
@@ -56,11 +56,14 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
     ): Promise<AsyncEventQueue<ProviderEvent>> {
         const q = new AsyncEventQueue<ProviderEvent>();
 
-        const {requestId, payload, headers, query} = request;
+        if (request.isPassthrough) {
+            return this.handlePassthrough(request, q);
+        }
+
+        const {requestId, payload, rawRequest} = request;
         const requestPayload = payload as RequestPayload;
 
         const start = Date.now();
-        let seq = 0;
         let fullText = "";
 
         const metrics = {
@@ -70,14 +73,12 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
             totalProcessingTime: 0,
         };
 
-        const push = (ev: Omit<ProviderEvent, "requestId" | "seq" | "ts">) => {
-            q.push({...ev, requestId, seq: seq++, ts: Date.now()} as ProviderEvent);
-        };
+        const push = this.createEventPusher(q, requestId);
 
         const ctx = pickDefined({
             requestType: request.type,
-            headers,
-            query,
+            headers: rawRequest.headers,
+            query: rawRequest.query,
             emitStreamEvent: (event: any) =>
                 push({type: "stream_event", event} as ProviderEvent),
             emitTextDelta: (text: string) => {
@@ -128,6 +129,94 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         payload: RequestPayload,
         ctx: ProviderContext
     ): Promise<ProviderRunner<Final>>;
+
+    protected getHeaders(request: HoloWorkerRequest, config: any): Record<string, string> {
+        const headers: Record<string, string> = {
+            ...filterForwardableHeaders(request.rawRequest.headers),
+            ...pickHeadersByPrefix(request.rawRequest.headers, [this.name.toLowerCase() + '-']),
+        };
+
+        if (config.apiKey) {
+            headers['authorization'] = `Bearer ${config.apiKey}`;
+        }
+
+        return headers;
+    }
+
+    private createEventPusher(q: AsyncEventQueue<ProviderEvent>, requestId: string) {
+        let seq = 0;
+        return (ev: Omit<ProviderEvent, "requestId" | "seq" | "ts">) => {
+            q.push({...ev, requestId, seq: seq++, ts: Date.now()} as ProviderEvent);
+        };
+    }
+
+    private async handlePassthrough(
+        request: HoloWorkerRequest,
+        q: AsyncEventQueue<ProviderEvent>
+    ): Promise<AsyncEventQueue<ProviderEvent>> {
+        const {requestId, passthroughPath, rawRequest, payload} = request;
+        const start = Date.now();
+        const push = this.createEventPusher(q, requestId);
+
+        void (async () => {
+            try {
+                const config = this._config;
+
+                if (!config?.baseUrl) {
+                    push({type: "error", error: {message: 'Provider config missing baseUrl'}, status: 500} as ProviderEvent);
+                    q.end();
+                    return;
+                }
+
+                const queryString = new URLSearchParams(rawRequest.query as any).toString();
+                const targetUrl = `${config.baseUrl}${passthroughPath}${queryString ? '?' + queryString : ''}`;
+
+                const fetchResponse = await fetch(targetUrl, {
+                    method: rawRequest.method,
+                    headers: this.getHeaders(request, config),
+                    body: JSON.stringify(payload),
+                    signal: AbortSignal.timeout(config.timeout || 120000)
+                });
+
+                const contentType = fetchResponse.headers.get('content-type') || '';
+                const isStreaming = contentType.includes('text/event-stream') || contentType.includes('stream');
+
+                if (isStreaming && fetchResponse.body) {
+                    const reader = fetchResponse.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    while (true) {
+                        const {done, value} = await reader.read();
+                        if (done) break;
+                        push({type: "stream_event", event: {raw: decoder.decode(value, {stream: true})}} as ProviderEvent);
+                    }
+                } else {
+                    const responseText = await fetchResponse.text();
+                    push({
+                        type: "done",
+                        message: JSON.parse(responseText),
+                        text: responseText,
+                        metrics: {timeToFirstToken: 0, inputTokens: 0, outputTokens: 0, totalProcessingTime: Date.now() - start}
+                    } as ProviderEvent);
+                    q.end();
+                    return;
+                }
+
+                push({
+                    type: "done",
+                    message: {status: 'completed'},
+                    text: '',
+                    metrics: {timeToFirstToken: 0, inputTokens: 0, outputTokens: 0, totalProcessingTime: Date.now() - start}
+                } as ProviderEvent);
+            } catch (error) {
+                push({type: "error", error: {message: (error as Error).message}, status: 500} as ProviderEvent);
+            } finally {
+                q.end();
+            }
+        })();
+
+        return q;
+    }
 
     get id(): string {
         return this._config.id;
