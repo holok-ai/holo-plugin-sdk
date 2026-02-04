@@ -4,9 +4,9 @@ import {
     IWireAdapter,
     ProviderCapabilities as ProviderFeatures,
     WireAdapterParams
-} from '../provider';
+} from '../provider/index';
 import {IPlugin} from "./base";
-import {RouteHandler, RouteTree} from "@holokai/sdk/core";
+import {RouteHandler, RouteTree} from "../core/routes";
 
 /**
  * Provider plugin interface for LLM integrations.

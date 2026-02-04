@@ -1,6 +1,6 @@
 import {AsyncEventQueue, IProvider, IResponseFactory, ModelInfo, ProviderContext, ProviderEvent} from "./types";
 import {HoloWorkerRequest, WorkerRequestEnvelope} from "../core/worker";
-import {ClassLogger, pickDefined, pickHeadersByPrefix, filterForwardableHeaders} from "@holokai/sdk/core";
+import {ClassLogger, filterForwardableHeaders, pickDefined, pickHeadersByPrefix} from "../core";
 import {IAuditor} from "./auditor";
 import {IProviderTranslator} from "./translator";
 import {LlmRequest, LlmResponse} from "../core/entities";
@@ -9,11 +9,11 @@ import {LlmRequest, LlmResponse} from "../core/entities";
 export type ProviderRunner<Final = any> = { final: () => Promise<Final>; cancel?: () => void };
 
 export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, Final = any> extends ClassLogger implements IProvider {
-    protected models: Record<string, ModelInfo> = {};
-    protected readonly client: ProviderClient;
     public readonly auditor: IAuditor;
     public readonly translator: IProviderTranslator;
     public readonly responseFactory: IResponseFactory;
+    protected models: Record<string, ModelInfo> = {};
+    protected readonly client: ProviderClient;
 
     constructor(
         public readonly name: string,
@@ -29,13 +29,9 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         this.responseFactory = this.createResponseFactory();
     }
 
-    protected abstract createClient(): ProviderClient;
-
-    protected abstract createAuditor(): IAuditor;
-
-    protected abstract createTranslator(): IProviderTranslator;
-
-    protected abstract createResponseFactory(): IResponseFactory
+    get id(): string {
+        return this._config.id;
+    }
 
     abstract getModels(allowedModels: string[] | true): Promise<any>;
 
@@ -102,9 +98,6 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         void (async () => {
             try {
                 const final = await run.final();
-
-                metrics.inputTokens = (final as any)?.usage?.input_tokens ?? 0;
-                metrics.outputTokens = (final as any)?.usage?.output_tokens ?? 0;
                 metrics.totalProcessingTime = Date.now() - start;
 
                 push({
@@ -122,6 +115,14 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
 
         return q;
     }
+
+    protected abstract createClient(): ProviderClient;
+
+    protected abstract createAuditor(): IAuditor;
+
+    protected abstract createTranslator(): IProviderTranslator;
+
+    protected abstract createResponseFactory(): IResponseFactory
 
     protected abstract handleError(error: any): Promise<any>;
 
@@ -163,7 +164,11 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
                 const config = this._config;
 
                 if (!config?.baseUrl) {
-                    push({type: "error", error: {message: 'Provider config missing baseUrl'}, status: 500} as ProviderEvent);
+                    push({
+                        type: "error",
+                        error: {message: 'Provider config missing baseUrl'},
+                        status: 500
+                    } as ProviderEvent);
                     q.end();
                     return;
                 }
@@ -188,7 +193,10 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
                     while (true) {
                         const {done, value} = await reader.read();
                         if (done) break;
-                        push({type: "stream_event", event: {raw: decoder.decode(value, {stream: true})}} as ProviderEvent);
+                        push({
+                            type: "stream_event",
+                            event: {raw: decoder.decode(value, {stream: true})}
+                        } as ProviderEvent);
                     }
                 } else {
                     const responseText = await fetchResponse.text();
@@ -196,7 +204,12 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
                         type: "done",
                         message: JSON.parse(responseText),
                         text: responseText,
-                        metrics: {timeToFirstToken: 0, inputTokens: 0, outputTokens: 0, totalProcessingTime: Date.now() - start}
+                        metrics: {
+                            timeToFirstToken: 0,
+                            inputTokens: 0,
+                            outputTokens: 0,
+                            totalProcessingTime: Date.now() - start
+                        }
                     } as ProviderEvent);
                     q.end();
                     return;
@@ -206,7 +219,12 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
                     type: "done",
                     message: {status: 'completed'},
                     text: '',
-                    metrics: {timeToFirstToken: 0, inputTokens: 0, outputTokens: 0, totalProcessingTime: Date.now() - start}
+                    metrics: {
+                        timeToFirstToken: 0,
+                        inputTokens: 0,
+                        outputTokens: 0,
+                        totalProcessingTime: Date.now() - start
+                    }
                 } as ProviderEvent);
             } catch (error) {
                 push({type: "error", error: {message: (error as Error).message}, status: 500} as ProviderEvent);
@@ -216,9 +234,5 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         })();
 
         return q;
-    }
-
-    get id(): string {
-        return this._config.id;
     }
 }

@@ -1,6 +1,6 @@
-import {RequestType} from "@holokai/sdk/holo";
+import {RequestType} from "../../holo";
 import {Prompt} from "./prompt";
-import {GuardResult} from "@holokai/sdk/plugin";
+import {GuardResult} from "../../plugin";
 
 export interface RawRequest {
     path: string;

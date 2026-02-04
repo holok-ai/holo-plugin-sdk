@@ -1,4 +1,4 @@
-import {HoloLogger} from "@holokai/sdk";
+import {HoloLogger} from "../core/logger/index";
 
 /**
  * Runtime context provided to plugins

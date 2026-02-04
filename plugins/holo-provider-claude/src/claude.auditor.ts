@@ -1,8 +1,8 @@
 import {injectable} from 'tsyringe';
 import {ClaudeChatRequest} from "./types";
-import {BaseAuditor, HoloWorkerRequest, HoloWorkerResponse, pickDefined, ProviderEnvelope} from "@holokai/sdk";
+import {BaseAuditor, HoloWorkerRequest, pickDefined, ProviderEnvelope, ProviderEvent} from "@holokai/sdk";
 import {MessageCreateParamsBase} from "@anthropic-ai/sdk/resources/messages";
-import {LlmRequest, LlmResponse, LlmStatus} from "@holokai/sdk/core/entities";
+import {LlmRequest, LlmStatus} from "@holokai/sdk/core/entities";
 
 @injectable()
 export class ClaudeAuditor extends BaseAuditor {
@@ -42,38 +42,28 @@ export class ClaudeAuditor extends BaseAuditor {
         }
     }
 
-    protected collectResponseMetrics(
-        workerResponse: HoloWorkerResponse,
-        llmResponse: Omit<LlmResponse, 'id'>
-    ): void {
-        const payload = workerResponse.payload;
+    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, { type: 'done' | 'error' }>) {
+        const metrics = await super.mapResponseMetrics(providerEvent);
 
-        if (workerResponse.metrics) {
-            llmResponse.usage_raw = workerResponse.metrics;
-            llmResponse.input_tokens = workerResponse.metrics.inputTokens;
-            llmResponse.output_tokens = workerResponse.metrics.outputTokens;
-            llmResponse.time_to_first_token = workerResponse.metrics.timeToFirstToken;
-            llmResponse.total_processing_time = workerResponse.metrics.totalProcessingTime;
-        } else if (payload.usage) {
-            llmResponse.usage_raw = payload.usage;
-            llmResponse.input_tokens = payload.usage.input_tokens;
-            llmResponse.output_tokens = payload.usage.output_tokens;
+        if (providerEvent.type === 'error') {
+            return metrics;
         }
+        const {usage} = providerEvent.message
 
-        if (payload.type === 'message_stop' || payload.stop_reason) {
-            if (payload.stop_reason === 'max_tokens') {
-                llmResponse.status = LlmStatus.PARTIAL;
-            } else if (payload.stop_reason === 'stop_sequence' || payload.stop_reason === 'end_turn') {
-                llmResponse.status = LlmStatus.SUCCESS;
-            } else {
-                llmResponse.status = LlmStatus.SUCCESS;
-            }
-        } else if (payload.type === 'error') {
-            llmResponse.status = LlmStatus.ERROR;
-            llmResponse.error_message = payload.error?.message || 'Claude API error';
-        } else {
-            llmResponse.status = LlmStatus.SUCCESS;
+        return pickDefined({
+            ...metrics,
+            usage_raw: usage,
+            input_tokens: usage.input_tokens,
+            output_tokens: usage.output_tokens
+        });
+    }
+
+    protected async mapResponseStatus(providerEvent: ProviderEvent): Promise<LlmStatus> {
+        if (providerEvent.type === 'done') {
+            const {stop_reason} = providerEvent.message;
+            if (stop_reason && stop_reason === 'max_tokens') return LlmStatus.PARTIAL;
         }
+        return super.mapResponseStatus(providerEvent);
     }
 
     private extractUserPromptFromMessages(messages?: any[]): string | undefined {

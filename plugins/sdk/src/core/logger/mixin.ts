@@ -1,9 +1,12 @@
-import {Constructor, getLoggerFactory, HoloLogger} from "@holokai/sdk";
+import {Constructor} from "../mixins";
+import {getLoggerFactory} from "./holo-logger-factory";
+import {HoloLogger} from "./logger";
 import {Transform} from "node:stream";
 
 export abstract class ClassLogger {
-    private _log?: HoloLogger;
     protected __className?: string;
+
+    private _log?: HoloLogger;
 
     protected get log(): HoloLogger {
         this.__className = this.__className ?? this.constructor?.name;

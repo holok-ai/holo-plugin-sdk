@@ -30,3 +30,7 @@ export function isUint8Array(value: any): value is Uint8Array {
         typeof value.buffer === 'object' &&
         value.constructor?.name === 'Uint8Array';
 }
+
+export function stringifyError(err: string | Error): string {
+    return typeof err === 'string' ? err : JSON.stringify(err);
+}

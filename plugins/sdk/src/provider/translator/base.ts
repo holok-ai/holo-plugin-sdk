@@ -1,5 +1,5 @@
 import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "../../holo";
-import {ClassLogger} from "@holokai/sdk/core";
+import {ClassLogger} from "../../core";
 
 export interface IProviderTranslator {
     toHoloRequest(request: any): Promise<Partial<HoloRequest>>;

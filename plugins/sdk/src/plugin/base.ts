@@ -104,6 +104,17 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
         return this._state;
     }
 
+    get name(): string {
+        return this.manifest.name;
+    }
+
+    get family(): string {
+        return this.manifest.family ?? this.manifest.name;
+    }
+
+    get version(): string {
+        return this.manifest.version;
+    }
 
     /**
      * Strongly typed access to the plugin context.
@@ -229,17 +240,5 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
     protected async onHealthCheck(): Promise<HealthCheckResult | void> {
         // Default implementation: no-op (host treats as healthy if READY)
         return;
-    }
-
-    get name(): string {
-        return this.manifest.name;
-    }
-
-    get family(): string {
-        return this.manifest.family ?? this.manifest.name;
-    }
-
-    get version(): string {
-        return this.manifest.version;
     }
 }

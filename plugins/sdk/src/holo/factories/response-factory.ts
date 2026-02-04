@@ -1,4 +1,4 @@
-import {pickDefined} from "@holokai/sdk";
+import {pickDefined} from "../../core";
 import {HoloResponse, HoloStreamChunk} from "../responses";
 
 export class HoloResponseFactory {
