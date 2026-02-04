@@ -57,4 +57,14 @@ export class ProviderHandlers extends ClassLogger {
             res.status(204);
         }
     }
+
+    createPassthroughHandler(providerFamily: string) {
+        return async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+            try {
+                await this.requestService.processRequest(providerFamily, RequestType.CHAT, req, res, true);
+            } catch (error) {
+                res.status(500).json({error: 'Failed to process passthrough request'});
+            }
+        };
+    }
 }

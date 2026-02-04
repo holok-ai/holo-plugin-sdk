@@ -22,39 +22,39 @@ The Common SDK is the foundation for developing Holo plugins. It provides:
 ### Plugin Development
 
 ```typescript
-import { IPlugin, PluginManifest, PluginContext } from '@holokai/common/plugin';
+import {IPlugin, PluginManifest, PluginContext} from '@holokai/common/plugin';
 
 export class MyPlugin implements IPlugin {
-  public manifest: PluginManifest = {
-    name: '@myorg/my-plugin',
-    version: '1.0.0',
-    pluginType: 'provider',
-    description: 'My custom provider plugin',
-  };
+    public manifest: PluginManifest = {
+        name: '@myorg/my-plugin',
+        version: '1.0.0',
+        pluginType: 'provider',
+        description: 'My custom provider plugin',
+    };
 
-  async initialize(context: PluginContext): Promise<void> {
-    // Plugin initialization
-  }
+    async initialize(context: PluginContext): Promise<void> {
+        // Plugin initialization
+    }
 
-  async destroy(): Promise<void> {
-    // Cleanup resources
-  }
+    async destroy(): Promise<void> {
+        // Cleanup resources
+    }
 }
 ```
 
 ### Provider Implementation
 
 ```typescript
-import { IProvider } from '@holokai/common/provider';
-import { HoloRequest, HoloResponse } from '@holokai/common/holo';
+import {IProvider} from '@holokai/common/provider';
+import {HoloRequest, HoloResponse} from '@holokai/common/holo';
 
 export class MyProvider implements IProvider {
-  async processRequest(request: HoloRequest): Promise<HoloResponse> {
-    // Transform Holo format to provider-specific format
-    // Call provider API
-    // Transform response back to Holo format
-    return response;
-  }
+    async processRequest(request: HoloRequest): Promise<HoloResponse> {
+        // Transform Holo format to provider-specific format
+        // Call provider API
+        // Transform response back to Holo format
+        return response;
+    }
 }
 ```
 
@@ -67,7 +67,7 @@ The SDK is organized into focused subpath exports:
 Core plugin interfaces and lifecycle management.
 
 ```typescript
-import { IPlugin, PluginManifest, PluginContext, PluginCapabilities } from '@holokai/common/plugin';
+import {IPlugin, PluginManifest, PluginContext, PluginCapabilities} from '@holokai/common/plugin';
 ```
 
 ### `/provider`
@@ -75,7 +75,7 @@ import { IPlugin, PluginManifest, PluginContext, PluginCapabilities } from '@hol
 Provider interfaces and base implementations.
 
 ```typescript
-import { IProvider, IProviderPlugin, ProviderConfig } from '@holokai/common/provider';
+import {IProvider, IProviderPlugin, ProviderConfig} from '@holokai/common/provider';
 ```
 
 ### `/holo`
@@ -83,7 +83,7 @@ import { IProvider, IProviderPlugin, ProviderConfig } from '@holokai/common/prov
 Universal Holo format definitions for cross-provider compatibility.
 
 ```typescript
-import { HoloRequest, HoloResponse, HoloMessage, HoloStream } from '@holokai/common/holo';
+import {HoloRequest, HoloResponse, HoloMessage, HoloStream} from '@holokai/common/holo';
 ```
 
 ### `/utils`
@@ -91,7 +91,7 @@ import { HoloRequest, HoloResponse, HoloMessage, HoloStream } from '@holokai/com
 Shared utilities and helper types.
 
 ```typescript
-import { Logger, ErrorResponse, HealthStatus, Result, AsyncResult } from '@holokai/common/utils';
+import {Logger, ErrorResponse, HealthStatus, Result, AsyncResult} from '@holokai/common/utils';
 ```
 
 ## Type Safety
@@ -100,13 +100,13 @@ All interfaces are fully typed with TypeScript:
 
 ```typescript
 interface PluginManifest {
-  name: string;
-  version: string;
-  pluginType: 'provider' | 'transformer' | 'validator';
-  description?: string;
-  author?: string;
-  license?: string;
-  capabilities?: PluginCapabilities;
+    name: string;
+    version: string;
+    pluginType: 'provider' | 'transformer' | 'validator';
+    description?: string;
+    author?: string;
+    license?: string;
+    capabilities?: PluginCapabilities;
 }
 ```
 
@@ -173,7 +173,12 @@ plugins/holo-provider-{name}/
     "test": "jest",
     "test:integration": "jest tests/integration"
   },
-  "keywords": ["holo", "plugin", "provider", "{name}"],
+  "keywords": [
+    "holo",
+    "plugin",
+    "provider",
+    "{name}"
+  ],
   "author": "Your Name",
   "license": "MIT"
 }
@@ -202,59 +207,59 @@ export {OpenAITranslator} from './translator';
 ### src/plugin.ts Template
 
 ```typescript
-import { IProviderPlugin, PluginManifest, PluginContext } from '@holokai/common/plugin';
-import { ProviderConfig, ProviderCapabilities } from '@holokai/common/provider';
-import { OpenAIProvider } from './provider';
+import {IProviderPlugin, PluginManifest, PluginContext} from '@holokai/common/plugin';
+import {ProviderConfig, ProviderCapabilities} from '@holokai/common/provider';
+import {OpenAIProvider} from './provider';
 
 class OpenAIProviderPlugin implements IProviderPlugin {
-  public manifest: PluginManifest = {
-    name: '@holokai/provider-openai',
-    version: '1.0.0',
-    pluginType: 'provider',
-    providerType: 'openai',
-    sdkVersion: 'openai@4.73.1',
-    commonSdkVersion: '^1.0.0',
-    capabilities: {
-      streaming: true,
-      tools: true,
-      vision: true,
-      reasoning: false
-    },
-    author: 'HoloKai Team',
-    source: 'official',
-    description: 'OpenAI provider plugin for GPT models'
-  };
+    public manifest: PluginManifest = {
+        name: '@holokai/provider-openai',
+        version: '1.0.0',
+        pluginType: 'provider',
+        providerType: 'openai',
+        sdkVersion: 'openai@4.73.1',
+        commonSdkVersion: '^1.0.0',
+        capabilities: {
+            streaming: true,
+            tools: true,
+            vision: true,
+            reasoning: false
+        },
+        author: 'HoloKai Team',
+        source: 'official',
+        description: 'OpenAI provider plugin for GPT models'
+    };
 
-  private context?: PluginContext;
-  private initialized = false;
+    private context?: PluginContext;
+    private initialized = false;
 
-  async initialize(context: PluginContext): Promise<void> {
-    if (this.initialized) return; // Idempotent
-    this.context = context;
-    this.initialized = true;
-    context.logger.info('[OpenAI Plugin] Initialized');
-  }
-
-  async destroy(): Promise<void> {
-    this.context = undefined;
-    this.initialized = false;
-  }
-
-  createProvider(config: ProviderConfig): OpenAIProvider {
-    if (!this.initialized) {
-      throw new Error('Plugin not initialized');
+    async initialize(context: PluginContext): Promise<void> {
+        if (this.initialized) return; // Idempotent
+        this.context = context;
+        this.initialized = true;
+        context.logger.info('[OpenAI Plugin] Initialized');
     }
-    return new OpenAIProvider(config, this.context!.logger);
-  }
 
-  validateConfig(config: unknown): boolean {
-    // Basic validation - plugins are lightweight
-    return typeof config === 'object' && config !== null;
-  }
+    async destroy(): Promise<void> {
+        this.context = undefined;
+        this.initialized = false;
+    }
 
-  getCapabilities(): ProviderCapabilities {
-    return this.manifest.capabilities!;
-  }
+    createProvider(config: ProviderConfig): OpenAIProvider {
+        if (!this.initialized) {
+            throw new Error('Plugin not initialized');
+        }
+        return new OpenAIProvider(config, this.context!.logger);
+    }
+
+    validateConfig(config: unknown): boolean {
+        // Basic validation - plugins are lightweight
+        return typeof config === 'object' && config !== null;
+    }
+
+    getCapabilities(): ProviderCapabilities {
+        return this.manifest.capabilities!;
+    }
 }
 
 // Export singleton instance
@@ -353,8 +358,14 @@ export class OpenAITranslator {
     "declarationMap": true,
     "sourceMap": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests"
+  ]
 }
 ```
 
@@ -377,7 +388,8 @@ export class OpenAITranslator {
 
 ### Complete Example
 
-See [plugins/holo-provider-openai](../holo-provider-openai) for a complete reference implementation following this template.
+See [plugins/holo-provider-openai](../holo-provider-openai) for a complete reference implementation following this
+template.
 
 ## Examples
 

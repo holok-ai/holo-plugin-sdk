@@ -40,7 +40,15 @@
     "validate:boundaries": "node scripts/validate-boundaries.js",
     "validate:plugin-boundaries": "bash scripts/validate-plugin-boundaries.sh",
     "docs:serve": "npx http-server ./docs -p 3001",
-    "docs:check": "ls -la README.md CONTRIBUTING.md plugins/*/README.md"
+    "docs:check": "ls -la README.md CONTRIBUTING.md plugins/*/README.md",
+    "publish:check": "npm run build:plugins && npm run test:workspaces",
+    "publish:sdk": "cd plugins/sdk && npm publish",
+    "publish:claude": "cd plugins/holo-provider-claude && npm publish",
+    "publish:openai": "cd plugins/holo-provider-openai && npm publish",
+    "publish:ollama": "cd plugins/holo-provider-ollama && npm publish",
+    "publish:all": "npm run publish:sdk && npm run publish:claude && npm run publish:openai && npm run publish:ollama",
+    "pack:sdk": "cd plugins/sdk && npm pack",
+    "pack:all": "npm run pack:sdk && cd plugins/holo-provider-claude && npm pack && cd ../holo-provider-openai && npm pack && cd ../holo-provider-ollama && npm pack"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.1",

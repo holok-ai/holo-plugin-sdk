@@ -81,25 +81,25 @@ All Holo types are:
 Plugins interact with Holo format through the SDK:
 
 ```typescript
-import type { HoloRequest, HoloResponse } from '@holokai/sdk';
+import type {HoloRequest, HoloResponse} from '@holokai/sdk';
 
 // Translate provider format to Holo
 function toHolo(providerRequest: MyProviderRequest): HoloRequest {
-  return {
-    model: providerRequest.model,
-    messages: providerRequest.messages.map(mapMessage),
-    temperature: providerRequest.temperature,
-    // ... map other fields
-  };
+    return {
+        model: providerRequest.model,
+        messages: providerRequest.messages.map(mapMessage),
+        temperature: providerRequest.temperature,
+        // ... map other fields
+    };
 }
 
 // Translate Holo to provider format
 function fromHolo(holoRequest: HoloRequest): MyProviderRequest {
-  return {
-    model: holoRequest.model,
-    messages: holoRequest.messages?.map(mapMessage) ?? [],
-    // ... map other fields
-  };
+    return {
+        model: holoRequest.model,
+        messages: holoRequest.messages?.map(mapMessage) ?? [],
+        // ... map other fields
+    };
 }
 ```
 
@@ -148,13 +148,13 @@ Holo provides normalized streaming through `HoloStreamChunk`:
 
 ```typescript
 interface HoloStreamChunk {
-  id?: string;
-  model?: string;
-  created?: number;
-  delta?: HoloStreamingDelta;
-  done?: boolean;
-  finish_reason?: HoloFinishReason;
-  usage?: HoloUsage;
+    id?: string;
+    model?: string;
+    created?: number;
+    delta?: HoloStreamingDelta;
+    done?: boolean;
+    finish_reason?: HoloFinishReason;
+    usage?: HoloUsage;
 }
 ```
 

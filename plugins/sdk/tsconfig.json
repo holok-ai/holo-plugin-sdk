@@ -10,7 +10,9 @@
     "lib": [
       "ESNext",
       "ESNext.Intl"
-    ]
+    ],
+    "baseUrl": ".",
+    "paths": {}
   },
   "include": [
     "src/**/*"

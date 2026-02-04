@@ -1,4 +1,4 @@
-import {RequestType} from "@holokai/sdk/holo";
+import {RequestType} from "../holo";
 import {HoloWorkerRequest, WorkerResponseEnvelope} from "../core/worker";
 import {IAuditor} from "./auditor";
 import {IProviderTranslator} from "./translator";
@@ -8,7 +8,16 @@ export type ProviderEvent =
     | { type: "stream_event"; requestId: string; seq: number; event: any; ts: number }
     | { type: "text_delta"; requestId: string; seq: number; text: string; ts: number }
     | { type: "done"; requestId: string; seq: number; message: any; text: string; metrics?: any; ts: number }
-    | { type: "error"; requestId: string; seq: number; error: any; status?: number; headers?: Record<string, string>; ts: number };
+    | {
+    type: "error";
+    requestId: string;
+    seq: number;
+    error: any;
+    status?: number;
+    headers?: Record<string, string>;
+    metrics?: any;
+    ts: number
+};
 
 export type ProviderEnvelope = {
     model_slug: string;
