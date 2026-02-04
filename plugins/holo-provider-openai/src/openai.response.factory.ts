@@ -1,4 +1,4 @@
-import {IResponseFactory} from "@holokai/sdk";
+import {HoloErrorCode, IResponseFactory} from "@holokai/sdk";
 import {ResponseErrorEvent} from "openai/resources/responses/responses";
 
 export type OpenAIResponseCode = | 'server_error'
@@ -21,12 +21,21 @@ export type OpenAIResponseCode = | 'server_error'
     | 'image_file_not_found';
 
 export class OpenAIResponseFactory implements IResponseFactory {
-    createError(message: string, code: OpenAIResponseCode = 'invalid_prompt'): ResponseErrorEvent {
+    mapHoloCode(code: HoloErrorCode): OpenAIResponseCode {
+        switch (code) {
+            case 'guard_failure':
+                return 'invalid_prompt';
+            default:
+                return 'invalid_prompt';
+        }
+    }
+
+    createError(message: string, code: HoloErrorCode): ResponseErrorEvent {
         return {
             type: 'error',
             message,
             param: null,
-            code,
+            code: this.mapHoloCode(code),
             sequence_number: 0
         };
     }

@@ -10,7 +10,7 @@ import {
     ClaudeTextDelta,
     ClaudeUsage
 } from './types';
-import {IResponseFactory, pickDefined} from '@holokai/sdk';
+import {HoloErrorCode, IResponseFactory, pickDefined} from '@holokai/sdk';
 import {ErrorResponse} from '@anthropic-ai/sdk/resources/shared';
 
 export type ClaudeResponseTypes =
@@ -26,12 +26,19 @@ export type ClaudeResponseTypes =
 
 export class ClaudeResponseFactory implements IResponseFactory {
 
-    createError(message: string, code: ClaudeResponseTypes): ErrorResponse {
+    mapHoloCode(code: HoloErrorCode): ClaudeResponseTypes {
+        switch (code) {
+            case 'guard_failure':
+                return 'invalid_request_error';
+        }
+    }
+
+    createError(message: string, code: HoloErrorCode): ErrorResponse {
         return {
             request_id: null,
             type: 'error',
             error: {
-                type: code,
+                type: this.mapHoloCode(code),
                 message
             }
         };
