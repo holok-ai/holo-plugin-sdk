@@ -31,6 +31,7 @@ export class OpenAIAuditor extends BaseAuditor {
         const payload = workerRequest.payload as ChatCompletionCreateParamsBase;
         // Set options (OpenAI-specific parameters)
         const options: Record<string, any> = {};
+        if (payload.max_completion_tokens !== undefined) options.max_completion_tokens = payload.max_completion_tokens;
         if (payload.max_tokens !== undefined) options.max_tokens = payload.max_tokens;
         if (payload.temperature !== undefined) options.temperature = payload.temperature;
         if (payload.top_p !== undefined) options.top_p = payload.top_p;
@@ -42,6 +43,7 @@ export class OpenAIAuditor extends BaseAuditor {
         if (payload.tool_choice !== undefined) options.tool_choice = payload.tool_choice;
         if (payload.response_format !== undefined) options.response_format = payload.response_format;
         if (payload.seed !== undefined) options.seed = payload.seed;
+        if (payload.safety_identifier !== undefined) options.safety_identifier = payload.safety_identifier;
         if (payload.user !== undefined) options.user = payload.user;
 
         if (Object.keys(options).length > 0) {
