@@ -92,6 +92,8 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
     protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, { type: 'done' | 'error' }>) {
         const metrics = providerEvent.metrics;
 
+        if (!metrics) return {};
+
         return pickDefined({
             usage_raw: metrics,
             input_tokens: metrics.inputTokens,
