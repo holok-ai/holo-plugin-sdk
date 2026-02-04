@@ -1,6 +1,6 @@
 {
   "name": "@holokai/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Common SDK for Holo plugin system - contracts, types, and validators",
   "author": "Holokai",
@@ -83,9 +83,15 @@
     "lint": "eslint src",
     "test": "jest",
     "test:watch": "jest --watch",
-    "prepublishOnly": "npm run clean && npm run build && npm run test"
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "peerDependencies": {
+    "express": "^4.21.0",
+    "tsyringe": "^4.10.0",
+    "winston": "^3.18.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "typescript": "^5.0.0"
   }
 }

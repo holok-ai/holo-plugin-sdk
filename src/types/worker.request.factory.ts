@@ -12,12 +12,11 @@ export class WorkerRequestFactory {
         providerName: string | undefined,
         type: RequestType,
         req: HttpApiRequest,
-        sourceId: string
+        sourceId: string,
+        isPassthrough: boolean = false
     ): HoloWorkerRequest {
-        const {auth, body, headers, query} = req;
+        const {auth, body, headers, query, path, method} = req;
 
-        // Remove thread_id and branch_id from body before validation as they're not part of provider API schemas
-        // thread_id and branch_id are extracted separately in fromRequest() and stored in HoloWorkerRequest
         const {thread_id, branch_id, ...payload} = body;
 
         // Transform OpenAI-specific deprecated parameters
@@ -25,7 +24,25 @@ export class WorkerRequestFactory {
             this.transformOpenAIPayload(payload);
         }
 
-        return this.create(providerType, providerName, type, payload, sourceId, auth, headers, query, thread_id, branch_id);
+       
+        const workerRequest = this.create(
+            providerType,
+            providerName,
+            type,
+            payload,
+            sourceId,
+            auth,
+            {path, method, headers: headers || {}, query: query || {}},
+            thread_id,
+            branch_id
+        );
+
+        if (isPassthrough) {
+            workerRequest.isPassthrough = true;
+            workerRequest.passthroughPath = path.replace(`/api/${providerType}`, '');
+        }
+
+        return workerRequest;
     }
 
     private static transformOpenAIPayload(payload: any): void {
@@ -67,8 +84,7 @@ export class WorkerRequestFactory {
         payload: any,
         sourceId: string,
         auth?: Auth,
-        headers?: Record<string, any>,
-        query?: Record<string, any>,
+        rawRequest?: {path: string; method: string; headers: Record<string, any>; query: Record<string, any>},
         thread_id?: string,
         branch_id?: string,
     ) {
@@ -92,8 +108,7 @@ export class WorkerRequestFactory {
             payload,
             isStreaming: payload.stream === true,
             timestamp: Date.now(),
-            headers,
-            query,
+            rawRequest: rawRequest || {path: '', method: 'POST', headers: {}, query: {}},
             thread_id,
             branch_id,
             ...sanitizedAuth

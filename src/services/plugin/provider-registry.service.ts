@@ -82,7 +82,12 @@ export class ProviderPluginRegistry extends ClassLogger implements IPluginRegist
     private buildRoutesFromTree(
         router: Router,
         tree: RouteTree,
-        handlers: { noOpHandler: any; modelsHandler: any; requestHandler: (rt: RequestType) => any },
+        handlers: {
+            noOpHandler: any;
+            modelsHandler: any;
+            requestHandler: (rt: RequestType) => any,
+            passthroughHandler: any
+        },
         authMiddleware: (req: HttpApiRequest, res: express.Response, next: NextFunction) => Promise<void>,
         providerFamily: string,
         basePath: string = ''
@@ -102,6 +107,9 @@ export class ProviderPluginRegistry extends ClassLogger implements IPluginRegist
                         break;
                     case RouteHandler.REQUEST:
                         handler = handlers.requestHandler(routeDef.requestType!);
+                        break;
+                    case RouteHandler.PASSTHROUGH:
+                        handler = handlers.passthroughHandler;
                         break;
                     default:
                         handler = handlers.noOpHandler;
@@ -142,12 +150,24 @@ export class ProviderPluginRegistry extends ClassLogger implements IPluginRegist
                 noOpHandler: providerHandlers.createNoOpHandler(plugin.family),
                 modelsHandler: providerHandlers.createModelsHandler(),
                 requestHandler: (requestType: RequestType) =>
-                    providerHandlers.createRequestHandler(plugin.family, requestType)
+                    providerHandlers.createRequestHandler(plugin.family, requestType),
+                passthroughHandler: providerHandlers.createPassthroughHandler(plugin.family)
             };
 
             const routeTree = plugin.getRoutes();
+            const authMiddleware = providerHandlers.createMiddleware(family);
 
-            this.buildRoutesFromTree(pluginRouter, routeTree, pluginHandlers, providerHandlers.createMiddleware(family), family);
+            this.buildRoutesFromTree(pluginRouter, routeTree, pluginHandlers, authMiddleware, family);
+
+            const defaultHandler = plugin.defaultRouteHandler;
+
+            if (defaultHandler === RouteHandler.NOOP) {
+                pluginRouter.all('/*', authMiddleware, pluginHandlers.noOpHandler);
+                logger.info(`  * (catch-all) /api/${family}/* -> NOOP`);
+            } else if (defaultHandler === RouteHandler.PASSTHROUGH) {
+                pluginRouter.all('/*', authMiddleware, pluginHandlers.passthroughHandler);
+                logger.info(`  * (catch-all) /api/${family}/* -> PASSTHROUGH`);
+            }
 
             router.use(`/${family}`, pluginRouter);
         }

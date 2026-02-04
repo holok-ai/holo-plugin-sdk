@@ -9,8 +9,13 @@ COPY tsconfig.json ./
 # Install PostgreSQL client for audit service
 RUN apk --no-cache add postgresql-client
 
-# Install all dependencies (including TypeScript and ts-node)
-RUN npm install
+# Remove workspace configuration and install from npm
+RUN npm pkg delete workspaces && \
+    npm install && \
+    npm install \
+      @holokai/holo-provider-claude@latest \
+      @holokai/holo-provider-openai@latest \
+      @holokai/holo-provider-ollama@latest
 
 # Copy source code
 COPY src/ ./src/

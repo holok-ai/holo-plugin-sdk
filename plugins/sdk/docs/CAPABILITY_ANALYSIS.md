@@ -167,18 +167,18 @@ populate.
 
 ```typescript
 {
-  id?: string;              // Optional (generate if provider lacks)
-  model: string;            // Required
-  messages: HoloMessage[]; // Required - primary response field
-  finish_reason?: HoloFinishReason;
-  service_tier?: string;   // Optional, top-level
-  usage?: HoloUsage;       // Optional
-  created?: number;        // Optional (ms since epoch)
+    id ? : string;              // Optional (generate if provider lacks)
+    model: string;            // Required
+    messages: HoloMessage[]; // Required - primary response field
+    finish_reason ? : HoloFinishReason;
+    service_tier ? : string;   // Optional, top-level
+    usage ? : HoloUsage;       // Optional
+    created ? : number;        // Optional (ms since epoch)
 
-  // OpenAI compatibility (optional)
-  object?: string;
-  choices?: HoloChoice[];
-  system_fingerprint?: string;
+    // OpenAI compatibility (optional)
+    object ? : string;
+    choices ? : HoloChoice[];
+    system_fingerprint ? : string;
 }
 ```
 
@@ -314,8 +314,8 @@ populate.
 // ✅ SDK uses proper typed interfaces
 export interface HoloFunctionArguments {
     [key: string]: string | number | boolean | null
-                  | HoloFunctionArguments
-                  | HoloFunctionArguments[];
+        | HoloFunctionArguments
+        | HoloFunctionArguments[];
 }
 
 export interface HoloJsonSchema {
@@ -413,10 +413,10 @@ The following are intentionally **NOT** in Holo format because they're provider-
 
 ```typescript
 // Before
-import { HoloTool } from '../types/requests';
+import {HoloTool} from '../types/requests';
 
 // After
-import type { HoloTool } from '@holokai/sdk';
+import type {HoloTool} from '@holokai/sdk';
 ```
 
 ### 2. ✅ Tighten Timestamp Type
@@ -426,13 +426,13 @@ import type { HoloTool } from '@holokai/sdk';
 **Current**:
 
 ```typescript
-created?: number | Date;
+created ? : number | Date;
 ```
 
 **Proposed**:
 
 ```typescript
-created?: number; // milliseconds since epoch
+created ? : number; // milliseconds since epoch
 ```
 
 **Rationale**: Eliminates ambiguity, ensures predictable serialization, and matches internal normalization practice.
@@ -446,23 +446,23 @@ created?: number; // milliseconds since epoch
 ```typescript
 // Round-trip: OpenAI → Holo → Claude → Holo → OpenAI
 const original = {
-  model: 'gpt-4',
-  messages: [{ role: 'user', content: 'Hi' }],
-  max_tokens: 100,
-  reasoning_effort: 'high' // ⚠️ OpenAI-only
+    model: 'gpt-4',
+    messages: [{role: 'user', content: 'Hi'}],
+    max_tokens: 100,
+    reasoning_effort: 'high' // ⚠️ OpenAI-only
 };
 
 // → Holo (reasoning_effort dropped)
-const holo1 = { model: 'gpt-4', messages: [...], max_tokens: 100 };
+const holo1 = {model: 'gpt-4', messages: [...], max_tokens: 100};
 
 // → Claude (successfully mapped)
-const claude = { model: 'claude-3-5-sonnet', messages: [...], max_tokens: 100 };
+const claude = {model: 'claude-3-5-sonnet', messages: [...], max_tokens: 100};
 
 // → Holo (lossless)
-const holo2 = { model: 'claude-3-5-sonnet', messages: [...], max_tokens: 100 };
+const holo2 = {model: 'claude-3-5-sonnet', messages: [...], max_tokens: 100};
 
 // → OpenAI (core fields preserved, reasoning_effort gone)
-const roundTrip = { model: 'gpt-4', messages: [...], max_tokens: 100 };
+const roundTrip = {model: 'gpt-4', messages: [...], max_tokens: 100};
 ```
 
 **Key principle**: Provider-specific fields (`thinking`, `reasoning_effort`, `keep_alive`, etc.) are **dropped at the

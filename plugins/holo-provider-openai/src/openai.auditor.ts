@@ -1,8 +1,9 @@
 import {injectable} from 'tsyringe';
-import {BaseAuditor, HoloWorkerRequest, HoloWorkerResponse, pickDefined, ProviderEnvelope} from "@holokai/sdk";
+import {BaseAuditor, HoloWorkerRequest, pickDefined, ProviderEnvelope, ProviderEvent} from "@holokai/sdk";
 import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
-import {ResponseCreateParamsBase} from "openai/resources/responses/responses";
-import {LlmRequest, LlmResponse, LlmStatus} from "@holokai/sdk/core/entities";
+import {ResponseCreateParamsBase, ResponseUsage} from "openai/resources/responses/responses";
+import {LlmRequest, LlmStatus} from "@holokai/sdk/core/entities";
+import {CompletionUsage} from "openai/resources/completions";
 
 @injectable()
 export class OpenAIAuditor extends BaseAuditor {
@@ -51,79 +52,52 @@ export class OpenAIAuditor extends BaseAuditor {
         }
     }
 
-    protected mapResponseToHolo(
-        workerResponse: HoloWorkerResponse,
-        llmResponse: Omit<LlmResponse, 'id'>
-    ): void {
-        const payload = workerResponse.payload;
-        // Extract model from payload
-        llmResponse.model_slug = payload.model || 'unknown';
-
-        // Extract response text from final response
-        if (workerResponse.fullResponse !== undefined) {
-            llmResponse.response = workerResponse.fullResponse;
-        } else if (payload.object === 'chat.completion') {
-            // Non-streaming completion
-            const choice = payload.choices?.[0];
-            if (choice?.message?.content !== undefined) {
-                llmResponse.response = choice.message.content;
-            }
-        } else if (payload.object === 'chat.completion.chunk') {
-            // Streaming chunk
-            const choice = payload.choices?.[0];
-            if (choice?.delta?.content !== undefined) {
-                llmResponse.response = choice.delta.content;
-            }
+    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, { type: 'done' | 'error' }>) {
+        const metrics = await super.mapResponseMetrics(providerEvent);
+        if (providerEvent.type === 'error') {
+            return metrics;
         }
 
-        // Ensure response is never undefined for successful completions
-        if (llmResponse.response === undefined) {
-            llmResponse.response = '';
+        const payload = providerEvent.message;
+        let usage: ResponseUsage | CompletionUsage = payload.response ? payload.response.usage : payload.usage;
+
+        if (!usage) {
+            return metrics;
         }
+
+        let input_tokens;
+        let output_tokens;
+        if (payload.response) {
+            usage = usage as ResponseUsage;
+            input_tokens = usage.input_tokens;
+            output_tokens = usage.output_tokens;
+        } else {
+            usage = usage as CompletionUsage;
+            input_tokens = usage.prompt_tokens;
+            output_tokens = usage.completion_tokens;
+        }
+
+        return pickDefined({
+            ...metrics,
+            usage_raw: usage,
+            input_tokens,
+            output_tokens
+        });
     }
 
-    protected collectResponseMetrics(
-        workerResponse: HoloWorkerResponse,
-        llmResponse: Omit<LlmResponse, 'id'>
-    ): void {
-
-        const payload = workerResponse.payload;
-
-        // Extract token usage from metrics or payload
-        if (workerResponse.metrics) {
-            llmResponse.usage_raw = workerResponse.metrics;
-            llmResponse.input_tokens = workerResponse.metrics.inputTokens;
-            llmResponse.output_tokens = workerResponse.metrics.outputTokens;
-            llmResponse.time_to_first_token = workerResponse.metrics.timeToFirstToken;
-            llmResponse.total_processing_time = workerResponse.metrics.totalProcessingTime;
-
-        } else if (payload.usage) {
-            llmResponse.usage_raw = payload.usage;
-            llmResponse.input_tokens = payload.usage.prompt_tokens;
-            llmResponse.output_tokens = payload.usage.completion_tokens;
-            llmResponse.time_to_first_token = payload.usage.timeToFirstToken;
-            llmResponse.total_processing_time = payload.usage.totalProcessingTime;
-        }
-
-        // Set status based on completion and finish reason
-        const choice = payload.choices?.[0];
-        if (choice?.finish_reason) {
-            if (choice.finish_reason === 'length') {
-                llmResponse.status = LlmStatus.PARTIAL;
-            } else if (choice.finish_reason === 'stop' || choice.finish_reason === 'end_turn') {
-                llmResponse.status = LlmStatus.SUCCESS;
-            } else if (choice.finish_reason === 'content_filter') {
-                llmResponse.status = LlmStatus.ERROR;
-                llmResponse.error_message = 'Content filtered by OpenAI';
-            } else {
-                llmResponse.status = LlmStatus.SUCCESS;
+    protected async mapResponseStatus(providerEvent: ProviderEvent): Promise<LlmStatus> {
+        if (providerEvent.type === 'done') {
+            const payload = providerEvent.message;
+            const choice = payload.choices?.[0];
+            if (choice?.finish_reason) {
+                if (choice.finish_reason === 'length') {
+                    return LlmStatus.PARTIAL;
+                } else if (choice.finish_reason === 'content_filter') {
+                    return LlmStatus.ERROR;
+                }
             }
-        } else if (payload.error) {
-            llmResponse.status = LlmStatus.ERROR;
-            llmResponse.error_message = payload.error.message || 'OpenAI API error';
-        } else {
-            llmResponse.status = LlmStatus.SUCCESS;
         }
+        return super.mapResponseStatus(providerEvent);
     }
 
     private extractUserPromptFromMessages(messages?: any[]): string | undefined {

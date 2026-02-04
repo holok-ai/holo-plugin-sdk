@@ -1,6 +1,6 @@
-import {ClassLogger, pickDefined} from '@holokai/sdk/core';
+import {ClassLogger, pickDefined, stringifyError} from '../../core';
 import {ProviderEvent} from '../types';
-import type {RequestType} from '@holokai/sdk/holo';
+import type {RequestType} from '../../holo';
 
 export type WireChunk = {
     requestId: string;
@@ -41,6 +41,8 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
         return this.fromStreaming(ev);
     }
 
+    abstract formatWire(data: any): string;
+
     // --- defaults ---
     protected nonStreamingHeaders(): Record<string, string> {
         return {'Content-Type': 'application/json'};
@@ -58,10 +60,6 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
         return (ev.type === 'error' || !this.isStreaming) ? this.nonStreamingHeaders() : this.streamingHeaders();
     }
 
-    protected stringifyResponse(err: string | Error): string {
-        return typeof err === 'string' ? err : JSON.stringify(err);
-    }
-
     protected chunkify(response: any, ev: ProviderEvent, done?: true, override?: {
         status?: number;
         headers?: Record<string, string>
@@ -69,7 +67,7 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
         const isFirst = this.wireSeq == 0;
         const seq = this.wireSeq++;
         const body = response === undefined ? '' :
-            ev.type === 'error' || ev.type === 'done' ? this.stringifyResponse(response) : this.formatWire(response);
+            ev.type === 'error' || ev.type === 'done' ? stringifyError(response) : this.formatWire(response);
 
         const chunk = pickDefined({
             requestId: this.requestId,
@@ -137,6 +135,4 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
         // Mid-stream: default behavior (provider adapters should usually override)
         return [this.chunkify(ev.error, ev, true)];
     }
-
-    abstract formatWire(data: any): string;
 }

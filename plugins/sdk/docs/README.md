@@ -14,16 +14,16 @@ npm install @holokai/sdk
 ```
 
 ```typescript
-import type { HoloRequest, HoloResponse } from '@holokai/sdk';
+import type {HoloRequest, HoloResponse} from '@holokai/sdk';
 
 // Use Holo types in your plugin
 const request: HoloRequest = {
-  model: 'gpt-4',
-  messages: [
-    { role: 'user', content: 'Hello!' }
-  ],
-  temperature: 0.7,
-  max_tokens: 1000
+    model: 'gpt-4',
+    messages: [
+        {role: 'user', content: 'Hello!'}
+    ],
+    temperature: 0.7,
+    max_tokens: 1000
 };
 ```
 
@@ -145,35 +145,35 @@ Fields unique to one provider (intentionally excluded from Holo):
 ```typescript
 // OpenAI Request
 const openaiRequest = {
-  model: 'gpt-4',
-  messages: [
-    { role: 'system', content: 'You are helpful.' },
-    { role: 'user', content: 'Hello!' }
-  ],
-  max_tokens: 1000,
-  temperature: 0.7
+    model: 'gpt-4',
+    messages: [
+        {role: 'system', content: 'You are helpful.'},
+        {role: 'user', content: 'Hello!'}
+    ],
+    max_tokens: 1000,
+    temperature: 0.7
 };
 
 // → Holo (extract system message)
 const holoRequest: HoloRequest = {
-  model: 'gpt-4',
-  system: 'You are helpful.', // Extracted from messages
-  messages: [
-    { role: 'user', content: 'Hello!' }
-  ],
-  max_tokens: 1000,
-  temperature: 0.7
+    model: 'gpt-4',
+    system: 'You are helpful.', // Extracted from messages
+    messages: [
+        {role: 'user', content: 'Hello!'}
+    ],
+    max_tokens: 1000,
+    temperature: 0.7
 };
 
 // → Claude (system is top-level)
 const claudeRequest = {
-  model: 'claude-3-5-sonnet-20241022',
-  system: 'You are helpful.', // Direct mapping
-  messages: [
-    { role: 'user', content: 'Hello!' }
-  ],
-  max_tokens: 1000,
-  temperature: 0.7
+    model: 'claude-3-5-sonnet-20241022',
+    system: 'You are helpful.', // Direct mapping
+    messages: [
+        {role: 'user', content: 'Hello!'}
+    ],
+    max_tokens: 1000,
+    temperature: 0.7
 };
 ```
 
@@ -182,45 +182,45 @@ const claudeRequest = {
 ```typescript
 // Claude Response
 const claudeResponse = {
-  id: 'msg_123',
-  type: 'message',
-  role: 'assistant',
-  content: [{ type: 'text', text: 'Hello!' }],
-  model: 'claude-3-5-sonnet-20241022',
-  stop_reason: 'end_turn',
-  usage: {
-    input_tokens: 10,
-    output_tokens: 5
-  }
+    id: 'msg_123',
+    type: 'message',
+    role: 'assistant',
+    content: [{type: 'text', text: 'Hello!'}],
+    model: 'claude-3-5-sonnet-20241022',
+    stop_reason: 'end_turn',
+    usage: {
+        input_tokens: 10,
+        output_tokens: 5
+    }
 };
 
 // → Holo (normalize structure)
 const holoResponse: HoloResponse = {
-  id: 'msg_123',
-  model: 'claude-3-5-sonnet-20241022',
-  messages: [{
-    role: 'assistant',
-    content: 'Hello!' // Flatten text blocks
-  }],
-  finish_reason: 'stop', // Map end_turn → stop
-  usage: {
-    input_tokens: 10,
-    output_tokens: 5,
-    total_tokens: 15 // Derived
-  }
+    id: 'msg_123',
+    model: 'claude-3-5-sonnet-20241022',
+    messages: [{
+        role: 'assistant',
+        content: 'Hello!' // Flatten text blocks
+    }],
+    finish_reason: 'stop', // Map end_turn → stop
+    usage: {
+        input_tokens: 10,
+        output_tokens: 5,
+        total_tokens: 15 // Derived
+    }
 };
 
 // → Ollama (different structure)
 const ollamaResponse = {
-  model: 'llama2',
-  created_at: '2025-12-09T12:00:00Z',
-  message: {
-    role: 'assistant',
-    content: 'Hello!' // Direct text
-  },
-  done: true,
-  prompt_eval_count: 10, // input_tokens
-  eval_count: 5 // output_tokens
+    model: 'llama2',
+    created_at: '2025-12-09T12:00:00Z',
+    message: {
+        role: 'assistant',
+        content: 'Hello!' // Direct text
+    },
+    done: true,
+    prompt_eval_count: 10, // input_tokens
+    eval_count: 5 // output_tokens
 };
 ```
 
@@ -233,12 +233,12 @@ const ollamaResponse = {
 Ollama doesn't provide response IDs. Generate them:
 
 ```typescript
-import { randomUUID } from 'crypto';
+import {randomUUID} from 'crypto';
 
 const holoResponse: HoloResponse = {
-  id: ollamaResponse.id ?? randomUUID(), // Generate if missing
-  model: ollamaResponse.model,
-  messages: [/* ... */]
+    id: ollamaResponse.id ?? randomUUID(), // Generate if missing
+    model: ollamaResponse.model,
+    messages: [/* ... */]
 };
 ```
 
@@ -249,19 +249,19 @@ Ensure tool calls and results are properly linked:
 ```typescript
 // Assistant makes tool call
 const toolCall: HoloToolCall = {
-  id: 'call_abc123',
-  type: 'function',
-  function: {
-    name: 'get_weather',
-    arguments: { location: 'SF' }
-  }
+    id: 'call_abc123',
+    type: 'function',
+    function: {
+        name: 'get_weather',
+        arguments: {location: 'SF'}
+    }
 };
 
 // Tool result references the call
 const toolResult: HoloMessage = {
-  role: 'tool',
-  tool_call_id: 'call_abc123', // Links to above
-  content: 'Sunny, 72°F'
+    role: 'tool',
+    tool_call_id: 'call_abc123', // Links to above
+    content: 'Sunny, 72°F'
 };
 ```
 
@@ -275,8 +275,8 @@ const input: string | HoloContent[] = 'Hello';
 
 // Normalize to array
 const normalized: HoloContent[] = typeof input === 'string'
-  ? [{ type: 'text', text: input }]
-  : input;
+    ? [{type: 'text', text: input}]
+    : input;
 ```
 
 ### Streaming Accumulation
@@ -288,23 +288,23 @@ let fullContent = '';
 let usage: HoloUsage | undefined;
 
 for await (const chunk of stream) {
-  if (chunk.delta?.type === 'content_delta') {
-    fullContent += chunk.delta.delta.content ?? '';
-  }
-  if (chunk.usage) {
-    usage = chunk.usage;
-  }
+    if (chunk.delta?.type === 'content_delta') {
+        fullContent += chunk.delta.delta.content ?? '';
+    }
+    if (chunk.usage) {
+        usage = chunk.usage;
+    }
 }
 
 const finalResponse: HoloResponse = {
-  id: 'msg_123',
-  model: 'gpt-4',
-  messages: [{
-    role: 'assistant',
-    content: fullContent
-  }],
-  finish_reason: 'stop',
-  usage
+    id: 'msg_123',
+    model: 'gpt-4',
+    messages: [{
+        role: 'assistant',
+        content: fullContent
+    }],
+    finish_reason: 'stop',
+    usage
 };
 ```
 
@@ -320,8 +320,8 @@ Holo format uses strict TypeScript types:
 // ✅ Properly typed arguments
 export interface HoloFunctionArguments {
     [key: string]: string | number | boolean | null
-                  | HoloFunctionArguments
-                  | HoloFunctionArguments[];
+        | HoloFunctionArguments
+        | HoloFunctionArguments[];
 }
 
 // ✅ Proper JSON Schema
@@ -341,11 +341,11 @@ export interface HoloJsonSchema {
 Use ArkType validators at boundaries:
 
 ```typescript
-import { validateHoloRequest } from '@holokai/sdk/validators';
+import {validateHoloRequest} from '@holokai/sdk/validators';
 
 const result = validateHoloRequest(untrustedInput);
 if (result.problems) {
-  throw new Error(`Invalid request: ${result.problems}`);
+    throw new Error(`Invalid request: ${result.problems}`);
 }
 
 const safeRequest: HoloRequest = result.data;
@@ -377,8 +377,8 @@ Maintain request/response IDs when present:
 ```typescript
 // Keep provider IDs when available
 const holoResponse: HoloResponse = {
-  id: providerResponse.id ?? generateId(),
-  // ... rest
+    id: providerResponse.id ?? generateId(),
+    // ... rest
 };
 ```
 
@@ -388,15 +388,15 @@ Use the standard finish reason mappings:
 
 ```typescript
 function mapFinishReason(
-  claudeReason: string
+    claudeReason: string
 ): HoloFinishReason {
-  const mapping: Record<string, HoloFinishReason> = {
-    'end_turn': 'stop',
-    'max_tokens': 'length',
-    'tool_use': 'tool_calls',
-    'refusal': 'content_filter'
-  };
-  return mapping[claudeReason] ?? 'stop';
+    const mapping: Record<string, HoloFinishReason> = {
+        'end_turn': 'stop',
+        'max_tokens': 'length',
+        'tool_use': 'tool_calls',
+        'refusal': 'content_filter'
+    };
+    return mapping[claudeReason] ?? 'stop';
 }
 ```
 
@@ -407,18 +407,18 @@ Different providers use different tool choice formats:
 ```typescript
 // Holo to Claude
 if (holo.tool_choice?.type === 'specific') {
-  claude.tool_choice = {
-    type: 'tool',
-    name: holo.tool_choice.name
-  };
+    claude.tool_choice = {
+        type: 'tool',
+        name: holo.tool_choice.name
+    };
 }
 
 // Holo to OpenAI
 if (holo.tool_choice?.type === 'specific') {
-  openai.tool_choice = {
-    type: 'function',
-    function: { name: holo.tool_choice.name }
-  };
+    openai.tool_choice = {
+        type: 'function',
+        function: {name: holo.tool_choice.name}
+    };
 }
 ```
 
@@ -429,12 +429,12 @@ Provider-specific fields should be safely ignored:
 ```typescript
 // When translating to Holo, drop provider-specific fields
 function toHolo(claudeRequest: ClaudeRequest): HoloRequest {
-  return {
-    model: claudeRequest.model,
-    messages: claudeRequest.messages,
-    // ... map supported fields
-    // ❌ DON'T include: thinking, betas, mcp_servers
-  };
+    return {
+        model: claudeRequest.model,
+        messages: claudeRequest.messages,
+        // ... map supported fields
+        // ❌ DON'T include: thinking, betas, mcp_servers
+    };
 }
 ```
 
@@ -447,24 +447,24 @@ function toHolo(claudeRequest: ClaudeRequest): HoloRequest {
 Test individual translations:
 
 ```typescript
-import { toHolo, fromHolo } from './translator';
+import {toHolo, fromHolo} from './translator';
 
 describe('Claude → Holo translation', () => {
-  it('should map basic request', () => {
-    const claude = {
-      model: 'claude-3-5-sonnet-20241022',
-      messages: [{ role: 'user', content: 'Hi' }],
-      max_tokens: 100
-    };
+    it('should map basic request', () => {
+        const claude = {
+            model: 'claude-3-5-sonnet-20241022',
+            messages: [{role: 'user', content: 'Hi'}],
+            max_tokens: 100
+        };
 
-    const holo = toHolo(claude);
+        const holo = toHolo(claude);
 
-    expect(holo).toEqual({
-      model: 'claude-3-5-sonnet-20241022',
-      messages: [{ role: 'user', content: 'Hi' }],
-      max_tokens: 100
+        expect(holo).toEqual({
+            model: 'claude-3-5-sonnet-20241022',
+            messages: [{role: 'user', content: 'Hi'}],
+            max_tokens: 100
+        });
     });
-  });
 });
 ```
 
@@ -474,17 +474,17 @@ Verify lossless translations:
 
 ```typescript
 it('should preserve core fields in round-trip', () => {
-  const original: HoloRequest = {
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: 'Test' }],
-    temperature: 0.7,
-    max_tokens: 100
-  };
+    const original: HoloRequest = {
+        model: 'gpt-4',
+        messages: [{role: 'user', content: 'Test'}],
+        temperature: 0.7,
+        max_tokens: 100
+    };
 
-  const openai = fromHolo(original);
-  const roundTrip = toHolo(openai);
+    const openai = fromHolo(original);
+    const roundTrip = toHolo(openai);
 
-  expect(roundTrip).toEqual(original);
+    expect(roundTrip).toEqual(original);
 });
 ```
 
@@ -494,21 +494,21 @@ Test with real provider SDKs:
 
 ```typescript
 import Anthropic from '@anthropic-ai/sdk';
-import { toHolo } from './claude-translator';
+import {toHolo} from './claude-translator';
 
 it('should handle real Claude response', async () => {
-  const claude = new Anthropic({ apiKey: 'test' });
+    const claude = new Anthropic({apiKey: 'test'});
 
-  const response = await claude.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
-    messages: [{ role: 'user', content: 'Hi' }],
-    max_tokens: 10
-  });
+    const response = await claude.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        messages: [{role: 'user', content: 'Hi'}],
+        max_tokens: 10
+    });
 
-  const holo = toHolo(response);
+    const holo = toHolo(response);
 
-  expect(holo.model).toBe('claude-3-5-sonnet-20241022');
-  expect(holo.messages[0].role).toBe('assistant');
+    expect(holo.model).toBe('claude-3-5-sonnet-20241022');
+    expect(holo.messages[0].role).toBe('assistant');
 });
 ```
 
@@ -533,10 +533,10 @@ Holo format is a true superset that handles all portable features.
 
 ```typescript
 interface ClaudeExtendedRequest extends HoloRequest {
-  claude_specific?: {
-    thinking?: ClaudeThinkingConfig;
-    betas?: string[];
-  };
+    claude_specific?: {
+        thinking?: ClaudeThinkingConfig;
+        betas?: string[];
+    };
 }
 ```
 
@@ -551,9 +551,9 @@ details.
 
 ```typescript
 interface MyCustomRequest extends HoloRequest {
-  custom_fields?: {
-    my_feature?: string;
-  };
+    custom_fields?: {
+        my_feature?: string;
+    };
 }
 ```
 
@@ -563,10 +563,10 @@ interface MyCustomRequest extends HoloRequest {
 
 ```typescript
 // Before
-import { HoloRequest } from '../types/holo';
+import {HoloRequest} from '../types/holo';
 
 // After
-import type { HoloRequest } from '@holokai/sdk';
+import type {HoloRequest} from '@holokai/sdk';
 ```
 
 ---
