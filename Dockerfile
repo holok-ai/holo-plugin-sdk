@@ -13,9 +13,9 @@ RUN apk --no-cache add postgresql-client
 RUN npm pkg delete workspaces && \
     npm install && \
     npm install \
-      @holokai/holo-provider-claude \
-      @holokai/holo-provider-openai \
-      @holokai/holo-provider-ollama
+      @holokai/holo-provider-claude@latest \
+      @holokai/holo-provider-openai@latest \
+      @holokai/holo-provider-ollama@latest
 
 # Copy source code
 COPY src/ ./src/

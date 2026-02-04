@@ -1,5 +1,6 @@
 services:
   holo:
+    container_name: holokai-holo
     build:
       context: .
       dockerfile: Dockerfile

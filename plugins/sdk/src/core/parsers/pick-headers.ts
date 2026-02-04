@@ -2,6 +2,7 @@ export function pickHeadersByPrefix(
     headers: Record<string, string | string[] | undefined>,
     prefixes: string[] = ["anthropic-"]
 ): Record<string, string> {
+    if (!headers) return {};
     const lowerPrefixes = prefixes.map(p => p.toLowerCase());
     const out: Record<string, string> = {};
 
