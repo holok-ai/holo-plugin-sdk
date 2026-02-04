@@ -46,7 +46,7 @@ export class ResponseDB {
             user_id,
             application_id,
             request_id,
-            provider_slug,
+            provider_slug?.toUpperCase(),
             model_slug,
             status,
             error_message,

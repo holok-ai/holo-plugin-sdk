@@ -47,7 +47,7 @@ export class RequestDB {
             timestamp,
             JSON.stringify(raw_request),
             application_id,
-            provider_slug,
+            provider_slug?.toUpperCase(),
             system_prompt
         ]);
     }
