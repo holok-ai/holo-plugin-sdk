@@ -1,7 +1,7 @@
 import {type, Type} from "arktype";
-import {Organization} from "../types";
 import {ApplicationValidator} from "./application.validator";
 import {ProviderValidator} from "./provider.validator";
+import {OrganizationConfigProps} from "@holokai/sdk";
 
 
 export const OrganizationValidator = type({
@@ -10,4 +10,4 @@ export const OrganizationValidator = type({
     slug: 'string',
     providers: ProviderValidator.array(),
     applications: ApplicationValidator.array()
-}) satisfies Type<Organization>;
+}) satisfies Type<OrganizationConfigProps>;

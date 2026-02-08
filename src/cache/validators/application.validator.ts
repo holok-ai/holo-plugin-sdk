@@ -1,7 +1,7 @@
 import {Type, type} from "arktype";
 import {ModelValidator} from "./model.validator";
 import {PromptValidator} from "./prompt.validator";
-import {Application} from "../types";
+import {ApplicationConfigProps} from "@holokai/sdk";
 
 export const ApplicationValidator = type({
     urlSlug: 'string',
@@ -12,4 +12,4 @@ export const ApplicationValidator = type({
     'systemPrompt?': PromptValidator,
     'guards?': PromptValidator.array(),
     'evaluators?': PromptValidator.array()
-}) satisfies Type<Application>;
+}) satisfies Type<ApplicationConfigProps>;

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {ApiResponse, ClassLogger, RequestType} from '@holokai/sdk';
 import {RequestService} from '../../admin/services/request.service';
-import {HttpApiRequest} from '../types';
+import {HoloApiRequest} from '../types';
 import {injectable} from "tsyringe";
 import {makeJwtAuthMiddleware} from "../middleware/jwt.middleware";
 import {AuthService} from "../../admin/services/auth.service";
@@ -22,7 +22,7 @@ export class ProviderHandlers extends ClassLogger {
     }
 
     createModelsHandler() {
-        return async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+        return async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
             const {auth} = req;
             if (!auth) {
                 res.status(401).json({error: 'Unauthorized'});
@@ -41,7 +41,7 @@ export class ProviderHandlers extends ClassLogger {
     }
 
     createRequestHandler(providerFamily: string, requestType: RequestType) {
-        return async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+        return async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
             try {
                 await this.requestService.processRequest(providerFamily, requestType, req, res);
             } catch (error) {
@@ -51,7 +51,7 @@ export class ProviderHandlers extends ClassLogger {
     }
 
     createNoOpHandler(providerFamily: string) {
-        return async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+        return async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
             const logger = this.mlog(`${providerFamily}NoOpHandler`);
             logger.debug(`Received data: ${JSON.stringify(req.body)}`);
             res.status(204);
@@ -59,7 +59,7 @@ export class ProviderHandlers extends ClassLogger {
     }
 
     createPassthroughHandler(providerFamily: string) {
-        return async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+        return async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
             try {
                 await this.requestService.processRequest(providerFamily, RequestType.CHAT, req, res, true);
             } catch (error) {

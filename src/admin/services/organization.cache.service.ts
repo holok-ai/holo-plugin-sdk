@@ -1,8 +1,15 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {Application, Organization, OrganizationCache, Provider} from "../../cache";
+import {OrganizationCache} from "../../cache";
 import {ApplicationConfigValidator, OrganizationConfigValidator} from "../validators";
-import {ApplicationConfig, HoloConfigAction, OrganizationConfig} from "../types";
+import {
+    ApplicationConfigProps,
+    ApplicationConfig,
+    HoloConfigAction,
+    OrganizationConfigProps,
+    OrganizationConfig,
+    ProviderConfigProps
+} from "@holokai/sdk";
 
 @injectable()
 export class OrganizationCacheService {
@@ -33,7 +40,7 @@ export class OrganizationCacheService {
         return this.orgCaches.get(id);
     }
 
-    set(organization: Organization) {
+    set(organization: OrganizationConfigProps) {
         this.orgCaches.set(organization.id, new OrganizationCache(organization));
     }
 
@@ -47,14 +54,14 @@ export class OrganizationCacheService {
         }
     }
 
-    setOrganizations(organizations: readonly Organization[]) {
+    setOrganizations(organizations: readonly OrganizationConfigProps[]) {
         // as organizations and configurations scale, this is most performant
         for (let i = 0; i < organizations.length; i++) {
             this.set(organizations[i]);
         }
     }
 
-    setApplications(applications: readonly Application[]) {
+    setApplications(applications: readonly ApplicationConfigProps[]) {
         for (let i = 0; i < applications.length; i++) {
             const {organizationId} = applications[i];
             const orgCache = this.get(organizationId);
@@ -62,11 +69,11 @@ export class OrganizationCacheService {
         }
     }
 
-    getApplication(orgId: string, urlSlug: string): Application | undefined {
+    getApplication(orgId: string, urlSlug: string): ApplicationConfigProps | undefined {
         return this.get(orgId)?.get('applications', urlSlug);
     }
 
-    getAllApplications(orgId: string): Application[] | undefined {
+    getAllApplications(orgId: string): ApplicationConfigProps[] | undefined {
         return this.get(orgId)?.getAll('applications');
     }
 
@@ -74,11 +81,11 @@ export class OrganizationCacheService {
         return this.get(orgId)?.find('applications', 'providerType', providerFamily);
     }
 
-    getProvider(orgId: string, providerName: string): Provider | undefined {
+    getProvider(orgId: string, providerName: string): ProviderConfigProps | undefined {
         return this.get(orgId)?.get('providers', providerName);
     }
 
-    getAllProviders(orgId: string): Provider[] | undefined {
+    getAllProviders(orgId: string): ProviderConfigProps[] | undefined {
         return this.get(orgId)?.getAll('providers');
     }
 

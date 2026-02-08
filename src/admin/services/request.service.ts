@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {HttpApiRequest} from "../../api/types";
+import {HoloApiRequest} from "../../api/types";
 import {Response} from "express";
 import {ResponseService} from "../../services";
 import {env} from "../../env";
@@ -20,7 +20,7 @@ export class RequestService extends ClassLogger {
         super();
     }
 
-    async processRequest(providerType: string, type: RequestType, req: HttpApiRequest, res: Response, isPassthrough: boolean = false) {
+    async processRequest(providerType: string, type: RequestType, req: HoloApiRequest, res: Response, isPassthrough: boolean = false) {
         const logger = this.mlog(this.processRequest);
         const {auth} = req;
 
@@ -41,7 +41,7 @@ export class RequestService extends ClassLogger {
         logger.info(`Request processed: ${providerType} ${type}`, {requestId: workerRequest.requestId, isPassthrough});
     }
 
-    async parseRequest(providerType: string, providerName: string | undefined, type: RequestType, req: HttpApiRequest, isPassthrough: boolean = false) {
+    async parseRequest(providerType: string, providerName: string | undefined, type: RequestType, req: HoloApiRequest, isPassthrough: boolean = false) {
         return WorkerRequestFactory.fromRequest(providerType, providerName, type, req, this.serverId, isPassthrough);
     }
 }

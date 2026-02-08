@@ -1,5 +1,5 @@
 import {NextFunction, Response} from 'express';
-import {HttpApiRequest} from '../types';
+import {HoloApiRequest} from '../types';
 import logger from '../../utils/logger';
 import {AuthService} from "../../admin/services/auth.service";
 
@@ -9,7 +9,7 @@ type Options = {
 };
 
 export const makeJwtAuthMiddleware = (authService: AuthService, providerFamily: string, opts: Options = {}) =>
-    async function authenticateJWTInternal(req: HttpApiRequest, res: Response, next: NextFunction): Promise<void> {
+    async function authenticateJWTInternal(req: HoloApiRequest, res: Response, next: NextFunction): Promise<void> {
         try {
             req.auth = await authService.populateAuth(providerFamily, req, opts.useCache ?? true);
             next();

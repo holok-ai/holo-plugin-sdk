@@ -1,5 +1,3 @@
-import {Logger} from "winston";
-
 export type HoloLogLevel =
     'fatal'
     | 'error'
@@ -10,11 +8,11 @@ export type HoloLogLevel =
     | 'silent';
 
 export interface HoloLoggerMethod {
-    (message: string, ...meta: any[]): Logger;
+    (message: string, ...meta: any[]): HoloLogger;
 
-    (message: any): Logger;
+    (message: any): HoloLogger;
 
-    (infoObject: object): Logger;
+    (infoObject: object): HoloLogger;
 }
 
 export interface HoloLogger {

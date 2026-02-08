@@ -4,7 +4,7 @@ import type {IPluginRegistry, IProviderPlugin} from '@holokai/sdk/plugin';
 import express, {NextFunction, Router} from 'express';
 import {ClassLogger, RequestType, RouteDefinition, RouteHandler, RouteTree} from '@holokai/sdk';
 import {ProviderHandlers} from '../../api/handlers/provider.handlers';
-import {HttpApiRequest} from "../../api/types";
+import {HoloApiRequest} from "../../api/types";
 
 @injectable()
 export class ProviderPluginRegistry extends ClassLogger implements IPluginRegistry<IProviderPlugin> {
@@ -88,7 +88,7 @@ export class ProviderPluginRegistry extends ClassLogger implements IPluginRegist
             requestHandler: (rt: RequestType) => any,
             passthroughHandler: any
         },
-        authMiddleware: (req: HttpApiRequest, res: express.Response, next: NextFunction) => Promise<void>,
+        authMiddleware: (req: HoloApiRequest, res: express.Response, next: NextFunction) => Promise<void>,
         providerFamily: string,
         basePath: string = ''
     ): void {

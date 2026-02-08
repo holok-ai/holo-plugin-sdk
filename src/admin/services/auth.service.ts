@@ -1,10 +1,9 @@
 import 'reflect-metadata';
-import {ClassLogger, pickDefined} from "@holokai/sdk";
+import {ApplicationConfigProps, ClassLogger, pickDefined} from "@holokai/sdk";
 import {injectable} from "tsyringe";
 import {OrganizationService} from "./organization.service";
-import {Application} from "../../cache";
 import {TokenService} from "./token.service";
-import {HttpApiRequest} from "../../api/types";
+import {HoloApiRequest} from "../../api/types";
 import {Auth} from "../types";
 import {UnauthorizedError} from "express-jwt";
 
@@ -18,7 +17,7 @@ export class AuthService extends ClassLogger {
         super();
     }
 
-    async populateAuth(provider: string, req: HttpApiRequest, useCache: boolean = true): Promise<Auth> {
+    async populateAuth(provider: string, req: HoloApiRequest, useCache: boolean = true): Promise<Auth> {
         const logger = this.mlog(this.populateAuth);
         let token = req.headers['x-api-key'] as string | undefined;
         if (!token) {
@@ -44,7 +43,7 @@ export class AuthService extends ClassLogger {
         const decodedToken = this.tokenService.decodeToken(token);
         const {organizationId, userId} = decodedToken;
 
-        let app: Application | undefined = undefined;
+        let app: ApplicationConfigProps | undefined = undefined;
 
         // we were either routed via a specific app / agent URL
         if (appSlug) {

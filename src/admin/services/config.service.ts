@@ -1,12 +1,13 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {AdminConfigError, HoloConfig, HoloConfigAction, HoloConfigType} from "../types";
+import {AdminConfigError} from "../types";
 import logger from "../../utils/logger";
 import {HoloConfigValidator} from "../validators";
 import {ArkErrors} from "arktype";
 import {EventEmitter} from "events";
 import {TokenService} from "./token.service";
 import {OrganizationCacheService} from "./organization.cache.service";
+import {HoloConfig, HoloConfigAction, HoloConfigType} from "@holokai/sdk";
 
 @injectable()
 export class ConfigService extends EventEmitter {
@@ -89,7 +90,7 @@ export class ConfigService extends EventEmitter {
                     ...item,
                     applications: item.applications.map((app: any) => {
                         if (!app.providerName && app.providerType) {
-                            return { ...app, providerName: app.providerType.toLowerCase() };
+                            return {...app, providerName: app.providerType.toLowerCase()};
                         }
                         return app;
                     })
@@ -97,7 +98,7 @@ export class ConfigService extends EventEmitter {
             } else if (item.urlSlug) {
                 // APPLICATION config - transform application directly
                 if (!item.providerName && item.providerType) {
-                    return { ...item, providerName: item.providerType.toLowerCase() };
+                    return {...item, providerName: item.providerType.toLowerCase()};
                 }
             }
             return item;

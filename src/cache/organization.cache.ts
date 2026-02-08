@@ -1,4 +1,4 @@
-import {Application, Keyable, Organization, OrgCacheMap, OrgCacheType, Provider} from "./types";
+import {ApplicationConfigProps, Keyable, OrganizationConfigProps, OrgCacheMap, OrgCacheType, ProviderConfigProps} from "../../plugins/sdk/src/core/config/types";
 import {OrganizationValidator} from "./validators";
 
 const SEP = '\x1F';
@@ -27,25 +27,25 @@ export interface CacheIndex<T> {
 }
 
 export class OrganizationCache {
-    private providers = new Map<string, Provider>();
-    private applications = new Map<string, Application>();
+    private providers = new Map<string, ProviderConfigProps>();
+    private applications = new Map<string, ApplicationConfigProps>();
 
     private providersIdx = new Map<string, Set<string>>();
     private applicationsIdx = new Map<string, Set<string>>();
 
-    private providersIdxDefs: CacheIndex<Provider>[] = [createCacheIndex({field: 'id'})];
-    private applicationsIdxDefs: CacheIndex<Application>[] = [createCacheIndex({field: 'providerType'})];
+    private providersIdxDefs: CacheIndex<ProviderConfigProps>[] = [createCacheIndex({field: 'id'})];
+    private applicationsIdxDefs: CacheIndex<ApplicationConfigProps>[] = [createCacheIndex({field: 'providerType'})];
 
 
-    private readonly caches = new Map<OrgCacheType, Map<String, Provider | Application>>
+    private readonly caches = new Map<OrgCacheType, Map<String, ProviderConfigProps | ApplicationConfigProps>>
     private readonly indexes = new Map<OrgCacheType, Map<string, string | Set<string>>>();
-    private readonly indexDefs = new Map<OrgCacheType, CacheIndex<Application>[] | CacheIndex<Provider>[]>();
+    private readonly indexDefs = new Map<OrgCacheType, CacheIndex<ApplicationConfigProps>[] | CacheIndex<ProviderConfigProps>[]>();
 
     id?: string;
     name?: string;
     slug?: string;
 
-    constructor(organization: Organization) {
+    constructor(organization: OrganizationConfigProps) {
         this.caches.set('applications', this.applications);
         this.caches.set('providers', this.providers);
         this.indexes.set('applications', this.applicationsIdx);
@@ -55,7 +55,7 @@ export class OrganizationCache {
         this.init(organization);
     }
 
-    init(organization: Organization): void {
+    init(organization: OrganizationConfigProps): void {
         const org = OrganizationValidator.assert(organization);
         const {id, name, slug, applications, providers} = org;
 
@@ -204,15 +204,15 @@ export class OrganizationCache {
     }
 
     // ----- Helpers -----
-    private cacheOf(cacheType: OrgCacheType): Map<string, Provider | Application> {
-        return this.caches.get(cacheType) as Map<string, Provider | Application>;
+    private cacheOf(cacheType: OrgCacheType): Map<string, ProviderConfigProps | ApplicationConfigProps> {
+        return this.caches.get(cacheType) as Map<string, ProviderConfigProps | ApplicationConfigProps>;
     }
 
     private indexOf(cacheType: OrgCacheType): Map<string, string | Set<string>> {
         return this.indexes.get(cacheType) as Map<string, string | Set<string>>;
     }
 
-    private defsOf(cacheType: OrgCacheType): CacheIndex<Application | Provider>[] {
-        return this.indexDefs.get(cacheType) as CacheIndex<Application | Provider>[];
+    private defsOf(cacheType: OrgCacheType): CacheIndex<ApplicationConfigProps | ProviderConfigProps>[] {
+        return this.indexDefs.get(cacheType) as CacheIndex<ApplicationConfigProps | ProviderConfigProps>[];
     }
 }

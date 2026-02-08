@@ -1,4 +1,4 @@
-import {Prompt} from "@holokai/sdk";
+import {PromptConfigProps} from "@holokai/sdk";
 import {EvaluatorData, LlmResponse, Provider} from "@holokai/sdk/dist/core/entities";
 
 interface BaseEvent {
@@ -71,7 +71,7 @@ export interface IEvaluator {
 
 export interface IPromptEvaluator extends IEvaluator {
     promptId: string;
-    prompt: Prompt;
+    prompt: PromptConfigProps;
     provider: Provider;
     llmResponse: LlmResponse;
     evaluatorData: EvaluatorData;

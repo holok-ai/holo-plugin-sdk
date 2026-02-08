@@ -60,10 +60,10 @@
       "import": "./dist/core/entities/index.js",
       "require": "./dist/core/entities/index.js"
     },
-    "./utils": {
-      "types": "./dist/utils/index.d.ts",
-      "import": "./dist/utils/index.js",
-      "require": "./dist/utils/index.js"
+    "./notification": {
+      "types": "./dist/notification/index.d.ts",
+      "import": "./dist/notification/index.js",
+      "require": "./dist/notification/index.js"
     },
     "./package.json": "./package.json"
   },
@@ -87,8 +87,7 @@
   },
   "peerDependencies": {
     "express": "^4.21.0",
-    "tsyringe": "^4.10.0",
-    "winston": "^3.18.0"
+    "tsyringe": "^4.10.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

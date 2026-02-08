@@ -1,4 +1,4 @@
-import {HttpApiRequest} from "../api/types";
+import {HoloApiRequest} from "../api/types";
 import {Auth} from "../admin/types";
 import {v4 as uuidv4} from "uuid";
 import logger from "../utils/logger";
@@ -11,7 +11,7 @@ export class WorkerRequestFactory {
         providerType: string,
         providerName: string | undefined,
         type: RequestType,
-        req: HttpApiRequest,
+        req: HoloApiRequest,
         sourceId: string,
         isPassthrough: boolean = false
     ): HoloWorkerRequest {

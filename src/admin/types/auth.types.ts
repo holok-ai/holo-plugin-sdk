@@ -1,4 +1,4 @@
-import {Application} from "../../cache";
+import {ApplicationConfigProps} from "@holokai/sdk";
 
 export interface JWTPayload {
     organizationId: string;
@@ -21,5 +21,5 @@ export interface Auth {
     organizationId: string;
     userId: string;
     providerName: string;
-    app: Application;
+    app: ApplicationConfigProps;
 }

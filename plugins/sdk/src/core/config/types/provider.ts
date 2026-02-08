@@ -1,4 +1,4 @@
-export interface Provider {
+export interface ProviderConfigProps {
     id: string;
     name: string;
     type: string;

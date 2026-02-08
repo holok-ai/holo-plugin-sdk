@@ -13,9 +13,9 @@ import {
     HoloRequest,
     HoloWorkerRequest,
     pickDefined,
+    PromptConfigProps,
     RequestType
 } from "@holokai/sdk";
-import {Prompt} from "../../cache";
 import {ProviderPluginRegistry} from "../../services/plugin/provider-registry.service";
 import {OrganizationService} from "./organization.service";
 
@@ -32,7 +32,7 @@ export class GuardService extends ClassLogger {
         super();
     }
 
-    async guard(workerRequest: HoloWorkerRequest, guards: Prompt[], auth: Auth) {
+    async guard(workerRequest: HoloWorkerRequest, guards: PromptConfigProps[], auth: Auth) {
         const logger = this.mlog(this.guard);
 
         if (!guards || !guards.length) return;

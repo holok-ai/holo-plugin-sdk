@@ -3,16 +3,10 @@ import {injectable} from 'tsyringe';
 import jwt from 'jsonwebtoken';
 import NodeCache from 'node-cache';
 import {env} from '../../env';
-import {
-    HoloConfigAction,
-    JWTPayload,
-    JwtTokenConfig,
-    JwtTokenConfigData,
-    TokenRefreshRequest,
-    TokenRefreshResponse
-} from '../types';
+import {JWTPayload, TokenRefreshRequest, TokenRefreshResponse} from '../types';
 import logger from '../../utils/logger';
 import {JwtTokenConfigValidator} from "../validators";
+import {HoloConfigAction, JwtTokenConfigData, JwtTokenConfig} from "@holokai/sdk";
 
 @injectable()
 export class TokenService {
