@@ -1,4 +1,11 @@
-import {ApplicationConfigProps, Keyable, OrganizationConfigProps, OrgCacheMap, OrgCacheType, ProviderConfigProps} from "../../plugins/sdk/src/core/config/types";
+import {
+    ApplicationConfigProps,
+    Keyable,
+    OrganizationConfigProps,
+    OrgCacheMap,
+    OrgCacheType,
+    ProviderConfigProps
+} from "@holokai/sdk/core";
 import {OrganizationValidator} from "./validators";
 
 const SEP = '\x1F';

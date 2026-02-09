@@ -8,7 +8,7 @@ export {SystemPromptMode} from "./system.prompt";
 export type {SystemPrompt} from "./system.prompt";
 export type {ApplicationConfigProps} from "./application";
 export type {OrganizationConfigProps} from "./organization";
-export type {Token} from "./token";
+export type {Token} from "../token";
 export type {UserConfigProps} from "./user";
 
 export type OrgCacheMap = {

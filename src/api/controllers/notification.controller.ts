@@ -26,6 +26,11 @@ export class NotificationController extends ClassLogger {
 
     stream = async (req: HoloApiRequest, res: Response) => {
         const logger = this.mlog(this.stream);
+        if (!req.auth) {
+            res.status(401).send({})
+            return;
+        }
+
         const {organizationId, userId, app} = req.auth;
 
         const threadIds = parseArray(parseRepeatableParam(req.query.threadId));
