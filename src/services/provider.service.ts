@@ -42,7 +42,9 @@ export class ProviderService extends ClassLogger {
             let plugin = this.providerRegistry.getByFamily(provider.type);
             if (plugin) {
                 try {
-                    let p = await plugin.createProvider(provider.config);
+                    // Clean config: remove null/undefined values to use provider SDK defaults
+                    const cleanConfig = this.sanitizeConfig(provider.config);
+                    let p = await plugin.createProvider(cleanConfig);
                     this.providers.set(provider.name, p);
                 } catch (e) {
                     logger.error(e);
@@ -53,6 +55,16 @@ export class ProviderService extends ClassLogger {
             }
         }
         logger.debug(`Available providers: ${Array.from(this.providers.keys())}`);
+    }
+
+    private sanitizeConfig(config: Record<string, any>): Record<string, any> {
+        return Object.entries(config).reduce((acc, [key, value]) => {
+            // Exclude null, undefined, and empty strings to use provider SDK defaults
+            if (value != null && value !== '') {
+                acc[key] = value;
+            }
+            return acc;
+        }, {} as Record<string, any>);
     }
 
     async matchProvider(name: string): Promise<IProvider> {
