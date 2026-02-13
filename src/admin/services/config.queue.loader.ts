@@ -100,9 +100,11 @@ export class ConfigQueueLoader extends EventEmitter implements ConfigLoader {
         await this.queueService.consume(
             this.managementQueue,
             async (messageId: string, content: any) => {
-                logger.debug(`MQ Config Loader: Received update message: ${messageId}`);
+                const msgId = messageId || 'unknown';
+                const configType = content?.configType || 'unknown';
+                logger.debug(`MQ Config Loader: Received update message: ${msgId} (type: ${configType})`);
                 if (!(await this.configService.processConfig(content))) {
-                    logger.error(`MQ Config Loader: Failed to process config message: ${messageId}`);
+                    logger.error(`MQ Config Loader: Failed to process config message: ${msgId} (type: ${configType})`);
                 }
             },
             true, // ignore errors for non-config messages

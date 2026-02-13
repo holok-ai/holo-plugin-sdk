@@ -105,14 +105,18 @@ export function createLoggerFormat(serverId: string) {
     return winston.format.combine(
         winston.format.timestamp(),
         winston.format.colorize({all: true}),
-        winston.format.printf((info: any) => {
-            const time = formatTime(info.timestamp);
-            const level = truncate(lvl3(info.level), W_LVL).trim();
+        winston.format.printf(({ level, message, timestamp, className, methodName, requestId, ...metadata }) => {
+            const time = formatTime(timestamp);
+            const lvl = truncate(lvl3(level), W_LVL).trim();
             const srv = truncate(serverId, W_SRV).trim();
-            const loc = truncate(formatLocation(info.className, info.methodName, W_LOC), W_LOC).trimEnd();
-            const rid = truncate(shortRid(info.requestId, 6), W_RID).trim();
+            const loc = truncate(formatLocation(className, methodName, W_LOC), W_LOC).trimEnd();
+            const rid = truncate(shortRid(requestId, 6), W_RID).trim();
 
-            return `${time}|${level}|${srv}|${loc}|${rid}|${info.message}`;
+            let msg = `${time}|${lvl}|${srv}|${loc}|${rid}|${message}`;
+            if (Object.keys(metadata).length > 0) {
+                msg += ` ${JSON.stringify(metadata)}`;
+            }
+            return msg;
         })
     );
 }
