@@ -28,7 +28,11 @@ export class RequestService extends ClassLogger {
             throw new Error('Unauthorized request. No auth object found.');
         }
 
-        const {providerName, app} = auth;
+        const {app} = auth;
+
+        // For custom routes (/api/custom/:provider/:appSlug/*), use app's provider
+        // For direct routes (/api/ollama/api/chat), use route's provider
+        const providerName = req.appSlug ? app.providerName : providerType;
 
         const workerRequest = await this.parseRequest(providerType, providerName, type, req, isPassthrough);
 
