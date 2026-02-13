@@ -109,8 +109,8 @@ export function createLoggerFormat(serverId: string) {
             const time = formatTime(timestamp);
             const lvl = truncate(lvl3(level), W_LVL).trim();
             const srv = truncate(serverId, W_SRV).trim();
-            const loc = truncate(formatLocation(className, methodName, W_LOC), W_LOC).trimEnd();
-            const rid = truncate(shortRid(requestId, 6), W_RID).trim();
+            const loc = truncate(formatLocation(className as string | undefined, methodName as string | undefined, W_LOC), W_LOC).trimEnd();
+            const rid = truncate(shortRid(requestId as string | undefined, 6), W_RID).trim();
 
             let msg = `${time}|${lvl}|${srv}|${loc}|${rid}|${message}`;
             if (Object.keys(metadata).length > 0) {
