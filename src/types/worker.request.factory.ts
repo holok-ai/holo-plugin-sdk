@@ -24,7 +24,7 @@ export class WorkerRequestFactory {
             this.transformOpenAIPayload(payload);
         }
 
-       
+
         const workerRequest = this.create(
             providerType,
             providerName,
@@ -34,7 +34,8 @@ export class WorkerRequestFactory {
             auth,
             {path, method, headers: headers || {}, query: query || {}},
             thread_id,
-            branch_id
+            branch_id,
+            req.appSlug
         );
 
         if (isPassthrough) {
@@ -87,15 +88,19 @@ export class WorkerRequestFactory {
         rawRequest?: {path: string; method: string; headers: Record<string, any>; query: Record<string, any>},
         thread_id?: string,
         branch_id?: string,
+        customAppSlug?: string
     ) {
         let sanitizedAuth = {};
 
         if (auth) {
-            const {organizationId, userId, app} = auth;
+            const {organizationId, userId} = auth;
+            // For custom routes, use the appSlug from URL
+            // For direct provider routes, use the provider name
+            const appSlug = customAppSlug || providerName;
             sanitizedAuth = {
                 organizationId,
                 userId,
-                app: app.urlSlug
+                appSlug
             };
         }
 

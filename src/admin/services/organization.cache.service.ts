@@ -3,6 +3,7 @@ import {injectable} from 'tsyringe';
 import {Application, Organization, OrganizationCache, Provider} from "../../cache";
 import {ApplicationConfigValidator, OrganizationConfigValidator} from "../validators";
 import {ApplicationConfig, HoloConfigAction, OrganizationConfig} from "../types";
+import logger from "../../utils/logger";
 
 @injectable()
 export class OrganizationCacheService {
@@ -56,14 +57,59 @@ export class OrganizationCacheService {
 
     setApplications(applications: readonly Application[]) {
         for (let i = 0; i < applications.length; i++) {
-            const {organizationId} = applications[i];
-            const orgCache = this.get(organizationId);
-            orgCache?.set('applications', 'urlSlug', applications[i]);
+            const app = applications[i];
+            const {organizationId, urlSlug} = app;
+            let orgCache = this.get(organizationId);
+
+            if (!orgCache) {
+                logger.warn(`Organization ${organizationId} not found in cache, creating minimal org cache for application ${urlSlug}`, {
+                    organizationId,
+                    urlSlug,
+                    existingOrgs: Array.from(this.orgCaches.keys())
+                });
+                const minimalOrg: Organization = {
+                    id: organizationId,
+                    name: organizationId,
+                    slug: organizationId,
+                    providers: [],
+                    applications: []
+                };
+                this.set(minimalOrg);
+                orgCache = this.get(organizationId);
+
+                if (!orgCache) {
+                    logger.error(`Failed to create organization cache for ${organizationId}, skipping application ${urlSlug}`);
+                    continue;
+                }
+                logger.info(`Created minimal organization cache for ${organizationId}`);
+            }
+
+            logger.debug(`Setting application with key="${urlSlug}" (from field: ${app.urlSlug})`);
+            orgCache.set('applications', app.urlSlug, app);
+            logger.info(`Application ${urlSlug} added to organization ${organizationId} cache`, {
+                organizationId,
+                urlSlug,
+                providerType: app.providerType,
+                providerName: app.providerName
+            });
         }
     }
 
     getApplication(orgId: string, urlSlug: string): Application | undefined {
-        return this.get(orgId)?.get('applications', urlSlug);
+        const orgCache = this.get(orgId);
+        if (!orgCache) {
+            logger.debug(`getApplication: org ${orgId} not found`);
+            return undefined;
+        }
+
+        const app = orgCache.get('applications', urlSlug);
+        logger.debug(`getApplication: orgId=${orgId}, urlSlug=${urlSlug}, found=${!!app}`, {
+            urlSlug,
+            appExists: orgCache.has('applications', urlSlug),
+            allAppSlugs: orgCache.getAll('applications').map(a => a.urlSlug)
+        });
+
+        return app;
     }
 
     getAllApplications(orgId: string): Application[] | undefined {

@@ -14,13 +14,30 @@ export const makeJwtAuthMiddleware = (authService: AuthService, providerFamily: 
             req.auth = await authService.populateAuth(providerFamily, req, opts.useCache ?? true);
             next();
         } catch (error) {
-            logger.warn('Authentication failed: Invalid token', {
-                error: (error as Error).message,
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorName = error instanceof Error ? error.name : 'Error';
+
+            logger.warn(`Authentication failed: ${errorMessage}`, {
+                errorType: errorName,
+                errorMessage,
                 path: req.path,
                 method: req.method,
                 ip: req.ip,
+                provider: providerFamily,
+                hasAuthHeader: !!req.headers.authorization,
+                hasApiKey: !!req.headers['x-api-key'],
+                ...(process.env.NODE_ENV === 'development' && error instanceof Error ? {stack: error.stack} : {})
             });
-            if (opts.optional) next();
-            res.status(403).json({error: 'Invalid token.'});
+
+            if (opts.optional) {
+                next();
+                return;
+            }
+
+            res.status(403).json({
+                error: 'Authentication failed',
+                message: errorMessage,
+                ...(process.env.NODE_ENV === 'development' ? {details: errorName} : {})
+            });
         }
     };

@@ -32,7 +32,7 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
             request_id: workerRequest.requestId,
             request_type: workerRequest.type,
             organization_id: workerRequest.organizationId,
-            application_id: workerRequest.appSlug ?? 'default',
+            application_id: workerRequest.appSlug ?? workerRequest.providerName,
             user_id: workerRequest.userId,
             provider_slug: workerRequest.providerName,
             timestamp: new Date(workerRequest.timestamp).toISOString(),
@@ -50,7 +50,7 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
             request_id: workerRequest.requestId,
             request_type: workerRequest.type,
             organization_id: workerRequest.organizationId,
-            application_id: workerRequest.appSlug ?? 'default',
+            application_id: workerRequest.appSlug ?? workerRequest.providerName,
             user_id: workerRequest.userId,
             provider_slug: workerRequest.providerName,
             ...await this.createProviderEnvelope(workerRequest.payload)

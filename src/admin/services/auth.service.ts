@@ -44,12 +44,22 @@ export class AuthService extends ClassLogger {
         const decodedToken = this.tokenService.decodeToken(token);
         const {organizationId, userId} = decodedToken;
 
+        logger.debug(`Token decoded: orgId=${organizationId}, userId=${userId}, appSlug=${appSlug}, appSlugs=${appSlugs?.join(',')}`);
+
         let app: Application | undefined = undefined;
 
         // we were either routed via a specific app / agent URL
         if (appSlug) {
+            logger.debug(`Looking up application: orgId=${organizationId}, appSlug=${appSlug}`);
             app = this.organizationService.getApplication(organizationId, appSlug);
             if (!app) {
+                logger.error(`Application ${appSlug} not found in cache`, {
+                    organizationId,
+                    appSlug,
+                    provider,
+                    orgExists: !!this.organizationService.withOrganization(organizationId),
+                    allAppsForOrg: this.organizationService.withOrganization(organizationId)?.getAll('applications').map(a => a.urlSlug)
+                });
                 return Promise.reject(`Application ${appSlug} no longer available.`);
             }
             if (app.providerType !== provider.toUpperCase()) {
