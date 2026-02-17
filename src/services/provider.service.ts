@@ -3,7 +3,6 @@ import {ProviderDB, ProviderWithCredential} from "../db/provider.db";
 import {injectable} from "tsyringe";
 import {ClassLogger, IProvider} from "@holokai/sdk";
 import {ProviderPluginRegistry} from "./plugin/provider-registry.service";
-import {Provider} from "@holokai/sdk/dist/core/entities";
 import {CryptoService} from "./crypto.service";
 
 @injectable()
