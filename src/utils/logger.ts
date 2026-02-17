@@ -20,20 +20,26 @@ try {
 
 // Define log levels
 export const levels = {
-    error: 0,
-    warn: 1,
-    info: 2,
-    http: 3,
-    debug: 4,
+    fatal: 0,
+    error: 1,
+    warn: 2,
+    info: 3,
+    http: 4,
+    verbose: 5,
+    debug: 6,
+    trace: 7,
 };
 
 // Define log colors
 export const colors = {
+    fatal: 'red',
     error: 'red',
     warn: 'yellow',
     info: 'green',
     http: 'magenta',
+    verbose: 'cyan',
     debug: 'white',
+    trace: 'gray',
 };
 
 // Add colors to winston
@@ -94,11 +100,14 @@ export function createLoggerFormat(serverId: string) {
 
     const lvl3 = (lvl: string) => {
         const l = lvl.toLowerCase();
+        if (l === "fatal") return "FTL";
         if (l === "error") return "ERR";
         if (l === "warn") return "WRN";
         if (l === "info") return "INF";
         if (l === "debug") return "DBG";
         if (l === "http") return "HTP";
+        if (l === "verbose") return "VRB";
+        if (l === "trace") return "TRC";
         return l.slice(0, 3).toUpperCase();
     };
 

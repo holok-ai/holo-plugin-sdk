@@ -34,7 +34,7 @@ export class GuardService extends ClassLogger {
 
     async guard(workerRequest: HoloWorkerRequest, guards: Prompt[], auth: Auth) {
         const logger = this.mlog(this.guard);
-
+        
         if (!guards || !guards.length) return;
 
         let provider = this.providerRegistry.getByFamily(workerRequest.providerType)
@@ -45,9 +45,16 @@ export class GuardService extends ClassLogger {
         const request = await provider.translator.toHoloRequest(workerRequest.payload);
 
         const holoMessages = request.messages;
+        logger.debug(`holoMessages after translation: ${JSON.stringify(holoMessages)}`);
         if (!holoMessages || !holoMessages.length) return;
 
-        const lastMessage = findLast(holoMessages, m => m.role === 'user');
+        const lastMessage = findLast(holoMessages, m => {
+            if (m === undefined || m === null) {
+                logger.warn(`Encountered ${m === null ? 'null' : 'undefined'} message in holoMessages`, {requestId: workerRequest.requestId});
+                return false;
+            }
+            return m.role === 'user';
+        });
 
         if (!lastMessage) {
             logger.warn(`No user message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
@@ -92,9 +99,21 @@ export class GuardService extends ClassLogger {
                             auth
                         );
 
+                        logger.debug(`Guard request details`, {
+                            requestId: workerRequest.requestId,
+                            guardName: guard.name,
+                            providerName: guard.providerName,
+                            providerFamily: provider.family,
+                            modelName: guard.modelName,
+                            payload: JSON.stringify(payload)
+                        });
+
                         const response = await this.responseService.requestOnce<string>(guardRequest);
 
                         const raw = JSON.parse(response as string);
+                        logger.debug(`Guard raw response: ${JSON.stringify(raw)}`, {requestId: workerRequest.requestId});
+                        // TODO: Handle error responses before translating - check if raw.error exists and return early
+                        //       to avoid passing error objects to translator which expects proper response structure
                         const holoResponse = await provider.translator.toHoloResponse(raw);
                         if (!holoResponse.messages) return {
                             passed: false,

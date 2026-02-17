@@ -6,5 +6,6 @@ export interface Provider extends BaseEntity {
     type: string;
     description?: string;
     config: Record<string, any>;
+    api_credential_id?: string;
     status?: { enabled?: boolean };
 }
