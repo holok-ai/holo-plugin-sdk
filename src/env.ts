@@ -151,7 +151,7 @@ export namespace env {
     }
 
     export namespace security {
-        export const encryptionKey = process.env.ENCRYPTION_KEY;
+        export const encryptionKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
         if (!encryptionKey) {
             throw new Error('ENCRYPTION_KEY environment variable is required for decrypting API credentials');
         }
