@@ -174,15 +174,33 @@ export function createLoggerOptions(serverId: string) {
     }
 }
 
-// Create the logger
-const logger = winston.createLogger(
+// Create the base logger
+const baseLogger = winston.createLogger(
     createLoggerOptions(env.id)
 );
+
+// Extend the logger with fatal and trace methods to match HoloLogger interface
+const logger = baseLogger as winston.Logger & {
+    fatal: typeof baseLogger.error;
+    trace: typeof baseLogger.debug;
+};
+
+// Add fatal and trace methods (Winston creates these from custom levels but doesn't expose them in types)
+(logger as any).fatal = baseLogger.log.bind(baseLogger, 'fatal');
+(logger as any).trace = baseLogger.log.bind(baseLogger, 'trace');
 
 export const LoggerFactoryToken: InjectionToken<(cls: Function | string) => winston.Logger> = 'LoggerFactory';
 
 container.register(LoggerFactoryToken, {
-    useFactory: () => (cls: Function | string) => logger.child({className: (cls as Function).name ?? cls})
+    useFactory: () => (cls: Function | string) => {
+        const childLogger = baseLogger.child({className: (cls as Function).name ?? cls}) as winston.Logger & {
+            fatal: typeof baseLogger.error;
+            trace: typeof baseLogger.debug;
+        };
+        (childLogger as any).fatal = childLogger.log.bind(childLogger, 'fatal');
+        (childLogger as any).trace = childLogger.log.bind(childLogger, 'trace');
+        return childLogger;
+    }
 });
 
 export default logger;
