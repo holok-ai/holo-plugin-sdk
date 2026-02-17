@@ -37,7 +37,7 @@ export class AuthService extends ClassLogger {
 
         const {appSlug: paramsAppSlug} = req.params;
         const appSlug = (req as any).appSlug || paramsAppSlug;
-
+        
         if (appSlug && !appSlugs.includes(appSlug)) {
             return Promise.reject('User is not authorized for application.');
         }
@@ -74,7 +74,7 @@ export class AuthService extends ClassLogger {
                 if (app?.providerType === provider.toUpperCase()) break;
             }
             if (!app) {
-                return Promise.reject(`No applications configured for provider: ${provider}`);
+                //return Promise.reject(`No applications configured for provider: ${provider}`);
             }
         }
 

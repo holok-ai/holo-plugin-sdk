@@ -34,7 +34,7 @@ export class GuardService extends ClassLogger {
 
     async guard(workerRequest: HoloWorkerRequest, guards: Prompt[], auth: Auth) {
         const logger = this.mlog(this.guard);
-
+        
         if (!guards || !guards.length) return;
 
         let provider = this.providerRegistry.getByFamily(workerRequest.providerType)
@@ -47,7 +47,13 @@ export class GuardService extends ClassLogger {
         const holoMessages = request.messages;
         if (!holoMessages || !holoMessages.length) return;
 
-        const lastMessage = findLast(holoMessages, m => m.role === 'user');
+        const lastMessage = findLast(holoMessages, m => {
+            if (m === undefined || m === null) {
+                logger.warn(`Encountered ${m === null ? 'null' : 'undefined'} message in holoMessages`, {requestId: workerRequest.requestId});
+                return false;
+            }
+            return m.role === 'user';
+        });
 
         if (!lastMessage) {
             logger.warn(`No user message to guard`, {methodName: 'guard', requestId: workerRequest.requestId});
@@ -91,10 +97,12 @@ export class GuardService extends ClassLogger {
                             this.serverId,
                             auth
                         );
-
                         const response = await this.responseService.requestOnce<string>(guardRequest);
 
                         const raw = JSON.parse(response as string);
+                        logger.trace(`Guard raw response: ${JSON.stringify(raw)}`, {requestId: workerRequest.requestId});
+                        // TODO: Handle error responses before translating - check if raw.error exists and return early
+                        //       to avoid passing error objects to translator which expects proper response structure
                         const holoResponse = await provider.translator.toHoloResponse(raw);
                         if (!holoResponse.messages) return {
                             passed: false,

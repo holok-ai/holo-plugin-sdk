@@ -9,6 +9,7 @@ import {PluginService} from "../services/plugin/plugin.service";
 import {PluginDiscoveryService} from "../services/plugin/discovery.service";
 import {PluginLoaderService} from "../services/plugin/loader.service";
 import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
+import {CryptoService} from "../services/crypto.service";
 
 @injectable()
 export class AuditServer extends withQueue(withDB(BaseServer)) {
@@ -40,7 +41,8 @@ export class AuditServer extends withQueue(withDB(BaseServer)) {
     }
 }
 
-container.registerSingleton(PluginService)
+container.registerSingleton(CryptoService)
+    .registerSingleton(PluginService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry)

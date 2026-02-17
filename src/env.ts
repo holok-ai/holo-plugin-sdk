@@ -149,4 +149,11 @@ export namespace env {
     if (!mokuUrl) {
         throw new Error('MOKU_URL environment variable is required for the application to start');
     }
+
+    export namespace security {
+        export const encryptionKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
+        if (!encryptionKey) {
+            throw new Error('ENCRYPTION_KEY environment variable is required for decrypting API credentials');
+        }
+    }
 }
