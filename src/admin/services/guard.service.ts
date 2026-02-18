@@ -34,8 +34,13 @@ export class GuardService extends ClassLogger {
 
     async guard(workerRequest: HoloWorkerRequest, guards: Prompt[], auth: Auth) {
         const logger = this.mlog(this.guard);
-        
-        if (!guards || !guards.length) return;
+
+        logger.debug(`Guard service invoked: guards.length=${guards?.length || 0}, requestId=${workerRequest.requestId}, requestType=${workerRequest.type}`);
+
+        if (!guards || !guards.length) {
+            logger.debug(`No guards to execute - returning early`);
+            return;
+        }
 
         let provider = this.providerRegistry.getByFamily(workerRequest.providerType)
         if (!provider) {
@@ -69,8 +74,11 @@ export class GuardService extends ClassLogger {
         try {
             //set guards onto request for auditing
             workerRequest.guards = guards;
+            logger.debug(`Executing ${guards.length} guard check(s) in parallel`);
             const results = await Promise.all(
-                guards.map(async (guard) => {
+                guards.map(async (guard, index) => {
+                    logger.debug(`Starting guard check ${index + 1}/${guards.length}: id=${guard.id}, model=${guard.modelName}, provider=${guard.providerName}`);
+                    const startTime = Date.now();
                     try {
                         const p = this.organizationService.getProvider(workerRequest.organizationId!, guard.providerName);
                         provider = this.providerRegistry.getByFamily(p!.type);
@@ -110,13 +118,19 @@ export class GuardService extends ClassLogger {
                         };
 
                         const guardResponse = holoResponse.messages[0].content as string;
-                        return JSON.parse(guardResponse);
+                        const result = JSON.parse(guardResponse);
+                        const duration = Date.now() - startTime;
+                        logger.debug(`Guard check ${index + 1}/${guards.length} completed: id=${guard.id}, passed=${result.passed}, duration=${duration}ms`);
+                        return result;
                     } catch (e: any) {
-                        logger.error(`Failed to process guard: ${e?.message ?? String(e)} for messages: ${JSON.stringify(lastMessage)}`, {requestId: workerRequest.requestId});
+                        const duration = Date.now() - startTime;
+                        logger.error(`Guard check ${index + 1}/${guards.length} failed: id=${guard.id}, error=${e?.message ?? String(e)}, duration=${duration}ms`, {requestId: workerRequest.requestId});
                         return {passed: true, errors: [e?.message ?? String(e)]};
                     }
                 })
             );
+
+            logger.debug(`All ${guards.length} guard checks completed - aggregating results`);
 
             const reduced = results.reduce<GuardResult>(
                 (acc, r: any) => {
@@ -131,11 +145,21 @@ export class GuardService extends ClassLogger {
             );
 
             workerRequest.guardResult = reduced;
+            if (reduced.passed) {
+                logger.debug(`Guard result summary: passed=true`);
+            } else {
+                const errorCount = reduced.errors?.length || 0;
+                logger.debug(`Guard result summary: passed=false, errorCount=${errorCount}`);
+                if (reduced.errors?.length) {
+                    logger.warn(`Guards BLOCKED request: ${reduced.errors.join('; ')}`);
+                }
+            }
             return reduced;
         } catch (e) {
-            logger.error(`Failed to process guard: ${(e as Error).message}`, {
+            logger.error(`Failed to process guards: ${(e as Error).message}`, {
                 methodName: 'guard',
-                requestId: workerRequest.requestId
+                requestId: workerRequest.requestId,
+                stack: (e as Error).stack
             });
             return {passed: false, errors: [(e as Error).message]};
         }

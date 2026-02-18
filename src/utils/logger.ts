@@ -113,10 +113,11 @@ export function createLoggerFormat(serverId: string) {
 
     return winston.format.combine(
         winston.format.timestamp(),
-        winston.format.colorize({all: true}),
         winston.format.printf(({ level, message, timestamp, className, methodName, requestId, ...metadata }) => {
             const time = formatTime(timestamp);
-            const lvl = truncate(lvl3(level), W_LVL).trim();
+            // Strip ANSI color codes from level if present
+            const cleanLevel = level.replace(/\x1b\[\d+m/g, '');
+            const lvl = truncate(lvl3(cleanLevel), W_LVL).trim();
             const srv = truncate(serverId, W_SRV).trim();
             const loc = truncate(formatLocation(className as string | undefined, methodName as string | undefined, W_LOC), W_LOC).trimEnd();
             const rid = truncate(shortRid(requestId as string | undefined, 6), W_RID).trim();
@@ -126,7 +127,8 @@ export function createLoggerFormat(serverId: string) {
                 msg += ` ${JSON.stringify(metadata)}`;
             }
             return msg;
-        })
+        }),
+        winston.format.colorize({all: true})
     );
 }
 

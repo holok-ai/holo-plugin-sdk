@@ -36,8 +36,20 @@ export class RequestService extends ClassLogger {
 
         const workerRequest = await this.parseRequest(providerType, providerName, type, req, isPassthrough);
 
+        // Log guard configuration details
+        logger.debug(`Guard determination: app.guards=${app.guards ? `[${app.guards.length} guards]` : 'undefined'}, appSlug=${req.appSlug}`);
+
         if (app.guards && app.guards.length) {
+            const guardDetails = app.guards.map(g => ({
+                id: g.id,
+                name: g.modelName,
+                provider: g.providerName
+            }));
+            logger.debug(`Executing ${app.guards.length} guard(s) for request: ${JSON.stringify(guardDetails)}`);
             await this.guardService.guard(workerRequest, app.guards, auth);
+            logger.debug(`All ${app.guards.length} guard(s) passed`);
+        } else {
+            logger.debug(`No guards configured for this application - skipping guard execution`);
         }
 
         await this.responseService.sendRequest(req, res, workerRequest);
