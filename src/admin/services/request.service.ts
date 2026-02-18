@@ -24,32 +24,43 @@ export class RequestService extends ClassLogger {
         const logger = this.mlog(this.processRequest);
         const {auth} = req;
 
-        if (!auth || !auth.app) {
+        if (!auth) {
             throw new Error('Unauthorized request. No auth object found.');
+        }
+
+        // App is only required for custom routes with appSlug
+        // Direct provider routes (/api/provider/*) don't need an app
+        if (req.appSlug && !auth.app) {
+            throw new Error('Application configuration not found for specified appSlug.');
         }
 
         const {app} = auth;
 
         // For custom routes (/api/custom/:provider/:appSlug/*), use app's provider
         // For direct routes (/api/ollama/api/chat), use route's provider
-        const providerName = req.appSlug ? app.providerName : providerType;
+        const providerName = req.appSlug && app ? app.providerName : providerType;
 
         const workerRequest = await this.parseRequest(providerType, providerName, type, req, isPassthrough);
 
-        // Log guard configuration details
-        logger.debug(`Guard determination: app.guards=${app.guards ? `[${app.guards.length} guards]` : 'undefined'}, appSlug=${req.appSlug}`);
+        // Guards only apply when explicitly routing through an app (appSlug present)
+        // Direct provider endpoints (/api/provider/*) bypass app-level guards
+        if (req.appSlug && app) {
+            logger.debug(`App-routed request: appSlug=${req.appSlug}, guards=${app.guards ? `[${app.guards.length}]` : 'none'}`);
 
-        if (app.guards && app.guards.length) {
-            const guardDetails = app.guards.map(g => ({
-                id: g.id,
-                name: g.modelName,
-                provider: g.providerName
-            }));
-            logger.debug(`Executing ${app.guards.length} guard(s) for request: ${JSON.stringify(guardDetails)}`);
-            await this.guardService.guard(workerRequest, app.guards, auth);
-            logger.debug(`All ${app.guards.length} guard(s) passed`);
+            if (app.guards && app.guards.length) {
+                const guardDetails = app.guards.map(g => ({
+                    id: g.id,
+                    name: g.modelName,
+                    provider: g.providerName
+                }));
+                logger.debug(`Executing ${app.guards.length} guard(s) for request: ${JSON.stringify(guardDetails)}`);
+                await this.guardService.guard(workerRequest, app.guards, auth);
+                logger.debug(`All ${app.guards.length} guard(s) passed`);
+            } else {
+                logger.debug(`No guards configured for application ${req.appSlug} - skipping guard execution`);
+            }
         } else {
-            logger.debug(`No guards configured for this application - skipping guard execution`);
+            logger.debug(`Direct provider endpoint - bypassing app-level guards (no appSlug)`);
         }
 
         await this.responseService.sendRequest(req, res, workerRequest);

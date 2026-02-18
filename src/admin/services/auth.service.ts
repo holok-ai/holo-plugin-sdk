@@ -65,17 +65,10 @@ export class AuthService extends ClassLogger {
             if (app.providerType !== provider.toUpperCase()) {
                 return Promise.reject(`Application support ${app.providerType}, not support ${provider}`);
             }
-        } else if (appSlugs) {
-            for (const appSlug of appSlugs) {
-                app = this.organizationService.getApplication(organizationId, appSlug);
-                if (!app) {
-                    logger.warn(`Application ${appSlug} in user credentials but no longer available.`);
-                }
-                if (app?.providerType === provider.toUpperCase()) break;
-            }
-            if (!app) {
-                //return Promise.reject(`No applications configured for provider: ${provider}`);
-            }
+        } else {
+            // Direct provider endpoint - no app configuration needed
+            // Provider comes from the endpoint definition, not app configuration
+            logger.debug(`No appSlug specified - direct provider endpoint (provider=${provider}), skipping app lookup`);
         }
 
         return pickDefined({
