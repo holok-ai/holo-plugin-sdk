@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import {injectable} from 'tsyringe';
+import {inject, injectable} from 'tsyringe';
 import {HoloApiRequest} from "../../api/types";
 import {Response} from "express";
 import {ResponseService} from "../../services";
@@ -7,6 +7,8 @@ import {env} from "../../env";
 import {GuardService} from "./guard.service";
 import {WorkerRequestFactory} from "../../types";
 import {ClassLogger, RequestType} from "@holokai/sdk";
+import {NotificationEventFactory, NotificationFanoutToken} from "@holokai/sdk/notification";
+import {NotificationService} from "../../services/notification/notification.service";
 
 
 @injectable()
@@ -15,7 +17,8 @@ export class RequestService extends ClassLogger {
 
     constructor(
         private readonly responseService: ResponseService,
-        private readonly guardService: GuardService
+        private readonly guardService: GuardService,
+        @inject(NotificationFanoutToken) readonly notificationService: NotificationService
     ) {
         super();
     }
@@ -28,11 +31,12 @@ export class RequestService extends ClassLogger {
             throw new Error('Unauthorized request. No auth object found.');
         }
 
-        const {providerName, app} = auth;
+        const {app} = auth;
 
-        const workerRequest = await this.parseRequest(providerType, providerName, type, req, isPassthrough);
+        const workerRequest = await this.parseRequest(providerType, app.providerName, type, req, isPassthrough);
 
         if (app.guards && app.guards.length) {
+            await this.notificationService.publish(NotificationEventFactory.fromAuth('guard_started', auth, 'Running guards'));
             await this.guardService.guard(workerRequest, app.guards, auth);
         }
 

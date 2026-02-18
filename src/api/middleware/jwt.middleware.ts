@@ -8,10 +8,10 @@ type Options = {
     optional?: boolean;
 };
 
-export const makeJwtAuthMiddleware = (authService: AuthService, providerFamily: string, opts: Options = {}) =>
+export const makeJwtAuthMiddleware = (authService: AuthService, opts: Options = {}, providerFamily?: string) =>
     async function authenticateJWTInternal(req: HoloApiRequest, res: Response, next: NextFunction): Promise<void> {
         try {
-            req.auth = await authService.populateAuth(providerFamily, req, opts.useCache ?? true);
+            req.auth = await authService.populateAuth(req, opts.useCache ?? true, providerFamily);
             next();
         } catch (error) {
             logger.warn('Authentication failed: Invalid token', {

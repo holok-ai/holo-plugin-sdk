@@ -1,10 +1,11 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {Auth, GuardResult, GuardResultSchema} from "../types";
+import {GuardResult, GuardResultSchema} from "../types";
 import {WorkerRequestFactory} from "../../types";
 import {env} from "../../env";
 import {ResponseService} from "../../services";
 import {
+    Auth,
     ClassLogger,
     filterJoin,
     findLast,

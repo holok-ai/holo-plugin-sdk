@@ -1,8 +1,7 @@
 import {HoloApiRequest} from "../api/types";
-import {Auth} from "../admin/types";
 import {v4 as uuidv4} from "uuid";
 import logger from "../utils/logger";
-import {HoloWorkerRequest, pickDefined, RequestType} from "@holokai/sdk";
+import {Auth, HoloWorkerRequest, pickDefined, RequestType} from "@holokai/sdk";
 
 export class WorkerRequestFactory {
     static logger = logger.child({className: 'WorkerRequestFactory'});
@@ -24,7 +23,7 @@ export class WorkerRequestFactory {
             this.transformOpenAIPayload(payload);
         }
 
-       
+
         const workerRequest = this.create(
             providerType,
             providerName,
@@ -84,18 +83,19 @@ export class WorkerRequestFactory {
         payload: any,
         sourceId: string,
         auth?: Auth,
-        rawRequest?: {path: string; method: string; headers: Record<string, any>; query: Record<string, any>},
+        rawRequest?: { path: string; method: string; headers: Record<string, any>; query: Record<string, any> },
         thread_id?: string,
         branch_id?: string,
     ) {
         let sanitizedAuth = {};
 
         if (auth) {
-            const {organizationId, userId, app} = auth;
+            const {organizationId, userId, app, availableApps} = auth;
             sanitizedAuth = {
                 organizationId,
                 userId,
-                app: app.urlSlug
+                app: app?.urlSlug,
+                availableApps
             };
         }
 

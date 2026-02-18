@@ -1,9 +1,10 @@
 import "reflect-metadata";
-import {Channel, ChannelModel, connect, ConsumeMessage} from 'amqplib';
+import {Channel, ChannelModel, connect, ConsumeMessage, Replies} from 'amqplib';
 import {RabbitConfig} from "../types";
 import {env} from "../env";
 import {injectable} from "tsyringe";
 import {ClassLogger} from "@holokai/sdk";
+import Consume = Replies.Consume;
 
 /**
  * RabbitMQ queue management service
@@ -99,7 +100,7 @@ export class QueueService extends ClassLogger {
         logger.info('Disconnected from RabbitMQ');
     }
 
-    public async consume(queueName: string, callback: (messageId: string, content: any, message: ConsumeMessage) => void, ignoreErrors: boolean = false, options = {noAck: false}): Promise<void> {
+    public async consume(queueName: string, callback: (messageId: string, content: any, message: ConsumeMessage) => Promise<void>, ignoreErrors: boolean = false, options = {noAck: false}): Promise<Consume> {
         const logger = this.mlog(this.connect);
         if (!this.isConnected) {
             await this.connect();
@@ -107,7 +108,7 @@ export class QueueService extends ClassLogger {
         // logger.debug(`Consuming messages from queue: ${queueName}`);
 
         try {
-            await this.channel!.consume(queueName, async (message) => {
+            return this.channel!.consume(queueName, async (message) => {
                 if (!message) {
                     logger.warn(`Received null message from queue: ${queueName}`);
                     return;

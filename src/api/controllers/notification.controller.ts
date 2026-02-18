@@ -1,114 +1,142 @@
 import 'reflect-metadata';
 import {Response} from "express";
-import {injectable} from "tsyringe";
+import {inject, injectable} from "tsyringe";
+import {ClassLogger, parseArray, parseRepeatableParam, pickDefined, stringifyError} from "@holokai/sdk";
+
+import type {NotificationFanout} from '@holokai/sdk/notification';
 import {
-    ClassLogger,
     NotificationEvent,
-    NotificationFanout,
-    NotificationStore,
+    NotificationFanoutToken,
+    NotificationSub,
     NotificationSubscribeFilter,
-    parseArray,
-    parseEventTypes,
-    parseLimit,
-    parseRepeatableParam,
-    stringifyError
-} from "@holokai/sdk";
+    parseEventTypes
+} from '@holokai/sdk/notification';
+
 import {HoloApiRequest} from "../types";
 
 @injectable()
 export class NotificationController extends ClassLogger {
     constructor(
-        private readonly store: NotificationStore,
-        private readonly fanout: NotificationFanout
-    ) {
+        @inject(NotificationFanoutToken) private readonly notificationService: NotificationFanout) {
         super();
     }
 
     stream = async (req: HoloApiRequest, res: Response) => {
         const logger = this.mlog(this.stream);
+
         if (!req.auth) {
-            res.status(401).send({})
+            res.status(401).send({});
             return;
         }
 
         const {organizationId, userId, app} = req.auth;
 
+        // Filters
         const threadIds = parseArray(parseRepeatableParam(req.query.threadId));
         const requestIds = parseArray(parseRepeatableParam(req.query.requestId));
+        const branchIds = parseArray(parseRepeatableParam(req.query.branchId));
         const types = parseEventTypes(req.query.type);
 
-        const afterId = req.header("Last-Event-ID") ?? undefined;
-        const limit = parseLimit(req.query.limit, 250);
-
-        const filter: NotificationSubscribeFilter = {
+        const filter = pickDefined({
             organizationId,
-            appSlug: app.urlSlug,
+            userId,
             ...(threadIds.length ? {threadIds} : {}),
             ...(requestIds.length ? {requestIds} : {}),
+            ...(branchIds.length ? {branchIds} : {}),
             ...(types?.length ? {types} : {}),
-            ...(afterId ? {afterId} : {}),
-        };
+            // Optional scoping; only if you want per-user subscriptions
+            // userId,
+        }) as NotificationSubscribeFilter;
 
         // SSE headers
         res.status(200);
-        res.setHeader("Content-Type", "text/event-stream");
-        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+        res.setHeader("Cache-Control", "no-cache, no-transform");
         res.setHeader("Connection", "keep-alive");
+        res.setHeader("X-Accel-Buffering", "no"); // nginx buffering off
         res.flushHeaders?.();
 
-        const hb = setInterval(() => res.write(`: ping\n\n`), 25_000);
+        // Helpful reconnection hint
+        res.write(`retry: 1500\n\n`);
 
-        const close = () => {
+        // Heartbeat
+        const hb = setInterval(() => {
+            res.write(`: ping ${Date.now()}\n\n`);
+        }, 25_000);
+
+        let sub: NotificationSub | undefined;
+        let closed = false;
+
+        const close = async () => {
+            if (closed) return;
+            closed = true;
+
             clearInterval(hb);
+
+            try {
+                if (sub) await this.notificationService.unsubscribe(sub.id);
+            } catch (e) {
+                // best-effort
+            }
+
             try {
                 res.end();
             } catch {
+                // ignore
             }
         };
 
         req.on("close", close);
         req.on("error", close);
 
+        const write = async (ev: NotificationEvent) => {
+            if (closed) return;
+
+            // Hard server-side tenancy enforcement (belt + suspenders)
+            if (ev.organizationId !== organizationId) return;
+
+            const chunk =
+                `id: ${ev.id}\n` +
+                `event: ${ev.type}\n` +
+                `data: ${JSON.stringify(ev)}\n\n`;
+
+            if (!res.write(chunk)) {
+                await new Promise<void>((resolve) => res.once("drain", resolve));
+            }
+        };
+
         try {
-            // Optional replay (only if afterId exists)
-            if (afterId) {
-                const items = await this.store.query({
-                    ...filter,
-                    afterId,
-                    limit
-                });
-                for (const ev of items) this.writeSse(res, ev);
+            sub = await this.notificationService.subscribe(filter);
+
+            // Stream live events from the subscription queue
+            for await (const ev of sub.q) {
+                logger.info(`Received ${JSON.stringify(ev)}`);
+                await write(ev);
             }
 
-            // Live
-            for await (const ev of this.fanout.subscribe(filter)) {
-                this.writeSse(res, ev);
-            }
+            // If the queue ended naturally, cleanup
+            await close();
         } catch (e: any) {
-            logger.error(`notification stream error: ${e?.message ?? e}`, {
-                organizationId,
-                userId,
-                appSlug: app.urlSlug
-            });
-            // cannot change HTTP status mid-stream; emit an event
-            this.writeSse(res, {
-                id: `err_${Date.now()}`,
-                ts: Date.now(),
-                organizationId,
-                appSlug: app.urlSlug,
-                userId,
-                type: "provider_error",
-                severity: "error",
-                message: "notification_stream_error",
-                payload: {error: stringifyError(e?.message ?? e)}
-            });
-            close();
+            logger.error(`notification stream error: ${e.message}`);
+
+            // Cannot change HTTP status mid-stream: emit an error event then close.
+            try {
+                await write(pickDefined({
+                    id: `err_${Date.now()}`,
+                    ts: Date.now(),
+                    organizationId,
+                    appSlug: app?.urlSlug,
+                    userId,
+                    type: "provider_error",
+                    severity: "error",
+                    message: "notification_stream_error",
+                    payload: {error: stringifyError(e?.message ?? e)},
+                }) as NotificationEvent);
+            } catch {
+                // ignore
+            }
+
+            await close();
         }
     };
-
-    private writeSse(res: Response, ev: NotificationEvent) {
-        res.write(`id: ${ev.id}\n`);
-        res.write(`event: ${ev.type}\n`);
-        res.write(`data: ${JSON.stringify(ev)}\n\n`);
-    }
 }

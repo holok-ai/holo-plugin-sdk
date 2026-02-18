@@ -19,6 +19,8 @@ import {PluginService} from "./services/plugin/plugin.service";
 import {PluginDiscoveryService} from "./services/plugin/discovery.service";
 import {PluginLoaderService} from "./services/plugin/loader.service";
 import {ProviderPluginRegistry} from "./services/plugin/provider-registry.service";
+import {NotificationFanoutToken} from '@holokai/sdk/notification';
+import {NotificationService} from "./services/notification/notification.service";
 
 // Initialize Express app
 const app: Application = express();
@@ -58,6 +60,7 @@ container.registerSingleton(ResponseService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry)
+    .registerSingleton(NotificationFanoutToken, NotificationService)
     .registerSingleton(ProviderService)
 
 const configService: ConfigService = container.resolve(ConfigService);

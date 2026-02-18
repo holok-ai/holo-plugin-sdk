@@ -64,7 +64,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         seq: 0,
                         ts: Date.now(),
                         status: 400,
-                        error: ai.responseFactory.createError(errorMessage, )
+                        error: ai.responseFactory.createError(errorMessage,)
                     } as ProviderEvent;
 
                     for (const wireChunk of wire.fromProviderEvent(evt)) {

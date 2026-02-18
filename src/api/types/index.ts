@@ -1,5 +1,5 @@
 import {Request} from 'express';
-import {Auth} from "../../admin/types";
+import {Auth} from "@holokai/sdk";
 
 export type HoloApiRequest = Request & {
     auth?: Auth,

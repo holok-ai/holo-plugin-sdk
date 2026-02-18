@@ -10,6 +10,7 @@ import {ResponseService} from "./response.service";
 @injectable()
 export class InitService {
     private serverId: string = env.worker.serverId;
+
     constructor(
         private pluginService: PluginService,
         private providerService: ProviderService,
@@ -18,11 +19,11 @@ export class InitService {
 
     }
 
-    async init(serverId: string): Promise<void>  {
+    async init(serverId: string): Promise<void> {
         await this.pluginService.initializePluginSystem();
         await this.providerService.init(serverId);
         await this.setupQueues(serverId);
-        await this.responseService.startLLMResponseConsumer()
+        await this.responseService.startLLMResponseConsumer();
     }
 
     // TODO: Move exchange and queue configuration to a dedicated config service or external config file
@@ -34,6 +35,7 @@ export class InitService {
         await this._setupGlobalExchanges();
         await this._setupRequestQueues();
         await this._setupResponseQueues();
+        await this._setupNotificationQueues();
     }
 
     async _setupGlobalExchanges() {
@@ -47,16 +49,17 @@ export class InitService {
         //originated the request. For audit messages a second audit response message with a unique 
         //routing key will be used
         await this.queueService.assertExchange(env.queue.responseExchange, 'direct');
+        await this.queueService.assertExchange(env.queue.notificationExchange, "fanout");
 
         await this.queueService.assertExchange(env.queue.adminExchange, 'topic');
         await this.queueService.assertExchange(env.queue.adminResponseExchange, 'direct');
-        
+
         // Direct exchange for evaluator tasks
         await this.queueService.assertExchange(env.queue.directExchange, 'direct');
     }
 
     async _setupRequestQueues() {
-        
+
         //Bind the env.queue.requestQueue(llm_requests) directly to the fanout exchange env.queue.requestExchange
         await this.queueService.assertQueue(env.queue.requestQueue, {durable: true}, env.queue.requestExchange);
         await this.queueService.assertQueue(env.queue.auditRequestQueue, {durable: true}, env.queue.requestExchange);
@@ -79,13 +82,15 @@ export class InitService {
 
         await this.queueService.assertQueue(
             env.queue.auditResponseQueue,
-             {
+            {
                 durable: true
-            }, 
+            },
             env.queue.responseExchange,
             env.queue.auditRoutingKey);
     }
 
+    async _setupNotificationQueues() {
+        await this.queueService.assertQueue(env.queue.auditNotificationQueue, {durable: true}, env.queue.notificationExchange);
+    }
 
-    
 }

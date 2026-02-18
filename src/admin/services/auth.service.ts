@@ -1,10 +1,9 @@
 import 'reflect-metadata';
-import {ApplicationConfigProps, ClassLogger, pickDefined} from "@holokai/sdk";
+import {ApplicationConfigProps, Auth, ClassLogger, pickDefined} from "@holokai/sdk";
 import {injectable} from "tsyringe";
 import {OrganizationService} from "./organization.service";
 import {TokenService} from "./token.service";
 import {HoloApiRequest} from "../../api/types";
-import {Auth} from "../types";
 import {UnauthorizedError} from "express-jwt";
 
 @injectable()
@@ -17,7 +16,7 @@ export class AuthService extends ClassLogger {
         super();
     }
 
-    async populateAuth(provider: string, req: HoloApiRequest, useCache: boolean = true): Promise<Auth> {
+    async populateAuth(req: HoloApiRequest, useCache: boolean = true, provider?: string): Promise<Auth> {
         const logger = this.mlog(this.populateAuth);
         let token = req.headers['x-api-key'] as string | undefined;
         if (!token) {
@@ -51,27 +50,39 @@ export class AuthService extends ClassLogger {
             if (!app) {
                 return Promise.reject(`Application ${appSlug} no longer available.`);
             }
-            if (app.providerType !== provider.toUpperCase()) {
-                return Promise.reject(`Application support ${app.providerType}, not support ${provider}`);
+            if (provider && app.providerType !== provider.toUpperCase()) {
+                return Promise.reject(`Application ${appSlug} supports ${app.providerType}, not support ${provider}`);
             }
-        } else if (appSlugs) {
+        }
+
+        const availableApps = new Array<ApplicationConfigProps>();
+        let availableApp;
+        if (appSlugs) {
             for (const appSlug of appSlugs) {
-                app = this.organizationService.getApplication(organizationId, appSlug);
-                if (!app) {
+                availableApp = this.organizationService.getApplication(organizationId, appSlug);
+                if (!availableApp) {
                     logger.warn(`Application ${appSlug} in user credentials but no longer available.`);
+                    continue;
                 }
-                if (app?.providerType === provider.toUpperCase()) break;
+                if (provider && availableApp.providerType.toUpperCase() !== provider.toUpperCase()) continue;
+                availableApps.push(availableApp);
             }
-            if (!app) {
-                return Promise.reject(`No applications configured for provider: ${provider}`);
+
+            if (provider && !availableApps.length) {
+                return Promise.reject(`User is not authorized for this provider: ${provider}.`);
             }
+        }
+
+        if (!app && !availableApps.length) {
+            return Promise.reject(`User is not authorized for any providers.`);
         }
 
         return pickDefined({
             organizationId,
             userId,
             providerName: app?.providerName,
-            app
+            app,
+            availableApps
         }) as Auth;
     }
 }

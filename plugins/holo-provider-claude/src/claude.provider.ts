@@ -44,6 +44,10 @@ export class ClaudeProvider extends BaseProvider<Anthropic, MessageCreateParamsB
         return response;
     }
 
+    async getModelNameFromRequest(payload: MessageCreateParamsBase): Promise<string> {
+        return payload.model;
+    }
+
     protected async handleRequest(payload: MessageCreateParamsBase, ctx: ProviderContext) {
         const headers = ctx.headers ? pickHeadersByPrefix(ctx.headers, ['anthropic-']) : [];
         const options = {

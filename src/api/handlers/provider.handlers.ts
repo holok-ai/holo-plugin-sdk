@@ -18,7 +18,7 @@ export class ProviderHandlers extends ClassLogger {
     }
 
     createMiddleware(providerFamily: string) {
-        return makeJwtAuthMiddleware(this.authService, providerFamily, {useCache: true});
+        return makeJwtAuthMiddleware(this.authService, {useCache: true}, providerFamily);
     }
 
     createModelsHandler() {
@@ -30,9 +30,31 @@ export class ProviderHandlers extends ClassLogger {
             }
 
             try {
-                const provider = await this.providerService.matchProvider(auth.providerName);
+                const {app, availableApps} = auth;
+                const apps = app ? [app] : availableApps;
+                const providerModelNames = new Map<string, Set<string>>();
 
-                const models = await provider.getModels(auth.app.models.map(model => model.name));
+                for (const a of apps) {
+                    let names = providerModelNames.get(a.providerName);
+                    if (!names) providerModelNames.set(a.providerName, names = new Set());
+
+                    for (const m of a.models) {
+                        names.add(m.name);
+                    }
+                }
+
+                const providerModels = new Map<string, any[]>(); // replace any with your model type
+
+                await Promise.all(
+                    Array.from(providerModelNames.entries()).map(async ([providerName, modelNames]) => {
+                        const provider = await this.providerService.matchProvider(providerName);
+
+                        const models = await provider.getModels(Array.from(modelNames));
+                        providerModels.set(providerName, models);
+                    })
+                );
+
+                const models = Array.from(providerModels.values()).flat();
                 res.status(200).json(models);
             } catch (error) {
                 res.status(500).json({error: (error as Error).message});

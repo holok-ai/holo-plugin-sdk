@@ -1,3 +1,6 @@
+import {Auth, pickDefined} from "../core";
+import {v4 as uuidv4} from "uuid";
+
 export type NotificationSeverity = "info" | "warn" | "error";
 
 export type NotificationEventType =
@@ -10,14 +13,15 @@ export type NotificationEventType =
     | "provider_error";
 
 export type NotificationEvent = {
-    id: string;                 // ULID/UUIDv7/DB id used as SSE "id"
-    ts: number;                 // epoch ms (simpler than ISO; convert in client if desired)
-    organizationId: string;
-    appSlug: string;
+    id: string; // ULID/UUIDv7/DB id used as SSE "id"
+    ts: number; // epoch ms
 
+    organizationId: string;
+    appSlug?: string;
     userId?: string;
     threadId?: string;
     requestId?: string;
+    branchId?: string; // NEW
 
     type: NotificationEventType;
     severity: NotificationSeverity;
@@ -25,20 +29,38 @@ export type NotificationEvent = {
     payload?: unknown;
 };
 
+export class NotificationEventFactory {
+    static fromAuth(type: NotificationEventType, auth: Auth, message: string, severity: NotificationSeverity = "info"): NotificationEvent {
+        const {organizationId, app, userId} = auth;
+        const appSlug = app?.urlSlug;
+        return pickDefined({
+            id: uuidv4(),
+            ts: Date.now(),
+            organizationId,
+            userId,
+            appSlug,
+            type,
+            severity,
+            message
+        }) as NotificationEvent;
+    }
+}
+
 export type NotificationQuery = {
     organizationId: string;
     appSlug: string;
 
     threadIds?: string[];
     requestIds?: string[];
+    branchIds?: string[]; // NEW
     types?: NotificationEventType[];
 
     // cursoring
-    afterId?: string;   // exclusive
+    afterId?: string; // exclusive
     limit: number;
 };
 
-export type NotificationSubscribeFilter = Omit<NotificationQuery, "afterId" | "limit"> & {
+export type NotificationSubscribeFilter = Omit<NotificationQuery, "limit"> & {
     // Optional: allow "replay since last event id"
-    afterId?: string;
+    limit?: number; // allow optional here for convenience in controller
 };

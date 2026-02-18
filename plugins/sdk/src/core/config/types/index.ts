@@ -18,6 +18,3 @@ export type OrgCacheMap = {
 
 export type OrgCacheType = keyof OrgCacheMap;
 
-export type Keyable<T> = {
-    [K in keyof T]-?: T[K] extends string | number ? K : never
-}[keyof T] & string;
