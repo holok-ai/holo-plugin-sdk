@@ -31,13 +31,21 @@ export class RequestService extends ClassLogger {
             throw new Error('Unauthorized request. No auth object found.');
         }
 
+
         const {app} = auth;
 
         const workerRequest = await this.parseRequest(providerType, app.providerName, type, req, isPassthrough);
 
         if (app.guards && app.guards.length) {
+            const guardDetails = app.guards.map(g => ({
+                id: g.id,
+                name: g.modelName,
+                provider: g.providerName
+            }));
+            logger.debug(`Executing ${app.guards.length} guard(s) for request: ${JSON.stringify(guardDetails)}`);
             await this.notificationService.publish(NotificationEventFactory.fromAuth('guard_started', auth, 'Running guards'));
             await this.guardService.guard(workerRequest, app.guards, auth);
+            logger.debug(`All ${app.guards.length} guard(s) passed`);
         }
 
         await this.responseService.sendRequest(req, res, workerRequest);

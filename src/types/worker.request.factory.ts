@@ -23,7 +23,7 @@ export class WorkerRequestFactory {
             this.transformOpenAIPayload(payload);
         }
 
-
+       
         const workerRequest = this.create(
             providerType,
             providerName,
@@ -33,7 +33,8 @@ export class WorkerRequestFactory {
             auth,
             {path, method, headers: headers || {}, query: query || {}},
             thread_id,
-            branch_id
+            branch_id,
+            req.appSlug
         );
 
         if (isPassthrough) {
@@ -86,15 +87,17 @@ export class WorkerRequestFactory {
         rawRequest?: { path: string; method: string; headers: Record<string, any>; query: Record<string, any> },
         thread_id?: string,
         branch_id?: string,
+        customAppSlug?: string
     ) {
         let sanitizedAuth = {};
 
         if (auth) {
             const {organizationId, userId, app, availableApps} = auth;
+            const appSlug = customAppSlug || providerName;
             sanitizedAuth = {
                 organizationId,
                 userId,
-                app: app?.urlSlug,
+                appSlug,
                 availableApps
             };
         }

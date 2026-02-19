@@ -310,7 +310,6 @@ export interface IGuardPlugin<TRequest = unknown, TResponse = unknown> extends I
 }
 
 export const GuardResultSchema = {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
         "passed": {
@@ -323,22 +322,6 @@ export const GuardResultSchema = {
             }
         }
     },
-    "required": ["passed"],
-    "if": {
-        "properties": {"passed": {"const": false}}
-    },
-    "then": {
-        "required": ["errors"],
-        "properties": {
-            "errors": {
-                "minItems": 1
-            }
-        }
-    },
-    "else": {
-        "properties": {
-            "errors": false
-        }
-    },
+    "required": ["passed", "errors"],
     "additionalProperties": false
 };

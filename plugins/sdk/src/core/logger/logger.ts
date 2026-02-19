@@ -3,6 +3,7 @@ export type HoloLogLevel =
     | 'error'
     | 'warn'
     | 'info'
+    | 'verbose'
     | 'debug'
     | 'trace'
     | 'silent';
@@ -18,6 +19,8 @@ export interface HoloLoggerMethod {
 export interface HoloLogger {
     level: HoloLogLevel;
 
+    fatal: HoloLoggerMethod;
+
     error: HoloLoggerMethod;
 
     warn: HoloLoggerMethod;
@@ -26,7 +29,9 @@ export interface HoloLogger {
 
     debug: HoloLoggerMethod;
 
-    trace?: HoloLoggerMethod;
+    trace: HoloLoggerMethod;
+
+    verbose: HoloLoggerMethod;
 
     /**
      * Optional child logger for scoping (class, method, plugin, etc.)
@@ -40,6 +45,7 @@ export function isHoloLogLevel(value: unknown): value is HoloLogLevel {
         value === 'error' ||
         value === 'warn' ||
         value === 'info' ||
+        value === 'verbose' ||
         value === 'debug' ||
         value === 'trace' ||
         value === 'silent'

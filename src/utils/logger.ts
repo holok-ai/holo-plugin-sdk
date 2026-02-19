@@ -20,20 +20,26 @@ try {
 
 // Define log levels
 export const levels = {
-    error: 0,
-    warn: 1,
-    info: 2,
-    http: 3,
-    debug: 4,
+    fatal: 0,
+    error: 1,
+    warn: 2,
+    info: 3,
+    http: 4,
+    verbose: 5,
+    debug: 6,
+    trace: 7,
 };
 
 // Define log colors
 export const colors = {
+    fatal: 'red',
     error: 'red',
     warn: 'yellow',
     info: 'green',
     http: 'magenta',
+    verbose: 'cyan',
     debug: 'white',
+    trace: 'gray',
 };
 
 // Add colors to winston
@@ -94,26 +100,35 @@ export function createLoggerFormat(serverId: string) {
 
     const lvl3 = (lvl: string) => {
         const l = lvl.toLowerCase();
+        if (l === "fatal") return "FTL";
         if (l === "error") return "ERR";
         if (l === "warn") return "WRN";
         if (l === "info") return "INF";
         if (l === "debug") return "DBG";
         if (l === "http") return "HTP";
+        if (l === "verbose") return "VRB";
+        if (l === "trace") return "TRC";
         return l.slice(0, 3).toUpperCase();
     };
 
     return winston.format.combine(
         winston.format.timestamp(),
-        winston.format.colorize({all: true}),
-        winston.format.printf((info: any) => {
-            const time = formatTime(info.timestamp);
-            const level = truncate(lvl3(info.level), W_LVL).trim();
+        winston.format.printf(({ level, message, timestamp, className, methodName, requestId, ...metadata }) => {
+            const time = formatTime(timestamp);
+            // Strip ANSI color codes from level if present
+            const cleanLevel = level.replace(/\x1b\[\d+m/g, '');
+            const lvl = truncate(lvl3(cleanLevel), W_LVL).trim();
             const srv = truncate(serverId, W_SRV).trim();
-            const loc = truncate(formatLocation(info.className, info.methodName, W_LOC), W_LOC).trimEnd();
-            const rid = truncate(shortRid(info.requestId, 6), W_RID).trim();
+            const loc = truncate(formatLocation(className as string | undefined, methodName as string | undefined, W_LOC), W_LOC).trimEnd();
+            const rid = truncate(shortRid(requestId as string | undefined, 6), W_RID).trim();
 
-            return `${time}|${level}|${srv}|${loc}|${rid}|${info.message}`;
-        })
+            let msg = `${time}|${lvl}|${srv}|${loc}|${rid}|${message}`;
+            if (Object.keys(metadata).length > 0) {
+                msg += ` ${JSON.stringify(metadata)}`;
+            }
+            return msg;
+        }),
+        winston.format.colorize({all: true})
     );
 }
 
@@ -161,15 +176,33 @@ export function createLoggerOptions(serverId: string) {
     }
 }
 
-// Create the logger
-const logger = winston.createLogger(
+// Create the base logger
+const baseLogger = winston.createLogger(
     createLoggerOptions(env.id)
 );
+
+// Extend the logger with fatal and trace methods to match HoloLogger interface
+const logger = baseLogger as winston.Logger & {
+    fatal: typeof baseLogger.error;
+    trace: typeof baseLogger.debug;
+};
+
+// Add fatal and trace methods (Winston creates these from custom levels but doesn't expose them in types)
+(logger as any).fatal = baseLogger.log.bind(baseLogger, 'fatal');
+(logger as any).trace = baseLogger.log.bind(baseLogger, 'trace');
 
 export const LoggerFactoryToken: InjectionToken<(cls: Function | string) => winston.Logger> = 'LoggerFactory';
 
 container.register(LoggerFactoryToken, {
-    useFactory: () => (cls: Function | string) => logger.child({className: (cls as Function).name ?? cls})
+    useFactory: () => (cls: Function | string) => {
+        const childLogger = baseLogger.child({className: (cls as Function).name ?? cls}) as winston.Logger & {
+            fatal: typeof baseLogger.error;
+            trace: typeof baseLogger.debug;
+        };
+        (childLogger as any).fatal = childLogger.log.bind(childLogger, 'fatal');
+        (childLogger as any).trace = childLogger.log.bind(childLogger, 'trace');
+        return childLogger;
+    }
 });
 
 export default logger;

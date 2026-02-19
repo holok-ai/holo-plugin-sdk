@@ -20,6 +20,6 @@ module.exports = {
     '^(\\.{1,2}/.*)\\.js$': '$1'
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(arktype|@ark)/.*)'
+    'node_modules/(?!(arktype|@ark|@holokai)/.*)'
   ]
 };

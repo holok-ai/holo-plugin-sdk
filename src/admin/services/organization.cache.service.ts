@@ -3,20 +3,22 @@ import {injectable} from 'tsyringe';
 import {OrganizationCache} from "../../cache";
 import {ApplicationConfigValidator, OrganizationConfigValidator} from "../validators";
 import {
-    ApplicationConfigProps,
     ApplicationConfig,
+    ApplicationConfigProps,
+    ClassLogger,
     HoloConfigAction,
-    OrganizationConfigProps,
     OrganizationConfig,
+    OrganizationConfigProps,
     ProviderConfigProps
 } from "@holokai/sdk";
 
 @injectable()
-export class OrganizationCacheService {
+export class OrganizationCacheService extends ClassLogger {
 
     private orgCaches = new Map<string, OrganizationCache>();
 
     constructor() {
+        super();
     }
 
     applyConfig(c: OrganizationConfig) {
@@ -62,15 +64,62 @@ export class OrganizationCacheService {
     }
 
     setApplications(applications: readonly ApplicationConfigProps[]) {
+        const logger = this.mlog(this.setApplications);
         for (let i = 0; i < applications.length; i++) {
-            const {organizationId} = applications[i];
-            const orgCache = this.get(organizationId);
-            orgCache?.set('applications', 'urlSlug', applications[i]);
+            const app = applications[i];
+            const {organizationId, urlSlug} = app;
+            let orgCache = this.get(organizationId);
+
+            if (!orgCache) {
+                logger.warn(`Organization ${organizationId} not found in cache, creating minimal org cache for application ${urlSlug}`, {
+                    organizationId,
+                    urlSlug,
+                    existingOrgs: Array.from(this.orgCaches.keys())
+                });
+                const minimalOrg: OrganizationConfigProps = {
+                    id: organizationId,
+                    name: organizationId,
+                    slug: organizationId,
+                    providers: [],
+                    applications: []
+                };
+                this.set(minimalOrg);
+                orgCache = this.get(organizationId);
+
+                if (!orgCache) {
+                    logger.error(`Failed to create organization cache for ${organizationId}, skipping application ${urlSlug}`);
+                    continue;
+                }
+                logger.info(`Created minimal organization cache for ${organizationId}`);
+            }
+
+            logger.debug(`Setting application with key="${urlSlug}" (from field: ${app.urlSlug})`);
+            orgCache.set('applications', app.urlSlug, app);
+            logger.info(`Application ${urlSlug} added to organization ${organizationId} cache`, {
+                organizationId,
+                urlSlug,
+                providerType: app.providerType,
+                providerName: app.providerName
+            });
         }
     }
 
     getApplication(orgId: string, urlSlug: string): ApplicationConfigProps | undefined {
-        return this.get(orgId)?.get('applications', urlSlug);
+        const logger = this.mlog(this.getApplication);
+        const orgCache = this.get(orgId);
+        if (!orgCache) {
+            logger.debug(`getApplication: org ${orgId} not found`);
+            return undefined;
+        }
+
+        const app = orgCache.get('applications', urlSlug);
+        logger.debug(`getApplication: orgId=${orgId}, urlSlug=${urlSlug}, found=${!!app}`, {
+            urlSlug,
+            appExists: orgCache.has('applications', urlSlug),
+            allAppSlugs: orgCache.getAll('applications').map(a => a.urlSlug)
+        });
+
+        return app;
     }
 
     getAllApplications(orgId: string): ApplicationConfigProps[] | undefined {

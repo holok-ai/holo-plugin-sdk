@@ -20,7 +20,6 @@ export const GuardResultFailValidator = type({
 export const GuardResultValidator = GuardResultPassValidator.or(GuardResultFailValidator).brand('GuardResultValidator') satisfies type<GuardResult>;
 
 export const GuardResultSchema = {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
         "passed": {
@@ -33,22 +32,6 @@ export const GuardResultSchema = {
             }
         }
     },
-    "required": ["passed"],
-    "if": {
-        "properties": {"passed": {"const": false}}
-    },
-    "then": {
-        "required": ["errors"],
-        "properties": {
-            "errors": {
-                "minItems": 1
-            }
-        }
-    },
-    "else": {
-        "properties": {
-            "errors": false
-        }
-    },
+    "required": ["passed", "errors"],
     "additionalProperties": false
 };

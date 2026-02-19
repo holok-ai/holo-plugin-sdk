@@ -46,8 +46,16 @@ export class AuthService extends ClassLogger {
 
         // we were either routed via a specific app / agent URL
         if (appSlug) {
+            logger.debug(`Looking up application: orgId=${organizationId}, appSlug=${appSlug}`);
             app = this.organizationService.getApplication(organizationId, appSlug);
             if (!app) {
+                logger.error(`Application ${appSlug} not found in cache`, {
+                    organizationId,
+                    appSlug,
+                    provider,
+                    orgExists: !!this.organizationService.withOrganization(organizationId),
+                    allAppsForOrg: this.organizationService.withOrganization(organizationId)?.getAll('applications').map(a => a.urlSlug)
+                });
                 return Promise.reject(`Application ${appSlug} no longer available.`);
             }
             if (provider && app.providerType !== provider.toUpperCase()) {
