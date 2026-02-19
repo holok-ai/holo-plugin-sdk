@@ -23,7 +23,7 @@ export class WorkerRequestFactory {
             this.transformOpenAIPayload(payload);
         }
 
-       
+
         const workerRequest = this.create(
             providerType,
             providerName,
@@ -92,7 +92,7 @@ export class WorkerRequestFactory {
         let sanitizedAuth = {};
 
         if (auth) {
-            const {organizationId, userId, app, availableApps} = auth;
+            const {organizationId, userId, availableApps} = auth;
             const appSlug = customAppSlug || providerName;
             sanitizedAuth = {
                 organizationId,

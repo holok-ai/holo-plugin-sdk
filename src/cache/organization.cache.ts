@@ -109,6 +109,20 @@ export class OrganizationCache {
         return m.delete(key);
     }
 
+    mdel(cacheType: OrgCacheType, keys: readonly string[]): { success: boolean; failed: string[] } {
+        const failed: string[] = [];
+        for (const key of keys) if (this.del(cacheType, key)) failed.push(key);
+        return {success: failed.length === 0, failed};
+    }
+
+    clear(cacheType: OrgCacheType): void {
+        this.cacheOf(cacheType).clear();
+    }
+
+    has(cacheType: OrgCacheType, key: string): boolean {
+        return this.cacheOf(cacheType).has(key);
+    }
+
     private addToIndexes(cacheType: OrgCacheType, key: string, value: OrgCacheMap[typeof cacheType]): void {
         const idx = this.indexOf(cacheType);
 

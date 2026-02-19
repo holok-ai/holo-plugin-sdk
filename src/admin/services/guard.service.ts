@@ -109,7 +109,7 @@ export class GuardService extends ClassLogger {
                         const response = await this.responseService.requestOnce<string>(guardRequest);
 
                         const raw = JSON.parse(response as string);
-                        logger.trace(`Guard raw response: ${JSON.stringify(raw)}`, {requestId: workerRequest.requestId});
+                        logger.debug(`Guard raw response: ${JSON.stringify(raw)}`, {requestId: workerRequest.requestId});
                         // TODO: Handle error responses before translating - check if raw.error exists and return early
                         //       to avoid passing error objects to translator which expects proper response structure
                         const holoResponse = await provider.translator.toHoloResponse(raw);

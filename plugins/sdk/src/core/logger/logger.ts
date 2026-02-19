@@ -19,8 +19,6 @@ export interface HoloLoggerMethod {
 export interface HoloLogger {
     level: HoloLogLevel;
 
-    fatal: HoloLoggerMethod;
-
     error: HoloLoggerMethod;
 
     warn: HoloLoggerMethod;
@@ -28,8 +26,6 @@ export interface HoloLogger {
     info: HoloLoggerMethod;
 
     debug: HoloLoggerMethod;
-
-    trace: HoloLoggerMethod;
 
     verbose: HoloLoggerMethod;
 
