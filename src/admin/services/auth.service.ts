@@ -30,21 +30,26 @@ export class AuthService extends ClassLogger {
             throw new UnauthorizedError('credentials_required', {message: 'Authentication failed: No token provided.'})
         }
 
-        const appSlugs = await this.tokenService.getAppSlugs(token, useCache);
-        if (!appSlugs) {
-            return Promise.reject('User is not provisioned with any applications.');
-        }
-
         const {appSlug: paramsAppSlug} = req.params;
         const appSlug = (req as any).appSlug || paramsAppSlug;
-        
-        if (appSlug && !appSlugs.includes(appSlug)) {
-            return Promise.reject('User is not authorized for application.');
+
+        // Only validate appSlugs if accessing a custom endpoint (with appSlug)
+        // Direct provider endpoints don't require app provisioning
+        let appSlugs: string[] | null = null;
+        if (appSlug) {
+            appSlugs = await this.tokenService.getAppSlugs(token, useCache);
+            if (!appSlugs) {
+                return Promise.reject('User is not provisioned with any applications.');
+            }
+            if (!appSlugs.includes(appSlug)) {
+                return Promise.reject('User is not authorized for application.');
+            }
         }
         const decodedToken = this.tokenService.decodeToken(token);
         const {organizationId, userId} = decodedToken;
 
-        logger.debug(`Token decoded: orgId=${organizationId}, userId=${userId}, appSlug=${appSlug}, appSlugs=${appSlugs?.join(',')}`);
+        logger.debug(`Token decoded: orgId=${organizationId}, userId=${userId}, appSlug=${appSlug || 'none'}, appSlugs=${appSlugs?.join(',') || 'not-checked'}`);
+
 
         let app: Application | undefined = undefined;
 
