@@ -22,7 +22,7 @@ export class OrganizationCacheService extends ClassLogger {
     }
 
     applyConfig(c: OrganizationConfig) {
-        const config = OrganizationConfigValidator.assert(c);
+        const config = OrganizationConfigValidator.assert(c) as OrganizationConfig;
 
         switch (config.action) {
             case HoloConfigAction.DELETE:
@@ -34,7 +34,7 @@ export class OrganizationCacheService extends ClassLogger {
     }
 
     applyApplicationConfig(c: ApplicationConfig) {
-        const config = ApplicationConfigValidator.assert(c);
+        const config = ApplicationConfigValidator.assert(c) as ApplicationConfig;
         this.setApplications(config.data)
     }
 
@@ -113,6 +113,7 @@ export class OrganizationCacheService extends ClassLogger {
         }
 
         const app = orgCache.get('applications', urlSlug);
+        
         logger.debug(`getApplication: orgId=${orgId}, urlSlug=${urlSlug}, found=${!!app}`, {
             urlSlug,
             appExists: orgCache.has('applications', urlSlug),

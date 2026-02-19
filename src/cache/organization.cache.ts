@@ -43,7 +43,7 @@ export class OrganizationCache {
     }
 
     init(organization: OrganizationConfigProps): void {
-        const org = OrganizationValidator.assert(organization);
+        const org = OrganizationValidator.assert(organization) as OrganizationConfigProps;
         const {id, name, slug, applications, providers} = org;
 
         this.id = id;
