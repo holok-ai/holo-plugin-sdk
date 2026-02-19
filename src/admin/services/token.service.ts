@@ -132,7 +132,7 @@ export class TokenService {
 
             const slugs = auth?.appSlugs;
             if (!Array.isArray(slugs)) {
-                logger.warn('Invalid JWT structure: missing or invalid appSlugs', {
+                logger.debug('JWT missing appSlugs - user can only access direct provider endpoints', {
                     hasAppSlugs: !!slugs,
                     appSlugsType: typeof slugs,
                 });
