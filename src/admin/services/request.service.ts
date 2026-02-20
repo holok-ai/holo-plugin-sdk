@@ -7,7 +7,7 @@ import {env} from "../../env";
 import {GuardService} from "./guard.service";
 import {WorkerRequestFactory} from "../../types";
 import {ClassLogger, RequestType} from "@holokai/sdk";
-import {NotificationEventFactory, NotificationFanoutToken} from "@holokai/sdk/notification";
+import {NotificationEventFactory, NotificationServiceToken} from "@holokai/sdk/notification";
 import {NotificationService} from "../../services/notification/notification.service";
 
 
@@ -18,7 +18,7 @@ export class RequestService extends ClassLogger {
     constructor(
         private readonly responseService: ResponseService,
         private readonly guardService: GuardService,
-        @inject(NotificationFanoutToken) readonly notificationService: NotificationService
+        @inject(NotificationServiceToken) readonly notificationService: NotificationService
     ) {
         super();
     }
@@ -31,7 +31,6 @@ export class RequestService extends ClassLogger {
             throw new Error('Unauthorized request. No auth object found.');
         }
 
-
         const {app} = auth;
 
         const workerRequest = await this.parseRequest(providerType, app.providerName, type, req, isPassthrough);
@@ -43,9 +42,9 @@ export class RequestService extends ClassLogger {
                 provider: g.providerName
             }));
             logger.debug(`Executing ${app.guards.length} guard(s) for request: ${JSON.stringify(guardDetails)}`);
-            await this.notificationService.publish(NotificationEventFactory.fromAuth('guard_started', auth, 'Running guards'));
-            await this.guardService.guard(workerRequest, app.guards, auth);
-            logger.debug(`All ${app.guards.length} guard(s) passed`);
+            await this.notificationService.publish(NotificationEventFactory.fromAuthAndRequest('guard_started', auth, workerRequest, 'Running guards'));
+            const results = await this.guardService.guard(workerRequest, app.guards, auth);
+            await this.notificationService.publish(NotificationEventFactory.fromAuthAndRequest(results?.passed ? 'guard_passed' : 'guard_failed', auth, workerRequest, 'Running guards'));
         }
 
         await this.responseService.sendRequest(req, res, workerRequest);

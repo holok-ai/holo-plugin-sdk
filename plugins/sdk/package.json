@@ -1,6 +1,6 @@
 {
   "name": "@holokai/sdk",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "description": "Common SDK for Holo plugin system - contracts, types, and validators",
   "author": "Holokai",

@@ -1,15 +1,14 @@
 import 'reflect-metadata';
 import {Response} from "express";
 import {inject, injectable} from "tsyringe";
-import {ClassLogger, parseArray, parseRepeatableParam, pickDefined, stringifyError} from "@holokai/sdk";
+import {ClassLogger, pickDefined, stringifyError} from "@holokai/sdk";
 
-import type {NotificationFanout} from '@holokai/sdk/notification';
+import type {NotificationService} from '@holokai/sdk/notification';
 import {
     NotificationEvent,
-    NotificationFanoutToken,
+    NotificationServiceToken,
     NotificationSub,
-    NotificationSubscribeFilter,
-    parseEventTypes
+    NotificationSubscribeFilter
 } from '@holokai/sdk/notification';
 
 import {HoloApiRequest} from "../types";
@@ -17,7 +16,7 @@ import {HoloApiRequest} from "../types";
 @injectable()
 export class NotificationController extends ClassLogger {
     constructor(
-        @inject(NotificationFanoutToken) private readonly notificationService: NotificationFanout) {
+        @inject(NotificationServiceToken) private readonly notificationService: NotificationService) {
         super();
     }
 
@@ -31,21 +30,10 @@ export class NotificationController extends ClassLogger {
 
         const {organizationId, userId, app} = req.auth;
 
-        // Filters
-        const threadIds = parseArray(parseRepeatableParam(req.query.threadId));
-        const requestIds = parseArray(parseRepeatableParam(req.query.requestId));
-        const branchIds = parseArray(parseRepeatableParam(req.query.branchId));
-        const types = parseEventTypes(req.query.type);
-
         const filter = pickDefined({
             organizationId,
             userId,
-            ...(threadIds.length ? {threadIds} : {}),
-            ...(requestIds.length ? {requestIds} : {}),
-            ...(branchIds.length ? {branchIds} : {}),
-            ...(types?.length ? {types} : {}),
-            // Optional scoping; only if you want per-user subscriptions
-            // userId,
+            appSlug: app?.urlSlug
         }) as NotificationSubscribeFilter;
 
         // SSE headers
@@ -55,8 +43,6 @@ export class NotificationController extends ClassLogger {
         res.setHeader("Connection", "keep-alive");
         res.setHeader("X-Accel-Buffering", "no"); // nginx buffering off
         res.flushHeaders?.();
-
-        // Helpful reconnection hint
         res.write(`retry: 1500\n\n`);
 
         // Heartbeat
@@ -65,12 +51,12 @@ export class NotificationController extends ClassLogger {
         }, 25_000);
 
         let sub: NotificationSub | undefined;
+
         let closed = false;
 
         const close = async () => {
             if (closed) return;
             closed = true;
-
             clearInterval(hb);
 
             try {
@@ -91,9 +77,9 @@ export class NotificationController extends ClassLogger {
 
         const write = async (ev: NotificationEvent) => {
             if (closed) return;
-
-            // Hard server-side tenancy enforcement (belt + suspenders)
             if (ev.organizationId !== organizationId) return;
+            if (filter.userId && ev.userId !== filter.userId) return;
+            if (filter.appSlug && ev.appSlug !== filter.appSlug) return;
 
             const chunk =
                 `id: ${ev.id}\n` +
@@ -107,19 +93,13 @@ export class NotificationController extends ClassLogger {
 
         try {
             sub = await this.notificationService.subscribe(filter);
-
-            // Stream live events from the subscription queue
             for await (const ev of sub.q) {
                 logger.info(`Received ${JSON.stringify(ev)}`);
                 await write(ev);
             }
-
-            // If the queue ended naturally, cleanup
-            await close();
         } catch (e: any) {
-            logger.error(`notification stream error: ${e.message}`);
+            logger.error(`notification stream error: ${e?.message ?? e}`);
 
-            // Cannot change HTTP status mid-stream: emit an error event then close.
             try {
                 await write(pickDefined({
                     id: `err_${Date.now()}`,

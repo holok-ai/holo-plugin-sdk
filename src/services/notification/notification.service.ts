@@ -1,127 +1,153 @@
 import 'reflect-metadata';
 import {injectable} from "tsyringe";
-import {ClassLogger,} from "@holokai/sdk";
+import {ClassLogger, pickDefined,} from "@holokai/sdk";
 import {
     NotificationEvent,
-    NotificationFanout,
-    NotificationIndexer,
     NotificationSub,
-    NotificationSubscribeFilter
+    NotificationSubscribeFilter,
+    NotificationTopic
 } from '@holokai/sdk/notification';
 import {QueueService} from "../queue.service";
 import {env} from "../../env";
-import {AsyncEventQueue, IndexMap} from "@holokai/sdk/core";
+import {AsyncEventQueue} from "@holokai/sdk/core";
 import {randomUUID} from "node:crypto";
 
 @injectable()
-export class NotificationService extends ClassLogger implements NotificationFanout {
-    private readonly notificationExchange = env.queue.notificationExchange;
-    private readonly notificationQueue = env.queue.notificationQueue;
+export class NotificationService extends ClassLogger implements NotificationService {
+    private readonly exchange = env.queue.notificationExchange;
+    private readonly queuePrefix = env.queue.notificationQueue;
 
-    private readonly consumers = new Set<string>();
-    private readonly subs = new Map<string, NotificationSub>();
-    private readonly idx = new IndexMap();
+    private consumers = new Map<string, { queueName: string; started: boolean }>();
+
+    // Per-user binding refcounts: userKey -> (bindingPattern -> count)
+    private bindingRefs = new Map<string, Map<string, number>>();
+
+    // Per-user SSE subs: userKey -> Map<subId, sub>
+    private subs = new Map<string, Map<string, NotificationSub>>();
 
     constructor(private readonly queueService: QueueService) {
         super();
     }
 
-    async startConsumer(organizationId: string): Promise<void> {
-        const queueName = `${this.notificationQueue}.${organizationId}`;
-
-        if (this.consumers.has(queueName)) {
-            return
-        }
-        await this.queueService.assertQueue(queueName, {
-                durable: true,
-                arguments: {
-                    'x-expires': env.queue.queueExpiration
-                }
-            },
-            env.queue.notificationExchange,
-            organizationId
-        );
-
-        await this.queueService.consume(
-            queueName,
-            async (_id: string, content: any) => this.processNotification(content as NotificationEvent),
-            true
-        );
-        this.consumers.add(queueName);
-    }
-
     async publish(event: NotificationEvent): Promise<void> {
-        await this.queueService.sendToExchange(this.notificationExchange, event.organizationId, event, {
+        const rk = NotificationTopic.publishKey(event.organizationId, event.userId, event.appSlug);
+        await this.queueService.sendToExchange(this.exchange, rk, event, {
             correlationId: event.id,
         });
     }
 
     async subscribe(filter: NotificationSubscribeFilter): Promise<NotificationSub> {
-        const logger = this.mlog(this.subscribe);
+        const {organizationId, userId, appSlug} = filter;
+
+        if (!organizationId || !userId) {
+            throw new Error('Notification subscription requires organizationId and userId');
+        }
+
+
+        const userKey = NotificationTopic.userKey(organizationId, userId);
         const id = randomUUID();
         const q = new AsyncEventQueue<NotificationEvent>();
-        await this.startConsumer(filter.organizationId);
 
-        const sub: NotificationSub = {id, filter, q};
-        this.subs.set(id, sub);
+        await this.ensureUserQueueConsumer(userKey);
 
-        logger.info(JSON.stringify(NotificationIndexer.keysForFilter(filter)));
-        for (const k of NotificationIndexer.keysForFilter(filter)) {
-            logger.info(`Adding: ${k}`);
-            this.idx.add(k, id);
-        }
-        logger.info(`Indexes ${JSON.stringify(this.idx.size())}`);
+        const bindingKey = NotificationTopic.userApp(organizationId, userId, appSlug);
+        await this.addBindingRef(userKey, bindingKey);
 
+        let m = this.subs.get(userKey);
+        if (!m) this.subs.set(userKey, (m = new Map()));
+
+        const sub = pickDefined({id, filter, q, appSlug}) as NotificationSub;
+        m.set(id, sub);
         return sub;
     }
 
+
     async unsubscribe(id: string): Promise<boolean> {
-        const sub = this.subs.get(id);
-        if (!sub) return false;
-
-        for (const k of NotificationIndexer.keysForFilter(sub.filter)) this.idx.remove(k, id);
-
-        sub.q.end();
-        this.subs.delete(id);
-        return true;
-    }
-
-    // ---------------- internals ----------------
-
-    private processNotification(ev: NotificationEvent) {
-        const logger = this.mlog(this.processNotification);
-        logger.info(`Processing notification ${JSON.stringify(ev)}`);
-
-        const keys = NotificationIndexer.keysForEvent(ev);
-
-        logger.info(`keys: ${JSON.stringify(keys)}`);
-
-        // union of all candidate subIds from all relevant keys
-        const candidateIds = new Set<string>();
-        for (const k of keys) {
-            for (const id of this.idx.get(k)) {
-                logger.info(`${k}: ${id}`);
-                candidateIds.add(id);
-            }
-        }
-
-        if (!candidateIds.size) return;
-
-        let delivered = 0;
-        for (const subId of candidateIds) {
-            const sub = this.subs.get(subId);
+        // We need to find which userKey owns this subId
+        for (const [userKey, subs] of this.subs.entries()) {
+            const sub = subs.get(id);
             if (!sub) continue;
-            if (!NotificationIndexer.matches(sub.filter, ev)) continue;
-            sub.q.push(ev);
-            delivered++;
+
+            subs.delete(id);
+            sub.q.end();
+
+            const {organizationId, userId, appSlug} = sub.filter;
+            await this.releaseBindingRef(userKey, NotificationTopic.userApp(organizationId, userId, appSlug));
+
+            // If no more subs for user, optionally stop consumer + let queue expire
+            if (subs.size === 0) {
+                this.subs.delete(userKey);
+            }
+
+            return true;
+        }
+        return false;
+    }
+
+    private async ensureUserQueueConsumer(userKey: string) {
+        const existing = this.consumers.get(userKey);
+        if (existing?.started) return;
+
+        const queueName = `${this.queuePrefix}.${userKey}.${env.api.apiServerId}`;
+
+        await this.queueService.assertQueue(
+            queueName,
+            {
+                durable: true,
+                arguments: {"x-expires": env.queue.queueExpiration},
+            }
+        );
+
+        await this.queueService.consume(
+            queueName,
+            async (_id: string, content: any) => this.fanoutToUser(userKey, content as NotificationEvent),
+            true
+        );
+
+        this.consumers.set(userKey, {queueName, started: true});
+    }
+
+    private async addBindingRef(userKey: string, binding: string) {
+        let m = this.bindingRefs.get(userKey);
+        if (!m) this.bindingRefs.set(userKey, (m = new Map()));
+
+        const n = (m.get(binding) ?? 0) + 1;
+        m.set(binding, n);
+        if (n > 1) return; // already bound
+
+        const c = this.consumers.get(userKey);
+        if (!c) throw new Error(`No queue for ${userKey}`);
+
+        await this.queueService.bindQueue(c.queueName, this.exchange, binding);
+    }
+
+    private async releaseBindingRef(userKey: string, binding: string) {
+        const m = this.bindingRefs.get(userKey);
+        if (!m) return;
+
+        const n = (m.get(binding) ?? 0) - 1;
+        if (n > 0) {
+            m.set(binding, n);
+            return;
         }
 
-        logger.debug(`notification delivered`, {
-            delivered,
-            candidates: candidateIds.size,
-            organizationId: ev.organizationId,
-            appSlug: ev.appSlug,
-            type: ev.type,
-        });
+        m.delete(binding);
+        if (m.size === 0) this.bindingRefs.delete(userKey);
+
+        const c = this.consumers.get(userKey);
+        if (!c) return;
+
+        await this.queueService.unbindQueue(c.queueName, this.exchange, binding);
     }
+
+    private fanoutToUser(userKey: string, ev: NotificationEvent) {
+        const subs = this.subs.get(userKey);
+        if (!subs || subs.size === 0) return;
+
+        for (const sub of subs.values()) {
+            if (sub.appSlug && ev.appSlug !== sub.appSlug) continue;
+            sub.q.push(ev);
+        }
+    }
+
 }

@@ -1,5 +1,6 @@
 import {Auth, pickDefined} from "../core";
 import {v4 as uuidv4} from "uuid";
+import {HoloWorkerRequest} from "../core/worker";
 
 export type NotificationSeverity = "info" | "warn" | "error";
 
@@ -17,8 +18,8 @@ export type NotificationEvent = {
     ts: number; // epoch ms
 
     organizationId: string;
+    userId: string;
     appSlug?: string;
-    userId?: string;
     threadId?: string;
     requestId?: string;
     branchId?: string; // NEW
@@ -30,8 +31,9 @@ export type NotificationEvent = {
 };
 
 export class NotificationEventFactory {
-    static fromAuth(type: NotificationEventType, auth: Auth, message: string, severity: NotificationSeverity = "info"): NotificationEvent {
+    static fromAuthAndRequest(type: NotificationEventType, auth: Auth, request: HoloWorkerRequest, message: string, payload?: any, severity: NotificationSeverity = "info"): NotificationEvent {
         const {organizationId, app, userId} = auth;
+        const {requestId, thread_id, branch_id} = request;
         const appSlug = app?.urlSlug;
         return pickDefined({
             id: uuidv4(),
@@ -41,18 +43,23 @@ export class NotificationEventFactory {
             appSlug,
             type,
             severity,
-            message
+            message,
+            requestId,
+            payload,
+            threadId: thread_id,
+            branchId: branch_id,
         }) as NotificationEvent;
     }
 }
 
 export type NotificationQuery = {
     organizationId: string;
-    appSlug: string;
+    userId: string;
+    appSlug?: string;
 
     threadIds?: string[];
     requestIds?: string[];
-    branchIds?: string[]; // NEW
+    branchIds?: string[];
     types?: NotificationEventType[];
 
     // cursoring

@@ -49,7 +49,7 @@ export class InitService {
         //originated the request. For audit messages a second audit response message with a unique 
         //routing key will be used
         await this.queueService.assertExchange(env.queue.responseExchange, 'direct');
-        await this.queueService.assertExchange(env.queue.notificationExchange, "fanout");
+        await this.queueService.assertExchange(env.queue.notificationExchange, "topic");
 
         await this.queueService.assertExchange(env.queue.adminExchange, 'topic');
         await this.queueService.assertExchange(env.queue.adminResponseExchange, 'direct');
@@ -67,8 +67,6 @@ export class InitService {
 
     async _setupResponseQueues() {
         const responseQueueName = `${env.queue.responseQueue}.${this.serverId}`;
-        //Bind a queue with the name llm_responses.server_xxxxx to the 
-        //llm_responses_exchange with binding key server_xxxxx
         await this.queueService.assertQueue(
             responseQueueName,
             {
@@ -90,7 +88,7 @@ export class InitService {
     }
 
     async _setupNotificationQueues() {
-        await this.queueService.assertQueue(env.queue.auditNotificationQueue, {durable: true}, env.queue.notificationExchange);
+        await this.queueService.assertQueue(env.queue.auditNotificationQueue, {durable: true}, env.queue.notificationExchange, '#');
     }
 
 }

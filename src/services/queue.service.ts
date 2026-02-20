@@ -279,4 +279,18 @@ export class QueueService extends ClassLogger {
         }
         await this.channel!.bindQueue(queue, exchange, pattern);
     }
+
+    async unbindQueue(queue: string, exchange: string, pattern: string) {
+        const logger = this.mlog(this.unbindQueue);
+        if (!this.isConnected) await this.connect();
+        logger.debug(`Unbinding queue ${queue} from exchange ${exchange} with pattern ${pattern}`);
+        await this.channel!.unbindQueue(queue, exchange, pattern);
+    }
+
+    async deleteQueue(queue: string, options: object = {}) {
+        const logger = this.mlog(this.deleteQueue);
+        if (!this.isConnected) await this.connect();
+        logger.debug(`Deleting queue ${queue}`);
+        await this.channel!.deleteQueue(queue, options as any);
+    }
 }

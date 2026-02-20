@@ -1,13 +1,14 @@
 import 'reflect-metadata';
 import {AuditServiceEvent} from '../types';
-import {container, injectable} from "tsyringe";
+import {container, inject, injectable} from "tsyringe";
 import {AppDB, EvaluatorDB, RequestDB, ResponseDB} from "../db";
-import logger from "../utils/logger";
 import {QueueService} from "./queue.service";
 import {env} from '../env';
 import {ClassLogger, HoloWorkerRequest, HoloWorkerResponse} from "@holokai/sdk";
 import {ProviderService} from "./provider.service";
 import {LlmRequest, LlmResponse} from "@holokai/sdk/dist/core/entities";
+import {NotificationEvent, NotificationStoreToken} from "@holokai/sdk/notification";
+import {PostgresNotificationStore} from "../db/notification.db";
 
 /**
  * Service for auditing and logging LLM requests and responses
@@ -18,13 +19,14 @@ export class AuditService extends ClassLogger {
 
     constructor(
         private readonly providerService: ProviderService,
+        @inject(NotificationStoreToken) private readonly notificationDB: PostgresNotificationStore,
         private evaluatorDB: EvaluatorDB,
         private requestDB: RequestDB,
         private responseDB: ResponseDB,
         private queueService: QueueService
     ) {
         super();
-        logger.info('AuditService initialized');
+        this.log.info('AuditService initialized');
     }
 
     /**
@@ -33,6 +35,7 @@ export class AuditService extends ClassLogger {
      * @param {HoloWorkerRequest | Omit<LlmRequest, 'id'>} content - Request data to log
      */
     async logRequest(content: HoloWorkerRequest | Omit<LlmRequest, 'id'>): Promise<void> {
+        const logger = this.mlog(this.logRequest);
         const startTime = Date.now();
 
         try {
@@ -61,6 +64,7 @@ export class AuditService extends ClassLogger {
      * @private
      */
     private isHoloWorkerRequest(obj: any): obj is HoloWorkerRequest {
+        const logger = this.mlog(this.isHoloWorkerRequest);
         const isWorkerRequest = obj.payload !== undefined &&
             obj.sourceId !== undefined &&
             obj.providerType !== undefined &&
@@ -78,6 +82,7 @@ export class AuditService extends ClassLogger {
      * @private
      */
     private async insertRequest(content: Omit<LlmRequest, 'id'>): Promise<void> {
+        const logger = this.mlog(this.insertRequest);
         const startTime = Date.now();
         try {
             await this.requestDB.insert(content);
@@ -100,6 +105,7 @@ export class AuditService extends ClassLogger {
      */
 
     async logResponse(content: Omit<LlmResponse, 'id'>): Promise<void> {
+        const logger = this.mlog(this.logResponse);
         const startTime = Date.now();
 
         try {
@@ -115,12 +121,29 @@ export class AuditService extends ClassLogger {
         }
     }
 
+    async logNotification(content: NotificationEvent): Promise<void> {
+        const logger = this.mlog(this.logNotification);
+        logger.debug(`Logging notification: ${JSON.stringify(content)}`);
+        const startTime = Date.now();
+        try {
+            await this.notificationDB.insert(content);
+        } catch (error) {
+            logger.error(`Failed to log notification: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+                error: error,
+                duration: Date.now() - startTime
+            });
+            throw error;
+        }
+
+    }
+
     /**
      * Creates a list of evaluators for the application id (in the response) and queues a msg for each evaluator
      * @param responseId - the llm response to evaluate
      * @param applicationId - the application used for the request-response
      */
     async sendToEvaluatorQ(responseId: string, applicationId: string): Promise<void> {
+        const logger = this.mlog(this.sendToEvaluatorQ);
         // if default string, use default application
         if (applicationId.toLowerCase() === 'default') {
             const application = await this.evaluatorDB.getApplicationByName(applicationId);
@@ -149,6 +172,7 @@ export class AuditService extends ClassLogger {
      * @private
      */
     private isHoloWorkerResponse(obj: any): obj is HoloWorkerResponse {
+        const logger = this.mlog(this.isHoloWorkerResponse);
         const isWorkerResponse = obj.requestId !== undefined &&
             obj.providerType !== undefined &&
             obj.payload !== undefined &&
@@ -164,6 +188,7 @@ export class AuditService extends ClassLogger {
      * @private
      */
     private async insertResponse(content: Omit<LlmResponse, 'id'>): Promise<string | null> {
+        const logger = this.mlog(this.insertResponse);
         const startTime = Date.now();
         try {
             const result = await this.responseDB.insert(content);

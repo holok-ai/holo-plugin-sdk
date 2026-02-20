@@ -13,6 +13,9 @@ import {ProviderPluginRegistry} from "../services/plugin/provider-registry.servi
 import {AIRequestStat, HoloWorkerRequest, IProvider, ProviderEvent} from "@holokai/sdk";
 import {WireService} from "../services/wire.service";
 import {CryptoService} from "../services/crypto.service";
+import {NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
+import {NotificationService} from "../services/notification/notification.service";
+import {PostgresNotificationStore} from "../db/notification.db";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -140,6 +143,8 @@ container.registerSingleton(CryptoService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry)
+    .registerSingleton(NotificationServiceToken, NotificationService)
+    .registerSingleton(NotificationStoreToken, PostgresNotificationStore)
     .registerSingleton(ProviderService);
 
 let workerInstance: WorkerServer | null = null;

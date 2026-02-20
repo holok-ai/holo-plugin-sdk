@@ -5,3 +5,5 @@ export interface NotificationStore {
 
     insert(event: NotificationEvent): Promise<void>;
 }
+
+export const NotificationStoreToken = Symbol("NotificationStore");
