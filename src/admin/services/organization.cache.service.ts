@@ -113,12 +113,12 @@ export class OrganizationCacheService extends ClassLogger {
         }
 
         const app = orgCache.get('applications', urlSlug);
-        
-        logger.debug(`getApplication: orgId=${orgId}, urlSlug=${urlSlug}, found=${!!app}`, {
-            urlSlug,
-            appExists: orgCache.has('applications', urlSlug),
-            allAppSlugs: orgCache.getAll('applications').map(a => a.urlSlug)
-        });
+
+        // logger.debug(`getApplication: orgId=${orgId}, urlSlug=${urlSlug}, found=${!!app}`, {
+        //     urlSlug,
+        //     appExists: orgCache.has('applications', urlSlug),
+        //     allAppSlugs: orgCache.getAll('applications').map(a => a.urlSlug)
+        // });
 
         return app;
     }

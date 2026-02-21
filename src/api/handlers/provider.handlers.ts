@@ -66,7 +66,8 @@ export class ProviderHandlers extends ClassLogger {
         return async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
             try {
                 await this.requestService.processRequest(providerFamily, requestType, req, res);
-            } catch (error) {
+            } catch (e: any) {
+                this.log.error(`Error handling ${providerFamily} ${requestType} request: ${e?.message ?? e}`);
                 res.status(500).json({error: 'Failed to process request'});
             }
         };

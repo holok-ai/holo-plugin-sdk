@@ -47,8 +47,6 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                 const {sourceId, guardResult} = workerRequest;
 
                 // Setup the over-the-wire response for client-native streaming
-
-
                 const envelope = await ai.auditor.createWorkerResponseEnvelope(workerRequest, this.id);
 
                 if (guardResult && !guardResult.passed) {

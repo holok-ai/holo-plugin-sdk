@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import {inject, injectable} from 'tsyringe';
 import {HoloApiRequest} from "../../api/types";
 import {Response} from "express";
-import {ResponseService} from "../../services";
+import {ProviderService, ResponseService} from "../../services";
 import {env} from "../../env";
 import {GuardService} from "./guard.service";
 import {WorkerRequestFactory} from "../../types";
@@ -18,6 +18,7 @@ export class RequestService extends ClassLogger {
     constructor(
         private readonly responseService: ResponseService,
         private readonly guardService: GuardService,
+        private readonly providerService: ProviderService,
         @inject(NotificationServiceToken) readonly notificationService: NotificationService
     ) {
         super();
@@ -27,11 +28,33 @@ export class RequestService extends ClassLogger {
         const logger = this.mlog(this.processRequest);
         const {auth} = req;
 
-        if (!auth || !auth.app) {
+        if (!auth) {
             throw new Error('Unauthorized request. No auth object found.');
         }
 
-        const {app} = auth;
+        let {app, availableApps} = auth;
+
+        if (!app) {
+            if (!availableApps.length) {
+                throw new Error('Unauthorized request. No app or available apps found.');
+            }
+            logger.debug(`No app defined, finding ${providerType} in availableApps`);
+            for (const availableApp of availableApps) {
+                if (availableApp.providerType.toUpperCase() === providerType.toUpperCase()) {
+                    const provider = await this.providerService.matchProvider(availableApp.providerName);
+                    const modelName = await provider.getModelNameFromRequest(req.body);
+                    if (modelName) {
+                        logger.debug(`No app declared. Defaulting to: ${availableApp.urlSlug}`);
+                        app = availableApp;
+                        break;
+                    }
+                }
+            }
+
+            if (!app) {
+                throw new Error('Unauthorized request. No authorized apps have the model requested.');
+            }
+        }
 
         const workerRequest = await this.parseRequest(providerType, app.providerName, type, req, isPassthrough);
 
