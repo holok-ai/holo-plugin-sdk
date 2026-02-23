@@ -89,7 +89,7 @@ export interface IProvider {
 
     getModels(allowedModels: string[] | true): Promise<any>;
 
-    getModelNameFromRequest(payload: any): Promise<string>;
+    getModelNameFromRequest(payload: any): Promise<string | undefined>;
 
     processWorkerRequest(
         request: HoloWorkerRequest,

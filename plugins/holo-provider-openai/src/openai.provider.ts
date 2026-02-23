@@ -61,8 +61,8 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         return this.responseFactory.createError(error.message, error.code ? error.code : undefined);
     }
 
-    async getModelNameFromRequest(payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<string> {
-        return payload.model ?? '' as string;
+    async getModelNameFromRequest(payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<string | undefined> {
+        return payload.model;
     }
 
     protected async handleRequest(

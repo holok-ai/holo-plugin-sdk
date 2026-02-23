@@ -126,7 +126,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
 
     protected abstract handleError(error: any): Promise<any>;
 
-    public abstract getModelNameFromRequest(payload: any): Promise<string>
+    public abstract getModelNameFromRequest(payload: any): Promise<string | undefined>
 
     protected abstract handleRequest(
         payload: RequestPayload,
