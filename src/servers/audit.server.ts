@@ -10,19 +10,28 @@ import {PluginDiscoveryService} from "../services/plugin/discovery.service";
 import {PluginLoaderService} from "../services/plugin/loader.service";
 import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
 import {CryptoService} from "../services/crypto.service";
+import {NotificationEvent, NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
+import {NotificationService} from "../services/notification/notification.service";
+import {PostgresNotificationStore} from "../db/notification.db";
 
 @injectable()
 export class AuditServer extends withQueue(withDB(BaseServer)) {
 
     constructor(
         private providerService: ProviderService,
-        private auditService: AuditService) {
+        private auditService: AuditService
+    ) {
         super(env.audit.serverId);
     }
 
     async onInit(): Promise<void> {
         await super.onInit();
         await this.providerService.init(this.id);
+
+        await this.queueService.consume(env.queue.auditNotificationQueue, async (_id, content: NotificationEvent) => {
+            await this.auditService.logNotification(content);
+        })
+
         await this.queueService.consume(env.queue.auditRequestQueue, async (_id, content) => {
             await this.auditService.logRequest(content);
         });
@@ -46,7 +55,9 @@ container.registerSingleton(CryptoService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry)
-    .registerSingleton(ProviderService);
+    .registerSingleton(ProviderService)
+    .registerSingleton(NotificationServiceToken, NotificationService)
+    .registerSingleton(NotificationStoreToken, PostgresNotificationStore);
 
 let auditServer: AuditServer | null = null;
 

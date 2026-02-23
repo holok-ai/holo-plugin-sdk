@@ -34,3 +34,7 @@ export function isUint8Array(value: any): value is Uint8Array {
 export function stringifyError(err: string | Error): string {
     return typeof err === 'string' ? err : JSON.stringify(err);
 }
+
+export function clamp(n: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, n));
+}

@@ -1,11 +1,9 @@
 import 'reflect-metadata';
-import {ClassLogger, pickDefined} from "@holokai/sdk";
+import {ApplicationConfigProps, Auth, ClassLogger, pickDefined} from "@holokai/sdk";
 import {injectable} from "tsyringe";
 import {OrganizationService} from "./organization.service";
-import {Application} from "../../cache";
 import {TokenService} from "./token.service";
-import {HttpApiRequest} from "../../api/types";
-import {Auth} from "../types";
+import {HoloApiRequest} from "../../api/types";
 import {UnauthorizedError} from "express-jwt";
 
 @injectable()
@@ -18,7 +16,7 @@ export class AuthService extends ClassLogger {
         super();
     }
 
-    async populateAuth(provider: string, req: HttpApiRequest, useCache: boolean = true): Promise<Auth> {
+    async populateAuth(req: HoloApiRequest, useCache: boolean = true, provider?: string): Promise<Auth> {
         const logger = this.mlog(this.populateAuth);
         let token = req.headers['x-api-key'] as string | undefined;
         if (!token) {
@@ -30,28 +28,21 @@ export class AuthService extends ClassLogger {
             throw new UnauthorizedError('credentials_required', {message: 'Authentication failed: No token provided.'})
         }
 
+        const appSlugs = await this.tokenService.getAppSlugs(token, useCache);
+        if (!appSlugs) {
+            return Promise.reject('User is not provisioned with any applications.');
+        }
+
         const {appSlug: paramsAppSlug} = req.params;
         const appSlug = (req as any).appSlug || paramsAppSlug;
 
-        // Only validate appSlugs if accessing a custom endpoint (with appSlug)
-        // Direct provider endpoints don't require app provisioning
-        let appSlugs: string[] | null = null;
-        if (appSlug) {
-            appSlugs = await this.tokenService.getAppSlugs(token, useCache);
-            if (!appSlugs) {
-                return Promise.reject('User is not provisioned with any applications.');
-            }
-            if (!appSlugs.includes(appSlug)) {
-                return Promise.reject('User is not authorized for application.');
-            }
+        if (appSlug && !appSlugs.includes(appSlug)) {
+            return Promise.reject('User is not authorized for application.');
         }
         const decodedToken = this.tokenService.decodeToken(token);
         const {organizationId, userId} = decodedToken;
 
-        logger.debug(`Token decoded: orgId=${organizationId}, userId=${userId}, appSlug=${appSlug || 'none'}, appSlugs=${appSlugs?.join(',') || 'not-checked'}`);
-
-
-        let app: Application | undefined = undefined;
+        let app: ApplicationConfigProps | undefined = undefined;
 
         // we were either routed via a specific app / agent URL
         if (appSlug) {
@@ -67,20 +58,39 @@ export class AuthService extends ClassLogger {
                 });
                 return Promise.reject(`Application ${appSlug} no longer available.`);
             }
-            if (app.providerType !== provider.toUpperCase()) {
-                return Promise.reject(`Application support ${app.providerType}, not support ${provider}`);
+            if (provider && app.providerType !== provider.toUpperCase()) {
+                return Promise.reject(`Application ${appSlug} supports ${app.providerType}, not support ${provider}`);
             }
-        } else {
-            // Direct provider endpoint - no app configuration needed
-            // Provider comes from the endpoint definition, not app configuration
-            logger.debug(`No appSlug specified - direct provider endpoint (provider=${provider}), skipping app lookup`);
+        }
+
+        const availableApps = new Array<ApplicationConfigProps>();
+        let availableApp;
+        if (appSlugs) {
+            for (const appSlug of appSlugs) {
+                availableApp = this.organizationService.getApplication(organizationId, appSlug);
+                if (!availableApp) {
+                    logger.warn(`Application ${appSlug} in user credentials but no longer available.`);
+                    continue;
+                }
+                if (provider && availableApp.providerType.toUpperCase() !== provider.toUpperCase()) continue;
+                availableApps.push(availableApp);
+            }
+
+            if (provider && !availableApps.length) {
+                return Promise.reject(`User is not authorized for this provider: ${provider}.`);
+            }
+        }
+
+        if (!app && !availableApps.length) {
+            return Promise.reject(`User is not authorized for any providers.`);
         }
 
         return pickDefined({
             organizationId,
             userId,
             providerName: app?.providerName,
-            app
+            app,
+            availableApps
         }) as Auth;
     }
 }

@@ -3,6 +3,7 @@ export {Provider} from "./provider";
 export {Evaluator} from "./evaluator";
 export {EvaluatorData} from "./evaluator.data";
 export {Model} from "./model";
+export {Notification} from "./notification";
 export {AnalysisResult} from "./analysisResult";
 export {LlmResponse} from "./llm.response";
 export {Application} from "./application";

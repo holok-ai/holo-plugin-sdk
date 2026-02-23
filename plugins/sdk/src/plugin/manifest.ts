@@ -6,7 +6,7 @@
 /**
  * Plugin type enumeration
  */
-export type PluginType = 'provider' | 'guard' | 'evaluator' | 'logger' | 'worker';
+export type PluginType = 'provider' | 'guard' | 'evaluator' | 'logger' | 'worker' | 'notification';
 
 /**
  * Plugin category for marketplace organization

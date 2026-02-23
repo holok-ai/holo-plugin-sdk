@@ -1,4 +1,4 @@
-export interface Prompt {
+export interface PromptConfigProps {
     id: string;
     systemPrompt?: string;
     userPrompt: string;

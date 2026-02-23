@@ -1,6 +1,6 @@
-import {AsyncEventQueue, IProvider, IResponseFactory, ModelInfo, ProviderContext, ProviderEvent} from "./types";
+import {IProvider, IResponseFactory, ModelInfo, ProviderContext, ProviderEvent} from "./types";
 import {HoloWorkerRequest, WorkerRequestEnvelope} from "../core/worker";
-import {ClassLogger, filterForwardableHeaders, pickDefined, pickHeadersByPrefix} from "../core";
+import {AsyncEventQueue, ClassLogger, filterForwardableHeaders, pickDefined, pickHeadersByPrefix} from "../core";
 import {IAuditor} from "./auditor";
 import {IProviderTranslator} from "./translator";
 import {LlmRequest, LlmResponse} from "../core/entities";
@@ -125,6 +125,8 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
     protected abstract createResponseFactory(): IResponseFactory
 
     protected abstract handleError(error: any): Promise<any>;
+
+    public abstract getModelNameFromRequest(payload: any): Promise<string | undefined>
 
     protected abstract handleRequest(
         payload: RequestPayload,

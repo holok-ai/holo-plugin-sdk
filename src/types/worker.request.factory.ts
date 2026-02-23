@@ -1,8 +1,7 @@
-import {HttpApiRequest} from "../api/types";
-import {Auth} from "../admin/types";
+import {HoloApiRequest} from "../api/types";
 import {v4 as uuidv4} from "uuid";
 import logger from "../utils/logger";
-import {HoloWorkerRequest, pickDefined, RequestType} from "@holokai/sdk";
+import {Auth, HoloWorkerRequest, pickDefined, RequestType} from "@holokai/sdk";
 
 export class WorkerRequestFactory {
     static logger = logger.child({className: 'WorkerRequestFactory'});
@@ -11,7 +10,7 @@ export class WorkerRequestFactory {
         providerType: string,
         providerName: string | undefined,
         type: RequestType,
-        req: HttpApiRequest,
+        req: HoloApiRequest,
         sourceId: string,
         isPassthrough: boolean = false
     ): HoloWorkerRequest {
@@ -85,7 +84,7 @@ export class WorkerRequestFactory {
         payload: any,
         sourceId: string,
         auth?: Auth,
-        rawRequest?: {path: string; method: string; headers: Record<string, any>; query: Record<string, any>},
+        rawRequest?: { path: string; method: string; headers: Record<string, any>; query: Record<string, any> },
         thread_id?: string,
         branch_id?: string,
         customAppSlug?: string
@@ -93,14 +92,13 @@ export class WorkerRequestFactory {
         let sanitizedAuth = {};
 
         if (auth) {
-            const {organizationId, userId} = auth;
-            // For custom routes, use the appSlug from URL
-            // For direct provider routes, use the provider name
+            const {organizationId, userId, availableApps} = auth;
             const appSlug = customAppSlug || providerName;
             sanitizedAuth = {
                 organizationId,
                 userId,
-                appSlug
+                appSlug,
+                availableApps
             };
         }
 

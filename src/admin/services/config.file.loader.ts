@@ -4,8 +4,9 @@ import {EventEmitter} from 'events';
 import {injectable} from 'tsyringe';
 import logger from '../../utils/logger';
 import {ConfigService} from "./config.service";
-import {ConfigLoader, HoloConfig} from "../types";
+import {ConfigLoader} from "../types";
 import {env} from "../../env";
+import {HoloConfig} from "@holokai/sdk/core";
 
 @injectable()
 export class ConfigFileLoader extends EventEmitter implements ConfigLoader {

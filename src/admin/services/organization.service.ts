@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {OrganizationCacheService} from "./organization.cache.service";
-import {Application, Model, OrganizationCache, Prompt, Provider} from "../../cache";
-import {ClassLogger} from "@holokai/sdk";
+import {ApplicationConfigProps, ClassLogger, ModelConfigProps, PromptConfigProps, ProviderConfigProps} from "@holokai/sdk";
+import {OrganizationCache} from "../../cache";
 
 @injectable()
 export class OrganizationService extends ClassLogger {
@@ -16,11 +16,11 @@ export class OrganizationService extends ClassLogger {
         return this.orgCacheService.get(orgId);
     }
 
-    getApplication(orgId: string, appId: string): Application | undefined {
+    getApplication(orgId: string, appId: string): ApplicationConfigProps | undefined {
         return this.orgCacheService.getApplication(orgId, appId);
     }
 
-    getProviderByModel(orgId: string, slug: string, modelName: string): Provider {
+    getProviderByModel(orgId: string, slug: string, modelName: string): ProviderConfigProps {
         const logger = this.mlog(this.getProviderByModel);
         const models = this.getModels(orgId, slug);
         if (!models) {
@@ -50,16 +50,16 @@ export class OrganizationService extends ClassLogger {
     }
 
 
-    getProvider(orgId: string, providerName: string): Provider | undefined {
+    getProvider(orgId: string, providerName: string): ProviderConfigProps | undefined {
         return this.orgCacheService.getProvider(orgId, providerName);
     }
 
-    getModels(orgId: string, urlSlug: string): Model[] | undefined {
+    getModels(orgId: string, urlSlug: string): ModelConfigProps[] | undefined {
         return this.orgCacheService.getApplication(orgId, urlSlug)?.models;
     }
 
-    getAllModels(orgId: string, urlSlugs: string[]): Model[] {
-        const models = new Set<Model>();
+    getAllModels(orgId: string, urlSlugs: string[]): ModelConfigProps[] {
+        const models = new Set<ModelConfigProps>();
 
         for (const slug of urlSlugs) {
             const app = this.orgCacheService.getApplication(orgId, slug);
@@ -72,15 +72,15 @@ export class OrganizationService extends ClassLogger {
         return Array.from(models);
     }
 
-    getGuards(orgId: string, urlSlug: string): Prompt[] | undefined {
+    getGuards(orgId: string, urlSlug: string): PromptConfigProps[] | undefined {
         return this.orgCacheService.getApplication(orgId, urlSlug)!.guards;
     }
 
-    getSystemPrompt(orgId: string, urlSlug: string): Prompt | undefined {
+    getSystemPrompt(orgId: string, urlSlug: string): PromptConfigProps | undefined {
         return this.orgCacheService.getApplication(orgId, urlSlug)!.systemPrompt;
     }
 
-    getEvaluators(orgId: string, urlSlug: string): Prompt[] | undefined {
+    getEvaluators(orgId: string, urlSlug: string): PromptConfigProps[] | undefined {
         return this.orgCacheService.getApplication(orgId, urlSlug)!.evaluators;
     }
 }

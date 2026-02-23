@@ -47,6 +47,9 @@
       ],
       "@holokai/sdk/holo": [
         "./plugins/sdk/src/holo/index.ts"
+      ],
+      "@holokai/sdk/notification": [
+        "./plugins/sdk/src/notification/index.ts"
       ]
     }
   },

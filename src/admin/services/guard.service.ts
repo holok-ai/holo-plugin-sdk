@@ -1,10 +1,11 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {Auth, GuardResult, GuardResultSchema} from "../types";
+import {GuardResult, GuardResultSchema} from "../types";
 import {WorkerRequestFactory} from "../../types";
 import {env} from "../../env";
 import {ResponseService} from "../../services";
 import {
+    Auth,
     ClassLogger,
     filterJoin,
     findLast,
@@ -13,9 +14,9 @@ import {
     HoloRequest,
     HoloWorkerRequest,
     pickDefined,
+    PromptConfigProps,
     RequestType
 } from "@holokai/sdk";
-import {Prompt} from "../../cache";
 import {ProviderPluginRegistry} from "../../services/plugin/provider-registry.service";
 import {OrganizationService} from "./organization.service";
 
@@ -32,7 +33,7 @@ export class GuardService extends ClassLogger {
         super();
     }
 
-    async guard(workerRequest: HoloWorkerRequest, guards: Prompt[], auth: Auth) {
+    async guard(workerRequest: HoloWorkerRequest, guards: PromptConfigProps[], auth: Auth) {
         const logger = this.mlog(this.guard);
 
         logger.debug(`Guard service invoked: guards.length=${guards?.length || 0}, requestId=${workerRequest.requestId}, requestType=${workerRequest.type}`);
@@ -108,7 +109,7 @@ export class GuardService extends ClassLogger {
                         const response = await this.responseService.requestOnce<string>(guardRequest);
 
                         const raw = JSON.parse(response as string);
-                        logger.trace(`Guard raw response: ${JSON.stringify(raw)}`, {requestId: workerRequest.requestId});
+                        logger.debug(`Guard raw response: ${JSON.stringify(raw)}`, {requestId: workerRequest.requestId});
                         // TODO: Handle error responses before translating - check if raw.error exists and return early
                         //       to avoid passing error objects to translator which expects proper response structure
                         const holoResponse = await provider.translator.toHoloResponse(raw);

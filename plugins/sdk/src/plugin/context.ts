@@ -1,4 +1,4 @@
-import {HoloLogger} from "../core/logger/index";
+import {HoloLogger} from "../core";
 
 /**
  * Runtime context provided to plugins

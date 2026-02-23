@@ -1,5 +1,5 @@
 import {Type, type} from "arktype";
-import {Prompt} from "../types";
+import {PromptConfigProps} from "@holokai/sdk";
 
 export const PromptValidator = type({
     id: 'string',
@@ -8,4 +8,4 @@ export const PromptValidator = type({
     'outputSchema?': 'Record<string, unknown>',
     providerName: 'string',
     modelName: 'string'
-}) satisfies Type<Prompt>;
+}) satisfies Type<PromptConfigProps>;

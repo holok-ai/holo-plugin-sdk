@@ -1,5 +1,5 @@
 import {NextFunction, Response} from 'express';
-import {HttpApiRequest} from '../types';
+import {HoloApiRequest} from '../types';
 import logger from '../../utils/logger';
 import {AuthService} from "../../admin/services/auth.service";
 
@@ -8,10 +8,10 @@ type Options = {
     optional?: boolean;
 };
 
-export const makeJwtAuthMiddleware = (authService: AuthService, providerFamily: string, opts: Options = {}) =>
-    async function authenticateJWTInternal(req: HttpApiRequest, res: Response, next: NextFunction): Promise<void> {
+export const makeJwtAuthMiddleware = (authService: AuthService, opts: Options = {}, providerFamily?: string) =>
+    async function authenticateJWTInternal(req: HoloApiRequest, res: Response, next: NextFunction): Promise<void> {
         try {
-            req.auth = await authService.populateAuth(providerFamily, req, opts.useCache ?? true);
+            req.auth = await authService.populateAuth(req, opts.useCache ?? true, providerFamily);
             next();
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);

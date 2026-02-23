@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {QueueService} from "./queue.service";
 import {container, injectable} from "tsyringe";
-import {HttpApiRequest} from "../api/types";
+import {HoloApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
 import {AsyncEventQueue, ClassLogger, HoloWorkerRequest, WireChunk} from "@holokai/sdk";
@@ -50,7 +50,7 @@ export class ResponseService extends ClassLogger {
         }
     }
 
-    async sendRequest(req: HttpApiRequest, res: Response, request: HoloWorkerRequest) {
+    async sendRequest(req: HoloApiRequest, res: Response, request: HoloWorkerRequest) {
         const logger = this.mlog(this.sendRequest);
         const {requestId} = request;
 

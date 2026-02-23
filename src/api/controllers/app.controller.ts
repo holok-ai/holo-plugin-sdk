@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {injectable} from "tsyringe";
-import {HttpApiRequest} from "../types";
+import {HoloApiRequest} from "../types";
 import {ApiResponse, BaseController} from "@holokai/sdk";
 
 @injectable()
@@ -10,7 +10,7 @@ export class AppController extends BaseController {
         super();
     }
 
-    public resolveRequest = async (req: HttpApiRequest, res: ApiResponse): Promise<void> => {
+    public resolveRequest = async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
         const logger = this.mlog(this.resolveRequest);
         try {
             const {provider, appSlug} = req.params;

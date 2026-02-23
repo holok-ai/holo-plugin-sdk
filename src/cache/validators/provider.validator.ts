@@ -1,5 +1,5 @@
 import {type, Type} from "arktype";
-import {Provider} from "../types";
+import {ProviderConfigProps} from "@holokai/sdk";
 
 
 export const ProviderValidator = type({
@@ -7,4 +7,4 @@ export const ProviderValidator = type({
     name: 'string',
     type: 'string',
     config: 'Record<string, unknown>'
-}) satisfies Type<Provider>;
+}) satisfies Type<ProviderConfigProps>;

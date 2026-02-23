@@ -13,6 +13,9 @@ import {ProviderPluginRegistry} from "../services/plugin/provider-registry.servi
 import {AIRequestStat, HoloWorkerRequest, IProvider, ProviderEvent} from "@holokai/sdk";
 import {WireService} from "../services/wire.service";
 import {CryptoService} from "../services/crypto.service";
+import {NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
+import {NotificationService} from "../services/notification/notification.service";
+import {PostgresNotificationStore} from "../db/notification.db";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -44,8 +47,6 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                 const {sourceId, guardResult} = workerRequest;
 
                 // Setup the over-the-wire response for client-native streaming
-
-
                 const envelope = await ai.auditor.createWorkerResponseEnvelope(workerRequest, this.id);
 
                 if (guardResult && !guardResult.passed) {
@@ -65,7 +66,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         seq: 0,
                         ts: Date.now(),
                         status: 400,
-                        error: ai.responseFactory.createError(errorMessage, )
+                        error: ai.responseFactory.createError(errorMessage,)
                     } as ProviderEvent;
 
                     for (const wireChunk of wire.fromProviderEvent(evt)) {
@@ -140,6 +141,8 @@ container.registerSingleton(CryptoService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry)
+    .registerSingleton(NotificationServiceToken, NotificationService)
+    .registerSingleton(NotificationStoreToken, PostgresNotificationStore)
     .registerSingleton(ProviderService);
 
 let workerInstance: WorkerServer | null = null;

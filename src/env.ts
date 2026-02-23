@@ -8,7 +8,7 @@
  * configured to load dotenv before any other imports.
  */
 import dotenv from 'dotenv';
-import {parseBoolean, parseNumber} from "@holokai/sdk";
+import {parseArray, parseBoolean, parseNumber} from "@holokai/sdk";
 
 dotenv.config();
 
@@ -28,6 +28,24 @@ export namespace env {
         export const configMode = process.env.API_CONFIG_MODE || 'local';
         export const configFile = process.env.API_CONFIG_FILE || './sample.app.config.json';
         export const configTimeoutMs = parseNumber(process.env.API_CONFIG_TIMEOUT, 60000);
+
+        // Notifications (SSE)
+        export namespace notifications {
+            // Endpoint behavior
+            export const sseHeartbeatMs = parseNumber(process.env.NOTIF_SSE_HEARTBEAT_MS, 25000);
+            export const replayDefaultLimit = parseNumber(process.env.NOTIF_REPLAY_DEFAULT_LIMIT, 250);
+            export const replayMaxLimit = parseNumber(process.env.NOTIF_REPLAY_MAX_LIMIT, 1000);
+
+            // Live fanout transport
+            // NOTE: We default to your existing direct exchange to minimize disruption.
+            export const exchange = process.env.NOTIF_EXCHANGE || "direct-exchange";
+            export const routingKeyPrefix = process.env.NOTIF_ROUTING_KEY_PREFIX || "notif";
+            export const queueNamePrefix = process.env.NOTIF_QUEUE_PREFIX || "notif_stream";
+
+            // Optional: include additional events by default (comma-separated)
+            // e.g. "status,guard_started,guard_failed"
+            export const defaultTypes = parseArray(process.env.NOTIF_DEFAULT_TYPES, []);
+        }
     }
 
     // Database config
@@ -87,6 +105,7 @@ export namespace env {
         export const responseQueue = process.env.RABBITMQ_RESPONSE_QUEUE || 'llm_responses';
         export const responseExchange = process.env.RABBITMQ_RESPONSE_EXCHANGE || 'llm_responses_exchange';
 
+
         export const adminExchange = process.env.RABBITMQ_ADMIN_EXCHANGE || 'llm_admin';
         export const directExchange = process.env.RABBITMQ_DIRECT_EXCHANGE || 'direct-exchange';
         export const adminCommandQueue = process.env.RABBITMQ_ADMIN_COMMAND_QUEUE || 'llm_admin_commands';
@@ -105,6 +124,10 @@ export namespace env {
         export const queueExpiration = process.env.QUEUE_EXPIRATION || 3600000;
 
         export const managementQueue = process.env.PROXY_MANAGEMENT_QUEUE || 'proxy_management';
+
+        export const notificationExchange = process.env.RABBITMQ_NOTIFICATION_EXCHANGE || "notifications_exchange";
+        export const notificationQueue = process.env.RABBITMQ_NOTIFICATION_QUEUE || 'notifications';
+        export const auditNotificationQueue = process.env.RABBITMQ_AUDIT_NOTIFICATION_QUEUE || "notifications_audit";
 
         export const config = {
             url,

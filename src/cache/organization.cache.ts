@@ -1,95 +1,76 @@
-import {Application, Keyable, Organization, OrgCacheMap, OrgCacheType, Provider} from "./types";
+import {
+    ApplicationConfigProps,
+    CacheIndex,
+    createCacheIndex,
+    IndexMap,
+    ixKey,
+    OrganizationConfigProps,
+    OrgCacheMap,
+    OrgCacheType,
+    ProviderConfigProps
+} from "@holokai/sdk/core";
 import {OrganizationValidator} from "./validators";
 
-const SEP = '\x1F';
-const ixKey = (field: string, value: string) => `${field}${SEP}${value}`;
-
-export interface CacheFieldIndex<T> {
-    field: Keyable<T>;
-    multi?: boolean;
-    name?: string;
-}
-
-export function createCacheIndex<T>(def: CacheFieldIndex<T>): CacheIndex<T> {
-    const {field, name, ...rest} = def;
-    return {
-        name: name || field,
-        fn: (val: T) => val[field] as string,
-        ...rest
-    }
-}
-
-
-export interface CacheIndex<T> {
-    name: string;
-    multi?: boolean;
-    fn: (val: T) => string;
-}
-
 export class OrganizationCache {
-    private providers = new Map<string, Provider>();
-    private applications = new Map<string, Application>();
+    private providers = new Map<string, ProviderConfigProps>();
+    private applications = new Map<string, ApplicationConfigProps>();
 
-    private providersIdx = new Map<string, Set<string>>();
-    private applicationsIdx = new Map<string, Set<string>>();
+    // Replace Map<string, Set<string>> with shared IndexMap
+    private readonly providersIdx = new IndexMap();
+    private readonly applicationsIdx = new IndexMap();
 
-    private providersIdxDefs: CacheIndex<Provider>[] = [createCacheIndex({field: 'id'})];
-    private applicationsIdxDefs: CacheIndex<Application>[] = [createCacheIndex({field: 'providerType'})];
+    private providersIdxDefs: CacheIndex<ProviderConfigProps>[] = [createCacheIndex({field: "id"})];
+    private applicationsIdxDefs: CacheIndex<ApplicationConfigProps>[] = [
+        createCacheIndex({field: "providerType"}),
+    ];
 
-
-    private readonly caches = new Map<OrgCacheType, Map<String, Provider | Application>>
-    private readonly indexes = new Map<OrgCacheType, Map<string, string | Set<string>>>();
-    private readonly indexDefs = new Map<OrgCacheType, CacheIndex<Application>[] | CacheIndex<Provider>[]>();
+    private readonly caches = new Map<OrgCacheType, Map<string, ProviderConfigProps | ApplicationConfigProps>>();
+    private readonly indexes = new Map<OrgCacheType, IndexMap>();
+    private readonly indexDefs = new Map<OrgCacheType, CacheIndex<any>[]>();
 
     id?: string;
     name?: string;
     slug?: string;
 
-    constructor(organization: Organization) {
-        this.caches.set('applications', this.applications);
-        this.caches.set('providers', this.providers);
-        this.indexes.set('applications', this.applicationsIdx);
-        this.indexes.set('providers', this.providersIdx);
-        this.indexDefs.set('applications', this.applicationsIdxDefs);
-        this.indexDefs.set('providers', this.providersIdxDefs);
+    constructor(organization: OrganizationConfigProps) {
+        this.caches.set("applications", this.applications);
+        this.caches.set("providers", this.providers);
+        this.indexes.set("applications", this.applicationsIdx);
+        this.indexes.set("providers", this.providersIdx);
+        this.indexDefs.set("applications", this.applicationsIdxDefs);
+        this.indexDefs.set("providers", this.providersIdxDefs);
         this.init(organization);
     }
 
-    init(organization: Organization): void {
-        const org = OrganizationValidator.assert(organization);
+    init(organization: OrganizationConfigProps): void {
+        const org = OrganizationValidator.assert(organization) as OrganizationConfigProps;
         const {id, name, slug, applications, providers} = org;
 
         this.id = id;
         this.name = name;
         this.slug = slug;
 
-        if (applications?.length > 0) {
-            this.mset('applications', applications, 'urlSlug');
-        }
-        if (providers?.length > 0) {
-            this.mset('providers', providers, 'name');
-        }
+        if (applications?.length) this.mset("applications", applications, "urlSlug");
+        if (providers?.length) this.mset("providers", providers, "name");
     }
 
-    find<K extends OrgCacheType>(cacheType: K, field: string, value: string): OrgCacheMap[K] | OrgCacheMap[K][] | undefined {
+    find<K extends OrgCacheType>(
+        cacheType: K,
+        field: string,
+        value: string
+    ): OrgCacheMap[K] | OrgCacheMap[K][] | undefined {
         const cache = this.cacheOf(cacheType);
         const idx = this.indexOf(cacheType);
-        const idxKey = ixKey(field, value);
-        const ids = idx.get(idxKey);
 
-        if (ids) {
-            if (ids instanceof Set) {
-                const results: OrgCacheMap[K][] = [];
-                for (const id of ids) {
-                    const result = cache.get(id) as OrgCacheMap[K] | undefined;
-                    if (result) results.push(result);
-                }
-                return results;
-            } else {
-                return cache.get(ids) as OrgCacheMap[K] | undefined;
-            }
+        const ids = idx.get(ixKey(field, value));
+        if (!ids.size) return undefined;
+
+        const out: OrgCacheMap[K][] = [];
+        for (const id of ids) {
+            const v = cache.get(id) as OrgCacheMap[K] | undefined;
+            if (v) out.push(v);
         }
-        return undefined;
+        return out.length <= 1 ? out[0] : out;
     }
 
     getAll<K extends OrgCacheType>(cacheType: K): OrgCacheMap[K][] {
@@ -142,77 +123,40 @@ export class OrganizationCache {
         return this.cacheOf(cacheType).has(key);
     }
 
-    // ----- Admin / monitoring -----
-    getStats() {
-        return {
-            applications: {size: this.applications.size},
-            providers: {size: this.providers.size},
-        };
-    }
-
-    snapshot() {
-        return {
-            applications: Object.fromEntries(this.applications),
-            providers: Object.fromEntries(this.providers),
-        };
-    }
-
     private addToIndexes(cacheType: OrgCacheType, key: string, value: OrgCacheMap[typeof cacheType]): void {
         const idx = this.indexOf(cacheType);
 
         for (const def of this.defsOf(cacheType)) {
-            let {name, fn, multi} = def;
+            const val = def.fn(value);
+            if (val === undefined || val === null || val === "") continue;
 
-            const val = fn(value);
-            const idxKey = ixKey(name, val);
-            if (!multi) {
-                idx.set(idxKey, key)
-            } else {
-                let set = idx.get(key);
-                if (!set) {
-                    set = new Set<string>();
-                    idx.set(key, set);
-                } else if (!(set instanceof Set)) {
-                    set = new Set<string>([set as string]);
-                }
-                set.add(key);
-            }
+            const k = ixKey(def.name, String(val));
+            idx.add(k, key);
         }
     }
 
-    private removeFromIndexes(cacheType: OrgCacheType, key: string, value: OrgCacheMap[typeof cacheType]): void {
+    private removeFromIndexes(cacheType: OrgCacheType, key: string, value: any): void {
         const idx = this.indexOf(cacheType);
-        for (const def of this.defsOf(cacheType)) {
-            let {name, fn, multi} = def;
 
-            const val = fn(value);
-            const idxKey = ixKey(name, val);
-            if (!multi) {
-                idx.delete(idxKey)
-            } else {
-                let set = idx.get(key);
-                if (set) {
-                    if (set instanceof Set) {
-                        set.delete(key);
-                        if (set.size === 0) {
-                            idx.delete(key);
-                        }
-                    }
-                }
-            }
+        for (const def of this.defsOf(cacheType)) {
+            const val = def.fn(value);
+            if (val === undefined || val === null || val === "") continue;
+
+            const k = ixKey(def.name, String(val));
+            idx.remove(k, key);
         }
     }
 
     // ----- Helpers -----
-    private cacheOf(cacheType: OrgCacheType): Map<string, Provider | Application> {
-        return this.caches.get(cacheType) as Map<string, Provider | Application>;
+    private cacheOf(cacheType: OrgCacheType): Map<string, ProviderConfigProps | ApplicationConfigProps> {
+        return this.caches.get(cacheType) as Map<string, ProviderConfigProps | ApplicationConfigProps>;
     }
 
-    private indexOf(cacheType: OrgCacheType): Map<string, string | Set<string>> {
-        return this.indexes.get(cacheType) as Map<string, string | Set<string>>;
+    private indexOf(cacheType: OrgCacheType): IndexMap {
+        return this.indexes.get(cacheType)!;
     }
 
-    private defsOf(cacheType: OrgCacheType): CacheIndex<Application | Provider>[] {
-        return this.indexDefs.get(cacheType) as CacheIndex<Application | Provider>[];
+    private defsOf(cacheType: OrgCacheType): CacheIndex<ApplicationConfigProps | ProviderConfigProps>[] {
+        return this.indexDefs.get(cacheType) as CacheIndex<ApplicationConfigProps | ProviderConfigProps>[];
     }
 }

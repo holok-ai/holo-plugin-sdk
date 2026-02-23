@@ -1,5 +1,5 @@
 import {EvaluatorEvent, EvaluatorResult, IEvaluator} from '../../types';
-import {Prompt} from '@holokai/sdk';
+import {PromptConfigProps} from '@holokai/sdk';
 import {EvaluatorDB} from '../../db';
 import {Evaluator, EvaluatorData, LlmResponse, Provider} from "@holokai/sdk/dist/core/entities";
 
@@ -10,7 +10,7 @@ export class PromptEvaluator implements IEvaluator {
     runType: string = "prompt";
     evaluatorName: string = "";
     private promptId: string;
-    private prompt: Prompt | null = null;
+    private prompt: PromptConfigProps | null = null;
     private provider: Provider | null = null;
     private evaluatorDb: EvaluatorDB;
 
@@ -124,7 +124,7 @@ export class PromptEvaluator implements IEvaluator {
      */
     protected substituteTags(
         template: string,
-        prompt: Prompt,
+        prompt: PromptConfigProps,
         llmResponse: LlmResponse | null,
         evalData: EvaluatorData | null
     ): string {
