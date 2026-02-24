@@ -104,7 +104,10 @@ export class GuardService extends ClassLogger {
                             RequestType.GENERATE,
                             payload,
                             this.serverId,
-                            auth
+                            auth,
+                            undefined,
+                            workerRequest.thread_id,
+                            workerRequest.branch_id
                         );
                         const response = await this.responseService.requestOnce<string>(guardRequest);
 
