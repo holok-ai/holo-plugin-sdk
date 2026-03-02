@@ -6,7 +6,7 @@ import {HoloConfigValidator} from "../validators";
 import {ArkErrors} from "arktype";
 import {EventEmitter} from "events";
 import {TokenService} from "./token.service";
-import {OrganizationCacheService} from "./organization.cache.service";
+import {OrganizationConfigCacheService} from "./organization.config.cache.service";
 import {HoloConfig, HoloConfigAction, HoloConfigType} from "@holokai/sdk";
 
 @injectable()
@@ -16,7 +16,7 @@ export class ConfigService extends EventEmitter {
 
     constructor(
         private tokenService: TokenService,
-        private organizationCacheService: OrganizationCacheService
+        private organizationCacheService: OrganizationConfigCacheService
     ) {
         super();
         this.setMaxListeners(5);

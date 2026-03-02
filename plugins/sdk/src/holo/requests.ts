@@ -7,11 +7,14 @@ export interface HoloRequestMetadata {
     user_id?: string | null;
 }
 
-export enum RequestType {
-    GENERATE = 'generate',
-    CHAT = 'chat',
-    RESPONSES = 'responses'
+export const RequestType = {
+    CHAT: 'chat',
+    GENERATE: 'generate',
+    RESPONSES: 'responses',
+    EMBED: 'embed'
 }
+
+export type RequestType = typeof RequestType[keyof typeof RequestType];
 
 // ---------- Holo Request (portable chat surface) ----------
 export interface HoloRequest {
