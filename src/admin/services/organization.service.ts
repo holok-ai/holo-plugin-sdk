@@ -1,18 +1,24 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {OrganizationCacheService} from "./organization.cache.service";
-import {ApplicationConfigProps, ClassLogger, ModelConfigProps, PromptConfigProps, ProviderConfigProps} from "@holokai/sdk";
-import {OrganizationCache} from "../../cache";
+import {OrganizationConfigCacheService} from "./organization.config.cache.service";
+import {
+    ApplicationConfigProps,
+    ClassLogger,
+    ModelConfigProps,
+    PromptConfigProps,
+    ProviderConfigProps
+} from "@holokai/sdk";
+import {OrganizationConfigCache} from "../types";
 
 @injectable()
 export class OrganizationService extends ClassLogger {
     constructor(
-        private orgCacheService: OrganizationCacheService,
+        private orgCacheService: OrganizationConfigCacheService,
     ) {
         super();
     }
 
-    withOrganization(orgId: string): OrganizationCache | undefined {
+    withOrganization(orgId: string): OrganizationConfigCache | undefined {
         return this.orgCacheService.get(orgId);
     }
 

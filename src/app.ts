@@ -12,7 +12,7 @@ import {createRoutes} from "./api/routes";
 import {env} from "./env";
 import listEndpoints from "express-list-endpoints";
 import {AppDB} from "./db";
-import {ConfigService, OrganizationCacheService, TokenService} from './admin/services';
+import {ConfigService, OrganizationConfigCacheService, TokenService} from './admin/services';
 import {ConfigFileLoader} from "./admin/services/config.file.loader";
 import {ConfigQueueLoader, ConfigQueueLoaderFactory} from "./admin/services/config.queue.loader";
 import {PluginService} from "./services/plugin/plugin.service";
@@ -52,7 +52,7 @@ app.get('/health', (_req: Request, res: Response): void => {
 const PORT: number = env.api.port || 3000;
 container.registerSingleton(ResponseService)
     .registerSingleton(AppDB)
-    .registerSingleton(OrganizationCacheService)
+    .registerSingleton(OrganizationConfigCacheService)
     .registerSingleton(ConfigService)
     .registerSingleton(TokenService)
     .registerSingleton(ConfigFileLoader)

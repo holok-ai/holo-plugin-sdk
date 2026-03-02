@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {OrganizationCache} from "../../cache";
 import {ApplicationConfigValidator, OrganizationConfigValidator} from "../validators";
 import {
     ApplicationConfig,
@@ -11,11 +10,12 @@ import {
     OrganizationConfigProps,
     ProviderConfigProps
 } from "@holokai/sdk";
+import {OrganizationConfigCache} from "../types";
 
 @injectable()
-export class OrganizationCacheService extends ClassLogger {
+export class OrganizationConfigCacheService extends ClassLogger {
 
-    private orgCaches = new Map<string, OrganizationCache>();
+    private orgCaches = new Map<string, OrganizationConfigCache>();
 
     constructor() {
         super();
@@ -38,12 +38,12 @@ export class OrganizationCacheService extends ClassLogger {
         this.setApplications(config.data)
     }
 
-    get(id: string): OrganizationCache | undefined {
+    get(id: string): OrganizationConfigCache | undefined {
         return this.orgCaches.get(id);
     }
 
     set(organization: OrganizationConfigProps) {
-        this.orgCaches.set(organization.id, new OrganizationCache(organization));
+        this.orgCaches.set(organization.id, new OrganizationConfigCache(organization));
     }
 
     del(id: string) {

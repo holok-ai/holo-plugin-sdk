@@ -9,9 +9,9 @@ import {
     OrgCacheType,
     ProviderConfigProps
 } from "@holokai/sdk/core";
-import {OrganizationValidator} from "./validators";
+import {OrganizationValidator} from "../validators";
 
-export class OrganizationCache {
+export class OrganizationConfigCache {
     private providers = new Map<string, ProviderConfigProps>();
     private applications = new Map<string, ApplicationConfigProps>();
 

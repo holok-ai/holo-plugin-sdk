@@ -17,6 +17,7 @@ import {OpenAIResponseFactory} from './openai.response.factory';
 import {APIError} from "openai/core/error";
 import {ChatCompletionCreateParamsStreaming} from "openai/resources/chat/completions/completions";
 import {Stream} from "openai/core/streaming";
+import {EmbeddingCreateParams} from "openai/resources";
 
 /**
  * OpenAI provider for connecting to OpenAI API
@@ -65,13 +66,21 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         return payload.model;
     }
 
+    async runEmbed(payload: EmbeddingCreateParams) {
+        return {
+            final: async () => this.client.embeddings.create(payload)
+        }
+    }
+
     protected async handleRequest(
-        payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase,
+        payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase | EmbeddingCreateParams,
         ctx: ProviderContext
     ): Promise<RunHandle<any>> {
         switch (ctx.requestType) {
             case RequestType.RESPONSES:
                 return this.runResponses(payload as ResponseCreateParamsBase, ctx);
+            case RequestType.EMBED:
+                return this.runEmbed(payload as EmbeddingCreateParams);
             default:
                 return this.runChatCompletions(payload as ChatCompletionCreateParamsBase, ctx);
         }

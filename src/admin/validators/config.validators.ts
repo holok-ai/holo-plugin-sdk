@@ -1,14 +1,15 @@
 import {type, type Type} from 'arktype';
-import {ApplicationValidator, OrganizationValidator} from "../../cache";
 import {
     ApplicationConfig,
     HoloConfig,
     HoloConfigAction,
     HoloConfigType,
-    JwtTokenConfigData,
     JwtTokenConfig,
+    JwtTokenConfigData,
     OrganizationConfig
 } from "@holokai/sdk";
+import {OrganizationValidator} from "./organization.validator";
+import {ApplicationValidator} from "./application.validator";
 
 export const JwtTokenConfigDataValidator = type({
     'token?': 'string',

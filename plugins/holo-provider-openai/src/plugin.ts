@@ -53,6 +53,11 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
                 method: 'POST',
                 requestType: RequestType.RESPONSES,
                 handler: RouteHandler.REQUEST
+            },
+            embeddings: {
+                method: 'POST',
+                requestType: RequestType.EMBED,
+                handler: RouteHandler.REQUEST
             }
         };
         return {
