@@ -6,8 +6,6 @@
       "ESNext",
       "ESNext.Intl"
     ],
-    "outDir": "./dist",
-    "rootDir": "./src",
     "composite": true,
     "strict": true,
     "esModuleInterop": true,
@@ -82,33 +80,5 @@
         "./plugins/types/src/plugin/index.ts"
       ]
     }
-  },
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifierResolution": "node",
-    "compilerOptions": {
-      "module": "ESNext",
-      "moduleResolution": "node"
-    },
-    "transpileOnly": true,
-    "files": false,
-    "emit": false
-  },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "plugins",
-    "tests"
-  ],
-  "references": [
-    {
-      "path": "./plugins/types"
-    },
-    {
-      "path": "./plugins/sdk"
-    }
-  ]
+  }
 }

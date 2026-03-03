@@ -21,7 +21,7 @@ fi
 
 # Run unit tests (fast tests only, not integration)
 echo "Running unit tests..."
-npm test -- --testPathIgnorePatterns=integration --testPathIgnorePatterns=baseline
+npm test -w app -- --testPathIgnorePatterns=integration --testPathIgnorePatterns=baseline
 
 if [ $? -ne 0 ]; then
   echo ""
