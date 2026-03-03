@@ -17,7 +17,7 @@ import {
     ConfigQueueLoader,
     ConfigQueueLoaderFactory,
     ConfigService,
-    OrganizationConfigCacheService,
+    OrganizationConfigCacheService, RedisService,
     TokenService
 } from './admin/services';
 import {PluginService} from "./services/plugin/plugin.service";
@@ -55,7 +55,8 @@ app.get('/health', (_req: Request, res: Response): void => {
 
 // Start server
 const PORT: number = env.api.port || 3000;
-container.registerSingleton(ResponseService)
+container.registerSingleton(RedisService)
+    .registerSingleton(ResponseService)
     .registerSingleton(AppDB)
     .registerSingleton(OrganizationConfigCacheService)
     .registerSingleton(ConfigService)
@@ -98,7 +99,6 @@ async function waitForInitialConfig(timeoutMs: number = 60000) {
 // Initialize app with async components
 async function initApp(): Promise<void> {
     try {
-        // const queueService = container.resolve(QueueService);
         const initService = container.resolve(InitService);
 
         logger.debug(`Creating API Server with id ${env.api.apiServerId}`);
@@ -159,8 +159,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
     try {
         // TODO: Implement proper cleanup of database connections, RabbitMQ connections, and provider clients
         // This should include: AppDB.close(), QueueService.disconnect(), ProviderService.cleanup()
-        // Close database connections, RabbitMQ connections, etc.
-        logger.info('Closed model registry connections');
+        const redisService = container.resolve(RedisService);
+        await redisService.disconnect();
+        logger.info('Closed Redis connection');
 
         // Add other cleanup tasks here
         // await database.close();

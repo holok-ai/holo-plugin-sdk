@@ -95,6 +95,10 @@ export namespace env {
         };
     }
 
+    export namespace redis {
+        export const url = process.env.REDIS_URL || 'redis://localhost:6379';
+    }
+
     // Queue config
     export namespace queue {
         export const url = process.env.RABBITMQ_URL || 'amqp://localhost:5672';

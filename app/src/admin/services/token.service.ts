@@ -1,13 +1,15 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import jwt from 'jsonwebtoken';
-import NodeCache from 'node-cache';
 import {env} from '../../env';
 import {JWTPayload, TokenRefreshRequest, TokenRefreshResponse} from '../types';
 import logger from '../../utils/logger';
 import {JwtTokenConfigValidator} from "../validators";
 import type {JwtTokenConfig, JwtTokenConfigData} from "@holokai/types/config";
 import {HoloConfigAction} from "@holokai/types/config";
+import {RedisService} from "./redis.service";
+
+const DEFAULT_TTL = 3600;
 
 @injectable()
 export class TokenService {
@@ -16,21 +18,14 @@ export class TokenService {
     private invalidatedTokens: Set<string> = new Set();
     private readonly _fetch = globalThis.fetch.bind(globalThis);
 
-    private cache = new NodeCache({
-        stdTTL: 3600,
-        checkperiod: 300,
-        useClones: false,
-        maxKeys: 5000,
-    });
-
     private readonly inFlight = new Map<string, Promise<string[] | null>>();
 
-    constructor() {
+    constructor(private readonly redis: RedisService) {
     }
 
     async getAppSlugs(token: string, useCache = true): Promise<string[] | null> {
         if (useCache) {
-            const hit = this.cache.get<string[]>(token);
+            const hit = await this.redis.get<string[]>(token);
             logger.debug(`Cache hit: ${!!hit}`);
             if (hit) return hit;
         }
@@ -40,8 +35,8 @@ export class TokenService {
 
         const p = this.refreshToken(token)
             .then((accessToken) => accessToken ? this.extractAppSlugs(accessToken) : [])
-            .then((slugs) => {
-                if (slugs?.length) this.cache.set(token, slugs); // TTL falls back to stdTTL
+            .then(async (slugs) => {
+                if (slugs?.length) await this.redis.set(token, slugs, DEFAULT_TTL);
                 return slugs;
             })
             .finally(() => this.inFlight.delete(token));
@@ -54,7 +49,7 @@ export class TokenService {
         const config = JwtTokenConfigValidator.assert(c);
         switch (config.action) {
             case HoloConfigAction.DELETE:
-                this.invalidateByCriteria(config.data);
+                void this.invalidateByCriteria(config.data);
                 break;
             default:
                 logger.warn(`Unsupported JwtToken config action: ${config.action}`);
@@ -62,24 +57,25 @@ export class TokenService {
     }
 
     //TODO: For performance, update to add onto an array, and then invalidate in bulk
-    invalidateByCriteria(filter: JwtTokenConfigData) {
+    async invalidateByCriteria(filter: JwtTokenConfigData) {
         for (const data of filter.data) {
             const {token, userId, organizationId} = data;
             if (token) {
-                this.invalidate(token);
+                await this.invalidate(token);
             }
-            for (const token of this.cache.keys()) {
-                const auth = this.decodeToken(token);
+            const keys = await this.redis.keys('*');
+            for (const key of keys) {
+                const auth = this.decodeToken(key);
                 if (userId === auth?.userId || organizationId === auth?.organizationId) {
-                    this.invalidate(token);
+                    await this.invalidate(key);
                 }
             }
         }
     }
 
     //TODO: Support bulk
-    invalidate(token: string) {
-        if (this.cache.del(token)) this.invalidatedTokens.add(token);
+    async invalidate(token: string) {
+        if (await this.redis.del(token)) this.invalidatedTokens.add(token);
         this.inFlight.delete(token);
     }
 
@@ -127,7 +123,7 @@ export class TokenService {
         }
     }
 
-    private extractAppSlugs(accessToken: string): string[] | null {
+    private async extractAppSlugs(accessToken: string): Promise<string[] | null> {
         try {
             const auth = this.decodeToken(accessToken);
 
@@ -140,10 +136,9 @@ export class TokenService {
                 return null;
             }
 
-            // Optional: align cache TTL to access token exp if present
             if (typeof auth.exp === 'number') {
                 const ttl = Math.max(1, auth.exp - Math.floor(Date.now() / 1000));
-                this.cache.set(accessToken, slugs, ttl);
+                await this.redis.set(accessToken, slugs, ttl);
             }
             return slugs;
         } catch (e) {

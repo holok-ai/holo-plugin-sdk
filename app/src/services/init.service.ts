@@ -6,6 +6,7 @@ import logger from "../utils/logger";
 import {ProviderService} from "./provider.service";
 import {PluginService} from "./plugin/plugin.service";
 import {ResponseService} from "./response.service";
+import {RedisService} from "../admin/services/redis.service";
 
 @injectable()
 export class InitService {
@@ -15,12 +16,15 @@ export class InitService {
         private pluginService: PluginService,
         private providerService: ProviderService,
         private responseService: ResponseService,
-        private queueService: QueueService) {
+        private queueService: QueueService,
+        private redisService: RedisService
+    ) {
 
     }
 
     async init(serverId: string): Promise<void> {
         await this.pluginService.initializePluginSystem();
+        await this.redisService.connect();
         await this.providerService.init(serverId);
         await this.setupQueues(serverId);
         await this.responseService.startLLMResponseConsumer();
