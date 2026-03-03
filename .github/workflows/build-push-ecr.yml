@@ -144,17 +144,73 @@ jobs:
           severity: CRITICAL,HIGH
           output: trivy-vuln-results.txt
 
+      - name: Upload Trivy vulnerability results
+        if: steps.trivy-vuln.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-vuln-results
+          path: trivy-vuln-results.txt
+
       - name: Comment Trivy vulnerability results on PR
         if: github.event_name == 'pull_request' && steps.trivy-vuln.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          MAX_CHARS=60000
+          RESULTS=$(cat trivy-vuln-results.txt)
           {
             echo "## Trivy - Container Vulnerability Results"
             echo ""
+            if [ ${#RESULTS} -gt $MAX_CHARS ]; then
+              echo '```'
+              echo "${RESULTS:0:$MAX_CHARS}"
+              echo '```'
+              echo ""
+              echo "**Output truncated.** Full results available in [workflow artifacts](${RUN_URL})."
+            else
+              echo '```'
+              echo "$RESULTS"
+              echo '```'
+            fi
+          } > comment-body.md
+          gh pr comment "$PR_NUMBER" --body-file comment-body.md
+
+      - name: Write build summary
+        env:
+          IMAGE: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          {
+            echo "## Container Image"
+            echo ""
             echo '```'
-            cat trivy-vuln-results.txt
+            echo "$IMAGE"
             echo '```'
+            echo ""
+            echo "**Tag:** \`${IMAGE_TAG}\`"
+            echo "**Commit:** \`${COMMIT_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment image path on PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          IMAGE: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}
+          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          {
+            echo "## Container Image"
+            echo ""
+            echo '```'
+            echo "$IMAGE"
+            echo '```'
+            echo ""
+            echo "**Tag:** \`${IMAGE_TAG}\`"
+            echo "**Commit:** \`${COMMIT_SHA}\`"
           } > comment-body.md
           gh pr comment "$PR_NUMBER" --body-file comment-body.md
