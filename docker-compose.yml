@@ -19,6 +19,8 @@ services:
       - JWT_SECRET=your-super-secret-key-at-least-32-characters-long-and-random
       - MOKU_URL=http://host.docker.internal:8080
       - API_SERVER_ID=duan_api
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
+      - API_PLUGINS_DIR=node_modules
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
