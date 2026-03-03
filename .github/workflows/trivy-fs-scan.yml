@@ -1,0 +1,71 @@
+name: Trivy FS Scan
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Trivy secret scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: secret
+          format: table
+          severity: CRITICAL,HIGH,MEDIUM
+
+  license-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Trivy license scan
+        id: trivy-license
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: license
+          format: table
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          output: trivy-license-results.txt
+
+      - name: Comment license results on PR
+        if: github.event_name == 'pull_request' && steps.trivy-license.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo "## Trivy - License Scan Results"
+            echo ""
+            echo '```'
+            cat trivy-license-results.txt
+            echo '```'
+          } > comment-body.md
+          gh pr comment "$PR_NUMBER" --body-file comment-body.md
