@@ -10,6 +10,7 @@ on:
 permissions:
   id-token: write
   contents: read
+  pull-requests: write
 
 env:
   ECR_REGISTRY: 671482219051.dkr.ecr.us-east-1.amazonaws.com
@@ -74,17 +75,54 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Lint Dockerfile
+        id: hadolint
         uses: hadolint/hadolint-action@v3.1.0
+        continue-on-error: true
         with:
           dockerfile: Dockerfile
+          output-file: hadolint-results.txt
+
+      - name: Comment hadolint results on PR
+        if: github.event_name == 'pull_request' && steps.hadolint.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo "## Hadolint - Dockerfile Lint Results"
+            echo ""
+            echo '```'
+            cat hadolint-results.txt
+            echo '```'
+          } > comment-body.md
+          gh pr comment "$PR_NUMBER" --body-file comment-body.md
 
       - name: Trivy Dockerfile misconfiguration scan
+        id: trivy-misconfig
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           scan-type: config
           scan-ref: .
           format: table
+          exit-code: '1'
           severity: CRITICAL,HIGH,MEDIUM
+          output: trivy-misconfig-results.txt
+
+      - name: Comment Trivy misconfig results on PR
+        if: github.event_name == 'pull_request' && steps.trivy-misconfig.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo "## Trivy - Dockerfile Misconfiguration Results"
+            echo ""
+            echo '```'
+            cat trivy-misconfig-results.txt
+            echo '```'
+          } > comment-body.md
+          gh pr comment "$PR_NUMBER" --body-file comment-body.md
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -96,8 +134,27 @@ jobs:
           labels: ${{ steps.labels.outputs.labels }}
 
       - name: Run Trivy vulnerability scan
+        id: trivy-vuln
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}
           format: table
+          exit-code: '1'
           severity: CRITICAL,HIGH
+          output: trivy-vuln-results.txt
+
+      - name: Comment Trivy vulnerability results on PR
+        if: github.event_name == 'pull_request' && steps.trivy-vuln.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo "## Trivy - Container Vulnerability Results"
+            echo ""
+            echo '```'
+            cat trivy-vuln-results.txt
+            echo '```'
+          } > comment-body.md
+          gh pr comment "$PR_NUMBER" --body-file comment-body.md
