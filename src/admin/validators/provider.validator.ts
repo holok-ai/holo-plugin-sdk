@@ -1,5 +1,5 @@
 import {type, Type} from "arktype";
-import {ProviderConfigProps} from "@holokai/sdk";
+import type {ProviderConfigProps} from "@holokai/types/config";
 
 
 export const ProviderValidator = type({

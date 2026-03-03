@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {AppDB} from "./app.db";
 import {injectable} from "tsyringe";
-import {Provider} from "@holokai/sdk/dist/core/entities";
+import {Provider} from "@holokai/types/entities";
 
 export interface ProviderWithCredential extends Provider {
     encrypted_value?: string;

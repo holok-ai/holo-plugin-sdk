@@ -2,7 +2,7 @@ import {EvaluatorEvent, EvaluatorResult, IEvaluator} from '../../types';
 import {spawn} from 'child_process';
 import * as path from 'path';
 import logger from '../../utils/logger';
-import {Evaluator} from "@holokai/sdk/dist/core/entities";
+import {Evaluator} from "@holokai/types/entities";
 
 export class ApplicationEvaluator implements IEvaluator {
     evaluatorId: string;
@@ -33,19 +33,6 @@ export class ApplicationEvaluator implements IEvaluator {
         this.evaluatorName = this.extractFilename(this.args);
     }
 
-    private extractFilename(args: string[]): string {
-        const scriptExtensions = ['.py', '.js', '.ts', '.sh', '.go', '.bat', '.ps', '.exe'];
-
-        // Look for a filename in the args (usually first arg contains the script path)
-        for (const arg of args) {
-            if (scriptExtensions.some(ext => arg.includes(ext))) {
-                return path.basename(arg);
-            }
-        }
-        // Fallback to first arg or empty string
-        return args.length > 0 ? path.basename(args[0]) : "";
-    }
-
     async evaluate(event: EvaluatorEvent): Promise<EvaluatorResult> {
         try {
             const rootAppDir = path.resolve(__dirname, '..', '..', '..', 'applications');
@@ -69,7 +56,7 @@ export class ApplicationEvaluator implements IEvaluator {
                 let stdout = "";
                 let stderr = "";
 
-                // Send event as JSON to stdin           
+                // Send event as JSON to stdin
                 logger.debug(`Sending to Python: ${eventJson.substring(0, 500)}...`);  // Log first 500 chars
                 proc.stdin.write(eventJson);
                 proc.stdin.end();
@@ -111,5 +98,18 @@ export class ApplicationEvaluator implements IEvaluator {
                 next_events: []
             };
         }
+    }
+
+    private extractFilename(args: string[]): string {
+        const scriptExtensions = ['.py', '.js', '.ts', '.sh', '.go', '.bat', '.ps', '.exe'];
+
+        // Look for a filename in the args (usually first arg contains the script path)
+        for (const arg of args) {
+            if (scriptExtensions.some(ext => arg.includes(ext))) {
+                return path.basename(arg);
+            }
+        }
+        // Fallback to first arg or empty string
+        return args.length > 0 ? path.basename(args[0]) : "";
     }
 }

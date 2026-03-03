@@ -9,7 +9,9 @@
 
 ## Overview
 
-The Claude provider plugin enables Holo to communicate with Anthropic's Claude API through the universal Holo format. This plugin is part of the migration from the monolithic provider architecture to a plugin-based system, providing complete bidirectional translation between Claude's native API and the portable Holo format.
+The Claude provider plugin enables Holo to communicate with Anthropic's Claude API through the universal Holo format.
+This plugin is part of the migration from the monolithic provider architecture to a plugin-based system, providing
+complete bidirectional translation between Claude's native API and the portable Holo format.
 
 ### Key Features
 
@@ -33,6 +35,7 @@ npm install @holokai/holo-provider-claude
 ### Peer Dependencies
 
 This plugin requires:
+
 - `@holokai/sdk` ^0.1.0 - Holo universal format types and plugin contracts
 
 ---
@@ -41,7 +44,8 @@ This plugin requires:
 
 ### Automatic Discovery
 
-When installed in a Holo worker environment, this plugin is automatically discovered and loaded by the plugin system. No manual registration required.
+When installed in a Holo worker environment, this plugin is automatically discovered and loaded by the plugin system. No
+manual registration required.
 
 ### Configuration
 
@@ -87,9 +91,11 @@ const response: HoloResponse = await holoClient.chat(request);
 
 ### What Changed
 
-This plugin represents the extraction of Claude provider logic from the monolithic `src/providers/claude/` codebase into a standalone, independently versioned package.
+This plugin represents the extraction of Claude provider logic from the monolithic `src/providers/claude/` codebase into
+a standalone, independently versioned package.
 
 **Before** (Monolithic):
+
 ```
 src/providers/claude/
 ├── claude.translator.ts
@@ -99,6 +105,7 @@ src/providers/claude/
 ```
 
 **After** (Plugin):
+
 ```
 @holokai/holo-provider-claude
 ├── src/
@@ -202,26 +209,27 @@ This plugin implements the official Holo format mappings as documented in the SD
 
 ### Request Mapping: Holo → Claude
 
-| Holo Field | Claude Field | Transformation | Notes |
-|------------|-------------|----------------|-------|
-| **Direct 1:1** ||||
-| `model` | `model` | Direct | Required |
-| `temperature` | `temperature` | Direct | 0-1 for Claude |
-| `top_p` | `top_p` | Direct | Optional |
-| `top_k` | `top_k` | Direct | Optional |
-| `stream` | `stream` | Direct | Optional |
-| `max_tokens` | `max_tokens` | Direct | Required by Claude |
-| `stop_sequences` | `stop_sequences` | Direct | Array format |
-| **Structure Transforms** ||||
-| `system` (string) | `system` | Direct | Top-level |
-| `system` (string[]) | `system` | Join with `\n\n` + drop metadata | Lossy if structured |
-| `metadata.user_id` | `metadata.user_id` | Direct | Optional |
-| `tools[].parameters` | `tools[].input_schema` | Rename field | JSON Schema |
-| `tool_choice.type: 'specific'` | `tool_choice.type: 'tool'` | Map type + name | Specific tool |
-| `tool_choice.type: 'required'` | `tool_choice.type: 'any'` | Map type | Any tool |
-| `messages[]` | `messages[]` | Transform content | See Content Mapping |
+| Holo Field                     | Claude Field               | Transformation                   | Notes               |
+|--------------------------------|----------------------------|----------------------------------|---------------------|
+| **Direct 1:1**                 |                            |                                  |                     |
+| `model`                        | `model`                    | Direct                           | Required            |
+| `temperature`                  | `temperature`              | Direct                           | 0-1 for Claude      |
+| `top_p`                        | `top_p`                    | Direct                           | Optional            |
+| `top_k`                        | `top_k`                    | Direct                           | Optional            |
+| `stream`                       | `stream`                   | Direct                           | Optional            |
+| `max_tokens`                   | `max_tokens`               | Direct                           | Required by Claude  |
+| `stop_sequences`               | `stop_sequences`           | Direct                           | Array format        |
+| **Structure Transforms**       |                            |                                  |                     |
+| `system` (string)              | `system`                   | Direct                           | Top-level           |
+| `system` (string[])            | `system`                   | Join with `\n\n` + drop metadata | Lossy if structured |
+| `metadata.user_id`             | `metadata.user_id`         | Direct                           | Optional            |
+| `tools[].parameters`           | `tools[].input_schema`     | Rename field                     | JSON Schema         |
+| `tool_choice.type: 'specific'` | `tool_choice.type: 'tool'` | Map type + name                  | Specific tool       |
+| `tool_choice.type: 'required'` | `tool_choice.type: 'any'`  | Map type                         | Any tool            |
+| `messages[]`                   | `messages[]`               | Transform content                | See Content Mapping |
 
 **Dropped Fields** (Holo → Claude):
+
 - `response_format` - Claude doesn't support structured output modes
 - `frequency_penalty` - Not supported
 - `presence_penalty` - Not supported
@@ -231,31 +239,31 @@ See [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#claude-
 
 ### Response Mapping: Claude → Holo
 
-| Claude Field | Holo Field | Transformation | Notes |
-|-------------|------------|----------------|-------|
-| **Direct 1:1** ||||
-| `id` | `id` | Direct | Always present |
-| `model` | `model` | Direct | Always present |
-| `role: 'assistant'` | `messages[0].role` | Wrap in array | Always assistant |
-| **Structure Transforms** ||||
-| `content[]` blocks | `messages[0].content` | Extract text + tools | Multi-part |
-| `stop_reason` | `finish_reason` | Map codes | See table below |
-| `usage.input_tokens` | `usage.input_tokens` | Direct | Optional |
-| `usage.output_tokens` | `usage.output_tokens` | Direct | Optional |
-| `usage.cache_read_input_tokens` | `usage.cache_read_tokens` | Direct | Optional |
-| `usage.cache_creation_input_tokens` | `usage.cache_write_tokens` | Direct | Optional |
-| `usage.service_tier` | `service_tier` | Promote to top-level | Optional |
-| N/A | `created` | Synthesize with `Date.now()` | Claude lacks timestamp |
+| Claude Field                        | Holo Field                 | Transformation               | Notes                  |
+|-------------------------------------|----------------------------|------------------------------|------------------------|
+| **Direct 1:1**                      |                            |                              |                        |
+| `id`                                | `id`                       | Direct                       | Always present         |
+| `model`                             | `model`                    | Direct                       | Always present         |
+| `role: 'assistant'`                 | `messages[0].role`         | Wrap in array                | Always assistant       |
+| **Structure Transforms**            |                            |                              |                        |
+| `content[]` blocks                  | `messages[0].content`      | Extract text + tools         | Multi-part             |
+| `stop_reason`                       | `finish_reason`            | Map codes                    | See table below        |
+| `usage.input_tokens`                | `usage.input_tokens`       | Direct                       | Optional               |
+| `usage.output_tokens`               | `usage.output_tokens`      | Direct                       | Optional               |
+| `usage.cache_read_input_tokens`     | `usage.cache_read_tokens`  | Direct                       | Optional               |
+| `usage.cache_creation_input_tokens` | `usage.cache_write_tokens` | Direct                       | Optional               |
+| `usage.service_tier`                | `service_tier`             | Promote to top-level         | Optional               |
+| N/A                                 | `created`                  | Synthesize with `Date.now()` | Claude lacks timestamp |
 
 **Finish Reason Mapping**:
 
-| Claude `stop_reason` | Holo `finish_reason` |
-|---------------------|---------------------|
-| `end_turn` | `stop` |
-| `max_tokens` | `length` |
-| `tool_use` | `tool_calls` |
-| `refusal` | `content_filter` |
-| `pause_turn` | `stop` (preserve in metadata) |
+| Claude `stop_reason` | Holo `finish_reason`          |
+|----------------------|-------------------------------|
+| `end_turn`           | `stop`                        |
+| `max_tokens`         | `length`                      |
+| `tool_use`           | `tool_calls`                  |
+| `refusal`            | `content_filter`              |
+| `pause_turn`         | `stop` (preserve in metadata) |
 
 ### Content Mapping
 
@@ -290,23 +298,23 @@ See [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#claude-
 ```typescript
 // Claude Response (embedded in content)
 {
-  content: [
-    { type: 'text', text: 'Let me check that for you.' },
-    { type: 'tool_use', id: 'toolu_123', name: 'get_weather', input: { location: 'SF' } }
-  ]
+    content: [
+        {type: 'text', text: 'Let me check that for you.'},
+        {type: 'tool_use', id: 'toolu_123', name: 'get_weather', input: {location: 'SF'}}
+    ]
 }
 
 // Holo Response (extracted)
 {
-  messages: [{
-    role: 'assistant',
-    content: 'Let me check that for you.',
-    tool_calls: [{
-      id: 'toolu_123',
-      type: 'function',
-      function: { name: 'get_weather', arguments: { location: 'SF' } }
+    messages: [{
+        role: 'assistant',
+        content: 'Let me check that for you.',
+        tool_calls: [{
+            id: 'toolu_123',
+            type: 'function',
+            function: {name: 'get_weather', arguments: {location: 'SF'}}
+        }]
     }]
-  }]
 }
 ```
 
@@ -318,18 +326,19 @@ See [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#claude-
 
 Claude provides the most granular streaming events (6 types):
 
-| Event Type | Purpose | Holo Mapping |
-|------------|---------|--------------|
-| `message_start` | Initialize message | `type: 'message_start'` |
-| `content_block_start` | Begin content block (text/tool) | Used internally |
-| `content_block_delta` | Incremental content | `type: 'content_delta'` |
-| `content_block_stop` | End content block | Used internally |
-| `message_delta` | Usage/finish updates | `type: 'message_delta'` |
-| `message_stop` | Completion marker | `type: 'message_stop'` |
+| Event Type            | Purpose                         | Holo Mapping            |
+|-----------------------|---------------------------------|-------------------------|
+| `message_start`       | Initialize message              | `type: 'message_start'` |
+| `content_block_start` | Begin content block (text/tool) | Used internally         |
+| `content_block_delta` | Incremental content             | `type: 'content_delta'` |
+| `content_block_stop`  | End content block               | Used internally         |
+| `message_delta`       | Usage/finish updates            | `type: 'message_delta'` |
+| `message_stop`        | Completion marker               | `type: 'message_stop'`  |
 
 ### Orchestration
 
 The `ClaudeStreamTranslator` maintains state to:
+
 1. Track content blocks by index
 2. Accumulate text and tool input deltas
 3. Extract complete tool calls on block completion
@@ -382,7 +391,8 @@ const request: HoloRequest = {
 };
 ```
 
-**Note**: Thinking blocks (`content[].type = 'thinking'`) are Claude-specific and not part of the portable Holo format. They're preserved in `provider_delta` for debugging.
+**Note**: Thinking blocks (`content[].type = 'thinking'`) are Claude-specific and not part of the portable Holo format.
+They're preserved in `provider_delta` for debugging.
 
 ### Prompt Caching
 
@@ -437,6 +447,7 @@ import type {
 ### Migration from Legacy Types
 
 **Before** (Legacy provider):
+
 ```typescript
 import { HoloTool } from '../../types/holo/requests';
 
@@ -446,6 +457,7 @@ interface HoloTool {
 ```
 
 **After** (Plugin SDK):
+
 ```typescript
 import type { HoloTool, HoloJsonSchema } from '@holokai/sdk';
 
@@ -531,9 +543,11 @@ npm run clean
 ## Related Documentation
 
 ### SDK Documentation
+
 - [SDK README](../sdk/README.md) - Plugin development guide and templates
 
 ### Claude API Documentation
+
 - [Official API Reference](https://docs.anthropic.com/claude/reference)
 - [Streaming Guide](https://docs.anthropic.com/claude/reference/streaming)
 - [Tool Use](https://docs.anthropic.com/claude/docs/tool-use)
@@ -541,6 +555,7 @@ npm run clean
 - [Prompt Caching](https://docs.anthropic.com/claude/docs/prompt-caching)
 
 ### Migration Notes
+
 - This plugin was extracted from the monolithic `src/providers/claude/` codebase
 - Migration to plugin architecture is complete
 
@@ -558,6 +573,7 @@ npm run clean
 ### Reporting Issues
 
 Found a bug or have a feature request?
+
 - GitHub Issues: https://github.com/holokai/holo-provider-claude/issues
 - Include: Holo version, Claude model, request/response samples
 
@@ -572,6 +588,7 @@ MIT © Holokai
 ## Changelog
 
 ### v0.1.0 (Current)
+
 - ✅ Initial plugin release
 - ✅ Extracted from monolithic architecture
 - ✅ Migrated to SDK types

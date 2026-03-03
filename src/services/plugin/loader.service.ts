@@ -1,7 +1,7 @@
 import {injectable} from 'tsyringe';
 import {EventEmitter} from 'events';
 import {pathToFileURL} from 'url';
-import type {IPlugin} from '@holokai/sdk/plugin';
+import type {IPlugin} from '@holokai/types/plugin';
 import type {DiscoveredPlugin} from './discovery.service';
 
 export interface LoadedPlugin {

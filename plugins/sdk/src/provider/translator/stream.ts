@@ -1,4 +1,4 @@
-import {TranslateOptions} from "./base";
+import type {TranslateOptions} from "@holokai/types/provider";
 
 export abstract class StreamTranslator<THolo, TProvider> {
     /** Validators for single streaming chunks (not full messages) */

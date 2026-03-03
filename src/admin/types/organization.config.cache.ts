@@ -1,36 +1,29 @@
-import {
+import {type CacheIndex, createCacheIndex, IndexMap, ixKey} from "../../utils/indexing";
+import type {
     ApplicationConfigProps,
-    CacheIndex,
-    createCacheIndex,
-    IndexMap,
-    ixKey,
     OrganizationConfigProps,
     OrgCacheMap,
     OrgCacheType,
     ProviderConfigProps
-} from "@holokai/sdk/core";
+} from "@holokai/types/config";
 import {OrganizationValidator} from "../validators";
 
 export class OrganizationConfigCache {
+    id?: string;
+    name?: string;
+    slug?: string;
     private providers = new Map<string, ProviderConfigProps>();
     private applications = new Map<string, ApplicationConfigProps>();
-
     // Replace Map<string, Set<string>> with shared IndexMap
     private readonly providersIdx = new IndexMap();
     private readonly applicationsIdx = new IndexMap();
-
     private providersIdxDefs: CacheIndex<ProviderConfigProps>[] = [createCacheIndex({field: "id"})];
     private applicationsIdxDefs: CacheIndex<ApplicationConfigProps>[] = [
         createCacheIndex({field: "providerType"}),
     ];
-
     private readonly caches = new Map<OrgCacheType, Map<string, ProviderConfigProps | ApplicationConfigProps>>();
     private readonly indexes = new Map<OrgCacheType, IndexMap>();
     private readonly indexDefs = new Map<OrgCacheType, CacheIndex<any>[]>();
-
-    id?: string;
-    name?: string;
-    slug?: string;
 
     constructor(organization: OrganizationConfigProps) {
         this.caches.set("applications", this.applications);

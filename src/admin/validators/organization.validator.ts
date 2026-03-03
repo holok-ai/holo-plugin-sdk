@@ -1,7 +1,7 @@
 import {type, Type} from "arktype";
 import {ApplicationValidator} from "./application.validator";
 import {ProviderValidator} from "./provider.validator";
-import {OrganizationConfigProps} from "@holokai/sdk";
+import type {OrganizationConfigProps} from "@holokai/types/config";
 
 
 export const OrganizationValidator = type({

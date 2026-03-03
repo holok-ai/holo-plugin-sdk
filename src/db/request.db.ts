@@ -1,6 +1,6 @@
 import {injectable} from "tsyringe";
 import {AppDB} from "./app.db";
-import {LlmRequest} from "@holokai/sdk/dist/core/entities";
+import {LlmRequest} from "@holokai/types/entities";
 
 @injectable()
 export class RequestDB {

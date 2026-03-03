@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 
 import {injectable} from 'tsyringe';
-import {ClaudeRawMessageStreamEvent} from '../../types';
 import {ClaudeMessageStartEventTranslator} from './claude.message.start.event.translator';
 import {ClaudeMessageDeltaEventTranslator} from './claude.message.delta.event.translator';
 import {ClaudeMessageStopEventTranslator} from './claude.message.stop.event.translator';
@@ -10,12 +9,13 @@ import {ClaudeContentBlockDeltaEventTranslator} from './claude.content.block.del
 import {ClaudeContentBlockStopEventTranslator} from './claude.content.block.stop.event.translator';
 import {mapHoloFinishReasonToClaude} from '../../utils/finish.reason.mapper.js';
 import {StreamTranslator} from "@holokai/sdk/provider";
-import {HoloStreamChunk} from "@holokai/sdk";
+import type {HoloStreamChunk} from "@holokai/types/holo";
+import {RawMessageStreamEvent} from "@anthropic-ai/sdk/resources/messages/messages";
 
 @injectable()
-export class ClaudeStreamTranslator extends StreamTranslator<HoloStreamChunk, ClaudeRawMessageStreamEvent> {
+export class ClaudeStreamTranslator extends StreamTranslator<HoloStreamChunk, RawMessageStreamEvent> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
-    protected providerDefaults: Partial<ClaudeRawMessageStreamEvent> = {};
+    protected providerDefaults: Partial<RawMessageStreamEvent> = {};
 
     constructor(
         private readonly messageStartTranslator: ClaudeMessageStartEventTranslator,
@@ -28,7 +28,7 @@ export class ClaudeStreamTranslator extends StreamTranslator<HoloStreamChunk, Cl
         super();
     }
 
-    protected async toHoloManyImpl(source: ClaudeRawMessageStreamEvent): Promise<Partial<HoloStreamChunk>[]> {
+    protected async toHoloManyImpl(source: RawMessageStreamEvent): Promise<Partial<HoloStreamChunk>[]> {
         switch (source.type) {
             case 'message_start':
                 return this.messageStartTranslator.toHoloMany(source);
@@ -47,7 +47,7 @@ export class ClaudeStreamTranslator extends StreamTranslator<HoloStreamChunk, Cl
         }
     }
 
-    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<ClaudeRawMessageStreamEvent>[]> {
+    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<RawMessageStreamEvent>[]> {
         const d = source.delta;
         if (!d) return [];
 
@@ -69,7 +69,7 @@ export class ClaudeStreamTranslator extends StreamTranslator<HoloStreamChunk, Cl
         switch (d.type) {
             case 'message_start':
                 // For non-Claude sources, synthesize content_block_start after message_start
-                const messageStartResults: Partial<ClaudeRawMessageStreamEvent>[] =
+                const messageStartResults: Partial<RawMessageStreamEvent>[] =
                     await this.messageStartTranslator.fromHoloMany(source);
 
                 if (isCrossProviderTranslation) {
@@ -81,7 +81,7 @@ export class ClaudeStreamTranslator extends StreamTranslator<HoloStreamChunk, Cl
                             type: 'text',
                             text: ''
                         }
-                    } as Partial<ClaudeRawMessageStreamEvent>);
+                    } as Partial<RawMessageStreamEvent>);
                 }
 
                 return messageStartResults;
@@ -92,7 +92,7 @@ export class ClaudeStreamTranslator extends StreamTranslator<HoloStreamChunk, Cl
                 // - content_block_start (for tool call shells)
                 // - content_block_delta (for tool argument fragments)
                 // - message_stop (if finish_reason indicates completion)
-                const results: Partial<ClaudeRawMessageStreamEvent>[] = [];
+                const results: Partial<RawMessageStreamEvent>[] = [];
 
                 // Order matters: start → delta → stop
                 results.push(...await this.messageDeltaTranslator.fromHoloMany(source));
@@ -113,14 +113,14 @@ export class ClaudeStreamTranslator extends StreamTranslator<HoloStreamChunk, Cl
 
             case 'message_stop':
                 // For non-Claude sources, synthesize content_block_stop before message_stop
-                const stopResults: Partial<ClaudeRawMessageStreamEvent>[] = [];
+                const stopResults: Partial<RawMessageStreamEvent>[] = [];
 
                 if (isCrossProviderTranslation) {
                     // Synthesize content_block_stop[0] to close the text content block
                     stopResults.push({
                         type: 'content_block_stop',
                         index: 0
-                    } as Partial<ClaudeRawMessageStreamEvent>);
+                    } as Partial<RawMessageStreamEvent>);
                 }
 
                 stopResults.push(...await this.messageStopTranslator.fromHoloMany(source));

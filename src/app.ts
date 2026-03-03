@@ -20,7 +20,7 @@ import {PluginDiscoveryService} from "./services/plugin/discovery.service";
 import {PluginLoaderService} from "./services/plugin/loader.service";
 import {ProviderPluginRegistry} from "./services/plugin/provider-registry.service";
 import {NotificationServiceToken, NotificationStoreToken} from '@holokai/sdk/notification';
-import {NotificationService} from "./services/notification/notification.service";
+import {QueueNotificationService} from "./services/notification/queue.notification.service";
 import {PostgresNotificationStore} from "./db/notification.db";
 
 // Initialize Express app
@@ -61,7 +61,7 @@ container.registerSingleton(ResponseService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry)
-    .registerSingleton(NotificationServiceToken, NotificationService)
+    .registerSingleton(NotificationServiceToken, QueueNotificationService)
     .registerSingleton(NotificationStoreToken, PostgresNotificationStore)
     .registerSingleton(ProviderService)
 

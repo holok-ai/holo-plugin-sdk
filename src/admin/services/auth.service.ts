@@ -1,5 +1,7 @@
 import 'reflect-metadata';
-import {ApplicationConfigProps, Auth, ClassLogger, pickDefined} from "@holokai/sdk";
+import {ClassLogger, pickDefined} from "@holokai/sdk";
+import type {ApplicationConfigProps} from "@holokai/types/config";
+import type {Auth} from "@holokai/types/api";
 import {injectable} from "tsyringe";
 import {OrganizationService} from "./organization.service";
 import {TokenService} from "./token.service";

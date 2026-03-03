@@ -11,11 +11,11 @@ import Consume = Replies.Consume;
  */
 @injectable()
 export class QueueService extends ClassLogger {
+    public isConnected: boolean = false;
+    public reconnectAttempts = 0;
     private readonly config: RabbitConfig = env.queue.config
     private connection: ChannelModel | null = null;
     private channel: Channel | null = null;
-    public isConnected: boolean = false;
-    public reconnectAttempts = 0;
 
     constructor() {
         super();

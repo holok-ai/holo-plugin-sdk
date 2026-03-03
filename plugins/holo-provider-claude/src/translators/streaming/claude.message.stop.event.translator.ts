@@ -1,20 +1,19 @@
 import 'reflect-metadata';
-
 import {injectable} from 'tsyringe';
-import {ClaudeRawMessageStopEvent} from '../../types';
-import {HoloStreamChunk} from "@holokai/sdk";
+import type {HoloStreamChunk} from "@holokai/types/holo";
 import {StreamTranslator} from "@holokai/sdk/provider";
+import {RawMessageStopEvent} from "@anthropic-ai/sdk/resources/messages/messages";
 
 @injectable()
-export class ClaudeMessageStopEventTranslator extends StreamTranslator<HoloStreamChunk, ClaudeRawMessageStopEvent> {
+export class ClaudeMessageStopEventTranslator extends StreamTranslator<HoloStreamChunk, RawMessageStopEvent> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
-    protected providerDefaults: Partial<ClaudeRawMessageStopEvent> = {};
+    protected providerDefaults: Partial<RawMessageStopEvent> = {};
 
     constructor() {
         super();
     }
 
-    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<ClaudeRawMessageStopEvent>[]> {
+    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<RawMessageStopEvent>[]> {
         const d = source.delta;
         if (!d) return [];
 
@@ -33,7 +32,7 @@ export class ClaudeMessageStopEventTranslator extends StreamTranslator<HoloStrea
         return [];
     }
 
-    protected async toHoloManyImpl(source: ClaudeRawMessageStopEvent): Promise<Partial<HoloStreamChunk>[]> {
+    protected async toHoloManyImpl(source: RawMessageStopEvent): Promise<Partial<HoloStreamChunk>[]> {
         return [{
             delta: {
                 provider: 'claude',

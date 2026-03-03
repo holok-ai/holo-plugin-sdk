@@ -10,8 +10,9 @@ import {PluginDiscoveryService} from "../services/plugin/discovery.service";
 import {PluginLoaderService} from "../services/plugin/loader.service";
 import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
 import {CryptoService} from "../services/crypto.service";
-import {NotificationEvent, NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
-import {NotificationService} from "../services/notification/notification.service";
+import {NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
+import type {NotificationEvent} from "@holokai/types/notification";
+import {QueueNotificationService} from "../services/notification/queue.notification.service";
 import {PostgresNotificationStore} from "../db/notification.db";
 
 @injectable()
@@ -56,7 +57,7 @@ container.registerSingleton(CryptoService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry)
     .registerSingleton(ProviderService)
-    .registerSingleton(NotificationServiceToken, NotificationService)
+    .registerSingleton(NotificationServiceToken, QueueNotificationService)
     .registerSingleton(NotificationStoreToken, PostgresNotificationStore);
 
 let auditServer: AuditServer | null = null;

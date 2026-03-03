@@ -1,6 +1,6 @@
 import winston from 'winston';
-import { Writable } from 'stream';
-import { levels, colors, createLoggerOptions, createLoggerFormat } from '../logger';
+import {Writable} from 'stream';
+import {colors, createLoggerFormat, createLoggerOptions, levels} from '../logger';
 
 // Mock the env module to avoid SDK ESM import issues in tests
 jest.mock('../../env', () => ({
@@ -30,7 +30,7 @@ function stripAnsi(str: string): string {
 function createTestFormat(serverId: string) {
     return winston.format.combine(
         winston.format.timestamp(),
-        winston.format.printf(({ level, message, timestamp, className, methodName, requestId, ...metadata }) => {
+        winston.format.printf(({level, message, timestamp, className, methodName, requestId, ...metadata}) => {
             // Simplified version of the formatter without colors
             const lvl3 = (lvl: string) => {
                 const l = lvl.toLowerCase();
@@ -149,7 +149,7 @@ describe('Winston Logger Configuration', () => {
             const serverId = 'test-server';
             const options = createLoggerOptions(serverId);
             const logger = winston.createLogger(options);
-            const childLogger = logger.child({ className: 'TestClass' });
+            const childLogger = logger.child({className: 'TestClass'});
 
             expect(childLogger).toBeDefined();
             expect(typeof childLogger.info).toBe('function');
@@ -323,7 +323,7 @@ describe('Winston Logger Configuration', () => {
                 ]
             });
 
-            const childLogger = logger.child({ className: 'TestClass', methodName: 'testMethod' });
+            const childLogger = logger.child({className: 'TestClass', methodName: 'testMethod'});
             childLogger.info('test message');
 
             expect(logs.length).toBe(1);
@@ -346,7 +346,7 @@ describe('Winston Logger Configuration', () => {
                 ]
             });
 
-            logger.info('test message', { requestId: 'req-abc123' });
+            logger.info('test message', {requestId: 'req-abc123'});
 
             expect(logs.length).toBe(1);
             expect(logs[0]).toContain('abc123');

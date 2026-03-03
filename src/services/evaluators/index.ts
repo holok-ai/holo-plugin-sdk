@@ -1,10 +1,10 @@
-import { IEvaluator } from '../../types/evaluator.types';
-import { WebhookClassifier } from './internal.webhook-classifier';
-import { ApplicationEvaluator } from './application.evaluator';
-import { PromptEvaluator } from './prompt.evaluator';
-import { ResponseCompleteEvaluator } from './internal.response-complete';
-import { CalculatePrMetrics } from './internal.calculate-prmetrics';
-import { EvaluatorDB } from '../../db';
+import {IEvaluator} from '../../types/evaluator.types';
+import {WebhookClassifier} from './internal.webhook-classifier';
+import {ApplicationEvaluator} from './application.evaluator';
+import {PromptEvaluator} from './prompt.evaluator';
+import {ResponseCompleteEvaluator} from './internal.response-complete';
+import {CalculatePrMetrics} from './internal.calculate-prmetrics';
+import {EvaluatorDB} from '../../db';
 
 export function createInternalEvaluators(evaluatorDb: EvaluatorDB): IEvaluator[] {
     return [
@@ -14,4 +14,4 @@ export function createInternalEvaluators(evaluatorDb: EvaluatorDB): IEvaluator[]
     ];
 }
 
-export { ApplicationEvaluator, PromptEvaluator };
+export {ApplicationEvaluator, PromptEvaluator};

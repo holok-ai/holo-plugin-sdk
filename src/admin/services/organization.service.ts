@@ -1,13 +1,13 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {OrganizationConfigCacheService} from "./organization.config.cache.service";
-import {
+import {ClassLogger} from "@holokai/sdk";
+import type {
     ApplicationConfigProps,
-    ClassLogger,
     ModelConfigProps,
     PromptConfigProps,
     ProviderConfigProps
-} from "@holokai/sdk";
+} from "@holokai/types/config";
 import {OrganizationConfigCache} from "../types";
 
 @injectable()

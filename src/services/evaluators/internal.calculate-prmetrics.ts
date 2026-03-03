@@ -13,7 +13,7 @@ import {AnalysisResultsRepository} from './internal.update-prmetrics';
 import * as Diff from 'diff';
 
 import logger from '../../utils/logger';
-import {EvaluatorData} from "@holokai/sdk/dist/core/entities";
+import {EvaluatorData} from "@holokai/types/entities";
 
 
 export class CalculatePrMetrics extends InternalEvaluatorBase {
@@ -183,12 +183,6 @@ export class CalculatePrMetrics extends InternalEvaluatorBase {
         return resultMetrics;
     }
 
-    private isSyntheticFile(filename: string): boolean {
-        // Detect synthetic filenames like "response_1.go", "file_2.py", etc.
-        return /^(response_|file_)\d+\./.test(filename);
-    }
-
-
     async loadLocalPrs(userId: string, startDate: Date, endDate: Date): Promise<UnifiedDiffBlock[]> {
         let blocks = [];
         const checkedEnd: Date = (!endDate) ? new Date() : endDate;
@@ -223,7 +217,7 @@ export class CalculatePrMetrics extends InternalEvaluatorBase {
             results.message = "No previous PR data found. Skipping metrics calculation.";
             return Promise.resolve(results);
         }
-        const userId: string = previousData.reference.user_id; // me = '485e2e34-c88e-46bf-a69f-fbe6eb989fb7' 
+        const userId: string = previousData.reference.user_id; // me = '485e2e34-c88e-46bf-a69f-fbe6eb989fb7'
         const startDate = previousData.data?.earliest_date || Date.now();
         const closeDate = previousData.data?.close_date || Date.now();
 
@@ -259,5 +253,10 @@ export class CalculatePrMetrics extends InternalEvaluatorBase {
             result: {key: "output", value: {metrics: prCompareResult}}
         };
         return Promise.resolve(results);
+    }
+
+    private isSyntheticFile(filename: string): boolean {
+        // Detect synthetic filenames like "response_1.go", "file_2.py", etc.
+        return /^(response_|file_)\d+\./.test(filename);
     }
 }

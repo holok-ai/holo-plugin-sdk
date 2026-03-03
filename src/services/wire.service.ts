@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import {injectable} from "tsyringe";
-import {ClassLogger, IWireAdapter, WireAdapterParams} from "@holokai/sdk";
+import {ClassLogger} from "@holokai/sdk";
+import type {IWireAdapter, WireAdapterParams} from "@holokai/types/provider";
 import {ProviderPluginRegistry} from "./plugin/provider-registry.service";
 
 @injectable()

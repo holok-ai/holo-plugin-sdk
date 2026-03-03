@@ -4,7 +4,7 @@ import {OpenAIMessageStartTranslator} from './openai.message.start.translator';
 import {OpenAIContentDeltaTranslator} from './openai.content.delta.translator';
 import {OpenAIMessageDeltaTranslator} from './openai.message.delta.translator';
 import {OpenAIMessageStopTranslator} from './openai.message.stop.translator';
-import {HoloStreamChunk} from "@holokai/sdk";
+import {HoloStreamChunk} from "@holokai/types/holo";
 import {StreamTranslator} from "@holokai/sdk/provider";
 import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";
 

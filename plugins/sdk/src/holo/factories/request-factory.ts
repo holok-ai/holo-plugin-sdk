@@ -1,5 +1,4 @@
-// Default values for Holo request
-import {HoloRequest} from "../requests";
+import {HoloRequest} from "@holokai/types/holo";
 
 export const HoloRequestDefaults: Partial<HoloRequest> = {
     stream: false,

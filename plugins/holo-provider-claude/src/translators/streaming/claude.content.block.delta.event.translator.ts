@@ -1,20 +1,20 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {ClaudeRawContentBlockDeltaEvent} from '../../types';
-import {HoloStreamChunk} from "@holokai/sdk";
+import type {HoloStreamChunk} from "@holokai/types/holo";
 import {StreamTranslator} from "@holokai/sdk/provider";
+import {RawContentBlockDeltaEvent} from "@anthropic-ai/sdk/resources/messages/messages";
 
 @injectable()
-export class ClaudeContentBlockDeltaEventTranslator extends StreamTranslator<HoloStreamChunk, ClaudeRawContentBlockDeltaEvent> {
+export class ClaudeContentBlockDeltaEventTranslator extends StreamTranslator<HoloStreamChunk, RawContentBlockDeltaEvent> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
-    protected providerDefaults: Partial<ClaudeRawContentBlockDeltaEvent> = {};
+    protected providerDefaults: Partial<RawContentBlockDeltaEvent> = {};
 
     constructor() {
         super();
     }
 
-    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<ClaudeRawContentBlockDeltaEvent>[]> {
-        const out: Partial<ClaudeRawContentBlockDeltaEvent>[] = [];
+    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<RawContentBlockDeltaEvent>[]> {
+        const out: Partial<RawContentBlockDeltaEvent>[] = [];
         const d = source.delta;
         if (!d) return out;
 
@@ -47,7 +47,7 @@ export class ClaudeContentBlockDeltaEventTranslator extends StreamTranslator<Hol
         return out;
     }
 
-    protected async toHoloManyImpl(source: ClaudeRawContentBlockDeltaEvent): Promise<Partial<HoloStreamChunk>[]> {
+    protected async toHoloManyImpl(source: RawContentBlockDeltaEvent): Promise<Partial<HoloStreamChunk>[]> {
         const out: Partial<HoloStreamChunk>[] = [];
 
         if (source.delta.type === 'text_delta' && source.delta.text) {

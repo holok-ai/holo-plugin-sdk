@@ -1,8 +1,11 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import type {IPluginRegistry, IProviderPlugin} from '@holokai/sdk/plugin';
+import type {IPluginRegistry, IProviderPlugin} from '@holokai/types/plugin';
 import express, {NextFunction, Router} from 'express';
-import {ClassLogger, RequestType, RouteDefinition, RouteHandler, RouteTree} from '@holokai/sdk';
+import {ClassLogger} from '@holokai/sdk';
+import {RequestType} from "@holokai/types/holo";
+import type {RouteDefinition, RouteTree} from "@holokai/types/routing";
+import {RouteHandler} from "@holokai/types/routing";
 import {ProviderHandlers} from '../../api/handlers/provider.handlers';
 import {HoloApiRequest} from "../../api/types";
 
@@ -79,6 +82,51 @@ export class ProviderPluginRegistry extends ClassLogger implements IPluginRegist
         return versions.get(version) || null;
     }
 
+    registerRoutes(
+        router: Router,
+        providerHandlers: ProviderHandlers
+    ): void {
+        const logger = this.mlog(this.registerRoutes);
+        const plugins = this.listPlugins();
+
+        logger.info(`Registering routes for ${plugins.length} provider plugins`);
+
+        for (const plugin of plugins) {
+            const family = plugin.family.toLowerCase();
+
+            logger.info(`Registering routes for ${plugin.family}`);
+
+            const pluginRouter = Router();
+
+            const pluginHandlers = {
+                noOpHandler: providerHandlers.createNoOpHandler(plugin.family),
+                modelsHandler: providerHandlers.createModelsHandler(),
+                requestHandler: (requestType: RequestType) =>
+                    providerHandlers.createRequestHandler(plugin.family, requestType),
+                passthroughHandler: providerHandlers.createPassthroughHandler(plugin.family)
+            };
+
+            const routeTree = plugin.getRoutes();
+            const authMiddleware = providerHandlers.createMiddleware(family);
+
+            this.buildRoutesFromTree(pluginRouter, routeTree, pluginHandlers, authMiddleware, family);
+
+            const defaultHandler = plugin.defaultRouteHandler;
+
+            if (defaultHandler === RouteHandler.NOOP) {
+                pluginRouter.all('/*', authMiddleware, pluginHandlers.noOpHandler);
+                logger.info(`  * (catch-all) /api/${family}/* -> NOOP`);
+            } else if (defaultHandler === RouteHandler.PASSTHROUGH) {
+                pluginRouter.all('/*', authMiddleware, pluginHandlers.passthroughHandler);
+                logger.info(`  * (catch-all) /api/${family}/* -> PASSTHROUGH`);
+            }
+
+            router.use(`/${family}`, pluginRouter);
+        }
+
+        logger.info('All provider routes registered');
+    }
+
     private buildRoutesFromTree(
         router: Router,
         tree: RouteTree,
@@ -128,50 +176,5 @@ export class ProviderPluginRegistry extends ClassLogger implements IPluginRegist
 
     private isRouteDefinition(value: any): value is RouteDefinition {
         return value && typeof value === 'object' && 'method' in value && 'handler' in value;
-    }
-
-    registerRoutes(
-        router: Router,
-        providerHandlers: ProviderHandlers
-    ): void {
-        const logger = this.mlog(this.registerRoutes);
-        const plugins = this.listPlugins();
-
-        logger.info(`Registering routes for ${plugins.length} provider plugins`);
-
-        for (const plugin of plugins) {
-            const family = plugin.family.toLowerCase();
-
-            logger.info(`Registering routes for ${plugin.family}`);
-
-            const pluginRouter = Router();
-
-            const pluginHandlers = {
-                noOpHandler: providerHandlers.createNoOpHandler(plugin.family),
-                modelsHandler: providerHandlers.createModelsHandler(),
-                requestHandler: (requestType: RequestType) =>
-                    providerHandlers.createRequestHandler(plugin.family, requestType),
-                passthroughHandler: providerHandlers.createPassthroughHandler(plugin.family)
-            };
-
-            const routeTree = plugin.getRoutes();
-            const authMiddleware = providerHandlers.createMiddleware(family);
-
-            this.buildRoutesFromTree(pluginRouter, routeTree, pluginHandlers, authMiddleware, family);
-
-            const defaultHandler = plugin.defaultRouteHandler;
-
-            if (defaultHandler === RouteHandler.NOOP) {
-                pluginRouter.all('/*', authMiddleware, pluginHandlers.noOpHandler);
-                logger.info(`  * (catch-all) /api/${family}/* -> NOOP`);
-            } else if (defaultHandler === RouteHandler.PASSTHROUGH) {
-                pluginRouter.all('/*', authMiddleware, pluginHandlers.passthroughHandler);
-                logger.info(`  * (catch-all) /api/${family}/* -> PASSTHROUGH`);
-            }
-
-            router.use(`/${family}`, pluginRouter);
-        }
-
-        logger.info('All provider routes registered');
     }
 }

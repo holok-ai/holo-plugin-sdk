@@ -1,11 +1,6 @@
-import {
-    BaseProvider,
-    IAuditor,
-    IProviderTranslator,
-    IResponseFactory,
-    pickHeadersByPrefix,
-    ProviderContext
-} from '@holokai/sdk';
+import {BaseProvider} from '@holokai/sdk/provider';
+import type {IAuditor, IProviderTranslator, IResponseFactory, ProviderContext} from '@holokai/types/provider';
+import {pickHeadersByPrefix} from '@holokai/sdk';
 import {Anthropic} from '@anthropic-ai/sdk/client';
 import {MessageCreateParamsBase} from '@anthropic-ai/sdk/resources/messages';
 import {ModelInfosPage} from '@anthropic-ai/sdk/resources/models';
@@ -17,6 +12,20 @@ import {APIError} from "@anthropic-ai/sdk";
 import {ErrorObject, ErrorResponse} from "@anthropic-ai/sdk/resources/shared";
 
 export class ClaudeProvider extends BaseProvider<Anthropic, MessageCreateParamsBase> {
+
+    async getModels(allowedModels: string[] | true): Promise<ModelInfosPage> {
+        const response = await this.client.models.list({limit: 100});
+        if (allowedModels === true) {
+            return response;
+        }
+
+        response.data = response.data.filter(model => allowedModels.includes(model.id));
+        return response;
+    }
+
+    async getModelNameFromRequest(payload: MessageCreateParamsBase): Promise<string> {
+        return payload.model;
+    }
 
     protected createAuditor(): IAuditor {
         return new ClaudeAuditor();
@@ -32,20 +41,6 @@ export class ClaudeProvider extends BaseProvider<Anthropic, MessageCreateParamsB
 
     protected createResponseFactory(): IResponseFactory {
         return ClaudeResponseFactory.instance();
-    }
-
-    async getModels(allowedModels: string[] | true): Promise<ModelInfosPage> {
-        const response = await this.client.models.list({limit: 100});
-        if (allowedModels === true) {
-            return response;
-        }
-
-        response.data = response.data.filter(model => allowedModels.includes(model.id));
-        return response;
-    }
-
-    async getModelNameFromRequest(payload: MessageCreateParamsBase): Promise<string> {
-        return payload.model;
     }
 
     protected async handleRequest(payload: MessageCreateParamsBase, ctx: ProviderContext) {

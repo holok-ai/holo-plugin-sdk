@@ -10,11 +10,12 @@ import {PluginService} from "../services/plugin/plugin.service";
 import {PluginDiscoveryService} from "../services/plugin/discovery.service";
 import {PluginLoaderService} from "../services/plugin/loader.service";
 import {ProviderPluginRegistry} from "../services/plugin/provider-registry.service";
-import {AIRequestStat, HoloWorkerRequest, IProvider, ProviderEvent} from "@holokai/sdk";
+import type {AIRequestStat, IProvider, ProviderEvent} from "@holokai/types/provider";
+import type {HoloWorkerRequest} from "@holokai/types/worker";
 import {WireService} from "../services/wire.service";
 import {CryptoService} from "../services/crypto.service";
 import {NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
-import {NotificationService} from "../services/notification/notification.service";
+import {QueueNotificationService} from "../services/notification/queue.notification.service";
 import {PostgresNotificationStore} from "../db/notification.db";
 
 @injectable()
@@ -141,7 +142,7 @@ container.registerSingleton(CryptoService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry)
-    .registerSingleton(NotificationServiceToken, NotificationService)
+    .registerSingleton(NotificationServiceToken, QueueNotificationService)
     .registerSingleton(NotificationStoreToken, PostgresNotificationStore)
     .registerSingleton(ProviderService);
 

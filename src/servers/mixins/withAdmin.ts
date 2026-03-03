@@ -5,7 +5,7 @@ import {IAppServer} from "../base.server";
 import {withQueue} from "./withQueue";
 import {env} from "../../env";
 import {AdminService} from '../../services';
-import {Constructor} from "@holokai/sdk";
+import {Constructor} from "../../utils/mixins";
 
 export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
 

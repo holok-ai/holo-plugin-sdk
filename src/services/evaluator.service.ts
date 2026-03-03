@@ -38,29 +38,6 @@ export class EvaluatorService {
         logger.info(`Loaded ${this.evaluatorRegistry.length} total evaluators`);
     }
 
-    private async loadExternalEvaluators(): Promise<IEvaluator[]> {
-        const externals = await this.evaluatorDb.list();
-        const evaluators: IEvaluator[] = [];
-
-        for (const evaluator of externals) {
-            const runWith = evaluator.parameters?.run_with;
-
-            try {
-                if (runWith === 'application') {
-                    evaluators.push(new ApplicationEvaluator(evaluator));
-                } else if (runWith === 'prompt') {
-                    const promptEval = new PromptEvaluator(evaluator, this.evaluatorDb);
-                    await promptEval.init();    // let them load their prompt and provider records
-                    evaluators.push(promptEval);
-                }
-            } catch (error) {
-                logger.error(`Failed to load evaluator ${evaluator.name}: ${error}`);
-            }
-        }
-
-        return evaluators;
-    }
-
     /**
      * Processes an evaluator message from the queue, runs the evaluator, and queues chained events.
      * @param {EvaluatorEvent} evalEvent - Any supported event type (Moku, Audit, Evaluator)
@@ -92,6 +69,29 @@ export class EvaluatorService {
             });
             throw error;
         }
+    }
+
+    private async loadExternalEvaluators(): Promise<IEvaluator[]> {
+        const externals = await this.evaluatorDb.list();
+        const evaluators: IEvaluator[] = [];
+
+        for (const evaluator of externals) {
+            const runWith = evaluator.parameters?.run_with;
+
+            try {
+                if (runWith === 'application') {
+                    evaluators.push(new ApplicationEvaluator(evaluator));
+                } else if (runWith === 'prompt') {
+                    const promptEval = new PromptEvaluator(evaluator, this.evaluatorDb);
+                    await promptEval.init();    // let them load their prompt and provider records
+                    evaluators.push(promptEval);
+                }
+            } catch (error) {
+                logger.error(`Failed to load evaluator ${evaluator.name}: ${error}`);
+            }
+        }
+
+        return evaluators;
     }
 
     private async queueChainedEvents(savedData: EvaluatorsDataResults | null, evalEvent: EvaluatorEvent): Promise<void> {

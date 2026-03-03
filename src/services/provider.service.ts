@@ -1,14 +1,15 @@
 import 'reflect-metadata';
 import {ProviderDB, ProviderWithCredential} from "../db/provider.db";
 import {injectable} from "tsyringe";
-import {ClassLogger, IProvider} from "@holokai/sdk";
+import {ClassLogger} from "@holokai/sdk";
+import type {IProvider} from "@holokai/types/provider";
 import {ProviderPluginRegistry} from "./plugin/provider-registry.service";
 import {CryptoService} from "./crypto.service";
 
 @injectable()
 export class ProviderService extends ClassLogger {
-    private providers: Map<string, IProvider> = new Map();
     serverId: string | undefined;
+    private providers: Map<string, IProvider> = new Map();
 
     constructor(
         private providerRegistry: ProviderPluginRegistry,
@@ -17,6 +18,10 @@ export class ProviderService extends ClassLogger {
     ) {
         super();
 
+    }
+
+    get availableProviders(): string[] {
+        return this.providers.keys().toArray();
     }
 
     async init(serverId: string): Promise<void> {
@@ -29,10 +34,6 @@ export class ProviderService extends ClassLogger {
 
     async getProviders(): Promise<ProviderWithCredential[]> {
         return this.providerDB.list();
-    }
-
-    get availableProviders(): string[] {
-        return this.providers.keys().toArray();
     }
 
     async refreshAvailableProviders() {
@@ -57,6 +58,18 @@ export class ProviderService extends ClassLogger {
             }
         }
         logger.debug(`Available providers: ${Array.from(this.providers.keys())}`);
+    }
+
+    async matchProvider(name: string): Promise<IProvider> {
+        const logger = this.mlog(this.matchProvider);
+        const provider = this.providers.get(name);
+
+        if (!provider) {
+            logger.error(`Provider ${name} not found. Available providers: ${JSON.stringify(this.providers, null, 2)}`);
+            throw new Error(`Provider ${name} not found`);
+        }
+
+        return provider;
     }
 
     private async decryptAndInjectApiKey(
@@ -93,17 +106,5 @@ export class ProviderService extends ClassLogger {
             }
             return acc;
         }, {} as Record<string, any>);
-    }
-
-    async matchProvider(name: string): Promise<IProvider> {
-        const logger = this.mlog(this.matchProvider);
-        const provider = this.providers.get(name);
-
-        if (!provider) {
-            logger.error(`Provider ${name} not found. Available providers: ${JSON.stringify(this.providers, null, 2)}`);
-            throw new Error(`Provider ${name} not found`);
-        }
-
-        return provider;
     }
 }

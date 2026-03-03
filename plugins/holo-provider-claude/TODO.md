@@ -1,6 +1,8 @@
 # Claude Provider Plugin - Todo List
 
-> **Context**: This plugin was extracted from the monolithic `src/providers/claude/` architecture as part of the migration to plugin-based providers. This TODO tracks remaining work to complete the migration and achieve full Holo format compliance.
+> **Context**: This plugin was extracted from the monolithic `src/providers/claude/` architecture as part of the
+> migration to plugin-based providers. This TODO tracks remaining work to complete the migration and achieve full Holo
+> format compliance.
 
 ---
 
@@ -34,6 +36,7 @@
 **Priority**: P0
 
 **Current State**:
+
 - Plugin imports from `@holokai/sdk` for public APIs
 - Internal translators still may use legacy type patterns
 - Need to verify all `Record<string, unknown>` instances are removed
@@ -47,9 +50,9 @@
    ```
 
 2. **Replace with SDK types**:
-   - Tool parameters: Use `HoloJsonSchema` instead of `Record<string, unknown>`
-   - Tool arguments: Use `HoloFunctionArguments` instead of flexible types
-   - All Holo types: Import from `@holokai/sdk`
+    - Tool parameters: Use `HoloJsonSchema` instead of `Record<string, unknown>`
+    - Tool arguments: Use `HoloFunctionArguments` instead of flexible types
+    - All Holo types: Import from `@holokai/sdk`
 
 3. **Update validators**:
    ```typescript
@@ -74,6 +77,7 @@
 **Priority**: P0
 
 **Current State**:
+
 - README describes orchestrator as "stateful" (README.md:335)
 - Implementation is largely stateless, just routes events
 - Quick fix (#0 in old TODO) added for cross-provider translation
@@ -97,24 +101,26 @@
    ```
 
 2. **Implement accumulation in `toHoloManyImpl`**:
-   - `content_block_start`: Initialize block state by index
-   - `content_block_delta`: Accumulate text/tool deltas by index
-   - `content_block_stop`: Emit complete content, extract tool calls
-   - `message_stop`: Reset state for next message
+    - `content_block_start`: Initialize block state by index
+    - `content_block_delta`: Accumulate text/tool deltas by index
+    - `content_block_stop`: Emit complete content, extract tool calls
+    - `message_stop`: Reset state for next message
 
 3. **Handle tool call extraction**:
-   - On `content_block_stop` for `tool_use` blocks
-   - Extract: `content[i].type='tool_use'` → `tool_calls[].type='function'`
-   - Map: `content[i].id` → `tool_calls[].id`
-   - Map: `content[i].name` → `tool_calls[].function.name`
-   - Map: `content[i].input` → `tool_calls[].function.arguments`
+    - On `content_block_stop` for `tool_use` blocks
+    - Extract: `content[i].type='tool_use'` → `tool_calls[].type='function'`
+    - Map: `content[i].id` → `tool_calls[].id`
+    - Map: `content[i].name` → `tool_calls[].function.name`
+    - Map: `content[i].input` → `tool_calls[].function.arguments`
 
 **Architecture Decision Needed**:
+
 - This requires making orchestrators stateful, which may conflict with "stateless translator" principle
 - Need to clarify: Are orchestrators exempt from statelessness rule?
 - Alternative: Move state to separate accumulator class
 
 **Reference**:
+
 - [Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#streaming-mappings)
 - [SDK Streaming Docs](../../packages/sdk/docs/README.md#streaming-accumulation)
 
@@ -128,6 +134,7 @@
 **Priority**: P0
 
 **Current State**:
+
 - Basic unit tests exist
 - No comprehensive SDK validation tests
 - No round-trip translation tests
@@ -182,8 +189,8 @@
    ```
 
 4. **Add validation tests per SDK docs**:
-   - See [SDK README Testing Section](../../packages/sdk/docs/README.md#testing)
-   - Verify all mappings from [Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md)
+    - See [SDK README Testing Section](../../packages/sdk/docs/README.md#testing)
+    - Verify all mappings from [Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md)
 
 **Impact**: Confidence in migration completeness and SDK compliance
 
@@ -198,6 +205,7 @@
 **Priority**: P1
 
 **Current State**:
+
 - Some translators have pass-through logic (e.g., content.block.delta for tools)
 - Not consistently applied across all event types
 - Missing for: content.block.start, message.delta
@@ -223,11 +231,12 @@
    ```
 
 2. **Apply to**:
-   - `claude.content.block.start.event.translator.ts`
-   - `claude.message.delta.event.translator.ts`
-   - Any others missing pass-through
+    - `claude.content.block.start.event.translator.ts`
+    - `claude.message.delta.event.translator.ts`
+    - Any others missing pass-through
 
-**Reference**: [Provider Mappings - Raw Event Preservation](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#streaming-response-structures)
+**Reference
+**: [Provider Mappings - Raw Event Preservation](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#streaming-response-structures)
 
 **Impact**: Performance optimization for Claude→Claude streaming (30-50% faster)
 
@@ -240,6 +249,7 @@
 **Priority**: P1
 
 **Actions Taken**:
+
 - ✅ Added complete Holo format mapping tables
 - ✅ Referenced SDK documentation
 - ✅ Documented migration from monolith
@@ -257,25 +267,27 @@
 **Priority**: P1
 
 **Required Actions**:
+
 - Add runtime validation of plugin config against manifest.configSchema
 - Throw descriptive errors for invalid configurations
 - Add tests for config validation
 
 **Example**:
+
 ```typescript
 import Ajv from 'ajv';
-import { manifest } from './manifest';
+import {manifest} from './manifest';
 
 const ajv = new Ajv();
 const validateConfig = ajv.compile(manifest.configSchema);
 
 export class ClaudeProviderPlugin {
-  constructor(config: unknown) {
-    if (!validateConfig(config)) {
-      throw new ConfigurationError(validateConfig.errors);
+    constructor(config: unknown) {
+        if (!validateConfig(config)) {
+            throw new ConfigurationError(validateConfig.errors);
+        }
+        // ...
     }
-    // ...
-  }
 }
 ```
 
@@ -289,20 +301,23 @@ export class ClaudeProviderPlugin {
 **Priority**: P2
 
 **Current State**:
+
 - README mentions `content[].type='thinking'` blocks (README.md:388)
 - No translator handles thinking blocks
 - Currently dropped during translation
 
 **Required Actions**:
+
 1. Add thinking block handling in content translators
 2. Options:
-   - **Option A**: Preserve in `provider_delta` only (Claude-specific)
-   - **Option B**: Map to `metadata.thinking` field
-   - **Option C**: Add to Holo SDK as experimental feature
+    - **Option A**: Preserve in `provider_delta` only (Claude-specific)
+    - **Option B**: Map to `metadata.thinking` field
+    - **Option C**: Add to Holo SDK as experimental feature
 
 **Decision Needed**: How should Claude-specific thinking blocks be exposed?
 
-**Reference**: [SDK Provider Mappings - Provider-Specific Content](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#provider-specific-content-intentionally-excluded)
+**Reference
+**: [SDK Provider Mappings - Provider-Specific Content](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#provider-specific-content-intentionally-excluded)
 
 ---
 
@@ -312,6 +327,7 @@ export class ClaudeProviderPlugin {
 **Priority**: P2
 
 **Required Actions**:
+
 1. Add `tests/integration/` directory
 2. Implement real API tests:
    ```typescript
@@ -340,10 +356,12 @@ export class ClaudeProviderPlugin {
 **Priority**: P2
 
 **Current State**:
+
 - No visible cancellation handling
 - Need to verify no synthetic `message_stop` is created on cancellation
 
 **Required Actions**:
+
 1. Document cancellation behavior in README
 2. Add tests for cancellation scenarios
 3. Verify streaming interruption handling
@@ -357,11 +375,13 @@ export class ClaudeProviderPlugin {
 **Priority**: P2
 
 **Required Actions**:
+
 - Document Claude's event ordering guarantees
 - Document Holo's ordering preservation requirements
 - Add integration tests to verify ordering
 
 **Example**:
+
 ```markdown
 ### Event Ordering Guarantees
 
@@ -387,6 +407,7 @@ The orchestrator preserves this ordering in Holo format.
 **Lines**: 69, 73-90, 117-131
 
 **Solution Implemented**:
+
 - Detect cross-provider translation by checking `!provider_delta`
 - Synthesize `content_block_start[0]` on `message_start`
 - Synthesize `content_block_stop[0]` on `message_stop`
@@ -401,6 +422,7 @@ The orchestrator preserves this ordering in Holo format.
 ### Migration Philosophy
 
 This plugin maintains the core translation logic from the monolithic architecture while:
+
 1. ✅ Using SDK types exclusively for public contracts
 2. ✅ Implementing plugin discovery and lifecycle
 3. ✅ Providing independent versioning
@@ -418,11 +440,13 @@ This plugin maintains the core translation logic from the monolithic architectur
 ### Reference Documentation
 
 **Primary**:
+
 - [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md) - Authoritative mapping reference
 - [SDK Capability Analysis](../../packages/sdk/docs/CAPABILITY_ANALYSIS.md) - Type safety requirements
 - [SDK Holo Format](../../packages/sdk/docs/HOLO_FORMAT.md) - Format specification
 
 **Legacy** (Archived):
+
 - `src/providers/docs/archive/` - Original monolithic provider docs
 - Use SDK docs as source of truth; legacy docs for historical context only
 
@@ -431,6 +455,7 @@ This plugin maintains the core translation logic from the monolithic architectur
 ## Contributing
 
 When picking up a task:
+
 1. Check SDK documentation first for latest guidance
 2. Write tests before implementation
 3. Update README.md if adding features

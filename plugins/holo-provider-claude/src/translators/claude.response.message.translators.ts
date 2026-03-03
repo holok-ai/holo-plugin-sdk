@@ -1,26 +1,26 @@
 import 'reflect-metadata';
-import {ClaudeResponseMessage} from "../types";
 import {ClaudeResponseContentTranslator} from "./claude.response.content.translators";
-import {createStableId} from "../utils/stable-id.js";
 import {injectable} from 'tsyringe';
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloContent, HoloMessage, pickDefined} from "@holokai/sdk";
+import {createStableId, pickDefined} from "@holokai/sdk";
+import type {HoloContent, HoloMessage} from "@holokai/types/holo";
+import {Message} from "@anthropic-ai/sdk/resources/messages/messages";
 
 @injectable()
-export class ClaudeResponseMessageTranslator extends BaseTranslator<HoloMessage, ClaudeResponseMessage> {
+export class ClaudeResponseMessageTranslator extends BaseTranslator<HoloMessage, Message> {
     protected holoDefaults: Partial<HoloMessage> = {};
-    protected providerDefaults: Partial<ClaudeResponseMessage> = {};
+    protected providerDefaults: Partial<Message> = {};
 
     constructor(private readonly responseContentTranslator: ClaudeResponseContentTranslator) {
         super();
     }
 
-    protected async fromHoloImpl(source: HoloMessage): Promise<Partial<ClaudeResponseMessage>> {
+    protected async fromHoloImpl(source: HoloMessage): Promise<Partial<Message>> {
         if (source.role !== 'assistant') {
             return {};
         }
 
-        const content: ClaudeResponseMessage["content"] = [];
+        const content: Message["content"] = [];
 
         if (typeof source.content === 'string') {
             content.push({type: 'text', text: source.content, citations: null});
@@ -48,7 +48,7 @@ export class ClaudeResponseMessageTranslator extends BaseTranslator<HoloMessage,
         return {role: 'assistant', content};
     }
 
-    protected async toHoloImpl(source: ClaudeResponseMessage): Promise<Partial<HoloMessage>> {
+    protected async toHoloImpl(source: Message): Promise<Partial<HoloMessage>> {
         const contentBlocks: HoloContent[] = [];
         const tool_calls: HoloMessage["tool_calls"] = [];
 

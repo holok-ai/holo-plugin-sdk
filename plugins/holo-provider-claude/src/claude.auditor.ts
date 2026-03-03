@@ -1,15 +1,20 @@
 import {injectable} from 'tsyringe';
-import {ClaudeChatRequest} from "./types";
-import {BaseAuditor, HoloWorkerRequest, pickDefined, ProviderEnvelope, ProviderEvent} from "@holokai/sdk";
+import {BaseAuditor} from "@holokai/sdk/provider";
+import {pickDefined} from "@holokai/sdk";
+import type {ProviderEnvelope, ProviderEvent} from "@holokai/types/provider";
+import type {HoloWorkerRequest} from "@holokai/types/worker";
+import type {LlmRequest} from "@holokai/types/entities";
+import {LlmStatus} from "@holokai/types/entities";
 import {MessageCreateParamsBase} from "@anthropic-ai/sdk/resources/messages";
-import {LlmRequest, LlmStatus} from "@holokai/sdk/core/entities";
+import {MessageStreamParams} from "@anthropic-ai/sdk/resources/messages/messages";
+import {BetaMessageStreamParams} from "@anthropic-ai/sdk/resources/beta/messages/messages";
 
 @injectable()
 export class ClaudeAuditor extends BaseAuditor {
     readonly provider = 'claude';
 
     protected toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as ClaudeChatRequest;
+        const payload = workerRequest.payload as MessageStreamParams | BetaMessageStreamParams;
 
         llmRequest.model_slug = payload.model;
 
@@ -26,7 +31,7 @@ export class ClaudeAuditor extends BaseAuditor {
     }
 
     protected mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as ClaudeChatRequest;
+        const payload = workerRequest.payload as MessageStreamParams | BetaMessageStreamParams;
         const options: Record<string, any> = {};
 
         if (payload.max_tokens !== undefined) options.max_tokens = payload.max_tokens;
@@ -66,6 +71,21 @@ export class ClaudeAuditor extends BaseAuditor {
         return super.mapResponseStatus(providerEvent);
     }
 
+    protected async createProviderEnvelope(
+        payload: MessageCreateParamsBase
+    ): Promise<ProviderEnvelope> {
+        const logger = this.mlog(this.createProviderEnvelope);
+        if (!payload.model) {
+            logger.error(`Missing model: ${JSON.stringify(payload)}`);
+        }
+
+        return pickDefined({
+            model_slug: payload.model,
+            system_prompt: payload.system ?
+                (Array.isArray(payload.system) ? JSON.stringify(payload.system) : payload.system) : undefined
+        }) as ProviderEnvelope;
+    }
+
     private extractUserPromptFromMessages(messages?: any[]): string | undefined {
         if (!messages || !Array.isArray(messages)) return undefined;
 
@@ -83,21 +103,6 @@ export class ClaudeAuditor extends BaseAuditor {
         }
 
         return undefined;
-    }
-
-    protected async createProviderEnvelope(
-        payload: MessageCreateParamsBase
-    ): Promise<ProviderEnvelope> {
-        const logger = this.mlog(this.createProviderEnvelope);
-        if (!payload.model) {
-            logger.error(`Missing model: ${JSON.stringify(payload)}`);
-        }
-
-        return pickDefined({
-            model_slug: payload.model,
-            system_prompt: payload.system ?
-                (Array.isArray(payload.system) ? JSON.stringify(payload.system) : payload.system) : undefined
-        }) as ProviderEnvelope;
     }
 
 

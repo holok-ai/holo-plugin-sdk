@@ -5,7 +5,7 @@ import {AppDB} from "../../db";
 import {container, injectable} from "tsyringe";
 import {IAppServer} from "../base.server";
 import {env} from "../../env";
-import {Constructor} from "@holokai/sdk";
+import {Constructor} from "../../utils/mixins";
 
 /**
  * Mixin to add database functionality to a class

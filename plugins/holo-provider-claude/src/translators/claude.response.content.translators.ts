@@ -1,19 +1,19 @@
 import 'reflect-metadata';
-import {ClaudeContentBlock} from "../types";
 import {injectable} from 'tsyringe';
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloContent} from "@holokai/sdk";
+import type {HoloContent} from "@holokai/types/holo";
+import {ContentBlock} from "@anthropic-ai/sdk/resources/messages/messages";
 
 @injectable()
-export class ClaudeResponseContentTranslator extends BaseTranslator<HoloContent, ClaudeContentBlock> {
+export class ClaudeResponseContentTranslator extends BaseTranslator<HoloContent, ContentBlock> {
     protected holoDefaults: Partial<HoloContent> = {};
-    protected providerDefaults: Partial<ClaudeContentBlock> = {};
+    protected providerDefaults: Partial<ContentBlock> = {};
 
     constructor() {
         super();
     }
 
-    protected async fromHoloImpl(source: HoloContent): Promise<Partial<ClaudeContentBlock>> {
+    protected async fromHoloImpl(source: HoloContent): Promise<Partial<ContentBlock>> {
         // For response-side synthesis, we only handle text content since 
         // Claude responses don't include image blocks in the same way as requests
         if (source.type === 'text') {
@@ -27,7 +27,7 @@ export class ClaudeResponseContentTranslator extends BaseTranslator<HoloContent,
         return {};
     }
 
-    protected async toHoloImpl(source: ClaudeContentBlock): Promise<Partial<HoloContent>> {
+    protected async toHoloImpl(source: ContentBlock): Promise<Partial<HoloContent>> {
         switch (source.type) {
             case 'text':
                 return {type: 'text', text: source.text};

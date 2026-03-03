@@ -1,21 +1,14 @@
-import {HoloWorkerRequest, WorkerRequestEnvelope, WorkerResponseEnvelope} from "../../core/worker";
+import {
+    HoloWorkerRequest,
+    LlmRequest,
+    LlmResponse,
+    LlmStatus,
+    WorkerRequestEnvelope,
+    WorkerResponseEnvelope
+} from "@holokai/types";
 import {ClassLogger, pickDefined, stringifyError} from "../../core";
-import {ProviderEnvelope, ProviderEvent} from "../types";
-import {LlmRequest, LlmResponse, LlmStatus} from "../../core/entities";
-
-
-export interface IAuditor {
-    readonly provider: string;
-
-    auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest>;
-
-    createWorkerResponseEnvelope(workerRequest: HoloWorkerRequest, workerId?: string): Promise<WorkerResponseEnvelope>;
-
-    auditResponse(
-        responseEnvelope: WorkerResponseEnvelope,
-        providerEvent: ProviderEvent,
-    ): Promise<LlmResponse>;
-}
+import type {IAuditor} from "@holokai/types/provider";
+import {ProviderEnvelope, ProviderEvent} from "@holokai/types/provider";
 
 export abstract class BaseAuditor extends ClassLogger implements IAuditor {
     abstract readonly provider: string;

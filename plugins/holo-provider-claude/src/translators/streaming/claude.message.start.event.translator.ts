@@ -1,21 +1,22 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {v4 as uuidv4} from 'uuid';
-import {ClaudeRawMessageStartEvent, ClaudeResponseMessage} from '../../types';
 import {ClaudeUsageTranslator} from '../claude.usage.translators';
 import {StreamTranslator} from "@holokai/sdk/provider";
-import {HoloStreamChunk, pickDefined} from "@holokai/sdk";
+import {pickDefined} from "@holokai/sdk";
+import type {HoloStreamChunk} from "@holokai/types/holo";
+import {Message, RawMessageStartEvent} from "@anthropic-ai/sdk/resources/messages/messages";
 
 @injectable()
-export class ClaudeMessageStartEventTranslator extends StreamTranslator<HoloStreamChunk, ClaudeRawMessageStartEvent> {
+export class ClaudeMessageStartEventTranslator extends StreamTranslator<HoloStreamChunk, RawMessageStartEvent> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
-    protected providerDefaults: Partial<ClaudeRawMessageStartEvent> = {};
+    protected providerDefaults: Partial<RawMessageStartEvent> = {};
 
     constructor(private readonly usageTranslator: ClaudeUsageTranslator) {
         super();
     }
 
-    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<ClaudeRawMessageStartEvent>[]> {
+    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<RawMessageStartEvent>[]> {
         const d = source.delta;
         if (!d || d.type !== 'message_start') return [];
 
@@ -24,7 +25,7 @@ export class ClaudeMessageStartEventTranslator extends StreamTranslator<HoloStre
 
         // Build message - usage is typically not present at message_start
         // When it is needed, it should have all required fields from the source
-        const message: Partial<ClaudeResponseMessage> = pickDefined({
+        const message: Partial<Message> = pickDefined({
             // Generate stable ID if not present, don't use empty string
             id: source.id ?? uuidv4(),
             model: source.model,
@@ -40,11 +41,11 @@ export class ClaudeMessageStartEventTranslator extends StreamTranslator<HoloStre
 
         return [{
             type: 'message_start' as const,
-            message: message as ClaudeResponseMessage
+            message: message as Message
         }];
     }
 
-    protected async toHoloManyImpl(source: ClaudeRawMessageStartEvent): Promise<Partial<HoloStreamChunk>[]> {
+    protected async toHoloManyImpl(source: RawMessageStartEvent): Promise<Partial<HoloStreamChunk>[]> {
         // Use the usage translator to convert usage (rarely present on message_start)
         const usage = source.message.usage
             ? await this.usageTranslator.toHolo(source.message.usage)

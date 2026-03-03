@@ -3,7 +3,7 @@ import {QueueService} from "../../services";
 import logger from "../../utils/logger";
 import {container, injectable} from "tsyringe";
 import {IAppServer} from "../base.server";
-import {Constructor} from "@holokai/sdk";
+import {Constructor} from "../../utils/mixins";
 
 /**
  * Mixin to add queue functionality to a class

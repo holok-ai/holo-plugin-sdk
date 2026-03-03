@@ -1,13 +1,12 @@
 import {type, type Type} from 'arktype';
-import {
+import type {
     ApplicationConfig,
     HoloConfig,
-    HoloConfigAction,
-    HoloConfigType,
     JwtTokenConfig,
     JwtTokenConfigData,
     OrganizationConfig
-} from "@holokai/sdk";
+} from "@holokai/types/config";
+import {HoloConfigAction, HoloConfigType} from "@holokai/types/config";
 import {OrganizationValidator} from "./organization.validator";
 import {ApplicationValidator} from "./application.validator";
 

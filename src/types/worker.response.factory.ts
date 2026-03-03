@@ -1,12 +1,8 @@
 import {env} from "../env";
-import {
-    HoloResponse,
-    HoloResponseFactory,
-    HoloWorkerRequest,
-    HoloWorkerResponse,
-    IProviderTranslator,
-    pickDefined
-} from "@holokai/sdk";
+import {HoloResponseFactory, pickDefined} from "@holokai/sdk";
+import type {IProviderTranslator} from "@holokai/types/provider";
+import type {HoloResponse} from "@holokai/types/holo";
+import type {HoloWorkerRequest, HoloWorkerResponse} from "@holokai/types/worker";
 
 export class WorkerResponseFactory {
     /**

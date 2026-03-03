@@ -113,7 +113,7 @@ export function createLoggerFormat(serverId: string) {
 
     return winston.format.combine(
         winston.format.timestamp(),
-        winston.format.printf(({ level, message, timestamp, className, methodName, requestId, ...metadata }) => {
+        winston.format.printf(({level, message, timestamp, className, methodName, requestId, ...metadata}) => {
             const time = formatTime(timestamp);
             // Strip ANSI color codes from level if present
             const cleanLevel = level.replace(/\x1b\[\d+m/g, '');

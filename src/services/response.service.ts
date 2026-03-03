@@ -4,8 +4,10 @@ import {container, injectable} from "tsyringe";
 import {HoloApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
-import {AsyncEventQueue, ClassLogger, HoloWorkerRequest, WireChunk} from "@holokai/sdk";
-import {LlmResponse} from "@holokai/sdk/dist/core/entities";
+import {AsyncEventQueue, ClassLogger} from "@holokai/sdk";
+import type {WireChunk} from "@holokai/types/provider";
+import type {HoloWorkerRequest} from "@holokai/types/worker";
+import {LlmResponse} from "@holokai/types/entities";
 
 @injectable()
 export class ResponseService extends ClassLogger {

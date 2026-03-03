@@ -6,7 +6,8 @@ import {env} from '../../env';
 import {JWTPayload, TokenRefreshRequest, TokenRefreshResponse} from '../types';
 import logger from '../../utils/logger';
 import {JwtTokenConfigValidator} from "../validators";
-import {HoloConfigAction, JwtTokenConfigData, JwtTokenConfig} from "@holokai/sdk";
+import type {JwtTokenConfig, JwtTokenConfigData} from "@holokai/types/config";
+import {HoloConfigAction} from "@holokai/types/config";
 
 @injectable()
 export class TokenService {

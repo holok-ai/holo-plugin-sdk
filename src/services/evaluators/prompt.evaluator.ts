@@ -1,7 +1,7 @@
 import {EvaluatorEvent, EvaluatorResult, IEvaluator} from '../../types';
-import {PromptConfigProps} from '@holokai/sdk';
+import type {PromptConfigProps} from "@holokai/types/config";
 import {EvaluatorDB} from '../../db';
-import {Evaluator, EvaluatorData, LlmResponse, Provider} from "@holokai/sdk/dist/core/entities";
+import {Evaluator, EvaluatorData, LlmResponse, Provider} from "@holokai/types/entities";
 
 export class PromptEvaluator implements IEvaluator {
     evaluatorId: string;

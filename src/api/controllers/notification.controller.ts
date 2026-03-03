@@ -2,21 +2,20 @@ import 'reflect-metadata';
 import {Response} from "express";
 import {inject, injectable} from "tsyringe";
 import {ClassLogger, pickDefined, stringifyError} from "@holokai/sdk";
-
-import type {NotificationService} from '@holokai/sdk/notification';
-import {
+import type {
+    INotificationService,
+    INotificationSub,
     NotificationEvent,
-    NotificationServiceToken,
-    NotificationSub,
     NotificationSubscribeFilter
-} from '@holokai/sdk/notification';
+} from '@holokai/types/notification';
+import {NotificationServiceToken} from '@holokai/sdk/notification';
 
 import {HoloApiRequest} from "../types";
 
 @injectable()
 export class NotificationController extends ClassLogger {
     constructor(
-        @inject(NotificationServiceToken) private readonly notificationService: NotificationService) {
+        @inject(NotificationServiceToken) private readonly notificationService: INotificationService) {
         super();
     }
 
@@ -50,7 +49,7 @@ export class NotificationController extends ClassLogger {
             res.write(`: ping ${Date.now()}\n\n`);
         }, 25_000);
 
-        let sub: NotificationSub | undefined;
+        let sub: INotificationSub | undefined;
 
         let closed = false;
 

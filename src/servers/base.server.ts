@@ -33,14 +33,6 @@ export class BaseServer extends ClassLogger implements IAppServer {
         process.exit(0);
     }
 
-    private async handleError(error: Error) {
-        const logger = this.mlog(this.handleError);
-        logger.error(`Server error: ${(error as Error).message}`, {
-            stack: (error as Error).stack
-        });
-        await this.onError(error);
-    }
-
     async start() {
         const logger = this.mlog(this.start);
         try {
@@ -71,5 +63,13 @@ export class BaseServer extends ClassLogger implements IAppServer {
 
     onError(_error: Error): Promise<void> {
         return Promise.resolve();
+    }
+
+    private async handleError(error: Error) {
+        const logger = this.mlog(this.handleError);
+        logger.error(`Server error: ${(error as Error).message}`, {
+            stack: (error as Error).stack
+        });
+        await this.onError(error);
     }
 }

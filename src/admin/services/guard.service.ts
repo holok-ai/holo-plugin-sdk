@@ -4,19 +4,13 @@ import {GuardResult, GuardResultSchema} from "../types";
 import {WorkerRequestFactory} from "../../types";
 import {env} from "../../env";
 import {ResponseService} from "../../services";
-import {
-    Auth,
-    ClassLogger,
-    filterJoin,
-    findLast,
-    HoloContent,
-    HoloContentText,
-    HoloRequest,
-    HoloWorkerRequest,
-    pickDefined,
-    PromptConfigProps,
-    RequestType
-} from "@holokai/sdk";
+import {ClassLogger, pickDefined} from "@holokai/sdk";
+import {filterJoin, findLast} from "../../utils/collection";
+import type {HoloContent, HoloContentText, HoloRequest} from "@holokai/types/holo";
+import {RequestType} from "@holokai/types/holo";
+import type {HoloWorkerRequest} from "@holokai/types/worker";
+import type {Auth} from "@holokai/types/api";
+import type {PromptConfigProps} from "@holokai/types/config";
 import {ProviderPluginRegistry} from "../../services/plugin/provider-registry.service";
 import {OrganizationService} from "./organization.service";
 

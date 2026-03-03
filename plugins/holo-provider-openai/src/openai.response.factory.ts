@@ -1,4 +1,5 @@
-import {HoloErrorCode, IResponseFactory} from "@holokai/sdk";
+import type {IResponseFactory} from "@holokai/types/provider";
+import {HoloErrorCode} from "@holokai/types/holo";
 import {ResponseErrorEvent} from "openai/resources/responses/responses";
 
 export type OpenAIResponseCode = | 'server_error'
@@ -21,6 +22,10 @@ export type OpenAIResponseCode = | 'server_error'
     | 'image_file_not_found';
 
 export class OpenAIResponseFactory implements IResponseFactory {
+    static instance(): OpenAIResponseFactory {
+        return new OpenAIResponseFactory();
+    }
+
     mapHoloCode(code: HoloErrorCode): OpenAIResponseCode {
         switch (code) {
             case 'guard_failure':
@@ -38,9 +43,5 @@ export class OpenAIResponseFactory implements IResponseFactory {
             code: this.mapHoloCode(code),
             sequence_number: 0
         };
-    }
-
-    static instance(): OpenAIResponseFactory {
-        return new OpenAIResponseFactory();
     }
 }

@@ -1,11 +1,11 @@
 import 'reflect-metadata';
 import {injectable} from "tsyringe";
 import {pickDefined} from "@holokai/sdk";
-import {NotificationEvent, NotificationQuery, NotificationStore} from '@holokai/sdk/notification';
+import type {INotificationStore, NotificationEvent, NotificationQuery} from '@holokai/types/notification';
 import {AppDB} from "./app.db";
 
 @injectable()
-export class PostgresNotificationStore implements NotificationStore {
+export class PostgresNotificationStore implements INotificationStore {
     constructor(private readonly db: AppDB) {
     }
 

@@ -1,7 +1,7 @@
 import {InternalEvaluatorBase} from './internal.base';
 import {AuditServiceEvent, EvaluatorResult} from '../../types';
 import logger from '../../utils/logger';
-import {LlmResponse} from "@holokai/sdk/dist/core/entities";
+import {LlmResponse} from "@holokai/types/entities";
 
 class CodeBlock {
     language!: string;

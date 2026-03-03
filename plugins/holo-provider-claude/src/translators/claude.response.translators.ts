@@ -1,15 +1,16 @@
 import 'reflect-metadata';
-import {ClaudeResponse, ClaudeResponseMessage} from "../types";
-import {ClaudeResponseMessageTranslator} from "./claude.response.message.translators";
 import {ClaudeUsageTranslator} from "./claude.usage.translators";
 import {injectable} from 'tsyringe';
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloFinishReason, HoloMessage, HoloResponse, pickDefined} from "@holokai/sdk";
+import {pickDefined} from "@holokai/sdk";
+import type {HoloFinishReason, HoloMessage, HoloResponse} from "@holokai/types/holo";
+import {Message, RawMessageStreamEvent} from "@anthropic-ai/sdk/resources/messages/messages";
+import {ClaudeResponseMessageTranslator} from "./claude.response.message.translators";
 
 @injectable()
-export class ClaudeResponseTranslator extends BaseTranslator<HoloResponse, ClaudeResponse> {
+export class ClaudeResponseTranslator extends BaseTranslator<HoloResponse, RawMessageStreamEvent | Message> {
     protected holoDefaults: Partial<HoloResponse> = {};
-    protected providerDefaults: Partial<ClaudeResponse> = {};
+    protected providerDefaults: Partial<RawMessageStreamEvent | Message> = {};
 
     constructor(
         private readonly responseMessageTranslator: ClaudeResponseMessageTranslator,
@@ -18,7 +19,7 @@ export class ClaudeResponseTranslator extends BaseTranslator<HoloResponse, Claud
         super();
     }
 
-    protected async fromHoloImpl(source: HoloResponse): Promise<Partial<ClaudeResponse>> {
+    protected async fromHoloImpl(source: HoloResponse): Promise<Partial<RawMessageStreamEvent | Message>> {
         // For Claude, we primarily work with the full response message format
         // Streaming events are handled separately in streaming contexts
         const messageResult = source.messages?.length
@@ -39,14 +40,14 @@ export class ClaudeResponseTranslator extends BaseTranslator<HoloResponse, Claud
             stop_reason: this.mapFinishReasonFromHolo(source.finish_reason) || null,
             usage: usageResult,
             ...messageResult
-        }) as Partial<ClaudeResponseMessage>;
+        }) as Partial<Message>;
     }
 
-    protected async toHoloImpl(source: ClaudeResponse): Promise<Partial<HoloResponse>> {
+    protected async toHoloImpl(source: RawMessageStreamEvent | Message): Promise<Partial<HoloResponse>> {
         // Handle streaming events vs full response messages
         if ('type' in source && source.type === 'message') {
             // Full response message
-            const responseMessage = source as ClaudeResponseMessage;
+            const responseMessage = source as Message;
 
             // Convert Claude response message back to Holo message using message translator
             const holoMessage = await this.responseMessageTranslator.toHolo(responseMessage);
@@ -71,7 +72,7 @@ export class ClaudeResponseTranslator extends BaseTranslator<HoloResponse, Claud
         }
     }
 
-    private mapFinishReasonFromHolo(reason?: HoloFinishReason | null): ClaudeResponseMessage["stop_reason"] | undefined {
+    private mapFinishReasonFromHolo(reason?: HoloFinishReason | null): Message["stop_reason"] | undefined {
         switch (reason) {
             case 'stop':
                 return 'end_turn';

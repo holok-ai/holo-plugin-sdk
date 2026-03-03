@@ -1,5 +1,6 @@
 import 'reflect-metadata';
-import {HoloTool, HoloToolChoice, pickDefined} from "@holokai/sdk";
+import {pickDefined} from "@holokai/sdk";
+import {HoloTool, HoloToolChoice} from "@holokai/types/holo";
 import {injectable} from 'tsyringe';
 import {BaseTranslator} from "@holokai/sdk/provider";
 import {ChatCompletionTool, ChatCompletionToolChoiceOption} from "openai/resources/chat/completions/completions";

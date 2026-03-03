@@ -1,23 +1,4 @@
-import {NotificationEvent, NotificationSubscribeFilter} from "./types";
-
-import {AsyncEventQueue} from "../core";
-
-export type NotificationSub = {
-    id: string;
-    filter: NotificationSubscribeFilter;
-    q: AsyncEventQueue<NotificationEvent>;
-    appSlug?: string;
-};
-
 export const NotificationServiceToken = Symbol("NotificationService");
-
-export interface NotificationService {
-    publish(event: NotificationEvent): Promise<void>;
-
-    subscribe(filter: NotificationSubscribeFilter): Promise<NotificationSub>;
-
-    unsubscribe(id: string): Promise<boolean>
-}
 
 export class NotificationTopic {
 

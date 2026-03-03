@@ -1,10 +1,10 @@
 import 'reflect-metadata';
-import { BaseServer } from "./base.server";
-import { EvaluatorService } from "../services";
-import { withDB, withQueue } from "./mixins";
-import { container, injectable } from "tsyringe";
-import { env } from "../env";
-import { AuditServiceEvent, EvaluatorServiceEvent } from '../types';
+import {BaseServer} from "./base.server";
+import {EvaluatorService} from "../services";
+import {withDB, withQueue} from "./mixins";
+import {container, injectable} from "tsyringe";
+import {env} from "../env";
+import {AuditServiceEvent, EvaluatorServiceEvent} from '../types';
 
 @injectable()
 export class EvaluatorServer extends withQueue(withDB(BaseServer)) {
@@ -23,11 +23,11 @@ export class EvaluatorServer extends withQueue(withDB(BaseServer)) {
         });
         await this.queueService.bindQueue(env.queue.evaluatorQueue, env.queue.directExchange, env.queue.evaluatorRoutingKey);
         await this.queueService.consume(env.queue.evaluatorQueue, async (_id, content) => {
-             await this.evaluatorService.handleRequest(content);
-         });
+            await this.evaluatorService.handleRequest(content);
+        });
 
-       // @ts-ignore
-        const auditEvent: AuditServiceEvent  = {
+        // @ts-ignore
+        const auditEvent: AuditServiceEvent = {
             source: "audit",
             eventName: "response-complete",
             timestamp: Date.now(),
@@ -44,19 +44,19 @@ export class EvaluatorServer extends withQueue(withDB(BaseServer)) {
         // // await this.evaluatorService.handleRequest(mokuEvent);
         // @ts-ignore
         const contentEval: EvaluatorServiceEvent = {
-             source: "evaluator",
-             eventName: "github-pullrequest-closed",
-             timestamp: Date.now(),
-             context: [{
-                 key: "pullrequest_info",
-                 value: {
-                     organization: "holok-ai",
-                     repository: "holo",
-                     pullRequestId: "2",
-                     userEmail: "peter.baxter@dynamo.works",
-                 },
-             }]
-         };
+            source: "evaluator",
+            eventName: "github-pullrequest-closed",
+            timestamp: Date.now(),
+            context: [{
+                key: "pullrequest_info",
+                value: {
+                    organization: "holok-ai",
+                    repository: "holo",
+                    pullRequestId: "2",
+                    userEmail: "peter.baxter@dynamo.works",
+                },
+            }]
+        };
 
 
     }

@@ -2,7 +2,7 @@ import {PrMetricSummary} from '../../types';
 import {EvaluatorDB} from '../../db';
 
 import logger from '../../utils/logger';
-import {AnalysisResult} from "@holokai/sdk/dist/core/entities";
+import {AnalysisResult} from "@holokai/types/entities";
 
 export class AnalysisResultsRepository {
     private evaluatorDB: EvaluatorDB;

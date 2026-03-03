@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import {HoloConfig} from "@holokai/sdk";
+import type {HoloConfig} from "@holokai/types/config";
 
 export interface ConfigLoaderEvents {
     'config:initial': (config: HoloConfig) => void;

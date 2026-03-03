@@ -1,5 +1,7 @@
 import 'reflect-metadata';
-import {ApiResponse, ClassLogger, RequestType} from '@holokai/sdk';
+import {ClassLogger} from '@holokai/sdk';
+import {ApiResponse} from '../../utils/api';
+import {RequestType} from "@holokai/types/holo";
 import {RequestService} from '../../admin/services/request.service';
 import {HoloApiRequest} from '../types';
 import {injectable} from "tsyringe";

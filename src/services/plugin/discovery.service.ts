@@ -1,7 +1,7 @@
 import {injectable} from 'tsyringe';
 import {promises as fs} from 'fs';
 import path from 'path';
-import type {PluginType} from '@holokai/sdk/plugin';
+import type {PluginType} from '@holokai/types/plugin';
 import {ClassLogger} from "@holokai/sdk";
 
 export interface DiscoveredPlugin {
@@ -60,7 +60,12 @@ export class PluginDiscoveryService extends ClassLogger {
                 const pluginNames = discovered.map(p => p.packageName).join(', ');
                 logger.info(`Found ${discovered.length} plugins: ${pluginNames}`, {
                     count: discovered.length,
-                    plugins: discovered.map(p => ({name: p.packageName, type: p.pluginType, version: p.version, isLatest: p.isLatest}))
+                    plugins: discovered.map(p => ({
+                        name: p.packageName,
+                        type: p.pluginType,
+                        version: p.version,
+                        isLatest: p.isLatest
+                    }))
                 });
             } else {
                 logger.info('No valid plugin packages found');
@@ -120,9 +125,8 @@ export class PluginDiscoveryService extends ClassLogger {
     }
 
     private inferPluginType(packageName: string): PluginType | null {
-        // Match both patterns: @holokai/provider-* and @holokai/holo-provider-*
-        const match = packageName.match(/@holokai\/(?:holo-)?(provider|guard|evaluator|logger|worker)-/);
-        return match ? (match[1] as PluginType) : null;
+        const match = packageName.match(/@holokai\/(?:holo-)?provider-/);
+        return match ? 'provider' : null;
     }
 
     /**

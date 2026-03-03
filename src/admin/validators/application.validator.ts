@@ -1,7 +1,7 @@
 import {Type, type} from "arktype";
 import {ModelValidator} from "./model.validator";
 import {PromptValidator} from "./prompt.validator";
-import {ApplicationConfigProps} from "@holokai/sdk";
+import type {ApplicationConfigProps} from "@holokai/types/config";
 
 export const ApplicationValidator = type({
     urlSlug: 'string',

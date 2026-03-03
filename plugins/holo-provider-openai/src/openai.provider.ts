@@ -1,13 +1,8 @@
 import OpenAI from 'openai';
-import {
-    BaseProvider,
-    IAuditor,
-    IProviderTranslator,
-    IResponseFactory,
-    ProviderContext,
-    RequestType,
-    RunHandle
-} from '@holokai/sdk';
+import {BaseProvider} from '@holokai/sdk/provider';
+import type {IAuditor, IProviderTranslator, IResponseFactory} from '@holokai/types/provider';
+import {ProviderContext, RunHandle} from '@holokai/types/provider';
+import {RequestType} from '@holokai/types/holo';
 import {ResponseCreateParamsBase, ResponseErrorEvent, ResponseStreamEvent} from 'openai/resources/responses/responses';
 import {ChatCompletionCreateParamsBase} from 'openai/resources/chat/completions';
 import {OpenAIAuditor} from './openai.auditor';
@@ -23,6 +18,29 @@ import {EmbeddingCreateParams} from "openai/resources";
  * OpenAI provider for connecting to OpenAI API
  */
 export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBase | ChatCompletionCreateParamsBase> {
+
+    async getModels(allowedModels: string[] | true): Promise<{ object: string, data: Model[] }> {
+        const response = await this.client.models.list() as ModelsPage;
+        if (allowedModels === true) {
+            return response;
+        }
+        const data = response.data.filter(model => allowedModels.includes(model.id));
+
+        return {
+            object: response.object,
+            data
+        };
+    }
+
+    async getModelNameFromRequest(payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<string | undefined> {
+        return payload.model;
+    }
+
+    async runEmbed(payload: EmbeddingCreateParams) {
+        return {
+            final: async () => this.client.embeddings.create(payload)
+        }
+    }
 
     protected createAuditor(): IAuditor {
         return new OpenAIAuditor();
@@ -40,19 +58,6 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         return OpenAIResponseFactory.instance();
     }
 
-    async getModels(allowedModels: string[] | true): Promise<{ object: string, data: Model[] }> {
-        const response = await this.client.models.list() as ModelsPage;
-        if (allowedModels === true) {
-            return response;
-        }
-        const data = response.data.filter(model => allowedModels.includes(model.id));
-
-        return {
-            object: response.object,
-            data
-        };
-    }
-
     protected async handleError(error: APIError): Promise<ResponseErrorEvent> {
         if (error.error) {
             // may need to validate what the error is
@@ -60,16 +65,6 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         }
 
         return this.responseFactory.createError(error.message, error.code ? error.code : undefined);
-    }
-
-    async getModelNameFromRequest(payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<string | undefined> {
-        return payload.model;
-    }
-
-    async runEmbed(payload: EmbeddingCreateParams) {
-        return {
-            final: async () => this.client.embeddings.create(payload)
-        }
     }
 
     protected async handleRequest(

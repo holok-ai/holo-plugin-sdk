@@ -1,6 +1,7 @@
-/**
- * Plugin error class for consistent error handling
- */
+import {PluginErrorCode} from "@holokai/types/plugin";
+
+export {PluginErrorCode};
+
 export class PluginError extends Error {
     constructor(
         message: string,
@@ -11,19 +12,4 @@ export class PluginError extends Error {
         super(message);
         this.name = 'PluginError';
     }
-}
-
-/**
- * Common plugin error codes
- */
-export enum PluginErrorCode {
-    INITIALIZATION_FAILED = 'PLUGIN_INIT_FAILED',
-    DESTRUCTION_FAILED = 'PLUGIN_DESTROY_FAILED',
-    INVALID_CONFIG = 'PLUGIN_INVALID_CONFIG',
-    DEPENDENCY_MISSING = 'PLUGIN_DEPENDENCY_MISSING',
-    INCOMPATIBLE_VERSION = 'PLUGIN_INCOMPATIBLE_VERSION',
-    PERMISSION_DENIED = 'PLUGIN_PERMISSION_DENIED',
-    HEALTH_CHECK_FAILED = 'PLUGIN_HEALTH_CHECK_FAILED',
-    INVALID_STATE = 'PLUGIN_INVALID_STATE',
-    UNKNOWN_ERROR = 'PLUGIN_UNKNOWN_ERROR'
 }

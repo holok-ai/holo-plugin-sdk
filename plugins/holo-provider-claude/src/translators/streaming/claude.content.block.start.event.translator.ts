@@ -1,20 +1,21 @@
 import 'reflect-metadata';
 
 import {injectable} from 'tsyringe';
-import {ClaudeRawContentBlockStartEvent} from '../../types';
-import {HoloStreamChunk, pickDefined} from '@holokai/sdk';
+import {pickDefined} from '@holokai/sdk';
+import type {HoloStreamChunk} from '@holokai/types/holo';
 import {StreamTranslator} from "@holokai/sdk/provider";
+import {RawContentBlockStartEvent} from "@anthropic-ai/sdk/resources/messages/messages";
 
 @injectable()
-export class ClaudeContentBlockStartEventTranslator extends StreamTranslator<HoloStreamChunk, ClaudeRawContentBlockStartEvent> {
+export class ClaudeContentBlockStartEventTranslator extends StreamTranslator<HoloStreamChunk, RawContentBlockStartEvent> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
-    protected providerDefaults: Partial<ClaudeRawContentBlockStartEvent> = {};
+    protected providerDefaults: Partial<RawContentBlockStartEvent> = {};
 
     constructor() {
         super();
     }
 
-    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<ClaudeRawContentBlockStartEvent>[]> {
+    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<RawContentBlockStartEvent>[]> {
         const d = source.delta;
         if (!d || d.type !== 'message_delta') return [];
 
@@ -34,17 +35,17 @@ export class ClaudeContentBlockStartEventTranslator extends StreamTranslator<Hol
                     name: tc.function!.name,
                     input: {}, // shell; args fragments arrive later
                     id: tc.id
-                }) as Partial<ClaudeRawContentBlockStartEvent['content_block']>;
+                }) as Partial<RawContentBlockStartEvent['content_block']>;
 
                 return pickDefined({
                     type: 'content_block_start' as const,
                     index,
                     content_block: contentBlock
-                }) as Partial<ClaudeRawContentBlockStartEvent>;
+                }) as Partial<RawContentBlockStartEvent>;
             });
     }
 
-    protected async toHoloManyImpl(source: ClaudeRawContentBlockStartEvent): Promise<Partial<HoloStreamChunk>[]> {
+    protected async toHoloManyImpl(source: RawContentBlockStartEvent): Promise<Partial<HoloStreamChunk>[]> {
         const cb = source.content_block;
 
         // Only emit for tool_use starts; ignore text/image/etc. starts

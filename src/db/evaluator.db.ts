@@ -1,14 +1,7 @@
 import {injectable} from "tsyringe";
 import {AppDB} from "./app.db";
-import {PromptConfigProps} from "@holokai/sdk";
-import {
-    AnalysisResult,
-    Application,
-    Evaluator,
-    EvaluatorData,
-    LlmResponse,
-    Provider
-} from "@holokai/sdk/dist/core/entities";
+import type {PromptConfigProps} from "@holokai/types/config";
+import {AnalysisResult, Application, Evaluator, EvaluatorData, LlmResponse, Provider} from "@holokai/types/entities";
 
 @injectable()
 export class EvaluatorDB {

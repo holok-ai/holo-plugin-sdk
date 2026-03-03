@@ -1,5 +1,5 @@
-import {HoloFinishReason} from "@holokai/sdk";
-import {ClaudeStopReason} from "../types";
+import type {HoloFinishReason} from "@holokai/types/holo";
+import {StopReason} from "@anthropic-ai/sdk/resources/messages/messages";
 
 export function mapClaudeFinishReason(reason?: string | null): HoloFinishReason | undefined {
     if (!reason) return undefined;
@@ -20,7 +20,7 @@ export function mapClaudeFinishReason(reason?: string | null): HoloFinishReason 
     }
 }
 
-export function mapHoloFinishReasonToClaude(reason?: HoloFinishReason): ClaudeStopReason | null | undefined {
+export function mapHoloFinishReasonToClaude(reason?: HoloFinishReason): StopReason | null | undefined {
     if (reason === undefined) return undefined;
     if (reason === null) return null;
 

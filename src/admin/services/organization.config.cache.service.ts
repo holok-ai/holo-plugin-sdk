@@ -1,15 +1,15 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {ApplicationConfigValidator, OrganizationConfigValidator} from "../validators";
-import {
+import {ClassLogger} from "@holokai/sdk";
+import type {
     ApplicationConfig,
     ApplicationConfigProps,
-    ClassLogger,
-    HoloConfigAction,
     OrganizationConfig,
     OrganizationConfigProps,
     ProviderConfigProps
-} from "@holokai/sdk";
+} from "@holokai/types/config";
+import {HoloConfigAction} from "@holokai/types/config";
 import {OrganizationConfigCache} from "../types";
 
 @injectable()

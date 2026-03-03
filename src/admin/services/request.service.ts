@@ -6,9 +6,10 @@ import {ProviderService, ResponseService} from "../../services";
 import {env} from "../../env";
 import {GuardService} from "./guard.service";
 import {WorkerRequestFactory} from "../../types";
-import {ClassLogger, RequestType} from "@holokai/sdk";
+import {ClassLogger} from "@holokai/sdk";
+import {RequestType} from "@holokai/types/holo";
+import type {INotificationService} from '@holokai/types/notification';
 import {NotificationEventFactory, NotificationServiceToken} from "@holokai/sdk/notification";
-import {NotificationService} from "../../services/notification/notification.service";
 
 
 @injectable()
@@ -19,7 +20,7 @@ export class RequestService extends ClassLogger {
         private readonly responseService: ResponseService,
         private readonly guardService: GuardService,
         private readonly providerService: ProviderService,
-        @inject(NotificationServiceToken) readonly notificationService: NotificationService
+        @inject(NotificationServiceToken) readonly notificationService: INotificationService
     ) {
         super();
     }

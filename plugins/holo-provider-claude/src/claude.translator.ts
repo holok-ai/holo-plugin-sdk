@@ -18,9 +18,15 @@ import {
     ClaudeToolTranslator,
     ClaudeUsageTranslator
 } from "./translators";
-import {ClaudeChatRequest, ClaudeRequestMessage, ClaudeResponse} from "./types";
-import {IProviderTranslator} from "@holokai/sdk/provider";
-import {ClassLogger, HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "@holokai/sdk";
+import type {IProviderTranslator} from "@holokai/types/provider";
+import {ClassLogger} from "@holokai/sdk";
+import type {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "@holokai/types/holo";
+import {
+    Message,
+    MessageParam,
+    MessageStreamParams,
+    RawMessageStreamEvent
+} from "@anthropic-ai/sdk/resources/messages/messages";
 
 
 @injectable()
@@ -70,27 +76,27 @@ export class ClaudeTranslator extends ClassLogger implements IProviderTranslator
         );
     }
 
-    async fromHoloRequest(request: HoloRequest): Promise<Partial<ClaudeChatRequest>> {
+    async fromHoloRequest(request: HoloRequest): Promise<Partial<MessageStreamParams>> {
         return this.requestTranslator.fromHolo(request);
     }
 
-    async toHoloRequest(request: ClaudeChatRequest): Promise<Partial<HoloRequest>> {
+    async toHoloRequest(request: MessageStreamParams): Promise<Partial<HoloRequest>> {
         return this.requestTranslator.toHolo(request);
     }
 
-    async fromHoloMessages(messages: HoloMessage[]): Promise<Partial<ClaudeRequestMessage>[]> {
+    async fromHoloMessages(messages: HoloMessage[]): Promise<Partial<MessageParam>[]> {
         return this.messageTranslator.fromHoloArray(messages);
     }
 
-    async toHoloMessages(messages: ClaudeRequestMessage[]): Promise<Partial<HoloMessage>[]> {
+    async toHoloMessages(messages: MessageParam[]): Promise<Partial<HoloMessage>[]> {
         return this.messageTranslator.toHoloArray(messages);
     }
 
-    async fromHoloResponse(message: HoloResponse): Promise<Partial<ClaudeResponse>> {
+    async fromHoloResponse(message: HoloResponse): Promise<Partial<RawMessageStreamEvent | Message>> {
         return this.responseTranslator.fromHolo(message);
     }
 
-    async toHoloResponse(message: ClaudeResponse): Promise<Partial<HoloResponse>> {
+    async toHoloResponse(message: RawMessageStreamEvent | Message): Promise<Partial<HoloResponse>> {
         return this.responseTranslator.toHolo(message);
     }
 

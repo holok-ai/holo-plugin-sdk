@@ -45,6 +45,27 @@ export class ConfigQueueLoader extends EventEmitter implements ConfigLoader {
         await this.registerWithMoku();
     }
 
+    /**
+     * Start listening for ongoing config updates after initial load
+     */
+    async startConfigUpdateListener(): Promise<void> {
+        logger.info(`MQ Config Loader: Starting config update listener on queue: ${this.managementQueue}`);
+
+        await this.queueService.consume(
+            this.managementQueue,
+            async (messageId: string, content: any) => {
+                const msgId = messageId || 'unknown';
+                const configType = content?.configType || 'unknown';
+                logger.debug(`MQ Config Loader: Received update message: ${msgId} (type: ${configType})`);
+                if (!(await this.configService.processConfig(content))) {
+                    logger.error(`MQ Config Loader: Failed to process config message: ${msgId} (type: ${configType})`);
+                }
+            },
+            true, // ignore errors for non-config messages
+            {noAck: false}
+        );
+    }
+
     private async setupPlatformInfrastructure(): Promise<void> {
         logger.debug('MQ Config Loader: Setting up platform infrastructure...');
 
@@ -89,26 +110,5 @@ export class ConfigQueueLoader extends EventEmitter implements ConfigLoader {
         );
         logger.debug(`MQ Config Loader: Proxy announcement sent to platform exchange with routing key: ${this.announcementRoutingKey}`);
         this.emit('announcement:sent', this.serverId);
-    }
-
-    /**
-     * Start listening for ongoing config updates after initial load
-     */
-    async startConfigUpdateListener(): Promise<void> {
-        logger.info(`MQ Config Loader: Starting config update listener on queue: ${this.managementQueue}`);
-
-        await this.queueService.consume(
-            this.managementQueue,
-            async (messageId: string, content: any) => {
-                const msgId = messageId || 'unknown';
-                const configType = content?.configType || 'unknown';
-                logger.debug(`MQ Config Loader: Received update message: ${msgId} (type: ${configType})`);
-                if (!(await this.configService.processConfig(content))) {
-                    logger.error(`MQ Config Loader: Failed to process config message: ${msgId} (type: ${configType})`);
-                }
-            },
-            true, // ignore errors for non-config messages
-            {noAck: false}
-        );
     }
 }

@@ -1,6 +1,6 @@
 import {injectable} from "tsyringe";
 import {AppDB} from "./app.db";
-import {LlmResponse} from "@holokai/sdk/dist/core/entities";
+import {LlmResponse} from "@holokai/types/entities";
 
 @injectable()
 export class ResponseDB {

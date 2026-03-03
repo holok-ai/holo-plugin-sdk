@@ -7,7 +7,8 @@ import {ArkErrors} from "arktype";
 import {EventEmitter} from "events";
 import {TokenService} from "./token.service";
 import {OrganizationConfigCacheService} from "./organization.config.cache.service";
-import {HoloConfig, HoloConfigAction, HoloConfigType} from "@holokai/sdk";
+import type {HoloConfig} from "@holokai/types/config";
+import {HoloConfigAction, HoloConfigType} from "@holokai/types/config";
 
 @injectable()
 export class ConfigService extends EventEmitter {

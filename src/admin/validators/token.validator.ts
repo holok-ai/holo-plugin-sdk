@@ -1,5 +1,5 @@
 import {Type, type} from "arktype";
-import {Token} from "@holokai/sdk";
+import type {Token} from "@holokai/types/config";
 
 
 export const TokenValidator = type({

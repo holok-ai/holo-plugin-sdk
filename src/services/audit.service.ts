@@ -4,10 +4,12 @@ import {container, inject, injectable} from "tsyringe";
 import {AppDB, EvaluatorDB, RequestDB, ResponseDB} from "../db";
 import {QueueService} from "./queue.service";
 import {env} from '../env';
-import {ClassLogger, HoloWorkerRequest, HoloWorkerResponse} from "@holokai/sdk";
+import {ClassLogger} from "@holokai/sdk";
+import type {HoloWorkerRequest, HoloWorkerResponse} from "@holokai/types/worker";
 import {ProviderService} from "./provider.service";
-import {LlmRequest, LlmResponse} from "@holokai/sdk/dist/core/entities";
-import {NotificationEvent, NotificationStoreToken} from "@holokai/sdk/notification";
+import {LlmRequest, LlmResponse} from "@holokai/types/entities";
+import {NotificationStoreToken} from "@holokai/sdk/notification";
+import type {NotificationEvent} from "@holokai/types/notification";
 import {PostgresNotificationStore} from "../db/notification.db";
 
 /**
@@ -58,46 +60,6 @@ export class AuditService extends ClassLogger {
     }
 
     /**
-     * Type guard to determine if object is an HoloWorkerRequest
-     * @param {any} obj - Object to check
-     * @returns {boolean} True if object is HoloWorkerRequest
-     * @private
-     */
-    private isHoloWorkerRequest(obj: any): obj is HoloWorkerRequest {
-        const logger = this.mlog(this.isHoloWorkerRequest);
-        const isWorkerRequest = obj.payload !== undefined &&
-            obj.sourceId !== undefined &&
-            obj.providerType !== undefined &&
-            obj.type !== undefined;
-        logger.debug(`Type guard check - isHoloWorkerRequest: ${isWorkerRequest}`);
-        return isWorkerRequest;
-    }
-
-    // HoloWorkerRequest mapping is now handled by the TranslatorRegistry
-    // This provides better type safety and provider-specific field extraction
-
-    /**
-     * Insert request record into database
-     * @param {Omit<LlmRequest, 'id'>} content - Request data to insert
-     * @private
-     */
-    private async insertRequest(content: Omit<LlmRequest, 'id'>): Promise<void> {
-        const logger = this.mlog(this.insertRequest);
-        const startTime = Date.now();
-        try {
-            await this.requestDB.insert(content);
-            logger.info(`Successfully logged LlmRequest ${content.request_id} in ${Date.now() - startTime}ms`);
-        } catch (error) {
-            logger.error(`Database insert failed for request ${content.request_id}: ${error instanceof Error ? error.message : 'Unknown error'}`, {
-                requestId: content.request_id,
-                error: error,
-                duration: Date.now() - startTime
-            });
-            throw error;
-        }
-    }
-
-    /**
      * Log LLM response to database with comprehensive audit trail
      * Supports HoloWorkerResponse and direct LlmResponse formats
      * @param {HoloWorkerResponse | Omit<LlmResponse, 'id'>} content - Response data to log
@@ -120,6 +82,9 @@ export class AuditService extends ClassLogger {
             throw error;
         }
     }
+
+    // HoloWorkerRequest mapping is now handled by the TranslatorRegistry
+    // This provides better type safety and provider-specific field extraction
 
     async logNotification(content: NotificationEvent): Promise<void> {
         const logger = this.mlog(this.logNotification);
@@ -163,6 +128,43 @@ export class AuditService extends ClassLogger {
             {correlationId: responseId}
         );
 
+    }
+
+    /**
+     * Type guard to determine if object is an HoloWorkerRequest
+     * @param {any} obj - Object to check
+     * @returns {boolean} True if object is HoloWorkerRequest
+     * @private
+     */
+    private isHoloWorkerRequest(obj: any): obj is HoloWorkerRequest {
+        const logger = this.mlog(this.isHoloWorkerRequest);
+        const isWorkerRequest = obj.payload !== undefined &&
+            obj.sourceId !== undefined &&
+            obj.providerType !== undefined &&
+            obj.type !== undefined;
+        logger.debug(`Type guard check - isHoloWorkerRequest: ${isWorkerRequest}`);
+        return isWorkerRequest;
+    }
+
+    /**
+     * Insert request record into database
+     * @param {Omit<LlmRequest, 'id'>} content - Request data to insert
+     * @private
+     */
+    private async insertRequest(content: Omit<LlmRequest, 'id'>): Promise<void> {
+        const logger = this.mlog(this.insertRequest);
+        const startTime = Date.now();
+        try {
+            await this.requestDB.insert(content);
+            logger.info(`Successfully logged LlmRequest ${content.request_id} in ${Date.now() - startTime}ms`);
+        } catch (error) {
+            logger.error(`Database insert failed for request ${content.request_id}: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+                requestId: content.request_id,
+                error: error,
+                duration: Date.now() - startTime
+            });
+            throw error;
+        }
     }
 
     /**

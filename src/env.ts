@@ -8,7 +8,7 @@
  * configured to load dotenv before any other imports.
  */
 import dotenv from 'dotenv';
-import {parseArray, parseBoolean, parseNumber} from "@holokai/sdk";
+import {parseArray, parseBoolean, parseNumber} from "./utils/env-parsers";
 
 dotenv.config();
 

@@ -1,8 +1,10 @@
-import {BasePlugin, IProviderPlugin, PluginContext} from '@holokai/sdk/plugin';
+import {BasePlugin} from '@holokai/sdk/plugin';
+import type {IPluginContext, IProviderPlugin} from '@holokai/types/plugin';
 import {manifest} from "./manifest.js";
-import {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/sdk/provider";
+import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/types/provider";
 import {OpenAIProvider} from "./openai.provider";
-import {RequestType, RouteHandler, RouteTree, RouteTreeNode} from "@holokai/sdk";
+import {RequestType} from "@holokai/types/holo";
+import {RouteHandler, RouteTree, RouteTreeNode} from "@holokai/types/routing";
 import {OpenAITranslator} from "./openai.translator";
 import {OpenAICompletionsWireAdapter, OpenAIResponsesWireAdapter} from "./openai.wire.adapter";
 
@@ -66,7 +68,7 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
         }
     }
 
-    protected onInitialize(_context: PluginContext): Promise<void> {
+    protected onInitialize(_context: IPluginContext): Promise<void> {
         return Promise.resolve();
     }
 

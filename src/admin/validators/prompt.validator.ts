@@ -1,5 +1,5 @@
 import {Type, type} from "arktype";
-import {PromptConfigProps} from "@holokai/sdk";
+import type {PromptConfigProps} from "@holokai/types/config";
 
 export const PromptValidator = type({
     id: 'string',

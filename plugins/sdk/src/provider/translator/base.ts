@@ -1,30 +1,5 @@
-import {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "../../holo";
+import type {TranslateOptions} from "@holokai/types/provider";
 import {ClassLogger} from "../../core";
-
-export interface IProviderTranslator {
-    toHoloRequest(request: any): Promise<Partial<HoloRequest>>;
-
-    fromHoloRequest(request: HoloRequest): Promise<Partial<any>>;
-
-    toHoloMessages(messages: any[]): Promise<Partial<HoloMessage>[]>;
-
-    fromHoloMessages(messages: HoloMessage[]): Promise<Partial<any>[]>;
-
-    toHoloResponse(response: any): Promise<Partial<HoloResponse>>;
-
-    fromHoloResponse(response: HoloResponse): Promise<Partial<any>>;
-
-    fromHoloStreamChunks(chunks: HoloStreamChunk[]): Promise<unknown>;
-}
-
-export type TranslateOptions = {
-    /** true: THolo -> TProvider; false: TProvider -> THolo */
-    fromHolo?: boolean;
-    /** validate & strip undeclared keys on the target */
-    validateTarget?: boolean;
-    /** when validation fails, return {} instead of throwing */
-    failQuietly?: boolean;
-};
 
 
 export abstract class BaseTranslator<THolo, TProvider> extends ClassLogger {

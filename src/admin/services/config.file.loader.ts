@@ -6,7 +6,7 @@ import logger from '../../utils/logger';
 import {ConfigService} from "./config.service";
 import {ConfigLoader} from "../types";
 import {env} from "../../env";
-import {HoloConfig} from "@holokai/sdk/core";
+import type {HoloConfig} from "@holokai/types/config";
 
 @injectable()
 export class ConfigFileLoader extends EventEmitter implements ConfigLoader {
@@ -31,7 +31,7 @@ export class ConfigFileLoader extends EventEmitter implements ConfigLoader {
             const fileContent = fs.readFileSync(absolutePath, 'utf8');
             const config = JSON.parse(fileContent) as HoloConfig;
 
-            if(!(await this.configService.processConfig(config))) {
+            if (!(await this.configService.processConfig(config))) {
                 throw new Error('Failed to process configuration');
             }
         } catch (error) {

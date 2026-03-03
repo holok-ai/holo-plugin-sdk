@@ -8,6 +8,8 @@ export class ErrorMessages {
     static readonly MODEL_REQUIRED = 'Model is required';
     static readonly PROMPT_REQUIRED = 'Prompt is required';
     static readonly MESSAGES_REQUIRED = 'Messages array is required';
+    // Message validation errors
+    static readonly MESSAGE_ROLE_CONTENT_REQUIRED = 'Each message must have role and content';
 
     // Dynamic validation errors
     static modelNotFound(model: string): string {
@@ -33,9 +35,6 @@ export class ErrorMessages {
     static unsupportedRequestType(type: string): string {
         return `Unsupported request type: ${type}`;
     }
-
-    // Message validation errors
-    static readonly MESSAGE_ROLE_CONTENT_REQUIRED = 'Each message must have role and content';
 
     static invalidMessageRole(validRoles: string[]): string {
         return `Message role must be one of: ${validRoles.join(', ')}`;
@@ -68,9 +67,9 @@ export function createErrorResponse(
         type: 'error',
         error: {
             message,
-            ...(requestId && { requestId }),
-            ...(provider && { provider }),
-            ...(code && { code })
+            ...(requestId && {requestId}),
+            ...(provider && {provider}),
+            ...(code && {code})
         }
     };
 }
