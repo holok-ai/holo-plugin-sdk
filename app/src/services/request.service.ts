@@ -9,6 +9,8 @@ import {GuardService} from "./guard.service";
 import {WorkerRequestFactory} from "./worker.request.factory";
 import {ClassLogger} from "@holokai/sdk";
 import {RequestType} from "@holokai/types/holo";
+import type {PromptConfigProps} from "@holokai/types/config";
+import type {Prompt} from "@holokai/types/entities";
 import type {INotificationService} from '@holokai/types/notification';
 import {NotificationEventFactory, NotificationServiceToken} from "@holokai/sdk/notification";
 
@@ -34,41 +36,42 @@ export class RequestService extends ClassLogger {
             throw new Error('Unauthorized request. No auth object found.');
         }
 
-        let {app, availableApps} = auth;
+        let {application, applications} = auth;
 
-        if (!app) {
-            if (!availableApps.length) {
+        if (!application) {
+            if (!applications.length) {
                 throw new Error('Unauthorized request. No app or available apps found.');
             }
-            logger.debug(`No app defined, finding ${providerType} in availableApps`);
-            for (const availableApp of availableApps) {
-                if (availableApp.providerType.toUpperCase() === providerType.toUpperCase()) {
-                    const provider = await this.providerService.matchProvider(availableApp.providerName);
+            logger.debug(`No app defined, finding ${providerType} in applications`);
+            for (const candidate of applications) {
+                if (candidate.provider!.type.toUpperCase() === providerType.toUpperCase()) {
+                    const provider = await this.providerService.matchProvider(candidate.provider!.name);
                     const modelName = await provider.getModelNameFromRequest(req.body);
                     if (modelName) {
-                        logger.debug(`No app declared. Defaulting to: ${availableApp.urlSlug}`);
-                        app = availableApp;
+                        logger.debug(`No app declared. Defaulting to: ${candidate.url_slug}`);
+                        application = candidate;
                         break;
                     }
                 }
             }
 
-            if (!app) {
+            if (!application) {
                 throw new Error('Unauthorized request. No authorized apps have the model requested.');
             }
         }
 
-        const workerRequest = await this.parseRequest(providerType, app.providerName, type, req, isPassthrough);
+        const workerRequest = await this.parseRequest(providerType, application.provider!.name, type, req, isPassthrough);
 
-        if (app.guards && app.guards.length) {
-            const guardDetails = app.guards.map(g => ({
+        if (application.guards?.length) {
+            const guardProps = application.guards.map(promptToConfigProps);
+            const guardDetails = guardProps.map(g => ({
                 id: g.id,
                 name: g.modelName,
                 provider: g.providerName
             }));
-            logger.debug(`Executing ${app.guards.length} guard(s) for request: ${JSON.stringify(guardDetails)}`);
+            logger.debug(`Executing ${guardProps.length} guard(s) for request: ${JSON.stringify(guardDetails)}`);
             await this.notificationService.publish(NotificationEventFactory.fromAuthAndRequest('guard_started', auth, workerRequest, 'Running guards'));
-            const results = await this.guardService.guard(workerRequest, app.guards, auth);
+            const results = await this.guardService.guard(workerRequest, guardProps, auth);
             await this.notificationService.publish(NotificationEventFactory.fromAuthAndRequest(results?.passed ? 'guard_passed' : 'guard_failed', auth, workerRequest, 'Running guards'));
         }
 
@@ -80,4 +83,16 @@ export class RequestService extends ClassLogger {
     async parseRequest(providerType: string, providerName: string | undefined, type: RequestType, req: HoloApiRequest, isPassthrough: boolean = false) {
         return WorkerRequestFactory.fromRequest(providerType, providerName, type, req, this.serverId, isPassthrough);
     }
+}
+
+function promptToConfigProps(p: Prompt): PromptConfigProps {
+    const result: PromptConfigProps = {
+        id: p.id,
+        userPrompt: p.user_prompt,
+        providerName: p.provider,
+        modelName: p.model ?? '',
+    };
+    if (p.system_prompt) result.systemPrompt = p.system_prompt;
+    if (p.output_schema) result.outputSchema = p.output_schema;
+    return result;
 }

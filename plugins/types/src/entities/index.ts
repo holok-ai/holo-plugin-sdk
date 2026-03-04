@@ -9,3 +9,6 @@ export {LlmResponse} from "./llm.response";
 export {Application} from "./application";
 export {LlmRequest} from "./llm.request";
 export {LlmStatus} from "./llm.status";
+export {HoloToken} from "./holo.token";
+export {Organization} from "./organization";
+export {Prompt} from "./prompt";

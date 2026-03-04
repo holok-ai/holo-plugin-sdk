@@ -55,7 +55,6 @@ export class OrganizationService extends ClassLogger {
         return provider;
     }
 
-
     getProvider(orgId: string, providerName: string): ProviderConfigProps | undefined {
         return this.orgCacheService.getProvider(orgId, providerName);
     }

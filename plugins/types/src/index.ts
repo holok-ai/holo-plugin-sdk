@@ -1,5 +1,20 @@
 export * from './holo';
-export * from './entities';
+export {
+    BaseEntity,
+    Provider,
+    Evaluator,
+    EvaluatorData,
+    Model,
+    Notification,
+    AnalysisResult,
+    LlmResponse,
+    Application,
+    LlmRequest,
+    LlmStatus,
+    HoloToken,
+    Organization,
+    Prompt as PromptEntity,
+} from './entities';
 export * from './config';
 export * from './worker';
 export * from './notification';

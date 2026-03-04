@@ -31,15 +31,15 @@ export class ProviderController extends BaseController {
             }
 
             try {
-                const {app, availableApps} = auth;
-                const apps = app ? [app] : availableApps;
+                const {application, applications} = auth;
+                const apps = application ? [application] : applications;
                 const providerModelNames = new Map<string, Set<string>>();
 
                 for (const a of apps) {
-                    let names = providerModelNames.get(a.providerName);
-                    if (!names) providerModelNames.set(a.providerName, names = new Set());
+                    let names = providerModelNames.get(a.provider!.name);
+                    if (!names) providerModelNames.set(a.provider!.name, names = new Set());
 
-                    for (const m of a.models) {
+                    for (const m of (a.models ?? [])) {
                         names.add(m.name);
                     }
                 }

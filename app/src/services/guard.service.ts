@@ -10,7 +10,7 @@ import type {HoloWorkerRequest} from "@holokai/types/worker";
 import type {Auth} from "@holokai/types/api";
 import type {PromptConfigProps} from "@holokai/types/config";
 import {ProviderPluginRegistry} from "./plugin/provider.registry.service";
-import {OrganizationService} from "../admin/services";
+import {ProviderCacheService} from "./provider.cache.service";
 import {ResponseService} from "./response.service";
 import {WorkerRequestFactory} from "./worker.request.factory";
 
@@ -21,7 +21,7 @@ export class GuardService extends ClassLogger {
 
     constructor(
         private responseService: ResponseService,
-        private organizationService: OrganizationService,
+        private providerCacheService: ProviderCacheService,
         private providerRegistry: ProviderPluginRegistry
     ) {
         super();
@@ -75,8 +75,9 @@ export class GuardService extends ClassLogger {
                     logger.debug(`Starting guard check ${index + 1}/${guards.length}: id=${guard.id}, model=${guard.modelName}, provider=${guard.providerName}`);
                     const startTime = Date.now();
                     try {
-                        const p = this.organizationService.getProvider(workerRequest.organizationId!, guard.providerName);
-                        provider = this.providerRegistry.getByFamily(p!.type);
+                        const p = await this.providerCacheService.getByName(workerRequest.organizationId!, guard.providerName);
+                        if (!p) return {passed: true};
+                        provider = this.providerRegistry.getByFamily(p.type);
                         if (!provider) return {passed: true};
 
                         const holoRequest: HoloRequest = pickDefined({

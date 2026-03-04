@@ -7,18 +7,21 @@ import bodyParser from 'body-parser';
 import morgan from 'morgan';
 import logger from './utils/logger';
 import {errorMiddleware, nocorsMiddleware} from "./api/middleware";
-import {InitService, ProviderService, ResponseService} from "./services";
+import {HoloTokenService, InitService, ProviderService, ResponseService} from "./services";
+import {ApplicationService} from "./services/application.service";
+import {ProviderCacheService} from "./services/provider.cache.service";
 import {createRoutes} from "./api/routes";
 import {env} from "./env";
 import listEndpoints from "express-list-endpoints";
-import {AppDB} from "./db";
+import {AppDB, HoloTokenDB} from "./db";
+import {ProviderDB} from "./db/provider.db";
 import {
     ConfigFileLoader,
     ConfigQueueLoader,
     ConfigQueueLoaderFactory,
     ConfigService,
     OrganizationConfigCacheService, RedisService,
-    TokenService
+    TokenService,
 } from './admin/services';
 import {PluginService} from "./services/plugin/plugin.service";
 import {PluginDiscoveryService} from "./services/plugin/discovery.service";
@@ -69,6 +72,11 @@ container.registerSingleton(RedisService)
     .registerSingleton(ProviderPluginRegistry)
     .registerSingleton(NotificationServiceToken, QueueNotificationService)
     .registerSingleton(NotificationStoreToken, PostgresNotificationStore)
+    .registerSingleton(HoloTokenDB)
+    .registerSingleton(HoloTokenService)
+    .registerSingleton(ProviderDB)
+    .registerSingleton(ApplicationService)
+    .registerSingleton(ProviderCacheService)
     .registerSingleton(ProviderService)
 
 const configService: ConfigService = container.resolve(ConfigService);

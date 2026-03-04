@@ -1,19 +1,50 @@
 import 'reflect-metadata';
 import {ClassLogger, pickDefined} from "@holokai/sdk";
-import type {ApplicationConfigProps} from "@holokai/types/config";
+import type {ApplicationConfigProps, PromptConfigProps} from "@holokai/types/config";
 import type {Auth} from "@holokai/types/api";
+import type {Application, Prompt} from "@holokai/types/entities";
 import {injectable} from "tsyringe";
-import {OrganizationService} from "./organization.service";
 import {TokenService} from "./token.service";
+import {ApplicationService} from "../../services/application.service";
 import {HoloApiRequest} from "../../api/types";
 import {UnauthorizedError} from "express-jwt";
+
+function promptToConfigProps(p: Prompt): PromptConfigProps {
+    const result: PromptConfigProps = {
+        id: p.id,
+        userPrompt: p.user_prompt,
+        providerName: p.provider,
+        modelName: p.model ?? '',
+    };
+    if (p.system_prompt) result.systemPrompt = p.system_prompt;
+    if (p.output_schema) result.outputSchema = p.output_schema;
+    return result;
+}
+
+function applicationToConfigProps(a: Application): ApplicationConfigProps {
+    const result: ApplicationConfigProps = {
+        urlSlug: a.url_slug,
+        organizationId: a.organization_id,
+        providerName: a.provider!.name,
+        providerType: a.provider!.type,
+        models: (a.models ?? []).map(m => ({
+            name: m.name,
+            accessModel: m.access_model ?? m.name,
+            providerName: a.provider!.name,
+        })),
+        guards: (a.guards ?? []).map(promptToConfigProps),
+        evaluators: [],
+    };
+    if (a.system_prompt) result.systemPrompt = promptToConfigProps(a.system_prompt);
+    return result;
+}
 
 @injectable()
 export class AuthService extends ClassLogger {
 
     constructor(
         private tokenService: TokenService,
-        private organizationService: OrganizationService
+        private applicationService: ApplicationService,
     ) {
         super();
     }
@@ -44,55 +75,46 @@ export class AuthService extends ClassLogger {
         const decodedToken = this.tokenService.decodeToken(token);
         const {organizationId, userId} = decodedToken;
 
-        let app: ApplicationConfigProps | undefined = undefined;
+        const allApplications = await this.applicationService.getBySlugs(organizationId, appSlugs);
 
-        // we were either routed via a specific app / agent URL
+        let application: Application | undefined;
         if (appSlug) {
             logger.debug(`Looking up application: orgId=${organizationId}, appSlug=${appSlug}`);
-            app = this.organizationService.getApplication(organizationId, appSlug);
-            if (!app) {
-                logger.error(`Application ${appSlug} not found in cache`, {
-                    organizationId,
-                    appSlug,
-                    provider,
-                    orgExists: !!this.organizationService.withOrganization(organizationId),
-                    allAppsForOrg: this.organizationService.withOrganization(organizationId)?.getAll('applications').map(a => a.urlSlug)
-                });
+            application = allApplications.find(a => a.url_slug === appSlug);
+            if (!application) {
+                logger.error(`Application ${appSlug} not found`, {organizationId, appSlug, provider});
                 return Promise.reject(`Application ${appSlug} no longer available.`);
             }
-            if (provider && app.providerType !== provider.toUpperCase()) {
-                return Promise.reject(`Application ${appSlug} supports ${app.providerType}, not support ${provider}`);
+            if (provider && application.provider!.type.toUpperCase() !== provider.toUpperCase()) {
+                return Promise.reject(`Application ${appSlug} supports ${application.provider!.type}, not ${provider}`);
             }
         }
 
-        const availableApps = new Array<ApplicationConfigProps>();
-        let availableApp;
-        if (appSlugs) {
-            for (const appSlug of appSlugs) {
-                availableApp = this.organizationService.getApplication(organizationId, appSlug);
-                if (!availableApp) {
-                    logger.warn(`Application ${appSlug} in user credentials but no longer available.`);
-                    continue;
-                }
-                if (provider && availableApp.providerType.toUpperCase() !== provider.toUpperCase()) continue;
-                availableApps.push(availableApp);
-            }
-
-            if (provider && !availableApps.length) {
+        let filteredApplications = allApplications;
+        if (provider) {
+            filteredApplications = allApplications.filter(
+                a => a.provider!.type.toUpperCase() === provider.toUpperCase()
+            );
+            if (!filteredApplications.length) {
                 return Promise.reject(`User is not authorized for this provider: ${provider}.`);
             }
         }
 
-        if (!app && !availableApps.length) {
+        if (!application && !filteredApplications.length) {
             return Promise.reject(`User is not authorized for any providers.`);
         }
+
+        const app = application ? applicationToConfigProps(application) : undefined;
+        const availableApps = filteredApplications.map(applicationToConfigProps);
 
         return pickDefined({
             organizationId,
             userId,
             providerName: app?.providerName,
             app,
-            availableApps
+            availableApps,
+            application,
+            applications: filteredApplications,
         }) as Auth;
     }
 }

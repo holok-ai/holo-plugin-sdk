@@ -10,3 +10,7 @@ export {ResponseService} from './response.service';
 export {WireService} from './wire.service';
 export {WorkerRequestFactory} from './worker.request.factory';
 export {WorkerResponseFactory} from './worker.response.factory';
+export {HoloTokenService} from './holo.token.service';
+export {ApplicationService} from './application.service';
+export {ProviderCacheService} from './provider.cache.service';
+export {BaseEntityCacheService} from './base.entity.cache.service';
