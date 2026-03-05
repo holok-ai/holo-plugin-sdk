@@ -23,12 +23,7 @@ export class TokenController extends BaseController {
 
     create = async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            const {auth} = req;
-            if (!auth) {
-                res.status(401).json({error: 'Unauthorized'});
-                return;
-            }
-
+            const auth = req.auth!;
             const {user_id, application_id, name, expires_at} = req.body;
 
             if (!user_id && !application_id) {
@@ -57,13 +52,18 @@ export class TokenController extends BaseController {
 
     list = async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            const {auth} = req;
-            if (!auth) {
-                res.status(401).json({error: 'Unauthorized'});
-                return;
+            const auth = req.auth!;
+            const {user_id, application_id} = req.query;
+
+            let tokens: HoloToken[];
+            if (user_id) {
+                tokens = await this.holoTokenDB.getByUser(user_id as string);
+            } else if (application_id) {
+                tokens = await this.holoTokenDB.getByApplication(application_id as string);
+            } else {
+                tokens = await this.holoTokenDB.getByOrganization(auth.organizationId);
             }
 
-            const tokens = await this.holoTokenDB.getByOrganization(auth.organizationId);
             res.status(200).json(tokens.map(maskToken));
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to list tokens');
@@ -72,12 +72,7 @@ export class TokenController extends BaseController {
 
     get = async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            const {auth} = req;
-            if (!auth) {
-                res.status(401).json({error: 'Unauthorized'});
-                return;
-            }
-
+            const auth = req.auth!;
             const token = await this.holoTokenDB.getById(req.params.id);
             if (!token || token.organization_id !== auth.organizationId) {
                 res.status(404).json({error: 'Token not found'});
@@ -92,12 +87,7 @@ export class TokenController extends BaseController {
 
     deactivate = async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
         try {
-            const {auth} = req;
-            if (!auth) {
-                res.status(401).json({error: 'Unauthorized'});
-                return;
-            }
-
+            const auth = req.auth!;
             const token = await this.holoTokenDB.getById(req.params.id);
             if (!token || token.organization_id !== auth.organizationId) {
                 res.status(404).json({error: 'Token not found'});
