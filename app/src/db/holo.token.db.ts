@@ -62,9 +62,10 @@ export class HoloTokenDB extends ClassLogger {
     async create(token: Pick<HoloToken, 'organization_id' | 'user_id' | 'application_id' | 'key_hash' | 'key_prefix' | 'key_suffix' | 'name' | 'expires_at'>): Promise<HoloToken> {
         const query = `
             INSERT INTO holo_tokens (organization_id, user_id, application_id, key_hash, key_prefix, key_suffix, name, expires_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
         `;
+
         const result = await this.db.queryOne<HoloToken>(query, [
             token.organization_id,
             token.user_id || null,

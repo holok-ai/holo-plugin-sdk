@@ -16,13 +16,13 @@ const AUTH_CACHE_TTL = 120;
 
 function buildAuth(
     tokenType: Auth['tokenType'],
-    orgId: string,
+    organizationId: string,
     applications: Application[],
     application?: Application,
     userId?: string,
 ): Auth {
     return pickDefined({
-        organizationId: orgId,
+        organizationId,
         userId,
         tokenType,
         application,

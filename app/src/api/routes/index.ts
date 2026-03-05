@@ -2,11 +2,10 @@ import express from "express";
 import {container} from 'tsyringe';
 import {createCustomApplicationRoutes} from "./app.routes";
 import {ProviderController} from "../controllers/provider.controller";
-import {ProviderPluginRegistry} from "../../services/plugin/provider.registry.service";
+import {AuthService, ProviderPluginRegistry} from "../../services";
 import {createNotificationRoutes} from "./notification.routes";
 import {createTokenRoutes} from "./token.routes";
-import {makeAuthMiddleware} from "../middleware/auth.middleware";
-import {AuthService} from "../../services/auth/auth.service";
+import {makeAuthMiddleware} from "../middleware";
 
 export function createRoutes(): express.Router {
     const router = express.Router();

@@ -6,12 +6,21 @@ import logger from '../../utils/logger';
 type AuthOptions = {
     useCache?: boolean;
     optional?: boolean;
+    allowJwt?: boolean;
+    allowHoloToken?: boolean;
     allowAnonymous?: boolean;
     providerFamily?: string;
 };
 
 export function makeAuthMiddleware(authService: AuthService, opts: AuthOptions = {}): RequestHandler {
-    const {useCache = true, optional = false, allowAnonymous = false, providerFamily} = opts;
+    const {
+        useCache = true,
+        optional = false,
+        allowJwt = true,
+        allowHoloToken = true,
+        allowAnonymous = false,
+        providerFamily,
+    } = opts;
 
     return async function authenticate(req: HoloApiRequest, res: Response, next: NextFunction): Promise<void> {
         const token = extractToken(req);
@@ -19,9 +28,9 @@ export function makeAuthMiddleware(authService: AuthService, opts: AuthOptions =
         const appSlug = extractAppSlug(req);
 
         try {
-            if (token?.startsWith('holo_')) {
+            if (token?.startsWith('holo_') && allowHoloToken) {
                 req.auth = await authService.authenticateHoloToken(token, appSlug, providerFamily);
-            } else if (token) {
+            } else if (token && !token.startsWith('holo_') && allowJwt) {
                 req.auth = await authService.authenticateJwt(token, appSlug, providerFamily, useCache);
             } else if (appSlug && allowAnonymous) {
                 req.auth = await authService.authenticateAnonymous(appSlug, providerFamily);

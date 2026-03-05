@@ -4,7 +4,7 @@ import {RequestType} from "@holokai/types/holo";
 import {AuthService, ProviderService, RequestService} from '../../services';
 import {HoloApiRequest} from '../types';
 import {injectable} from "tsyringe";
-import {makeAuthMiddleware} from "../middleware/auth.middleware";
+import {makeAuthMiddleware} from "../middleware";
 
 @injectable()
 export class ProviderController extends BaseController {
