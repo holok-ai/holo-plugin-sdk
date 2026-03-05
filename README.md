@@ -22,10 +22,11 @@ Holo runs as four independent server processes connected via RabbitMQ:
    │ API Server  │   │ Worker Server  │   │  Audit Server    │
    │ (Express)   │   │ (Plugins)      │   │  (Logging)       │
    │             │   │                │   │                  │
-   │ JWT Auth    │   │ Provider Match │   │  Request Audit   │
-   │ Guard Exec  │   │ Guard Enforce  │   │  Response Audit  │
-   │ SSE Stream  │   │ Wire Adapters  │   │  Notification Log│
-   │ Notif SSE   │   │ Auditors       │   └──────────────────┘
+   │ Auth (JWT/  │   │ Provider Match │   │  Request Audit   │
+   │  HoloToken) │   │ Guard Enforce  │   │  Response Audit  │
+   │ Guard Exec  │   │ Wire Adapters  │   │  Notification Log│
+   │ SSE Stream  │   │ Auditors       │   └──────────────────┘
+   │ Notif SSE   │   │                │
    └─────────────┘   └────────────────┘
                               │              ┌──────────────────┐
                      ┌────────┴────────┐     │ Evaluator Server │
@@ -40,7 +41,7 @@ Holo runs as four independent server processes connected via RabbitMQ:
                          └─────────┘
 ```
 
-**API Server** (`src/app.ts`) — HTTP entry point. Authenticates via JWT, executes guards, queues requests, streams responses back via SSE. Serves the notification SSE endpoint.
+**API Server** (`src/app.ts`) — HTTP entry point. Authenticates via JWT or HoloToken, executes guards, queues requests, streams responses back via SSE. Serves the notification SSE endpoint.
 
 **Worker Server** (`src/servers/worker.server.ts`) — Consumes requests from queue. Resolves provider plugin, enforces guard results, processes via provider SDK, converts events to wire format, publishes response chunks back.
 
@@ -51,7 +52,7 @@ Holo runs as four independent server processes connected via RabbitMQ:
 ### Request Flow
 
 1. Client sends HTTP request to `/:provider/:appSlug/*`
-2. API server authenticates JWT, resolves app config from cache
+2. API server authenticates (JWT, HoloToken, or anonymous), resolves app config from cache
 3. Guards execute (parallel side-LLM calls) — results attached to request
 4. Request published to RabbitMQ fanout exchange
 5. Worker consumes, checks guard results, calls provider via plugin
@@ -88,7 +89,29 @@ POST /claude/my-app/v1/messages
 GET  /openai/my-app/v1/models
 ```
 
-The app controller extracts provider and appSlug, validates access via JWT, and rewrites to `/api/{provider}/{path}`.
+The app controller extracts provider and appSlug, authenticates the request, and rewrites to `/api/{provider}/{path}`.
+
+## Authentication
+
+See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) for the full auth architecture.
+
+Three mutually exclusive auth methods, resolved by a single middleware (`makeAuthMiddleware`):
+
+| Method | Token | Use Case |
+|--------|-------|----------|
+| **JWT** | Standard Bearer token | Internal Holokai apps (desktop, web) |
+| **HoloToken** | `holo_` prefixed Bearer or `x-api-key` | External/API access (app tokens, user API keys) |
+| **Anonymous** | No token | Public endpoints where app has `access_level = 'anonymous'` |
+
+**Token detection:** `Authorization: Bearer <token>` primary, `x-api-key` fallback. HoloTokens are identified by the `holo_` prefix.
+
+**Client identity forwarding:** `X-Client-User` header — opaque string passed through to `Auth.clientIdentifier` for audit purposes. Allows 3rd-party apps to forward their own user context.
+
+**HoloToken types:**
+- **Application token** (`application_id`) — service-to-service, scoped to a single app
+- **User token** (`user_id`) — personal API key, access determined by user's application permissions
+
+**Caching:** HoloToken auth results are cached in Redis (`auth:{tokenHash}:{appSlug}`, 120s TTL). JWT auth is cached via the existing `TokenService`.
 
 ## Notifications
 
