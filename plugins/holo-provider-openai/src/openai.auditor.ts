@@ -4,6 +4,7 @@ import {BaseAuditor} from "@holokai/sdk/provider";
 import {HoloWorkerRequest} from "@holokai/types/worker";
 import {ProviderEnvelope, ProviderEvent} from "@holokai/types/provider";
 import {LlmRequest, LlmStatus} from "@holokai/types/entities";
+import {RequestType} from "@holokai/types/holo";
 import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
 import {ResponseCreateParamsBase, ResponseUsage} from "openai/resources/responses/responses";
 import {CompletionUsage} from "openai/resources/completions";
@@ -13,42 +14,69 @@ export class OpenAIAuditor extends BaseAuditor {
     readonly provider = 'openai';
 
     protected toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as ChatCompletionCreateParamsBase;
+        if (workerRequest.type === RequestType.RESPONSES) {
+            // Responses API: prompts are in payload.input[], not payload.messages[]
+            const payload = workerRequest.payload as ResponseCreateParamsBase;
 
-        // Set model
-        llmRequest.model_slug = payload.model;
+            if (payload.model) {
+                llmRequest.model_slug = payload.model as string;
+            }
 
-        // Extract user prompt from messages
-        const userPrompt = this.extractUserPromptFromMessages(payload.messages);
-        if (userPrompt !== undefined) {
-            llmRequest.user_prompt = userPrompt;
-        }
+            const userPrompt = this.extractUserPromptFromInput(payload.input);
+            if (userPrompt !== undefined) {
+                llmRequest.user_prompt = userPrompt;
+            }
 
-        // Extract system prompt from messages
-        const systemPrompt = this.extractSystemPromptFromMessages(payload.messages);
-        if (systemPrompt !== undefined) {
-            llmRequest.system_prompt = systemPrompt;
+            const systemPrompt = this.extractSystemPromptFromInput(payload.input);
+            if (systemPrompt !== undefined) {
+                llmRequest.system_prompt = systemPrompt;
+            }
+        } else {
+            // Chat Completions API: prompts are in payload.messages[]
+            const payload = workerRequest.payload as ChatCompletionCreateParamsBase;
+
+            llmRequest.model_slug = payload.model;
+
+            const userPrompt = this.extractUserPromptFromMessages(payload.messages);
+            if (userPrompt !== undefined) {
+                llmRequest.user_prompt = userPrompt;
+            }
+
+            const systemPrompt = this.extractSystemPromptFromMessages(payload.messages);
+            if (systemPrompt !== undefined) {
+                llmRequest.system_prompt = systemPrompt;
+            }
         }
     }
 
     protected mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        const payload = workerRequest.payload as ChatCompletionCreateParamsBase;
-        // Set options (OpenAI-specific parameters)
         const options: Record<string, any> = {};
-        if (payload.max_completion_tokens !== undefined) options.max_completion_tokens = payload.max_completion_tokens;
-        if (payload.max_tokens !== undefined) options.max_tokens = payload.max_tokens;
-        if (payload.temperature !== undefined) options.temperature = payload.temperature;
-        if (payload.top_p !== undefined) options.top_p = payload.top_p;
-        if (payload.frequency_penalty !== undefined) options.frequency_penalty = payload.frequency_penalty;
-        if (payload.presence_penalty !== undefined) options.presence_penalty = payload.presence_penalty;
-        if (payload.stop !== undefined) options.stop = payload.stop;
-        if (payload.stream !== undefined) options.stream = payload.stream;
-        if (payload.tools !== undefined) options.tools = payload.tools;
-        if (payload.tool_choice !== undefined) options.tool_choice = payload.tool_choice;
-        if (payload.response_format !== undefined) options.response_format = payload.response_format;
-        if (payload.seed !== undefined) options.seed = payload.seed;
-        if (payload.safety_identifier !== undefined) options.safety_identifier = payload.safety_identifier;
-        if (payload.user !== undefined) options.user = payload.user;
+
+        if (workerRequest.type === RequestType.RESPONSES) {
+            const payload = workerRequest.payload as ResponseCreateParamsBase;
+            if (payload.max_output_tokens !== undefined) options.max_output_tokens = payload.max_output_tokens;
+            if (payload.temperature !== undefined) options.temperature = payload.temperature;
+            if (payload.top_p !== undefined) options.top_p = payload.top_p;
+            if (payload.stream !== undefined) options.stream = payload.stream;
+            if (payload.tools !== undefined) options.tools = payload.tools;
+            if (payload.tool_choice !== undefined) options.tool_choice = payload.tool_choice;
+        } else {
+            const payload = workerRequest.payload as ChatCompletionCreateParamsBase;
+            if (payload.max_completion_tokens !== undefined) options.max_completion_tokens = payload.max_completion_tokens;
+            if (payload.max_tokens !== undefined) options.max_tokens = payload.max_tokens;
+            if (payload.temperature !== undefined) options.temperature = payload.temperature;
+            if (payload.top_p !== undefined) options.top_p = payload.top_p;
+            if (payload.frequency_penalty !== undefined) options.frequency_penalty = payload.frequency_penalty;
+            if (payload.presence_penalty !== undefined) options.presence_penalty = payload.presence_penalty;
+            if (payload.stop !== undefined) options.stop = payload.stop;
+            if (payload.stream !== undefined) options.stream = payload.stream;
+            if (payload.tools !== undefined) options.tools = payload.tools;
+            if (payload.tool_choice !== undefined) options.tool_choice = payload.tool_choice;
+            if (payload.response_format !== undefined) options.response_format = payload.response_format;
+            if (payload.seed !== undefined) options.seed = payload.seed;
+            if (payload.safety_identifier !== undefined) options.safety_identifier = payload.safety_identifier;
+            if (payload.user !== undefined) options.user = payload.user;
+        }
 
         if (Object.keys(options).length > 0) {
             llmRequest.options = options;
@@ -107,6 +135,57 @@ export class OpenAIAuditor extends BaseAuditor {
         return pickDefined({
             model_slug: payload.model
         }) as ProviderEnvelope
+    }
+
+    private extractUserPromptFromInput(input: ResponseCreateParamsBase['input']): string | undefined {
+        if (!input) return undefined;
+
+        // Simple string input — the whole thing is the user prompt
+        if (typeof input === 'string') {
+            return input;
+        }
+
+        if (!Array.isArray(input)) return undefined;
+
+        // Walk in reverse to find the last user-role entry
+        for (let i = input.length - 1; i >= 0; i--) {
+            const entry = input[i];
+            if (!entry || typeof entry !== 'object') continue;
+            if (!('role' in entry) || (entry as any).role !== 'user') continue;
+
+            const content = (entry as any).content;
+            if (typeof content === 'string') {
+                return content;
+            }
+
+            if (Array.isArray(content)) {
+                // Responses API uses type:'input_text'; also accept type:'text' for safety
+                const textParts = content
+                    .filter((c: any) => (c.type === 'input_text' || c.type === 'text') && typeof c.text === 'string')
+                    .map((c: any) => c.text as string);
+                if (textParts.length > 0) {
+                    return textParts.join('\n');
+                }
+            }
+        }
+
+        return undefined;
+    }
+
+    private extractSystemPromptFromInput(input: ResponseCreateParamsBase['input']): string | undefined {
+        if (!input || !Array.isArray(input)) return undefined;
+
+        for (const entry of input) {
+            if (!entry || typeof entry !== 'object') continue;
+            if (!('role' in entry) || (entry as any).role !== 'system') continue;
+
+            const content = (entry as any).content;
+            if (typeof content === 'string') {
+                return content;
+            }
+        }
+
+        return undefined;
     }
 
     private extractUserPromptFromMessages(messages?: any[]): string | undefined {
