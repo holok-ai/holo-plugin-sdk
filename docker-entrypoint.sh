@@ -13,21 +13,23 @@ trap cleanup SIGTERM SIGINT
 
 echo "Starting LLM Proxy services..."
 
-export NODE_OPTIONS="--import ./register-ts-node.mjs"
+cd app
+
+export NODE_OPTIONS="--import ./scripts/register-ts-node.mjs"
 
 # Start the API server in the background
 echo "Starting API server..."
-node app/src/app.ts &
+node src/app.ts &
 API_PID=$!
 
 # Start the worker server in the background
 echo "Starting worker server..."
-node app/src/servers/worker.server.ts &
+node src/servers/worker.server.ts &
 WORKER_PID=$!
 
 # Start the audit server in the background
 echo "Starting audit server..."
-node app/src/servers/audit.server.ts &
+node src/servers/audit.server.ts &
 AUDIT_PID=$!
 
 echo "All services started:"
