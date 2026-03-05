@@ -15,6 +15,10 @@ echo "Starting LLM Proxy services..."
 
 cd app
 
+# Symlink .env from parent dir (volume mounted at /app/.env)
+ln -sf /app/.env .env
+
+export TS_NODE_PROJECT=/app/app/tsconfig.json
 export NODE_OPTIONS="--import ./scripts/register-ts-node.mjs"
 
 # Start the API server in the background
