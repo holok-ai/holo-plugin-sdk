@@ -224,7 +224,7 @@ if (validated instanceof ArkErrors) {
 **Error Response Factory:**
 
 ```typescript
-import { createGuardErrorResponse } from './holo.response.factory';
+import {createGuardErrorResponse} from './holo.response.factory';
 
 // Create guard failure response (streaming mode)
 const errorChunks = createGuardErrorResponse(
@@ -232,24 +232,24 @@ const errorChunks = createGuardErrorResponse(
     {
         responseFormat: 'text',  // or 'json'
         guardDetails: [
-            { name: 'PII_Detector', errors: ['Detected SSN'] }
+            {name: 'PII_Detector', errors: ['Detected SSN']}
         ]
     }
 );
 
 // Text mode output (array of HoloStreamChunk):
 [
-  { delta: { type: 'message_start', delta: { role: 'assistant' } } },
-  { delta: { type: 'content_delta', delta: { content: 'We could not process your request because: ' } } },
-  { delta: { type: 'content_delta', delta: { content: 'Detected PII data.' } } },
-  { delta: { type: 'message_stop' } }
+    {delta: {type: 'message_start', delta: {role: 'assistant'}}},
+    {delta: {type: 'content_delta', delta: {content: 'We could not process your request because: '}}},
+    {delta: {type: 'content_delta', delta: {content: 'Detected PII data.'}}},
+    {delta: {type: 'message_stop'}}
 ]
 
 // JSON mode output:
 {
-  errors: [
-    { guard: 'PII_Detector', messages: ['Detected SSN'] }
-  ]
+    errors: [
+        {guard: 'PII_Detector', messages: ['Detected SSN']}
+    ]
 }
 ```
 
@@ -275,7 +275,7 @@ mode) or structured `errors` array (JSON mode).
 **HoloTranslator** routes to provider translators:
 
 ```typescript
-import { HoloTranslater } from './holo.translator';
+import {HoloTranslater} from './holo.translator';
 
 const translator = new HoloTranslater();
 
@@ -293,8 +293,8 @@ const result = await translator.translate(request, 'claude');
 const holoRequest: HoloRequest = {
     model: 'gpt-4',
     messages: [
-        { role: 'system', content: 'You are helpful' },
-        { role: 'user', content: 'Hello!' }
+        {role: 'system', content: 'You are helpful'},
+        {role: 'user', content: 'Hello!'}
     ],
     temperature: 0.7,
     max_tokens: 1024,

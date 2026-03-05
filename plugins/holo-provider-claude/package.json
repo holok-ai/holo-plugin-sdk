@@ -1,6 +1,6 @@
 {
   "name": "@holokai/holo-provider-claude",
-  "version": "0.1.4",
+  "version": "1.0.0",
   "type": "module",
   "description": "Claude provider plugin for Holo LLM Gateway",
   "author": "Holokai",
@@ -59,7 +59,7 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "peerDependencies": {
-    "@holokai/sdk": "^0.1.4"
+    "@holokai/sdk": "^1.0.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.72.1"

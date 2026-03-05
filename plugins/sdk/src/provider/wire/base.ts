@@ -1,29 +1,5 @@
 import {ClassLogger, pickDefined, stringifyError} from '../../core';
-import {ProviderEvent} from '../types';
-import type {RequestType} from '../../holo';
-
-export type WireChunk = {
-    requestId: string;
-    seq: number;                 // wire seq (0..n), owned by adapter
-    eventSeq?: number;           // correlation to ProviderEvent.seq
-    headers?: Record<string, string>; // typically first chunk only
-    status?: number;             // typically first chunk only
-    body: string;
-    done?: true;
-};
-
-export interface IWireAdapter {
-    requestId: string;
-    isStreaming: boolean;
-
-    fromProviderEvent(ev: ProviderEvent): WireChunk[];
-}
-
-export interface WireAdapterParams {
-    requestId: string;
-    isStreaming: boolean;
-    requestType: RequestType;
-}
+import type {IWireAdapter, ProviderEvent, WireChunk} from '@holokai/types/provider';
 
 export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapter {
     wireSeq = 0;

@@ -1,5 +1,5 @@
 import {pickDefined} from "../../core";
-import {HoloResponse, HoloStreamChunk} from "../responses";
+import {HoloResponse, HoloStreamChunk} from "@holokai/types/holo";
 
 export class HoloResponseFactory {
 

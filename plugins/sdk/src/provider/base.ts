@@ -1,12 +1,8 @@
-import {IProvider, IResponseFactory, ModelInfo, ProviderContext, ProviderEvent} from "./types";
-import {HoloWorkerRequest, WorkerRequestEnvelope} from "../core/worker";
+import type {IAuditor, IProvider, IProviderTranslator, IResponseFactory, ProviderRunner} from "@holokai/types/provider";
+import {ModelInfo, ProviderContext, ProviderEvent} from "@holokai/types/provider";
+import {HoloWorkerRequest, WorkerRequestEnvelope} from "@holokai/types/worker";
+import {LlmRequest, LlmResponse} from "@holokai/types/entities";
 import {AsyncEventQueue, ClassLogger, filterForwardableHeaders, pickDefined, pickHeadersByPrefix} from "../core";
-import {IAuditor} from "./auditor";
-import {IProviderTranslator} from "./translator";
-import {LlmRequest, LlmResponse} from "../core/entities";
-
-
-export type ProviderRunner<Final = any> = { final: () => Promise<Final>; cancel?: () => void };
 
 export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, Final = any> extends ClassLogger implements IProvider {
     public readonly auditor: IAuditor;
@@ -116,6 +112,8 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         return q;
     }
 
+    public abstract getModelNameFromRequest(payload: any): Promise<string | undefined>
+
     protected abstract createClient(): ProviderClient;
 
     protected abstract createAuditor(): IAuditor;
@@ -125,8 +123,6 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
     protected abstract createResponseFactory(): IResponseFactory
 
     protected abstract handleError(error: any): Promise<any>;
-
-    public abstract getModelNameFromRequest(payload: any): Promise<string | undefined>
 
     protected abstract handleRequest(
         payload: RequestPayload,

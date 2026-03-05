@@ -1,6 +1,6 @@
 {
   "name": "@holokai/holo-provider-openai",
-  "version": "0.1.4",
+  "version": "1.0.0",
   "type": "module",
   "description": "OpenAI provider plugin for Holo LLM Gateway",
   "author": "Holokai",
@@ -58,7 +58,7 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "peerDependencies": {
-    "@holokai/sdk": "^0.1.4"
+    "@holokai/sdk": "^1.0.0"
   },
   "dependencies": {
     "openai": "^6.17.0"

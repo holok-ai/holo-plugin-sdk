@@ -1,19 +1,20 @@
 import 'reflect-metadata';
-import {ClaudeUsage} from "../types";
 import {injectable} from 'tsyringe';
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloUsage, pickDefined} from "@holokai/sdk";
+import {pickDefined} from "@holokai/sdk";
+import type {HoloUsage} from "@holokai/types/holo";
+import {Usage} from "@anthropic-ai/sdk/resources/messages/messages";
 
 @injectable()
-export class ClaudeUsageTranslator extends BaseTranslator<HoloUsage, ClaudeUsage> {
+export class ClaudeUsageTranslator extends BaseTranslator<HoloUsage, Usage> {
     protected holoDefaults: Partial<HoloUsage> = {};
-    protected providerDefaults: Partial<ClaudeUsage> = {};
+    protected providerDefaults: Partial<Usage> = {};
 
     constructor() {
         super();
     }
 
-    protected async fromHoloImpl(source: HoloUsage): Promise<Partial<ClaudeUsage>> {
+    protected async fromHoloImpl(source: HoloUsage): Promise<Partial<Usage>> {
         return pickDefined({
             input_tokens: source.input_tokens,
             output_tokens: source.output_tokens,
@@ -27,7 +28,7 @@ export class ClaudeUsageTranslator extends BaseTranslator<HoloUsage, ClaudeUsage
         });
     }
 
-    protected async toHoloImpl(source: ClaudeUsage): Promise<Partial<HoloUsage>> {
+    protected async toHoloImpl(source: Usage): Promise<Partial<HoloUsage>> {
         return pickDefined({
             input_tokens: source.input_tokens,
             output_tokens: source.output_tokens,

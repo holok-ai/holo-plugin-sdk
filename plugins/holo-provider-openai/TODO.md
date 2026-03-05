@@ -1,6 +1,8 @@
 # OpenAI Provider Plugin - Todo List
 
-> **Context**: This plugin was extracted from the monolithic `src/providers/openai/` architecture as part of the migration to plugin-based providers. This TODO tracks remaining work to complete the migration and achieve full Holo format compliance.
+> **Context**: This plugin was extracted from the monolithic `src/providers/openai/` architecture as part of the
+> migration to plugin-based providers. This TODO tracks remaining work to complete the migration and achieve full Holo
+> format compliance.
 
 ---
 
@@ -33,23 +35,29 @@
 ### #CRITICAL-1: Convert Timestamp from Seconds to Milliseconds
 
 **Files**:
+
 - `src/translators/openai.chatcompletion.response.translator.ts`
 - `src/translators/streaming/openai.message.start.translator.ts`
 - `src/translators/streaming/openai.message.delta.translator.ts`
 
-**Issue**: OpenAI returns `created` as Unix timestamp in seconds. Per [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#openai--holo-responses), must convert to milliseconds.
+**Issue**: OpenAI returns `created` as Unix timestamp in seconds.
+Per [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#openai--holo-responses), must convert to
+milliseconds.
 
 **Current Code**:
+
 ```typescript
 created: source.created  // ❌ Seconds, not milliseconds
 ```
 
 **Required Fix**:
+
 ```typescript
 created: source.created ? source.created * 1000 : undefined  // ✅ Milliseconds
 ```
 
-**Reference**: [SDK Provider Mappings - Timestamp Normalization](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#timestamp-normalization)
+**Reference
+**: [SDK Provider Mappings - Timestamp Normalization](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#timestamp-normalization)
 
 **Impact**: Timestamp type mismatch; consumers expect milliseconds per Holo spec
 
@@ -60,23 +68,26 @@ created: source.created ? source.created * 1000 : undefined  // ✅ Milliseconds
 ### #TOOL-1: Parse Tool Call Arguments from JSON String
 
 **Files**:
+
 - `src/translators/openai.chatcompletion.response.translator.ts`
 - `src/translators/streaming/openai.message.delta.translator.ts`
 
 **Issue**: OpenAI returns `tool_calls[].function.arguments` as JSON string. Holo expects parsed object.
 
 **Current Behavior**:
+
 ```typescript
 // OpenAI returns
 tool_calls: [{
-  function: {
-    name: 'get_weather',
-    arguments: '{"location":"SF"}'  // ❌ String
-  }
+    function: {
+        name: 'get_weather',
+        arguments: '{"location":"SF"}'  // ❌ String
+    }
 }]
 ```
 
 **Required Action**:
+
 ```typescript
 private parseToolCallArguments(toolCalls: OpenAIToolCall[]): HoloToolCall[] {
   return toolCalls.map(tc => ({
@@ -92,11 +103,13 @@ private parseToolCallArguments(toolCalls: OpenAIToolCall[]): HoloToolCall[] {
 ```
 
 **Edge Cases**:
+
 - Empty string `""` → Parse as `null` or `{}`?
 - Invalid JSON → Log warning and return raw string?
 - Already parsed object → Pass through
 
-**Reference**: [SDK Provider Mappings - Tool Call Mapping](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#tool-call-mappings)
+**Reference
+**: [SDK Provider Mappings - Tool Call Mapping](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#tool-call-mappings)
 
 **Impact**: Tool call arguments unusable in Holo format; consumers expect object
 
@@ -109,14 +122,18 @@ private parseToolCallArguments(toolCalls: OpenAIToolCall[]): HoloToolCall[] {
 **File**: `src/translators/streaming/openai.stream.translator.ts`
 **Lines**: TBD (in orchestrator)
 
-**Issue**: OpenAI doesn't emit explicit `message_start` event. Per [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#streaming-mappings), orchestrator must synthesize on first chunk.
+**Issue**: OpenAI doesn't emit explicit `message_start` event.
+Per [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#streaming-mappings), orchestrator must
+synthesize on first chunk.
 
 **Current Behavior**:
+
 - First chunk has `delta.role` field
 - No explicit message_start emitted
 - Consumers expect message_start before content
 
 **Required Action**:
+
 ```typescript
 export class OpenAIStreamTranslator extends BaseStreamTranslator {
     private hasEmittedStart = false;
@@ -133,7 +150,7 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator {
                 delta: {
                     provider: 'openai',
                     type: 'message_start',
-                    delta: { role: source.choices[0].delta.role },
+                    delta: {role: source.choices[0].delta.role},
                     provider_delta: source
                 }
             });
@@ -146,7 +163,8 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator {
 }
 ```
 
-**Architecture Note**: Requires stateful orchestrator (track `hasEmittedStart`). May conflict with "stateless translator" principle.
+**Architecture Note**: Requires stateful orchestrator (track `hasEmittedStart`). May conflict with "stateless
+translator" principle.
 
 **Reference**: [SDK Streaming Docs](../../packages/sdk/docs/README.md#streaming)
 
@@ -167,6 +185,7 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator {
 **Priority**: P1
 
 **Current State**:
+
 - Plugin imports from `@holokai/sdk` for public APIs
 - Validators use ArkType with 200/228 validators (88% coverage)
 - Need to audit remaining `Record<string, unknown>` instances
@@ -181,13 +200,14 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator {
    ```
 
 2. **Replace with SDK types**:
-   - Tool parameters: Use `HoloJsonSchema` instead of `Record<string, unknown>`
-   - Tool arguments: Use `HoloFunctionArguments` instead of flexible types
-   - All Holo types: Import from `@holokai/sdk`
+    - Tool parameters: Use `HoloJsonSchema` instead of `Record<string, unknown>`
+    - Tool arguments: Use `HoloFunctionArguments` instead of flexible types
+    - All Holo types: Import from `@holokai/sdk`
 
 3. **Complete remaining validators**: 28 types still need validators (12% gap)
 
-**Reference**: [SDK Capability Analysis - Type Safety](../../packages/sdk/docs/CAPABILITY_ANALYSIS.md#type-safety-analysis)
+**Reference
+**: [SDK Capability Analysis - Type Safety](../../packages/sdk/docs/CAPABILITY_ANALYSIS.md#type-safety-analysis)
 
 **Impact**: Critical for type safety compliance with Holo spec
 
@@ -200,6 +220,7 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator {
 **Priority**: P1
 
 **Current State**:
+
 - Basic unit tests exist
 - No comprehensive SDK validation tests
 - No round-trip translation tests
@@ -280,8 +301,8 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator {
    ```
 
 5. **Add validation tests per SDK docs**:
-   - See [SDK README Testing Section](../../packages/sdk/docs/README.md#testing)
-   - Verify all mappings from [Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md)
+    - See [SDK README Testing Section](../../packages/sdk/docs/README.md#testing)
+    - Verify all mappings from [Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md)
 
 **Impact**: Confidence in migration completeness and SDK compliance
 
@@ -290,6 +311,7 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator {
 ### #RESP-1: Implement Responses API Response Translator
 
 **Files**:
+
 - `src/translators/openai.responses.response.translator.ts` (create)
 - `src/translators/streaming/openai.responses.stream.translator.ts` (create)
 
@@ -298,6 +320,7 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator {
 **Priority**: P1
 
 **Current State**:
+
 - Responses API request translator exists
 - Response translator not implemented
 - Streaming translator not implemented
@@ -323,11 +346,11 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator {
    ```
 
 2. **Create streaming translator**: Handle 54 event types from Responses API
-   - Map lifecycle events (created, queued, in_progress, completed, etc.)
-   - Map text events (delta, done)
-   - Map tool call events (function, web_search, file_search, etc.)
-   - Map reasoning events (o1, o3, o4-mini models)
-   - Map audio events (delta, done, transcript)
+    - Map lifecycle events (created, queued, in_progress, completed, etc.)
+    - Map text events (delta, done)
+    - Map tool call events (function, web_search, file_search, etc.)
+    - Map reasoning events (o1, o3, o4-mini models)
+    - Map audio events (delta, done, transcript)
 
 3. **Add to orchestrator**: Route Responses API events through translator
 
@@ -346,25 +369,27 @@ export class OpenAIStreamTranslator extends BaseStreamTranslator {
 **Priority**: P1
 
 **Required Actions**:
+
 - Add runtime validation of plugin config against manifest.configSchema
 - Throw descriptive errors for invalid configurations
 - Add tests for config validation
 
 **Example**:
+
 ```typescript
 import Ajv from 'ajv';
-import { manifest } from './manifest';
+import {manifest} from './manifest';
 
 const ajv = new Ajv();
 const validateConfig = ajv.compile(manifest.configSchema);
 
 export class OpenAIProviderPlugin {
-  constructor(config: unknown) {
-    if (!validateConfig(config)) {
-      throw new ConfigurationError(validateConfig.errors);
+    constructor(config: unknown) {
+        if (!validateConfig(config)) {
+            throw new ConfigurationError(validateConfig.errors);
+        }
+        // ...
     }
-    // ...
-  }
 }
 ```
 
@@ -383,6 +408,7 @@ export class OpenAIProviderPlugin {
 **Issue**: Timestamp conversion (`created * 1000`) is performed on every response.
 
 **Optimization**:
+
 ```typescript
 private timestampCache = new Map<number, number>();
 
@@ -401,6 +427,7 @@ private convertTimestamp(seconds: number): number {
 ### #REFACTOR-1: Centralize Response Format Mapping
 
 **Files**:
+
 - `src/translators/openai.chatcompletion.request.translator.ts`
 - `src/translators/openai.responses.request.translator.ts`
 
@@ -411,6 +438,7 @@ private convertTimestamp(seconds: number): number {
 **Issue**: Response format mapping (`json_object`, `json_schema`) duplicated across translators.
 
 **Required Action**:
+
 - Create shared utility for response format mapping
 - Centralize schema validation logic
 - Reduce code duplication
@@ -426,6 +454,7 @@ private convertTimestamp(seconds: number): number {
 **Priority**: P2
 
 **Required Actions**:
+
 1. Add `tests/integration/` directory
 2. Implement real API tests:
    ```typescript
@@ -460,6 +489,7 @@ private convertTimestamp(seconds: number): number {
 **Priority**: P3
 
 **Required Actions**:
+
 - Document that `n > 1` is OpenAI-specific
 - Clarify that multi-choice is not portable across providers
 - Show examples of handling choice indices in streaming
@@ -476,6 +506,7 @@ private convertTimestamp(seconds: number): number {
 **Issue**: Dual API support (Chat Completions + Responses) creates complexity.
 
 **Required Actions**:
+
 - Document architectural decision to support both APIs
 - Clarify routing logic and type guards
 - Document when to use each API
@@ -492,6 +523,7 @@ private convertTimestamp(seconds: number): number {
 **Priority**: P3
 
 **Required Actions**:
+
 - Document logprobs usage via `provider_config`
 - Document logit_bias usage
 - Document parallel_tool_calls usage
@@ -538,6 +570,7 @@ All streaming translators include `provider_delta: source` for round-trip fideli
 ### Migration Philosophy
 
 This plugin maintains the core translation logic from the monolithic architecture while:
+
 1. ✅ Using SDK types exclusively for public contracts
 2. ✅ Implementing plugin discovery and lifecycle
 3. ✅ Providing independent versioning
@@ -563,6 +596,7 @@ This plugin maintains the core translation logic from the monolithic architectur
 - **Gap**: 28 validators remaining
 
 **Missing Validators**:
+
 - Chat Completions: 10/60 missing
 - Responses API: 18/168 missing
 
@@ -571,11 +605,13 @@ See `src/validators/` for implementation status.
 ### Reference Documentation
 
 **Primary**:
+
 - [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md) - Authoritative mapping reference
 - [SDK Capability Analysis](../../packages/sdk/docs/CAPABILITY_ANALYSIS.md) - Type safety requirements
 - [SDK Holo Format](../../packages/sdk/docs/HOLO_FORMAT.md) - Format specification
 
 **Legacy** (Archived):
+
 - `src/providers/docs/archive/` - Original monolithic provider docs
 - Use SDK docs as source of truth; legacy docs for historical context only
 
@@ -584,6 +620,7 @@ See `src/validators/` for implementation status.
 ## Contributing
 
 When picking up a task:
+
 1. Check SDK documentation first for latest guidance
 2. Write tests before implementation
 3. Update README.md if adding features

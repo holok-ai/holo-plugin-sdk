@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {HoloStreamChunk, pickDefined} from '@holokai/sdk';
+import {pickDefined} from '@holokai/sdk';
+import {HoloStreamChunk} from '@holokai/types/holo';
 import {v4 as uuidv4} from 'uuid';
 import {StreamTranslator} from "@holokai/sdk/provider";
 import {ChatCompletionChunk} from "openai/resources/chat/completions/completions";

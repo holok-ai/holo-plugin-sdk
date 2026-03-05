@@ -1,0 +1,24 @@
+{
+  "$schema": "https://github.com/changesets/changesets/blob/main/packages/config/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "holo",
+      "@holokai/types",
+      "@holokai/sdk",
+      "@holokai/holo-provider-claude",
+      "@holokai/holo-provider-openai",
+      "@holokai/holo-provider-ollama"
+    ]
+  ],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "privatePackages": {
+    "version": true,
+    "tag": false
+  },
+  "ignore": []
+}

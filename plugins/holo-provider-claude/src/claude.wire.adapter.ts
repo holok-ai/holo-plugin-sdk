@@ -1,4 +1,4 @@
-import {BaseWireAdapter} from "@holokai/sdk";
+import {BaseWireAdapter} from "@holokai/sdk/provider";
 
 export class ClaudeWireAdapter extends BaseWireAdapter {
     formatWire(data: any): string {

@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import {HoloWorkerResponse} from "@holokai/sdk";
+import {HoloWorkerResponse} from "@holokai/types/worker";
 import type {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
 
 export class OpenAIChatCompletionsService {

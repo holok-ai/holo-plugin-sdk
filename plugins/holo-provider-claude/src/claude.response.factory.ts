@@ -1,17 +1,19 @@
-import {
-    ClaudeRawContentBlockDeltaEvent,
-    ClaudeRawContentBlockStartEvent,
-    ClaudeRawContentBlockStopEvent,
-    ClaudeRawMessageDeltaEvent,
-    ClaudeRawMessageStartEvent,
-    ClaudeRawMessageStopEvent,
-    ClaudeResponseMessage,
-    ClaudeTextBlock,
-    ClaudeTextDelta,
-    ClaudeUsage
-} from './types';
-import {HoloErrorCode, IResponseFactory, pickDefined} from '@holokai/sdk';
+import {pickDefined} from '@holokai/sdk';
+import type {IResponseFactory} from '@holokai/types/provider';
+import type {HoloErrorCode} from '@holokai/types/holo';
 import {ErrorResponse} from '@anthropic-ai/sdk/resources/shared';
+import {
+    Message,
+    RawContentBlockDeltaEvent,
+    RawContentBlockStartEvent,
+    RawContentBlockStopEvent,
+    RawMessageDeltaEvent,
+    RawMessageStartEvent,
+    RawMessageStopEvent,
+    TextBlock,
+    TextDelta,
+    Usage
+} from "@anthropic-ai/sdk/resources/messages/messages";
 
 export type ClaudeResponseTypes =
     'timeout_error'
@@ -26,27 +28,9 @@ export type ClaudeResponseTypes =
 
 export class ClaudeResponseFactory implements IResponseFactory {
 
-    mapHoloCode(code: HoloErrorCode): ClaudeResponseTypes {
-        switch (code) {
-            case 'guard_failure':
-                return 'invalid_request_error';
-        }
-    }
-
-    createError(message: string, code: HoloErrorCode): ErrorResponse {
-        return {
-            request_id: null,
-            type: 'error',
-            error: {
-                type: this.mapHoloCode(code),
-                message
-            }
-        };
-    }
-
     static streamResponseMessage(text: string | string[] = '') {
         const messages = [];
-        const responseMessage = this.createResponseMessage(text) as ClaudeResponseMessage;
+        const responseMessage = this.createResponseMessage(text) as Message;
 
         // Start with message_start event
         messages.push(this.createRawMessageStartEvent(responseMessage));
@@ -73,29 +57,29 @@ export class ClaudeResponseFactory implements IResponseFactory {
         return messages;
     }
 
-    static createResponseMessage(text: string | string[] = ''): Partial<ClaudeResponseMessage> {
+    static createResponseMessage(text: string | string[] = ''): Partial<Message> {
         return pickDefined({
             id: 'msg_placeholder_id',
             container: null,
-            content: this.createTextMessages(text) as ClaudeTextBlock[],
+            content: this.createTextMessages(text) as TextBlock[],
             context_management: null,
             model: '',
             role: 'assistant',
             stop_reason: null,
             stop_sequence: null,
             type: 'message',
-            usage: this.createUsage() as ClaudeUsage
+            usage: this.createUsage() as Usage
         });
     }
 
-    static createTextMessages(text: string | string[]): Partial<ClaudeTextBlock>[] {
+    static createTextMessages(text: string | string[]): Partial<TextBlock>[] {
         if (Array.isArray(text)) {
             return text.map(t => this.createTextMessage(t));
         }
         return [this.createTextMessage(text)];
     }
 
-    static createTextMessage(text: string): Partial<ClaudeTextBlock> {
+    static createTextMessage(text: string): Partial<TextBlock> {
         return pickDefined({
             citations: [],
             type: 'text',
@@ -103,7 +87,7 @@ export class ClaudeResponseFactory implements IResponseFactory {
         });
     }
 
-    static createUsage(): Partial<ClaudeUsage> {
+    static createUsage(): Partial<Usage> {
         return pickDefined({
             cache_creation: null,
             cache_creation_input_tokens: null,
@@ -115,44 +99,44 @@ export class ClaudeResponseFactory implements IResponseFactory {
         })
     }
 
-    static createRawContentBlockStartEvent(text: string = '', index: number = 0): Partial<ClaudeRawContentBlockStartEvent> {
+    static createRawContentBlockStartEvent(text: string = '', index: number = 0): Partial<RawContentBlockStartEvent> {
         return pickDefined({
-            content_block: this.createTextMessage(text) as ClaudeTextBlock,
+            content_block: this.createTextMessage(text) as TextBlock,
             index,
             type: 'content_block_start'
         });
     }
 
-    static createRawContentBlockDeltaEvent(text: string = '', index: number = 0): Partial<ClaudeRawContentBlockDeltaEvent> {
+    static createRawContentBlockDeltaEvent(text: string = '', index: number = 0): Partial<RawContentBlockDeltaEvent> {
         return pickDefined({
-            delta: this.createTextDelta(text) as ClaudeTextDelta,
+            delta: this.createTextDelta(text) as TextDelta,
             index,
             type: 'content_block_delta'
         });
     }
 
-    static createRawContentBlockStopEvent(index: number = 0): Partial<ClaudeRawContentBlockStopEvent> {
+    static createRawContentBlockStopEvent(index: number = 0): Partial<RawContentBlockStopEvent> {
         return pickDefined({
             index,
             type: 'content_block_stop'
         });
     }
 
-    static createTextDelta(text: string): Partial<ClaudeTextDelta> {
+    static createTextDelta(text: string): Partial<TextDelta> {
         return pickDefined({
             text,
             type: 'text_delta'
         });
     }
 
-    static createRawMessageStartEvent(message: ClaudeResponseMessage): Partial<ClaudeRawMessageStartEvent> {
+    static createRawMessageStartEvent(message: Message): Partial<RawMessageStartEvent> {
         return pickDefined({
             message,
             type: 'message_start'
         });
     }
 
-    static createRawMessageDeltaEvent(): Partial<ClaudeRawMessageDeltaEvent> {
+    static createRawMessageDeltaEvent(): Partial<RawMessageDeltaEvent> {
         return pickDefined({
             delta: {
                 container: null,
@@ -170,7 +154,7 @@ export class ClaudeResponseFactory implements IResponseFactory {
         });
     }
 
-    static createRawMessageStopEvent(): Partial<ClaudeRawMessageStopEvent> {
+    static createRawMessageStopEvent(): Partial<RawMessageStopEvent> {
         return pickDefined({
             type: 'message_stop'
         });
@@ -178,5 +162,23 @@ export class ClaudeResponseFactory implements IResponseFactory {
 
     static instance(): ClaudeResponseFactory {
         return new ClaudeResponseFactory();
+    }
+
+    mapHoloCode(code: HoloErrorCode): ClaudeResponseTypes {
+        switch (code) {
+            case 'guard_failure':
+                return 'invalid_request_error';
+        }
+    }
+
+    createError(message: string, code: HoloErrorCode): ErrorResponse {
+        return {
+            request_id: null,
+            type: 'error',
+            error: {
+                type: this.mapHoloCode(code),
+                message
+            }
+        };
     }
 }

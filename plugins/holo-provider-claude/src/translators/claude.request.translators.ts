@@ -1,28 +1,21 @@
 import 'reflect-metadata';
 import {ClaudeMessageTranslator} from "./claude.message.translators";
 import {ClaudeToolChoiceTranslator, ClaudeToolTranslator} from "./claude.tool.translators";
-import {ClaudeChatRequest, ClaudeRequestMessage, ClaudeTool, ClaudeToolChoice} from "../types";
 import {injectable} from 'tsyringe';
-import {
-    HoloMessage,
-    HoloRequest,
-    HoloRequestDefaults,
-    HoloResponseFormat,
-    HoloTool,
-    HoloToolChoice,
-    pickDefined
-} from "@holokai/sdk";
+import {HoloRequestDefaults, pickDefined} from "@holokai/sdk";
+import type {HoloMessage, HoloRequest, HoloResponseFormat, HoloTool, HoloToolChoice} from "@holokai/types/holo";
 import {BaseTranslator} from "@holokai/sdk/provider";
+import {MessageParam, MessageStreamParams, Tool, ToolChoice} from "@anthropic-ai/sdk/resources/messages/messages";
 
 // Claude request defaults
-const ClaudeChatRequestDefaults: Partial<ClaudeChatRequest> = {
+const MessageStreamParamsDefaults: Partial<MessageStreamParams> = {
     max_tokens: 4096
 };
 
 @injectable()
-export class ClaudeRequestTranslator extends BaseTranslator<HoloRequest, ClaudeChatRequest> {
+export class ClaudeRequestTranslator extends BaseTranslator<HoloRequest, MessageStreamParams> {
     protected holoDefaults: Partial<HoloRequest> = HoloRequestDefaults;
-    protected providerDefaults: Partial<ClaudeChatRequest> = ClaudeChatRequestDefaults;
+    protected providerDefaults: Partial<MessageStreamParams> = MessageStreamParamsDefaults;
 
     constructor(
         private readonly messageTranslator: ClaudeMessageTranslator,
@@ -32,11 +25,11 @@ export class ClaudeRequestTranslator extends BaseTranslator<HoloRequest, ClaudeC
         super();
     }
 
-    protected async fromHoloImpl(source: HoloRequest): Promise<Partial<ClaudeChatRequest>> {
+    protected async fromHoloImpl(source: HoloRequest): Promise<Partial<MessageStreamParams>> {
         const [messages, tools, tool_choice] = await Promise.all([
-            source.messages ? this.messageTranslator.fromHoloArray(source.messages) : Promise.resolve<ClaudeRequestMessage[] | undefined>(undefined),
-            source.tools ? this.toolTranslator.fromHoloArray(source.tools) : Promise.resolve<ClaudeTool[] | undefined>(undefined),
-            source.tool_choice ? this.toolChoiceTranslator.fromHolo(source.tool_choice) : Promise.resolve<ClaudeToolChoice | undefined>(undefined),
+            source.messages ? this.messageTranslator.fromHoloArray(source.messages) : Promise.resolve<MessageParam[] | undefined>(undefined),
+            source.tools ? this.toolTranslator.fromHoloArray(source.tools) : Promise.resolve<Tool[] | undefined>(undefined),
+            source.tool_choice ? this.toolChoiceTranslator.fromHolo(source.tool_choice) : Promise.resolve<ToolChoice | undefined>(undefined),
         ]);
 
         const system = this.buildSystemFromResponseFormat(source.system, source.response_format);
@@ -57,10 +50,10 @@ export class ClaudeRequestTranslator extends BaseTranslator<HoloRequest, ClaudeC
             messages: messages && messages.length ? messages : undefined,
             tools: tools && tools.length ? tools : undefined,
             tool_choice: tool_choice,
-        }) as Partial<ClaudeChatRequest>;
+        }) as Partial<MessageStreamParams>;
     }
 
-    protected async toHoloImpl(source: ClaudeChatRequest): Promise<Partial<HoloRequest>> {
+    protected async toHoloImpl(source: MessageStreamParams): Promise<Partial<HoloRequest>> {
         const [messages, tools, tool_choice] = await Promise.all([
             source.messages ? this.messageTranslator.toHoloArray(source.messages) : Promise.resolve<HoloMessage[] | undefined>(undefined),
             source.tools ? this.toolTranslator.toHoloArray(source.tools) : Promise.resolve<HoloTool[] | undefined>(undefined),

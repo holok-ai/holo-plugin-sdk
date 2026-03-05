@@ -1,4 +1,6 @@
-import {BaseWireAdapter, ProviderEvent, WireChunk} from "@holokai/sdk";
+import {BaseWireAdapter} from "@holokai/sdk/provider";
+import type {WireChunk} from "@holokai/types/provider";
+import {ProviderEvent} from "@holokai/types/provider";
 import {ResponseStreamEvent} from "openai/resources/responses/responses";
 
 export class OpenAICompletionsWireAdapter extends BaseWireAdapter {

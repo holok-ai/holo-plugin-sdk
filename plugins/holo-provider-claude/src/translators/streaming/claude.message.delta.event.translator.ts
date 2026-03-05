@@ -1,21 +1,22 @@
 import 'reflect-metadata';
 
 import {injectable} from 'tsyringe';
-import {ClaudeRawMessageDeltaEvent} from '../../types';
-import {HoloStreamChunk, pickDefined} from '@holokai/sdk';
+import {pickDefined} from '@holokai/sdk';
+import type {HoloStreamChunk} from '@holokai/types/holo';
 import {mapClaudeFinishReason, mapHoloFinishReasonToClaude} from '../../utils/finish.reason.mapper.js';
 import {StreamTranslator} from "@holokai/sdk/provider";
+import {RawMessageDeltaEvent} from "@anthropic-ai/sdk/resources/messages/messages";
 
 @injectable()
-export class ClaudeMessageDeltaEventTranslator extends StreamTranslator<HoloStreamChunk, ClaudeRawMessageDeltaEvent> {
+export class ClaudeMessageDeltaEventTranslator extends StreamTranslator<HoloStreamChunk, RawMessageDeltaEvent> {
     protected holoDefaults: Partial<HoloStreamChunk> = {};
-    protected providerDefaults: Partial<ClaudeRawMessageDeltaEvent> = {};
+    protected providerDefaults: Partial<RawMessageDeltaEvent> = {};
 
     constructor() {
         super();
     }
 
-    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<ClaudeRawMessageDeltaEvent>[]> {
+    protected async fromHoloManyImpl(source: HoloStreamChunk): Promise<Partial<RawMessageDeltaEvent>[]> {
         const d = source.delta;
         if (!d || d.type !== 'message_delta') return [];
 
@@ -32,10 +33,9 @@ export class ClaudeMessageDeltaEventTranslator extends StreamTranslator<HoloStre
         // Emit only if we actually have something to say
         if (!stop_reason && !usage) return [];
 
-        const event: Partial<ClaudeRawMessageDeltaEvent> = {
+        const event: Partial<RawMessageDeltaEvent> = {
             type: 'message_delta' as const,
             delta: {
-                container: null,  // Required by validator, always null for message_delta
                 stop_reason: stop_reason ?? null,
                 stop_sequence: null
             },
@@ -45,7 +45,7 @@ export class ClaudeMessageDeltaEventTranslator extends StreamTranslator<HoloStre
         return [event];
     }
 
-    protected async toHoloManyImpl(source: ClaudeRawMessageDeltaEvent): Promise<Partial<HoloStreamChunk>[]> {
+    protected async toHoloManyImpl(source: RawMessageDeltaEvent): Promise<Partial<HoloStreamChunk>[]> {
         // Build usage only if we have valid values - keep it minimal
         const usage = source.usage
             ? pickDefined({

@@ -1,6 +1,6 @@
 {
   "name": "@holokai/sdk",
-  "version": "0.1.4",
+  "version": "1.0.0",
   "type": "module",
   "description": "Common SDK for Holo plugin system - contracts, types, and validators",
   "author": "Holokai",
@@ -55,11 +55,6 @@
       "import": "./dist/core/index.js",
       "require": "./dist/core/index.js"
     },
-    "./core/entities": {
-      "types": "./dist/core/entities/index.d.ts",
-      "import": "./dist/core/entities/index.js",
-      "require": "./dist/core/entities/index.js"
-    },
     "./notification": {
       "types": "./dist/notification/index.d.ts",
       "import": "./dist/notification/index.js",
@@ -84,6 +79,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "@holokai/types": "^1.0.0"
   },
   "peerDependencies": {
     "express": "^4.21.0",

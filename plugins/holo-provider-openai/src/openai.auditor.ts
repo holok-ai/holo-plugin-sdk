@@ -1,8 +1,11 @@
 import {injectable} from 'tsyringe';
-import {BaseAuditor, HoloWorkerRequest, pickDefined, ProviderEnvelope, ProviderEvent} from "@holokai/sdk";
+import {pickDefined} from "@holokai/sdk";
+import {BaseAuditor} from "@holokai/sdk/provider";
+import {HoloWorkerRequest} from "@holokai/types/worker";
+import {ProviderEnvelope, ProviderEvent} from "@holokai/types/provider";
+import {LlmRequest, LlmStatus} from "@holokai/types/entities";
 import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
 import {ResponseCreateParamsBase, ResponseUsage} from "openai/resources/responses/responses";
-import {LlmRequest, LlmStatus} from "@holokai/sdk/core/entities";
 import {CompletionUsage} from "openai/resources/completions";
 
 @injectable()
@@ -100,6 +103,12 @@ export class OpenAIAuditor extends BaseAuditor {
         return super.mapResponseStatus(providerEvent);
     }
 
+    protected async createProviderEnvelope(payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<ProviderEnvelope> {
+        return pickDefined({
+            model_slug: payload.model
+        }) as ProviderEnvelope
+    }
+
     private extractUserPromptFromMessages(messages?: any[]): string | undefined {
         if (!messages || !Array.isArray(messages)) return undefined;
 
@@ -126,11 +135,5 @@ export class OpenAIAuditor extends BaseAuditor {
 
         const systemMessage = messages.find(msg => msg.role === 'system');
         return systemMessage && typeof systemMessage.content === 'string' ? systemMessage.content : undefined;
-    }
-
-    protected async createProviderEnvelope(payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<ProviderEnvelope> {
-        return pickDefined({
-            model_slug: payload.model
-        }) as ProviderEnvelope
     }
 }

@@ -4,12 +4,15 @@
  * Implements IProviderPlugin contract for Claude/Anthropic API
  */
 
-import {BasePlugin, IProviderPlugin, PluginContext} from '@holokai/sdk/plugin';
+import {BasePlugin} from '@holokai/sdk/plugin';
+import type {IPluginContext, IProviderPlugin} from '@holokai/types/plugin';
 import {manifest} from "./manifest.js";
-import {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/sdk/provider";
+import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/types/provider";
+import type {RouteTree} from "@holokai/types/routing";
+import {RouteHandler} from "@holokai/types/routing";
+import {RequestType} from "@holokai/types/holo";
 import {ClaudeProvider} from "./claude.provider";
 import {ClaudeWireAdapter} from "./claude.wire.adapter";
-import {RequestType, RouteHandler, RouteTree} from "@holokai/sdk";
 import {ClaudeTranslator} from "./claude.translator";
 
 export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin {
@@ -56,7 +59,7 @@ export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin 
         }
     }
 
-    protected onInitialize(_context: PluginContext): Promise<void> {
+    protected onInitialize(_context: IPluginContext): Promise<void> {
         return Promise.resolve();
     }
 

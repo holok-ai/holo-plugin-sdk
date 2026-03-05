@@ -1,23 +1,22 @@
 import 'reflect-metadata';
-import {ClaudeRequestMessage} from "../types";
 import {ClaudeContentTranslator} from "./claude.content.translators";
-import {createStableId} from "../utils/stable-id.js";
 import {injectable} from 'tsyringe';
-import {HoloContent, HoloMessage} from "@holokai/sdk";
+import type {HoloContent, HoloMessage} from "@holokai/types/holo";
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {ContentBlockParam} from "@anthropic-ai/sdk/resources/messages/messages";
+import {ContentBlockParam, MessageParam} from "@anthropic-ai/sdk/resources/messages/messages";
+import {createStableId} from "@holokai/sdk";
 
 @injectable()
-export class ClaudeMessageTranslator extends BaseTranslator<HoloMessage, ClaudeRequestMessage> {
+export class ClaudeMessageTranslator extends BaseTranslator<HoloMessage, MessageParam> {
     protected holoDefaults: Partial<HoloMessage> = {};
-    protected providerDefaults: Partial<ClaudeRequestMessage> = {};
+    protected providerDefaults: Partial<MessageParam> = {};
 
     constructor(private readonly contentTranslator: ClaudeContentTranslator) {
         super();
     }
 
-    protected async fromHoloImpl(source: HoloMessage): Promise<Partial<ClaudeRequestMessage>> {
-        const role: ClaudeRequestMessage["role"] = source.role === 'assistant' ? 'assistant' : 'user';
+    protected async fromHoloImpl(source: HoloMessage): Promise<Partial<MessageParam>> {
+        const role: MessageParam["role"] = source.role === 'assistant' ? 'assistant' : 'user';
         const hasToolCalls = !!(source.role === 'assistant' && source.tool_calls?.length);
 
         // Simple, no-tools path: plain string content from non-tool roles
@@ -69,7 +68,7 @@ export class ClaudeMessageTranslator extends BaseTranslator<HoloMessage, ClaudeR
         return {role, ...(contentBlocks.length ? {content: contentBlocks} : {})};
     }
 
-    protected async toHoloImpl(source: ClaudeRequestMessage): Promise<Partial<HoloMessage>> {
+    protected async toHoloImpl(source: MessageParam): Promise<Partial<HoloMessage>> {
         // Default: map unknown roles to 'user' (Claude schema already restricts role)
         let role: HoloMessage["role"] = source.role === 'assistant' ? 'assistant' : 'user';
 

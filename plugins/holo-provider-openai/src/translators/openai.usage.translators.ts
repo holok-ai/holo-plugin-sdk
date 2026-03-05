@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {HoloUsage, pickDefined} from "@holokai/sdk";
+import {pickDefined} from "@holokai/sdk";
+import {HoloUsage} from "@holokai/types/holo";
 import {BaseTranslator} from "@holokai/sdk/provider";
 import {CompletionUsage} from "openai/resources/completions";
 

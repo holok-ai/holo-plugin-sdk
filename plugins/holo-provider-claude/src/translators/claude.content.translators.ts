@@ -1,8 +1,8 @@
 import 'reflect-metadata';
-import {ClaudeContentBlockParam} from "../types";
 import {injectable} from 'tsyringe';
 import {BaseTranslator} from "@holokai/sdk/provider";
-import {HoloContent} from "@holokai/sdk";
+import type {HoloContent} from "@holokai/types/holo";
+import {ContentBlockParam} from "@anthropic-ai/sdk/resources/messages/messages";
 
 type ImageMime = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
 
@@ -24,15 +24,15 @@ function parseDataUrl(u: string): { media: ImageMime; data: string } | null {
 }
 
 @injectable()
-export class ClaudeContentTranslator extends BaseTranslator<HoloContent, ClaudeContentBlockParam> {
+export class ClaudeContentTranslator extends BaseTranslator<HoloContent, ContentBlockParam> {
     protected holoDefaults: Partial<HoloContent> = {};
-    protected providerDefaults: Partial<ClaudeContentBlockParam> = {};
+    protected providerDefaults: Partial<ContentBlockParam> = {};
 
     constructor() {
         super();
     }
 
-    protected async fromHoloImpl(source: HoloContent): Promise<Partial<ClaudeContentBlockParam>> {
+    protected async fromHoloImpl(source: HoloContent): Promise<Partial<ContentBlockParam>> {
         if (source.type === 'text') {
             return {type: 'text', text: source.text};
         }
@@ -44,7 +44,7 @@ export class ClaudeContentTranslator extends BaseTranslator<HoloContent, ClaudeC
         return {type: 'image', source: {type: 'url', url: source.url}};
     }
 
-    protected async toHoloImpl(source: ClaudeContentBlockParam): Promise<Partial<HoloContent>> {
+    protected async toHoloImpl(source: ContentBlockParam): Promise<Partial<HoloContent>> {
         if (source.type === 'text') {
             return {type: 'text', text: source.text};
         }

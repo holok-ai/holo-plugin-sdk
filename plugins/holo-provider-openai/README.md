@@ -9,7 +9,9 @@
 
 ## Overview
 
-The OpenAI provider plugin enables Holo to communicate with OpenAI's Chat Completions and Responses APIs through the universal Holo format. This plugin is part of the migration from the monolithic provider architecture to a plugin-based system, providing complete bidirectional translation between OpenAI's native APIs and the portable Holo format.
+The OpenAI provider plugin enables Holo to communicate with OpenAI's Chat Completions and Responses APIs through the
+universal Holo format. This plugin is part of the migration from the monolithic provider architecture to a plugin-based
+system, providing complete bidirectional translation between OpenAI's native APIs and the portable Holo format.
 
 ### Key Features
 
@@ -34,6 +36,7 @@ npm install @holokai/holo-provider-openai
 ### Peer Dependencies
 
 This plugin requires:
+
 - `@holokai/sdk` ^0.1.0 - Holo universal format types and plugin contracts
 - `openai` ^6.9.1 - Official OpenAI SDK
 
@@ -43,7 +46,8 @@ This plugin requires:
 
 ### Automatic Discovery
 
-When installed in a Holo worker environment, this plugin is automatically discovered and loaded by the plugin system. No manual registration required.
+When installed in a Holo worker environment, this plugin is automatically discovered and loaded by the plugin system. No
+manual registration required.
 
 ### Configuration
 
@@ -89,9 +93,11 @@ const response: HoloResponse = await holoClient.chat(request);
 
 ### What Changed
 
-This plugin represents the extraction of OpenAI provider logic from the monolithic `src/providers/openai/` codebase into a standalone, independently versioned package.
+This plugin represents the extraction of OpenAI provider logic from the monolithic `src/providers/openai/` codebase into
+a standalone, independently versioned package.
 
 **Before** (Monolithic):
+
 ```
 src/providers/openai/
 ├── openai.translator.ts
@@ -104,6 +110,7 @@ src/providers/openai/
 ```
 
 **After** (Plugin):
+
 ```
 @holokai/holo-provider-openai
 ├── src/
@@ -225,31 +232,32 @@ This plugin implements the official Holo format mappings as documented in the SD
 
 ### Request Mapping: Holo → OpenAI (Chat Completions)
 
-| Holo Field | OpenAI Field | Transformation | Notes |
-|------------|-------------|----------------|-------|
-| **Direct 1:1** ||||
-| `model` | `model` | Direct | Required |
-| `temperature` | `temperature` | Direct | 0-2 for OpenAI |
-| `top_p` | `top_p` | Direct | Optional |
-| `stream` | `stream` | Direct | Optional |
-| `max_tokens` | `max_tokens` | Direct | Optional |
-| `stop_sequences` | `stop` | Rename | Array format |
-| `frequency_penalty` | `frequency_penalty` | Direct | Optional |
-| `presence_penalty` | `presence_penalty` | Direct | Optional |
-| `seed` | `seed` | Direct | Optional |
-| **Structure Transforms** ||||
-| `system` (string) | First message with `role:'system'` | Inject as message | Optional |
-| `messages` | `messages` | Direct | Array of messages |
-| `metadata.user_id` | `user` | Promote to top-level | Optional |
-| `tools[].parameters` | `tools[].function.parameters` | Wrap in function | JSON Schema |
-| `tool_choice.type: 'specific'` | `{type: 'function', function: {name}}` | Wrap with name | Specific tool |
-| `tool_choice.type: 'required'` | `'required'` | Map type | Any tool required |
-| `tool_choice.type: 'auto'` | `'auto'` | Direct | Default |
-| `tool_choice.type: 'none'` | `'none'` | Direct | Disable tools |
-| `response_format.type: 'json_object'` | `{type: 'json_object'}` | Wrap | JSON mode |
-| `response_format.type: 'json_schema'` | `{type: 'json_schema', json_schema: {...}}` | Nest schema | Structured output |
+| Holo Field                            | OpenAI Field                                | Transformation       | Notes             |
+|---------------------------------------|---------------------------------------------|----------------------|-------------------|
+| **Direct 1:1**                        |                                             |                      |                   |
+| `model`                               | `model`                                     | Direct               | Required          |
+| `temperature`                         | `temperature`                               | Direct               | 0-2 for OpenAI    |
+| `top_p`                               | `top_p`                                     | Direct               | Optional          |
+| `stream`                              | `stream`                                    | Direct               | Optional          |
+| `max_tokens`                          | `max_tokens`                                | Direct               | Optional          |
+| `stop_sequences`                      | `stop`                                      | Rename               | Array format      |
+| `frequency_penalty`                   | `frequency_penalty`                         | Direct               | Optional          |
+| `presence_penalty`                    | `presence_penalty`                          | Direct               | Optional          |
+| `seed`                                | `seed`                                      | Direct               | Optional          |
+| **Structure Transforms**              |                                             |                      |                   |
+| `system` (string)                     | First message with `role:'system'`          | Inject as message    | Optional          |
+| `messages`                            | `messages`                                  | Direct               | Array of messages |
+| `metadata.user_id`                    | `user`                                      | Promote to top-level | Optional          |
+| `tools[].parameters`                  | `tools[].function.parameters`               | Wrap in function     | JSON Schema       |
+| `tool_choice.type: 'specific'`        | `{type: 'function', function: {name}}`      | Wrap with name       | Specific tool     |
+| `tool_choice.type: 'required'`        | `'required'`                                | Map type             | Any tool required |
+| `tool_choice.type: 'auto'`            | `'auto'`                                    | Direct               | Default           |
+| `tool_choice.type: 'none'`            | `'none'`                                    | Direct               | Disable tools     |
+| `response_format.type: 'json_object'` | `{type: 'json_object'}`                     | Wrap                 | JSON mode         |
+| `response_format.type: 'json_schema'` | `{type: 'json_schema', json_schema: {...}}` | Nest schema          | Structured output |
 
 **OpenAI-Specific Fields** (not in Holo core):
+
 - `n` - Number of choices (handled via multi-choice streaming)
 - `logprobs` - Token probabilities (not in Holo spec)
 - `logit_bias` - Token bias (not in Holo spec)
@@ -258,56 +266,57 @@ This plugin implements the official Holo format mappings as documented in the SD
 
 ### Request Mapping: Holo → OpenAI (Responses API)
 
-| Holo Field | OpenAI Field | Transformation | Notes |
-|------------|-------------|----------------|-------|
-| **Direct 1:1** ||||
-| `model` | `model` | Direct | Required |
-| `temperature` | `temperature` | Direct | Optional |
-| `top_p` | `top_p` | Direct | Optional |
-| `stream` | `stream` | Direct | Optional |
-| **Structure Transforms** ||||
-| `messages` | `input` | Rename field | Different field name |
-| `system` (string) | `input[0]` with `role: 'system'` | Inject as first item | Optional |
-| `max_tokens` | `max_output_tokens` | Rename | Optional |
-| `tools` | `tools` | Transform structure | See Tool Mapping |
-| `tool_choice` | `tool_choice` | Similar to Chat | Optional |
-| `metadata.user_id` | `metadata.user_id` | Nest in metadata | Optional |
+| Holo Field               | OpenAI Field                     | Transformation       | Notes                |
+|--------------------------|----------------------------------|----------------------|----------------------|
+| **Direct 1:1**           |                                  |                      |                      |
+| `model`                  | `model`                          | Direct               | Required             |
+| `temperature`            | `temperature`                    | Direct               | Optional             |
+| `top_p`                  | `top_p`                          | Direct               | Optional             |
+| `stream`                 | `stream`                         | Direct               | Optional             |
+| **Structure Transforms** |                                  |                      |                      |
+| `messages`               | `input`                          | Rename field         | Different field name |
+| `system` (string)        | `input[0]` with `role: 'system'` | Inject as first item | Optional             |
+| `max_tokens`             | `max_output_tokens`              | Rename               | Optional             |
+| `tools`                  | `tools`                          | Transform structure  | See Tool Mapping     |
+| `tool_choice`            | `tool_choice`                    | Similar to Chat      | Optional             |
+| `metadata.user_id`       | `metadata.user_id`               | Nest in metadata     | Optional             |
 
 **Note**: Responses API uses `input` instead of `messages` and `max_output_tokens` instead of `max_tokens`.
 
 ### Response Mapping: OpenAI → Holo
 
-| OpenAI Field | Holo Field | Transformation | Notes |
-|-------------|------------|----------------|-------|
-| **Direct 1:1** ||||
-| `id` | `id` | Direct | Always present |
-| `model` | `model` | Direct | Always present |
-| `choices[0].message.role` | `messages[0].role` | Extract from choices | Always 'assistant' |
-| `choices[0].message.content` | `messages[0].content` | Extract from choices | Text content |
-| `choices[0].message.tool_calls` | `messages[0].tool_calls` | Extract from choices | If present |
-| **Structure Transforms** ||||
-| `created` | `created` | Multiply by 1000 | Seconds → milliseconds |
-| `choices[0].finish_reason` | `finish_reason` | Map codes | See table below |
-| `usage.prompt_tokens` | `usage.input_tokens` | Rename | Optional |
-| `usage.completion_tokens` | `usage.output_tokens` | Rename | Optional |
-| `usage.prompt_tokens_details.cached_tokens` | `usage.cache_read_tokens` | Rename | Optional |
-| Computed | `usage.total_tokens` | `input + output` | Derived |
-| `service_tier` | `service_tier` | Direct | Top-level field |
+| OpenAI Field                                | Holo Field                | Transformation       | Notes                  |
+|---------------------------------------------|---------------------------|----------------------|------------------------|
+| **Direct 1:1**                              |                           |                      |                        |
+| `id`                                        | `id`                      | Direct               | Always present         |
+| `model`                                     | `model`                   | Direct               | Always present         |
+| `choices[0].message.role`                   | `messages[0].role`        | Extract from choices | Always 'assistant'     |
+| `choices[0].message.content`                | `messages[0].content`     | Extract from choices | Text content           |
+| `choices[0].message.tool_calls`             | `messages[0].tool_calls`  | Extract from choices | If present             |
+| **Structure Transforms**                    |                           |                      |                        |
+| `created`                                   | `created`                 | Multiply by 1000     | Seconds → milliseconds |
+| `choices[0].finish_reason`                  | `finish_reason`           | Map codes            | See table below        |
+| `usage.prompt_tokens`                       | `usage.input_tokens`      | Rename               | Optional               |
+| `usage.completion_tokens`                   | `usage.output_tokens`     | Rename               | Optional               |
+| `usage.prompt_tokens_details.cached_tokens` | `usage.cache_read_tokens` | Rename               | Optional               |
+| Computed                                    | `usage.total_tokens`      | `input + output`     | Derived                |
+| `service_tier`                              | `service_tier`            | Direct               | Top-level field        |
 
 **Timestamp Conversion**:
+
 - OpenAI: Unix timestamp in seconds (`number`)
 - Holo: Milliseconds since epoch (`number`)
 - Conversion: `created * 1000`
 
 **Finish Reason Mapping**:
 
-| OpenAI `finish_reason` | Holo `finish_reason` | Notes |
-|----------------------|---------------------|-------|
-| `'stop'` | `'stop'` | Natural completion |
-| `'length'` | `'length'` | Hit token limit |
-| `'tool_calls'` | `'tool_calls'` | Model called tools |
-| `'content_filter'` | `'content_filter'` | Content filtered |
-| `'function_call'` | `'tool_calls'` | Legacy function calling |
+| OpenAI `finish_reason` | Holo `finish_reason` | Notes                   |
+|------------------------|----------------------|-------------------------|
+| `'stop'`               | `'stop'`             | Natural completion      |
+| `'length'`             | `'length'`           | Hit token limit         |
+| `'tool_calls'`         | `'tool_calls'`       | Model called tools      |
+| `'content_filter'`     | `'content_filter'`   | Content filtered        |
+| `'function_call'`      | `'tool_calls'`       | Legacy function calling |
 
 ### Content Mapping
 
@@ -424,12 +433,12 @@ OpenAI uses incremental deltas for streaming:
 
 The plugin translates OpenAI chunks to Holo streaming events:
 
-| OpenAI Chunk | Holo Event | Notes |
-|--------------|-----------|-------|
-| First chunk (`delta.role`) | `message_start` | Initialize message |
-| Content chunks (`delta.content`) | `content_delta` | Incremental text |
-| Tool call chunks (`delta.tool_calls`) | `message_delta` (with tools) | Tool accumulation |
-| Final chunk (`finish_reason`) | `message_stop` | Completion + usage |
+| OpenAI Chunk                          | Holo Event                   | Notes              |
+|---------------------------------------|------------------------------|--------------------|
+| First chunk (`delta.role`)            | `message_start`              | Initialize message |
+| Content chunks (`delta.content`)      | `content_delta`              | Incremental text   |
+| Tool call chunks (`delta.tool_calls`) | `message_delta` (with tools) | Tool accumulation  |
+| Final chunk (`finish_reason`)         | `message_stop`               | Completion + usage |
 
 ### Streaming Example
 
@@ -483,7 +492,8 @@ OpenAI supports multiple completions via the `n` parameter:
 }
 ```
 
-**Note**: Multi-choice (`n > 1`) is OpenAI-specific and not part of portable Holo spec. Handled via streaming with `delta.choice` index.
+**Note**: Multi-choice (`n > 1`) is OpenAI-specific and not part of portable Holo spec. Handled via streaming with
+`delta.choice` index.
 
 ---
 
@@ -580,6 +590,7 @@ import type {
 ### Migration from Legacy Types
 
 **Before** (Legacy provider):
+
 ```typescript
 import { HoloTool } from '../../types/holo/requests';
 
@@ -589,6 +600,7 @@ interface HoloTool {
 ```
 
 **After** (Plugin SDK):
+
 ```typescript
 import type { HoloTool, HoloJsonSchema } from '@holokai/sdk';
 
@@ -709,9 +721,11 @@ npm run clean
 ## Related Documentation
 
 ### SDK Documentation
+
 - [SDK README](../sdk/README.md) - Plugin development guide and templates
 
 ### OpenAI Documentation
+
 - [Official API Reference](https://platform.openai.com/docs/api-reference)
 - [Chat Completions](https://platform.openai.com/docs/api-reference/chat)
 - [Responses API](https://platform.openai.com/docs/api-reference/responses)
@@ -721,6 +735,7 @@ npm run clean
 - [Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs)
 
 ### Migration Notes
+
 - This plugin was extracted from the monolithic `src/providers/openai/` codebase
 - Migration to plugin architecture is complete
 
@@ -738,6 +753,7 @@ npm run clean
 ### Reporting Issues
 
 Found a bug or have a feature request?
+
 - GitHub Issues: https://github.com/holokai/holo-provider-openai/issues
 - Include: Holo version, OpenAI model, request/response samples
 
@@ -752,6 +768,7 @@ MIT © Holokai
 ## Changelog
 
 ### v0.1.0 (Current)
+
 - ✅ Initial plugin release
 - ✅ Extracted from monolithic architecture
 - ✅ Migrated to SDK types

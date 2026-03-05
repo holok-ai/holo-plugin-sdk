@@ -6,8 +6,6 @@
       "ESNext",
       "ESNext.Intl"
     ],
-    "outDir": "./dist",
-    "rootDir": "./src",
     "composite": true,
     "strict": true,
     "esModuleInterop": true,
@@ -36,9 +34,6 @@
       "@holokai/sdk/core": [
         "./plugins/sdk/src/core/index.ts"
       ],
-      "@holokai/sdk/core/entities": [
-        "./plugins/sdk/src/core/entities/index.ts"
-      ],
       "@holokai/sdk/plugin": [
         "./plugins/sdk/src/plugin/index.ts"
       ],
@@ -50,32 +45,40 @@
       ],
       "@holokai/sdk/notification": [
         "./plugins/sdk/src/notification/index.ts"
+      ],
+      "@holokai/types": [
+        "./plugins/types/src/index.ts"
+      ],
+      "@holokai/types/holo": [
+        "./plugins/types/src/holo/index.ts"
+      ],
+      "@holokai/types/entities": [
+        "./plugins/types/src/entities/index.ts"
+      ],
+      "@holokai/types/config": [
+        "./plugins/types/src/config/index.ts"
+      ],
+      "@holokai/types/worker": [
+        "./plugins/types/src/worker/index.ts"
+      ],
+      "@holokai/types/notification": [
+        "./plugins/types/src/notification/index.ts"
+      ],
+      "@holokai/types/routing": [
+        "./plugins/types/src/routing/index.ts"
+      ],
+      "@holokai/types/api": [
+        "./plugins/types/src/api/index.ts"
+      ],
+      "@holokai/types/provider": [
+        "./plugins/types/src/provider/index.ts"
+      ],
+      "@holokai/types/logger": [
+        "./plugins/types/src/logger/index.ts"
+      ],
+      "@holokai/types/plugin": [
+        "./plugins/types/src/plugin/index.ts"
       ]
     }
-  },
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifierResolution": "node",
-    "compilerOptions": {
-      "module": "ESNext",
-      "moduleResolution": "node"
-    },
-    "transpileOnly": true,
-    "files": false,
-    "emit": false
-  },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "plugins",
-    "tests"
-  ],
-  "references": [
-    {
-      "path": "./plugins/sdk"
-    }
-  ]
+  }
 }

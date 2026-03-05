@@ -1,105 +1,14 @@
-import {PluginManifest} from "./manifest";
-import {PluginContext} from "./context";
+import {IHoloPluginManifest, IPlugin, IPluginContext, PluginState} from "@holokai/types/plugin";
 import {PluginError, PluginErrorCode} from "./errors";
 import {ClassLogger} from "../core";
 
 
-export enum PluginState {
-    UNINITIALIZED = 'uninitialized',
-    INITIALIZING = 'initializing',
-    READY = 'ready',
-    ERROR = 'error',
-    DESTROYING = 'destroying',
-    DESTROYED = 'destroyed'
-}
-
-/**
- * Base plugin interface that all plugin types must implement
- *
- * @example
- * ```typescript
- * class MyPlugin implements IPlugin {
- *   manifest = {
- *     name: '@myorg/my-plugin',
- *     version: '1.0.0',
- *     pluginType: 'provider' as const
- *   };
- *
- *   async initialize(context: PluginContext): Promise<void> {
- *     // Setup plugin resources
- *   }
- *
- *   async destroy(): Promise<void> {
- *     // Cleanup resources
- *   }
- * }
- * ```
- */
-export interface IPlugin {
-    /** Plugin metadata and configuration */
-    readonly manifest: PluginManifest;
-
-    /** Current plugin state */
-    readonly state: PluginState;
-
-    readonly family: string;
-
-    /**
-     * Initialize the plugin with provided context
-     * @param context Runtime context including logger, config, and environment
-     * @throws {PluginError} If initialization fails
-     */
-    initialize(context: PluginContext): Promise<void>;
-
-    /**
-     * Destroy the plugin and cleanup resources
-     * @throws {PluginError} If cleanup fails
-     */
-    destroy(): Promise<void>;
-
-    /**
-     * Get current plugin state
-     * @returns Current state of the plugin
-     */
-    getState(): PluginState;
-
-    /**
-     * Perform health check on the plugin
-     * @returns Health status and diagnostic information
-     */
-    healthCheck(): Promise<HealthCheckResult>;
-}
-
-/**
- * Health check result for plugin status monitoring
- */
-export interface HealthCheckResult {
-    healthy: boolean;
-    message?: string;
-    details?: Record<string, unknown>;
-    timestamp: number;
-}
-
-/**
- * Base abstract class implementing common plugin functionality.
- *
- * Lifecycle:
- *   UNINITIALIZED → INITIALIZING → READY → DESTROYING → DESTROYED
- *   Any failure moves the plugin to ERROR.
- */
 export abstract class BasePlugin extends ClassLogger implements IPlugin {
-    /**
-     * Static manifest per-plugin implementation.
-     * Implementations SHOULD treat this as immutable metadata.
-     */
-    abstract readonly manifest: PluginManifest;
+    abstract readonly manifest: IHoloPluginManifest;
 
-    private _context: PluginContext | undefined;
+    private _context: IPluginContext | undefined;
     protected _state: PluginState = PluginState.UNINITIALIZED;
 
-    /**
-     * Current plugin state (read-only from outside).
-     */
     get state(): PluginState {
         return this._state;
     }
@@ -116,11 +25,7 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
         return this.manifest.version;
     }
 
-    /**
-     * Strongly typed access to the plugin context.
-     * Throws if accessed before initialize() or after destroy().
-     */
-    protected get pluginContext(): PluginContext {
+    protected get pluginContext(): IPluginContext {
         if (!this._context) {
             throw new PluginError(
                 'Plugin context is not available. Initialize the plugin first.',
@@ -131,14 +36,11 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
         return this._context;
     }
 
-    /**
-     * Backwards-compatible state accessor.
-     */
     getState(): PluginState {
         return this._state;
     }
 
-    async initialize(context: PluginContext): Promise<void> {
+    async initialize(context: IPluginContext): Promise<void> {
         const logger = this.mlog(this.initialize);
         if (this._state !== PluginState.UNINITIALIZED) {
             throw new PluginError(
@@ -188,7 +90,6 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
             this._context = undefined;
         } catch (error) {
             this._state = PluginState.ERROR;
-            // Fall back to console if logger is gone
             try {
                 logger.error('Plugin destruction failed', {error});
             } catch {
@@ -203,42 +104,7 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
         }
     }
 
-    async healthCheck(): Promise<HealthCheckResult> {
-        const logger = this.mlog(this.healthCheck);
-        const timestamp = Date.now();
-
-        if (this._state !== PluginState.READY) {
-            return {
-                healthy: false,
-                message: `Plugin not ready (state: ${this._state})`,
-                timestamp
-            };
-        }
-
-        try {
-            const customCheck = await this.onHealthCheck();
-            return (
-                customCheck ?? {
-                    healthy: true,
-                    timestamp
-                }
-            );
-        } catch (error) {
-            logger.warn('Health check failed', {error});
-            return {
-                healthy: false,
-                message: error instanceof Error ? error.message : 'Health check failed',
-                timestamp
-            };
-        }
-    }
-
-    protected abstract onInitialize(context: PluginContext): Promise<void>;
+    protected abstract onInitialize(context: IPluginContext): Promise<void>;
 
     protected abstract onDestroy(): Promise<void>;
-
-    protected async onHealthCheck(): Promise<HealthCheckResult | void> {
-        // Default implementation: no-op (host treats as healthy if READY)
-        return;
-    }
 }
