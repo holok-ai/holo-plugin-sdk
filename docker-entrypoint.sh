@@ -17,17 +17,17 @@ export NODE_OPTIONS="--import ./register-ts-node.mjs"
 
 # Start the API server in the background
 echo "Starting API server..."
-node src/app.ts &
+node app/src/app.ts &
 API_PID=$!
 
 # Start the worker server in the background
 echo "Starting worker server..."
-node src/servers/worker.server.ts &
+node app/src/servers/worker.server.ts &
 WORKER_PID=$!
 
 # Start the audit server in the background
 echo "Starting audit server..."
-node src/servers/audit.server.ts &
+node app/src/servers/audit.server.ts &
 AUDIT_PID=$!
 
 echo "All services started:"
