@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import {inject, injectable} from 'tsyringe';
 import {HoloApiRequest} from "../api/types";
 import {Response} from "express";
-import {ProviderService} from "./entities/provider.service";
+import {ProviderService} from "./entities";
 import {ResponseService} from "./response.service";
 import {env} from "../env";
 import {GuardService} from "./guard.service";

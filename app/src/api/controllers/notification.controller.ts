@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import {Response} from "express";
 import {inject, injectable} from "tsyringe";
 import {pickDefined, stringifyError} from "@holokai/sdk";
-import {BaseController} from "../../utils/api";
+import {BaseController} from "../../utils";
 import type {
     INotificationService,
     INotificationSub,

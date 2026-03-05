@@ -3,8 +3,8 @@ import {QueueService} from "./queue.service";
 import {injectable} from "tsyringe";
 import {env} from "../env";
 import logger from "../utils/logger";
-import {ProviderService} from "./entities/provider.service";
-import {PluginService} from "./plugin/plugin.service";
+import {ProviderService} from "./entities";
+import {PluginService} from "./plugin";
 import {ResponseService} from "./response.service";
 import {RedisService} from "./redis.service";
 

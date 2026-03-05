@@ -6,11 +6,11 @@ import {QueueService} from "./queue.service";
 import {env} from '../env';
 import {ClassLogger} from "@holokai/sdk";
 import type {HoloWorkerRequest, HoloWorkerResponse} from "@holokai/types/worker";
-import {ProviderService} from "./entities/provider.service";
 import {LlmRequest, LlmResponse} from "@holokai/types/entities";
 import {NotificationStoreToken} from "@holokai/sdk/notification";
 import type {NotificationEvent} from "@holokai/types/notification";
 import {PostgresNotificationStore} from "../db/notification.db";
+import {ProviderService} from "./entities";
 
 /**
  * Service for auditing and logging LLM requests and responses

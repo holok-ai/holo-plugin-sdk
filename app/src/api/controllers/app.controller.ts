@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {injectable} from "tsyringe";
 import {HoloApiRequest} from "../types";
-import {ApiResponse, BaseController} from "../../utils/api";
+import {ApiResponse, BaseController} from "../../utils";
 
 @injectable()
 export class AppController extends BaseController {
