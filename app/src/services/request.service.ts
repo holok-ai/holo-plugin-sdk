@@ -2,15 +2,13 @@ import 'reflect-metadata';
 import {inject, injectable} from 'tsyringe';
 import {HoloApiRequest} from "../api/types";
 import {Response} from "express";
-import {ProviderService} from "./provider.service";
+import {ProviderService} from "./entities/provider.service";
 import {ResponseService} from "./response.service";
 import {env} from "../env";
 import {GuardService} from "./guard.service";
 import {WorkerRequestFactory} from "./worker.request.factory";
 import {ClassLogger} from "@holokai/sdk";
 import {RequestType} from "@holokai/types/holo";
-import type {PromptConfigProps} from "@holokai/types/config";
-import type {Prompt} from "@holokai/types/entities";
 import type {INotificationService} from '@holokai/types/notification';
 import {NotificationEventFactory, NotificationServiceToken} from "@holokai/sdk/notification";
 
@@ -63,15 +61,14 @@ export class RequestService extends ClassLogger {
         const workerRequest = await this.parseRequest(providerType, application.provider!.name, type, req, isPassthrough);
 
         if (application.guards?.length) {
-            const guardProps = application.guards.map(promptToConfigProps);
-            const guardDetails = guardProps.map(g => ({
+            const guardDetails = application.guards.map(g => ({
                 id: g.id,
-                name: g.modelName,
-                provider: g.providerName
+                name: g.model,
+                provider: g.provider
             }));
-            logger.debug(`Executing ${guardProps.length} guard(s) for request: ${JSON.stringify(guardDetails)}`);
+            logger.debug(`Executing ${application.guards.length} guard(s) for request: ${JSON.stringify(guardDetails)}`);
             await this.notificationService.publish(NotificationEventFactory.fromAuthAndRequest('guard_started', auth, workerRequest, 'Running guards'));
-            const results = await this.guardService.guard(workerRequest, guardProps, auth);
+            const results = await this.guardService.guard(workerRequest, application.guards, auth);
             await this.notificationService.publish(NotificationEventFactory.fromAuthAndRequest(results?.passed ? 'guard_passed' : 'guard_failed', auth, workerRequest, 'Running guards'));
         }
 
@@ -83,16 +80,4 @@ export class RequestService extends ClassLogger {
     async parseRequest(providerType: string, providerName: string | undefined, type: RequestType, req: HoloApiRequest, isPassthrough: boolean = false) {
         return WorkerRequestFactory.fromRequest(providerType, providerName, type, req, this.serverId, isPassthrough);
     }
-}
-
-function promptToConfigProps(p: Prompt): PromptConfigProps {
-    const result: PromptConfigProps = {
-        id: p.id,
-        userPrompt: p.user_prompt,
-        providerName: p.provider,
-        modelName: p.model ?? '',
-    };
-    if (p.system_prompt) result.systemPrompt = p.system_prompt;
-    if (p.output_schema) result.outputSchema = p.output_schema;
-    return result;
 }

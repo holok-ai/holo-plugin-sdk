@@ -1,4 +1,4 @@
-import {IEvaluator} from '../../types/evaluator.types';
+import {IEvaluator} from '../../types';
 import {WebhookClassifier} from './internal.webhook.classifier';
 import {ApplicationEvaluator} from './application.evaluator';
 import {PromptEvaluator} from './prompt.evaluator';

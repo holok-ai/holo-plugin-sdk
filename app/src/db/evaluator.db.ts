@@ -1,7 +1,6 @@
 import {injectable} from "tsyringe";
 import {AppDB} from "./app.db";
-import type {PromptConfigProps} from "@holokai/types/config";
-import {AnalysisResult, Application, Evaluator, EvaluatorData, LlmResponse, Provider} from "@holokai/types/entities";
+import {AnalysisResult, Application, Evaluator, EvaluatorData, LlmResponse, Prompt, Provider} from "@holokai/types/entities";
 
 @injectable()
 export class EvaluatorDB {
@@ -76,13 +75,13 @@ export class EvaluatorDB {
         return newRecord?.id;
     }
 
-    async getPrompt(id: string): Promise<PromptConfigProps | null> {
+    async getPrompt(id: string): Promise<Prompt | null> {
         const query = `
             SELECT *
             FROM prompts
             WHERE id = $1
         `;
-        return await this.db.queryOne<PromptConfigProps>(query, [id]);
+        return await this.db.queryOne<Prompt>(query, [id]);
     }
 
     async getData(id: string): Promise<EvaluatorData | null> {

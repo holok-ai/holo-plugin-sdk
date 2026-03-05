@@ -63,13 +63,12 @@ export class WorkerRequestFactory {
         let sanitizedAuth = {};
 
         if (auth) {
-            const {organizationId, userId, availableApps} = auth;
+            const {organizationId, userId} = auth;
             const appSlug = customAppSlug || providerName;
             sanitizedAuth = {
                 organizationId,
                 userId,
                 appSlug,
-                availableApps
             };
         }
 

@@ -6,7 +6,7 @@ export {Model} from "./model";
 export {Notification} from "./notification";
 export {AnalysisResult} from "./analysisResult";
 export {LlmResponse} from "./llm.response";
-export {Application} from "./application";
+export {Application, type AccessLevel} from "./application";
 export {LlmRequest} from "./llm.request";
 export {LlmStatus} from "./llm.status";
 export {HoloToken} from "./holo.token";

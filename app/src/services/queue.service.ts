@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import {Channel, ChannelModel, connect, ConsumeMessage, Replies} from 'amqplib';
-import {RabbitConfig} from "../admin/types";
+import {RabbitConfig} from "../types";
 import {env} from "../env";
 import {injectable} from "tsyringe";
 import {ClassLogger} from "@holokai/sdk";

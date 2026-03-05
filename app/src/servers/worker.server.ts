@@ -1,21 +1,23 @@
 import 'reflect-metadata';
-import {withAdmin, withDB} from "./mixins";
+import {withAdmin, withDB, withStats} from "./mixins";
 import {BaseServer} from "./base.server";
 import logger from "../utils/logger";
-import {ProviderService, ResponseService} from "../services";
+import {
+    CryptoService,
+    NotificationService,
+    PluginDiscoveryService,
+    PluginLoaderService,
+    PluginService,
+    ProviderPluginRegistry,
+    ProviderService,
+    ResponseService,
+    WireService
+} from "../services";
 import {container, injectable} from "tsyringe";
-import {withStats} from "./mixins/with.stats";
 import {env} from "../env";
-import {PluginService} from "../services/plugin/plugin.service";
-import {PluginDiscoveryService} from "../services/plugin/discovery.service";
-import {PluginLoaderService} from "../services/plugin/loader.service";
-import {ProviderPluginRegistry} from "../services/plugin/provider.registry.service";
 import type {AIRequestStat, IProvider, ProviderEvent} from "@holokai/types/provider";
 import type {HoloWorkerRequest} from "@holokai/types/worker";
-import {WireService} from "../services/wire.service";
-import {CryptoService} from "../services/crypto.service";
 import {NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
-import {QueueNotificationService} from "../services/notification/queue.notification.service";
 import {PostgresNotificationStore} from "../db/notification.db";
 
 @injectable()
@@ -142,7 +144,7 @@ container.registerSingleton(CryptoService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry)
-    .registerSingleton(NotificationServiceToken, QueueNotificationService)
+    .registerSingleton(NotificationServiceToken, NotificationService)
     .registerSingleton(NotificationStoreToken, PostgresNotificationStore)
     .registerSingleton(ProviderService);
 

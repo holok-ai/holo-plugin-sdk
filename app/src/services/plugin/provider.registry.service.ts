@@ -1,13 +1,12 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import type {IPluginRegistry, IProviderPlugin} from '@holokai/types/plugin';
-import express, {NextFunction, Router} from 'express';
+import {Router} from 'express';
 import {ClassLogger} from '@holokai/sdk';
 import {RequestType} from "@holokai/types/holo";
 import type {RouteDefinition, RouteTree} from "@holokai/types/routing";
 import {RouteHandler} from "@holokai/types/routing";
 import {ProviderController} from '../../api/controllers/provider.controller';
-import {HoloApiRequest} from "../../api/types";
 
 @injectable()
 export class ProviderPluginRegistry extends ClassLogger implements IPluginRegistry<IProviderPlugin> {
@@ -136,7 +135,7 @@ export class ProviderPluginRegistry extends ClassLogger implements IPluginRegist
             requestHandler: (rt: RequestType) => any,
             passthroughHandler: any
         },
-        authMiddleware: (req: HoloApiRequest, res: express.Response, next: NextFunction) => Promise<void>,
+        authMiddleware: any,
         providerFamily: string,
         basePath: string = ''
     ): void {

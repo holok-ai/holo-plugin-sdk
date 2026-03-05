@@ -1,12 +1,10 @@
 import 'reflect-metadata';
-import {ApiResponse, BaseController} from '../../utils/api';
+import {ApiResponse, BaseController} from '../../utils';
 import {RequestType} from "@holokai/types/holo";
-import {RequestService} from '../../services/request.service';
+import {AuthService, ProviderService, RequestService} from '../../services';
 import {HoloApiRequest} from '../types';
 import {injectable} from "tsyringe";
-import {makeJwtAuthMiddleware} from "../middleware/jwt.middleware";
-import {AuthService} from "../../admin/services/auth.service";
-import {ProviderService} from "../../services";
+import {makeAuthMiddleware} from "../middleware/auth.middleware";
 
 @injectable()
 export class ProviderController extends BaseController {
@@ -19,7 +17,7 @@ export class ProviderController extends BaseController {
     }
 
     createMiddleware(providerFamily: string) {
-        return makeJwtAuthMiddleware(this.authService, {useCache: true}, providerFamily);
+        return makeAuthMiddleware(this.authService, {useCache: true, providerFamily});
     }
 
     createModelsHandler() {

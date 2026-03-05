@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {Pool, QueryResult, QueryResultRow} from 'pg';
-import {DatabaseConfig} from '../admin/types';
+import {DatabaseConfig} from '../types';
 import logger from '../utils/logger';
 import {env} from "../env";
 

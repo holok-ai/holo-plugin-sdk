@@ -1,7 +1,6 @@
 import {EvaluatorEvent, EvaluatorResult, IEvaluator} from '../../types';
-import type {PromptConfigProps} from "@holokai/types/config";
 import {EvaluatorDB} from '../../db';
-import {Evaluator, EvaluatorData, LlmResponse, Provider} from "@holokai/types/entities";
+import {Evaluator, EvaluatorData, LlmResponse, Prompt, Provider} from "@holokai/types/entities";
 
 export class PromptEvaluator implements IEvaluator {
     evaluatorId: string;
@@ -10,7 +9,7 @@ export class PromptEvaluator implements IEvaluator {
     runType: string = "prompt";
     evaluatorName: string = "";
     private promptId: string;
-    private prompt: PromptConfigProps | null = null;
+    private prompt: Prompt | null = null;
     private provider: Provider | null = null;
     private evaluatorDb: EvaluatorDB;
 
@@ -36,8 +35,8 @@ export class PromptEvaluator implements IEvaluator {
         // Set evaluator name from prompt name
         this.evaluatorName = this.prompt.id || "";
 
-        if (this.prompt.providerName) {
-            this.provider = await this.evaluatorDb.getProvider(this.prompt.providerName);
+        if (this.prompt.provider) {
+            this.provider = await this.evaluatorDb.getProvider(this.prompt.provider);
             if (!this.provider || !(this.provider.name.toLowerCase() === 'ollama')) {
                 throw new Error(`Provider ${(!this.provider ? "was not found" : "must be OLLAMA.")}`);
             }
@@ -124,7 +123,7 @@ export class PromptEvaluator implements IEvaluator {
      */
     protected substituteTags(
         template: string,
-        prompt: PromptConfigProps,
+        prompt: Prompt,
         llmResponse: LlmResponse | null,
         evalData: EvaluatorData | null
     ): string {

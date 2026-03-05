@@ -3,10 +3,10 @@ import {QueueService} from "./queue.service";
 import {injectable} from "tsyringe";
 import {env} from "../env";
 import logger from "../utils/logger";
-import {ProviderService} from "./provider.service";
+import {ProviderService} from "./entities/provider.service";
 import {PluginService} from "./plugin/plugin.service";
 import {ResponseService} from "./response.service";
-import {RedisService} from "../admin/services/redis.service";
+import {RedisService} from "./redis.service";
 
 @injectable()
 export class InitService {

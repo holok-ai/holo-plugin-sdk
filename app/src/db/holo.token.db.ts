@@ -10,6 +10,15 @@ export class HoloTokenDB extends ClassLogger {
         super();
     }
 
+    async getById(id: string): Promise<HoloToken | null> {
+        const query = `
+            SELECT *
+            FROM holo_tokens
+            WHERE id = $1
+        `;
+        return this.db.queryOne<HoloToken>(query, [id]);
+    }
+
     async getByHash(keyHash: string): Promise<HoloToken | null> {
         const query = `
             SELECT *
