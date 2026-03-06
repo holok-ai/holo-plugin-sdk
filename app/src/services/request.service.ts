@@ -73,6 +73,7 @@ export class RequestService extends ClassLogger {
             await this.notificationService.publish(NotificationEventFactory.fromAuthAndRequest(results?.passed ? 'guard_passed' : 'guard_failed', auth, workerRequest, 'Running guards'));
         }
 
+        await this.notificationService.publish(NotificationEventFactory.fromAuthAndRequest('request_started', auth, workerRequest, 'Request started'));
         await this.responseService.sendRequest(req, res, workerRequest);
 
         logger.info(`Request processed: ${providerType} ${type}`, {requestId: workerRequest.requestId, isPassthrough});
