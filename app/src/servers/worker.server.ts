@@ -3,7 +3,7 @@ import {withAdmin, withDB} from "./mixins";
 import {BaseServer} from "./base.server";
 import logger from "../utils/logger";
 import {ProviderService, ResponseService} from "../services";
-import {container, injectable} from "tsyringe";
+import {container, injectable, inject} from "tsyringe";
 import {withStats} from "./mixins/with.stats";
 import {env} from "../env";
 import {PluginService} from "../services/plugin/plugin.service";
@@ -14,9 +14,10 @@ import type {AIRequestStat, IProvider, ProviderEvent} from "@holokai/types/provi
 import type {HoloWorkerRequest} from "@holokai/types/worker";
 import {WireService} from "../services/wire.service";
 import {CryptoService} from "../services/crypto.service";
-import {NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
+import {NotificationEventFactory, NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
 import {QueueNotificationService} from "../services/notification/queue.notification.service";
 import {PostgresNotificationStore} from "../db/notification.db";
+import type {INotificationService} from "@holokai/types/notification";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -26,7 +27,8 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
     constructor(
         private providerService: ProviderService,
         private responseService: ResponseService,
-        private wireService: WireService
+        private wireService: WireService,
+        @inject(NotificationServiceToken) private readonly notificationService: INotificationService
     ) {
         super(env.worker.serverId);
     }
@@ -75,6 +77,15 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                     }
                     await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt));
+                    await this.notificationService.publish(
+                        NotificationEventFactory.fromRequest(
+                            'response_completed',
+                            workerRequest,
+                            'Response completed',
+                            {status: 'error', eventType: evt.type},
+                            "error"
+                        )
+                    );
                 } else {
                     const wire = await this.wireService.matchWireAdapter(ai.family, ai.version, {
                         requestId,
@@ -94,7 +105,31 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                             } else {
                                 logger.debug(`Final response: ${JSON.stringify(evt.message)}`, {requestId});
                             }
-                            await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt))
+                            await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt));
+                            if (evt.type === "done") {
+                                await this.notificationService.publish(
+                                    NotificationEventFactory.fromRequest(
+                                        'response_completed',
+                                        workerRequest,
+                                        'Response completed',
+                                        {status: 'success', eventType: evt.type}
+                                    )
+                                );
+                            } else if (evt.type === "error") {
+                                await this.notificationService.publish(
+                                    NotificationEventFactory.fromRequest(
+                                        'response_completed',
+                                        workerRequest,
+                                        'Response completed',
+                                        {
+                                            status: 'error',
+                                            eventType: evt.type,
+                                            error: evt.error
+                                        },
+                                        "error"
+                                    )
+                                );
+                            }
                             break;
                         }
                     }
