@@ -1,5 +1,5 @@
 import {RequestType} from "../holo";
-import {Prompt} from "./prompt";
+import {Prompt} from "../entities";
 
 export interface GuardResult {
     passed: boolean;

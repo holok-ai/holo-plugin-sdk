@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import {DatabaseConfig} from "../../admin/types";
+import {DatabaseConfig} from "../../types";
 import logger from "../../utils/logger";
 import {AppDB} from "../../db";
 import {container, injectable} from "tsyringe";

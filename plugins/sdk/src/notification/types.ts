@@ -6,9 +6,9 @@ import {v4 as uuidv4} from "uuid";
 
 export class NotificationEventFactory {
     static fromAuthAndRequest(type: NotificationEventType, auth: Auth, request: HoloWorkerRequest, message: string, payload?: any, severity: NotificationSeverity = "info"): NotificationEvent {
-        const {organizationId, app, userId} = auth;
+        const {organizationId, application, userId} = auth;
         const {requestId, thread_id, branch_id} = request;
-        const appSlug = app?.urlSlug;
+        const appSlug = application?.url_slug;
         return pickDefined({
             id: uuidv4(),
             ts: Date.now(),

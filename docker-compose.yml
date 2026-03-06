@@ -21,10 +21,20 @@ services:
       - API_SERVER_ID=duan_api
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
       - API_PLUGINS_DIR=node_modules
+      - REDIS_URL=redis://holokai-redis:6379
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - audit_logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - holokai-network
+
+  redis:
+    container_name: holokai-redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
     restart: unless-stopped
     networks:
       - holokai-network

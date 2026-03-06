@@ -2,7 +2,7 @@ import {injectable} from 'tsyringe';
 import {PluginDiscoveryService} from './discovery.service';
 import {PluginLoaderService} from './loader.service';
 import {ProviderPluginRegistry} from './provider.registry.service';
-import type {IPluginContext, IProviderPlugin} from '@holokai/types/plugin';
+import type {PluginContext, IProviderPlugin} from '@holokai/types/plugin';
 import {PluginState} from '@holokai/types/plugin';
 import {ClassLogger} from "@holokai/sdk";
 import type {HoloLogger} from "@holokai/types/logger";
@@ -44,7 +44,7 @@ export class PluginService extends ClassLogger {
             const providerPlugin = plugin as IProviderPlugin;
 
             // Create plugin context
-            const pluginContext: IPluginContext = {
+            const pluginContext: PluginContext = {
                 logger: logger as HoloLogger,
                 config: {},
                 env: process.env

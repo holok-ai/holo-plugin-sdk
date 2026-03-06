@@ -1,12 +1,10 @@
 import 'reflect-metadata';
-import {ApiResponse, BaseController} from '../../utils/api';
+import {ApiResponse, BaseController} from '../../utils';
 import {RequestType} from "@holokai/types/holo";
-import {RequestService} from '../../services/request.service';
+import {AuthService, ProviderService, RequestService} from '../../services';
 import {HoloApiRequest} from '../types';
 import {injectable} from "tsyringe";
-import {makeJwtAuthMiddleware} from "../middleware/jwt.middleware";
-import {AuthService} from "../../admin/services/auth.service";
-import {ProviderService} from "../../services";
+import {makeAuthMiddleware} from "../middleware";
 
 @injectable()
 export class ProviderController extends BaseController {
@@ -19,7 +17,7 @@ export class ProviderController extends BaseController {
     }
 
     createMiddleware(providerFamily: string) {
-        return makeJwtAuthMiddleware(this.authService, {useCache: true}, providerFamily);
+        return makeAuthMiddleware(this.authService, {useCache: true, providerFamily});
     }
 
     createModelsHandler() {
@@ -31,15 +29,15 @@ export class ProviderController extends BaseController {
             }
 
             try {
-                const {app, availableApps} = auth;
-                const apps = app ? [app] : availableApps;
+                const {application, applications} = auth;
+                const apps = application ? [application] : applications;
                 const providerModelNames = new Map<string, Set<string>>();
 
                 for (const a of apps) {
-                    let names = providerModelNames.get(a.providerName);
-                    if (!names) providerModelNames.set(a.providerName, names = new Set());
+                    let names = providerModelNames.get(a.provider!.name);
+                    if (!names) providerModelNames.set(a.provider!.name, names = new Set());
 
-                    for (const m of a.models) {
+                    for (const m of (a.models ?? [])) {
                         names.add(m.name);
                     }
                 }

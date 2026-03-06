@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {GuardResult, GuardResultSchema} from "../admin/types";
+import {GuardResult, GuardResultSchema} from "../types";
 import {env} from "../env";
 import {ClassLogger, pickDefined} from "@holokai/sdk";
 import {filterJoin, findLast} from "../utils";
@@ -8,11 +8,11 @@ import type {HoloContent, HoloContentText, HoloRequest} from "@holokai/types/hol
 import {RequestType} from "@holokai/types/holo";
 import type {HoloWorkerRequest} from "@holokai/types/worker";
 import type {Auth} from "@holokai/types/api";
-import type {PromptConfigProps} from "@holokai/types/config";
-import {ProviderPluginRegistry} from "./plugin/provider.registry.service";
-import {OrganizationService} from "../admin/services";
+import type {Prompt} from "@holokai/types/entities";
+import {ProviderPluginRegistry} from "./plugin";
 import {ResponseService} from "./response.service";
 import {WorkerRequestFactory} from "./worker.request.factory";
+import {ProviderService} from "./entities";
 
 
 @injectable()
@@ -21,13 +21,13 @@ export class GuardService extends ClassLogger {
 
     constructor(
         private responseService: ResponseService,
-        private organizationService: OrganizationService,
+        private providerService: ProviderService,
         private providerRegistry: ProviderPluginRegistry
     ) {
         super();
     }
 
-    async guard(workerRequest: HoloWorkerRequest, guards: PromptConfigProps[], auth: Auth) {
+    async guard(workerRequest: HoloWorkerRequest, guards: Prompt[], auth: Auth) {
         const logger = this.mlog(this.guard);
 
         logger.debug(`Guard service invoked: guards.length=${guards?.length || 0}, requestId=${workerRequest.requestId}, requestType=${workerRequest.type}`);
@@ -67,34 +67,34 @@ export class GuardService extends ClassLogger {
         if (!lastContent.length) return;
 
         try {
-            //set guards onto request for auditing
             workerRequest.guards = guards;
             logger.debug(`Executing ${guards.length} guard check(s) in parallel`);
             const results = await Promise.all(
                 guards.map(async (guard, index) => {
-                    logger.debug(`Starting guard check ${index + 1}/${guards.length}: id=${guard.id}, model=${guard.modelName}, provider=${guard.providerName}`);
+                    logger.debug(`Starting guard check ${index + 1}/${guards.length}: id=${guard.id}, model=${guard.model}, provider=${guard.provider}`);
                     const startTime = Date.now();
                     try {
-                        const p = this.organizationService.getProvider(workerRequest.organizationId!, guard.providerName);
-                        provider = this.providerRegistry.getByFamily(p!.type);
+                        const p = await this.providerService.getByName(workerRequest.organizationId!, guard.provider);
+                        if (!p) return {passed: true};
+                        provider = this.providerRegistry.getByFamily(p.type);
                         if (!provider) return {passed: true};
 
                         const holoRequest: HoloRequest = pickDefined({
                             request_type: "generate",
-                            model: guard.modelName,
+                            model: guard.model,
                             messages: [{
                                 role: "user",
-                                content: guard.userPrompt + "\n\n" + lastContent
+                                content: guard.user_prompt + "\n\n" + lastContent
                             }],
                             response_format: {type: "json_schema", schema: GuardResultSchema, strict: true},
                             stream: false,
-                            ...(guard.systemPrompt && {system: guard.systemPrompt}),
+                            ...(guard.system_prompt && {system: guard.system_prompt}),
                         }) as HoloRequest;
 
                         const payload = await provider.translator.fromHoloRequest(holoRequest);
                         const guardRequest = WorkerRequestFactory.create(
                             provider.family,
-                            guard.providerName,
+                            guard.provider,
                             RequestType.GENERATE,
                             payload,
                             this.serverId,

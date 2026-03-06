@@ -1,23 +1,24 @@
 import 'reflect-metadata';
-import {withAdmin, withDB} from "./mixins";
+import {container, inject, injectable} from "tsyringe";
+import {withAdmin, withDB, withStats} from "./mixins";
 import {BaseServer} from "./base.server";
-import logger from "../utils/logger";
-import {ProviderService, ResponseService} from "../services";
-import {container, injectable, inject} from "tsyringe";
-import {withStats} from "./mixins/with.stats";
 import {env} from "../env";
-import {PluginService} from "../services/plugin/plugin.service";
-import {PluginDiscoveryService} from "../services/plugin/discovery.service";
-import {PluginLoaderService} from "../services/plugin/loader.service";
-import {ProviderPluginRegistry} from "../services/plugin/provider.registry.service";
-import type {AIRequestStat, IProvider, ProviderEvent} from "@holokai/types/provider";
-import type {HoloWorkerRequest} from "@holokai/types/worker";
-import {WireService} from "../services/wire.service";
-import {CryptoService} from "../services/crypto.service";
+import {
+    CryptoService,
+    NotificationService,
+    PluginDiscoveryService,
+    PluginLoaderService,
+    PluginService,
+    ProviderPluginRegistry,
+    ProviderService,
+    ResponseService,
+    WireService
+} from "../services";
 import {NotificationEventFactory, NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
-import {QueueNotificationService} from "../services/notification/queue.notification.service";
-import {PostgresNotificationStore} from "../db/notification.db";
+import {AIRequestStat, HoloWorkerRequest, IProvider, ProviderEvent} from "@holokai/types";
 import type {INotificationService} from "@holokai/types/notification";
+import {PostgresNotificationStore} from "../db/notification.db";
+import logger from "../utils/logger";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -177,7 +178,7 @@ container.registerSingleton(CryptoService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginRegistry)
-    .registerSingleton(NotificationServiceToken, QueueNotificationService)
+    .registerSingleton(NotificationServiceToken, NotificationService)
     .registerSingleton(NotificationStoreToken, PostgresNotificationStore)
     .registerSingleton(ProviderService);
 

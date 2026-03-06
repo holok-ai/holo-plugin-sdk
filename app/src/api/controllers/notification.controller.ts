@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import {Response} from "express";
 import {inject, injectable} from "tsyringe";
 import {pickDefined, stringifyError} from "@holokai/sdk";
-import {BaseController} from "../../utils/api";
+import {BaseController} from "../../utils";
 import type {
     INotificationService,
     INotificationSub,
@@ -28,12 +28,12 @@ export class NotificationController extends BaseController {
             return;
         }
 
-        const {organizationId, userId, app} = req.auth;
+        const {organizationId, userId, application} = req.auth;
 
         const filter = pickDefined({
             organizationId,
             userId,
-            appSlug: app?.urlSlug
+            appSlug: application?.url_slug
         }) as NotificationSubscribeFilter;
 
         // SSE headers
@@ -105,7 +105,7 @@ export class NotificationController extends BaseController {
                     id: `err_${Date.now()}`,
                     ts: Date.now(),
                     organizationId,
-                    appSlug: app?.urlSlug,
+                    appSlug: application?.url_slug,
                     userId,
                     type: "provider_error",
                     severity: "error",

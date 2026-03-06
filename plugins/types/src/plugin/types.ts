@@ -24,7 +24,7 @@ export const PluginErrorCode = {
 
 export type PluginErrorCode = typeof PluginErrorCode[keyof typeof PluginErrorCode];
 
-export interface IHoloPluginManifest {
+export interface PluginManifest {
     name: string;
     version: string;
     pluginType: PluginType;
@@ -33,7 +33,7 @@ export interface IHoloPluginManifest {
     description?: string;
 }
 
-export interface IPluginContext {
+export interface PluginContext {
     logger: HoloLogger;
     loggerFactory?: (pluginName: string) => HoloLogger;
     config?: unknown;
@@ -42,11 +42,11 @@ export interface IPluginContext {
 }
 
 export interface IPlugin {
-    readonly manifest: IHoloPluginManifest;
+    readonly manifest: PluginManifest;
     readonly state: PluginState;
     readonly family: string;
 
-    initialize(context: IPluginContext): Promise<void>;
+    initialize(context: PluginContext): Promise<void>;
 
     destroy(): Promise<void>;
 

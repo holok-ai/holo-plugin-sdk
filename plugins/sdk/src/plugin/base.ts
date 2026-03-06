@@ -1,12 +1,12 @@
-import {IHoloPluginManifest, IPlugin, IPluginContext, PluginState} from "@holokai/types/plugin";
+import {PluginManifest, IPlugin, PluginContext, PluginState} from "@holokai/types/plugin";
 import {PluginError, PluginErrorCode} from "./errors";
 import {ClassLogger} from "../core";
 
 
 export abstract class BasePlugin extends ClassLogger implements IPlugin {
-    abstract readonly manifest: IHoloPluginManifest;
+    abstract readonly manifest: PluginManifest;
 
-    private _context: IPluginContext | undefined;
+    private _context: PluginContext | undefined;
     protected _state: PluginState = PluginState.UNINITIALIZED;
 
     get state(): PluginState {
@@ -25,7 +25,7 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
         return this.manifest.version;
     }
 
-    protected get pluginContext(): IPluginContext {
+    protected get pluginContext(): PluginContext {
         if (!this._context) {
             throw new PluginError(
                 'Plugin context is not available. Initialize the plugin first.',
@@ -40,7 +40,7 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
         return this._state;
     }
 
-    async initialize(context: IPluginContext): Promise<void> {
+    async initialize(context: PluginContext): Promise<void> {
         const logger = this.mlog(this.initialize);
         if (this._state !== PluginState.UNINITIALIZED) {
             throw new PluginError(
@@ -104,7 +104,7 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
         }
     }
 
-    protected abstract onInitialize(context: IPluginContext): Promise<void>;
+    protected abstract onInitialize(context: PluginContext): Promise<void>;
 
     protected abstract onDestroy(): Promise<void>;
 }

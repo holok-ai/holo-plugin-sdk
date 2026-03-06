@@ -4,8 +4,8 @@ import logger from "../../utils/logger";
 import {IAppServer} from "../base.server";
 import {withQueue} from "./with.queue";
 import {env} from "../../env";
-import {AdminService} from '../../admin/services';
 import {Constructor} from "../../utils";
+import {AdminService} from "../../services";
 
 export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
 

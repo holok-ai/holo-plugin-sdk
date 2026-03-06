@@ -1,5 +1,4 @@
-import type {Prompt} from "@holokai/types/worker";
-import {EvaluatorData, LlmResponse, Provider} from "@holokai/types/entities";
+import {EvaluatorData, LlmResponse, Prompt, Provider} from "@holokai/types/entities";
 
 interface BaseEvent {
     timestamp: number;
