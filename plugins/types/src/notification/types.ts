@@ -1,12 +1,14 @@
 export type NotificationSeverity = "info" | "warn" | "error";
 
 export type NotificationEventType =
+    | "request_started"
     | "guard_started"
     | "guard_passed"
     | "guard_failed"
     | "status"
     | "provider_request_started"
     | "provider_response_completed"
+    | "response_completed"
     | "provider_error";
 
 export interface NotificationEvent {

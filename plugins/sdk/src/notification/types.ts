@@ -24,4 +24,22 @@ export class NotificationEventFactory {
             branchId: branch_id,
         }) as NotificationEvent;
     }
+
+    static fromRequest(type: NotificationEventType, request: HoloWorkerRequest, message: string, payload?: any, severity: NotificationSeverity = "info"): NotificationEvent {
+        const {organizationId, userId, appSlug, requestId, thread_id, branch_id} = request;
+        return pickDefined({
+            id: uuidv4(),
+            ts: Date.now(),
+            organizationId,
+            userId,
+            appSlug,
+            type,
+            severity,
+            message,
+            requestId,
+            payload,
+            threadId: thread_id,
+            branchId: branch_id,
+        }) as NotificationEvent;
+    }
 }
