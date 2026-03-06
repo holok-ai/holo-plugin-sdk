@@ -118,7 +118,7 @@ Three mutually exclusive auth methods, resolved by a single middleware (`makeAut
 Real-time event streaming via SSE at `/api/notifications/stream`:
 
 - RabbitMQ topic exchange with routing key pattern `org.{id}.user.{id}.app.{slug}`
-- Event types: `guard_started`, `guard_passed`, `guard_failed`, `provider_request_started`, `provider_response_completed`, `provider_error`, `status`
+- Event types: `request_started`, `guard_started`, `guard_passed`, `guard_failed`, `response_completed`, `provider_request_started`, `provider_response_completed`, `provider_error`, `status`
 - Cursor-based pagination for replay via `Last-Event-ID`
 - Persisted to PostgreSQL for audit trail
 
