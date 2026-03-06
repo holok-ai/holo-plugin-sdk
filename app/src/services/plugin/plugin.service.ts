@@ -54,7 +54,7 @@ export class PluginService extends ClassLogger {
             await providerPlugin.initialize(pluginContext);
 
             if (providerPlugin.getState() === PluginState.READY) {
-                this.providerRegistry.registerPlugin(
+                await this.providerRegistry.registerPlugin(
                     providerPlugin,
                     discoveryInfo.version,
                     discoveryInfo.isLatest

@@ -17,6 +17,13 @@ export class AccessDB extends ClassLogger {
         const rows = await this.db.query<{ id: string }>(ACCESSIBLE_APPS_QUERY, [userId, orgId]);
         return rows.map(r => r.id);
     }
+
+    async getUserIdByEmail(email: string): Promise<string | null> {
+        const result = await this.db.queryOne<{ id: string }>(
+            `SELECT id FROM app_users WHERE email = $1`, [email]
+        );
+        return result?.id ?? null;
+    }
 }
 
 const ACCESS_CHECK_QUERY = `

@@ -60,15 +60,21 @@ export class WorkerRequestFactory {
         branch_id?: string,
         customAppSlug?: string
     ) {
-        let sanitizedAuth = {};
+        let sanitizedAuth: Record<string, any> = {};
 
         if (auth) {
-            const {organizationId, userId} = auth;
+            const {organizationId, userId, application, tokenType, clientIdentifier} = auth;
             const appSlug = customAppSlug || providerName;
             sanitizedAuth = {
                 organizationId,
                 userId,
                 appSlug,
+                applicationId: application?.id,
+                applicationName: application?.name,
+                providerId: application?.provider_id,
+                providerName: application?.provider?.name ?? providerName,
+                clientIdentifier,
+                tokenType,
             };
         }
 

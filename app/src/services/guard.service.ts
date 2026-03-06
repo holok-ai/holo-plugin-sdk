@@ -37,12 +37,12 @@ export class GuardService extends ClassLogger {
             return;
         }
 
-        let provider = this.providerRegistry.getByFamily(workerRequest.providerType)
-        if (!provider) {
-            throw new Error(`No provider found: ${workerRequest.providerName}`);
+        const requestPlugin = this.providerRegistry.getByFamily(workerRequest.providerType);
+        if (!requestPlugin) {
+            throw new Error(`No plugin found for provider type: ${workerRequest.providerType}`);
         }
 
-        const request = await provider.translator.toHoloRequest(workerRequest.payload);
+        const request = await requestPlugin.translator.toHoloRequest(workerRequest.payload);
 
         const holoMessages = request.messages;
         if (!holoMessages || !holoMessages.length) return;
@@ -74,13 +74,22 @@ export class GuardService extends ClassLogger {
                     logger.debug(`Starting guard check ${index + 1}/${guards.length}: id=${guard.id}, model=${guard.model}, provider=${guard.provider}`);
                     const startTime = Date.now();
                     try {
-                        const p = await this.providerService.getByName(workerRequest.organizationId!, guard.provider);
-                        if (!p) return {passed: true};
-                        provider = this.providerRegistry.getByFamily(p.type);
-                        if (!provider) return {passed: true};
+                        if (!guard.provider_id) {
+                            logger.warn(`Guard ${guard.id} has no provider_id`);
+                            return {passed: true};
+                        }
+                        const guardProvider = await this.providerService.getById(guard.provider_id);
+                        if (!guardProvider) {
+                            logger.warn(`Guard provider not found: ${guard.provider_id}`);
+                            return {passed: true};
+                        }
+                        const guardPlugin = this.providerRegistry.getByFamily(guardProvider.type);
+                        if (!guardPlugin) {
+                            logger.warn(`No plugin for guard provider type: ${guardProvider.type}`);
+                            return {passed: true};
+                        }
 
                         const holoRequest: HoloRequest = pickDefined({
-                            request_type: "generate",
                             model: guard.model,
                             messages: [{
                                 role: "user",
@@ -91,11 +100,11 @@ export class GuardService extends ClassLogger {
                             ...(guard.system_prompt && {system: guard.system_prompt}),
                         }) as HoloRequest;
 
-                        const payload = await provider.translator.fromHoloRequest(holoRequest);
+                        const payload = await guardPlugin.translator.fromHoloRequest(holoRequest);
                         const guardRequest = WorkerRequestFactory.create(
-                            provider.family,
-                            guard.provider,
-                            RequestType.GENERATE,
+                            guardPlugin.family,
+                            guardProvider.name,
+                            RequestType.CHAT,
                             payload,
                             this.serverId,
                             auth,
@@ -103,13 +112,14 @@ export class GuardService extends ClassLogger {
                             workerRequest.thread_id,
                             workerRequest.branch_id
                         );
+                        logger.info(JSON.stringify(guardRequest));
                         const response = await this.responseService.requestOnce<string>(guardRequest);
 
                         const raw = JSON.parse(response as string);
                         logger.debug(`Guard raw response: ${JSON.stringify(raw)}`, {requestId: workerRequest.requestId});
                         // TODO: Handle error responses before translating - check if raw.error exists and return early
                         //       to avoid passing error objects to translator which expects proper response structure
-                        const holoResponse = await provider.translator.toHoloResponse(raw);
+                        const holoResponse = await guardPlugin.translator.toHoloResponse(raw);
                         if (!holoResponse.messages) return {
                             passed: false,
                             errors: ["Guard response is missing messages"]

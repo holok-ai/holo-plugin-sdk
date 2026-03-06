@@ -54,7 +54,7 @@ export interface IPlugin {
 }
 
 export interface IPluginRegistry<T extends IPlugin> {
-    registerPlugin(plugin: T, version?: string, isLatest?: boolean): void;
+    registerPlugin(plugin: T, version?: string, isLatest?: boolean): Promise<void>;
 
     unregisterPlugin(id: string, version?: string): void;
 

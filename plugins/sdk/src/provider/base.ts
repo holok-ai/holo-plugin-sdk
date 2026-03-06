@@ -1,7 +1,7 @@
 import type {IAuditor, IProvider, IProviderTranslator, IResponseFactory, ProviderRunner} from "@holokai/types/provider";
 import {ModelInfo, ProviderContext, ProviderEvent} from "@holokai/types/provider";
 import {HoloWorkerRequest, WorkerRequestEnvelope} from "@holokai/types/worker";
-import {LlmRequest, LlmResponse} from "@holokai/types/entities";
+import {ProviderRequest, ProviderResponse} from "@holokai/types/entities";
 import {AsyncEventQueue, ClassLogger, filterForwardableHeaders, pickDefined, pickHeadersByPrefix} from "../core";
 
 export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, Final = any> extends ClassLogger implements IProvider {
@@ -31,14 +31,14 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
 
     abstract getModels(allowedModels: string[] | true): Promise<any>;
 
-    async auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest> {
+    async auditRequest(workerRequest: HoloWorkerRequest): Promise<ProviderRequest> {
         return this.auditor.auditRequest(workerRequest);
     }
 
     async auditResponse(
         workerEnvelope: WorkerRequestEnvelope,
         providerEvent: ProviderEvent
-    ): Promise<LlmResponse> {
+    ): Promise<ProviderResponse> {
         return this.auditor.auditResponse(workerEnvelope, providerEvent);
     }
 

@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import crypto from 'crypto';
+import {validate} from 'uuid';
 import {ClassLogger, pickDefined} from "@holokai/sdk";
 import type {Auth} from "@holokai/types/api";
 import type {Application, HoloToken} from "@holokai/types/entities";
@@ -20,6 +21,7 @@ function buildAuth(
     applications: Application[],
     application?: Application,
     userId?: string,
+    clientIdentifier?: string,
 ): Auth {
     return pickDefined({
         organizationId,
@@ -27,6 +29,7 @@ function buildAuth(
         tokenType,
         application,
         applications,
+        clientIdentifier,
     }) as Auth;
 }
 
@@ -96,7 +99,16 @@ export class AuthService extends ClassLogger {
         }
 
         const decodedToken = this.tokenService.decodeToken(token);
-        const {organizationId, userId} = decodedToken;
+        const {organizationId, userId: tokenUserId} = decodedToken;
+
+        let userId = tokenUserId;
+        let clientIdentifier: string | undefined;
+
+
+        if (tokenUserId && !validate(tokenUserId)) {
+            clientIdentifier = tokenUserId;
+            userId = await this.accessService.getUserIdByEmail(tokenUserId) ?? undefined;
+        }
 
         const allApplications = await this.applicationService.getBySlugs(organizationId, appSlugs);
 
@@ -123,7 +135,7 @@ export class AuthService extends ClassLogger {
             return Promise.reject('User is not authorized for any providers.');
         }
 
-        return buildAuth('jwt', organizationId, filtered, application, userId);
+        return buildAuth('jwt', organizationId, filtered, application, userId, clientIdentifier);
     }
 
     async authenticateAnonymous(appSlug: string, provider?: string): Promise<Auth> {

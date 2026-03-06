@@ -3,7 +3,7 @@ import type {IProviderPlugin, PluginContext} from '@holokai/types/plugin';
 import {manifest} from "./manifest.js";
 import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/types/provider";
 import {OpenAIProvider} from "./openai.provider";
-import {RequestType} from "@holokai/types/holo";
+import {Capability} from "@holokai/types/holo";
 import {RouteHandler, RouteTree, RouteTreeNode} from "@holokai/types/routing";
 import {OpenAITranslator} from "./openai.translator";
 import {OpenAICompletionsWireAdapter, OpenAIResponsesWireAdapter} from "./openai.wire.adapter";
@@ -42,24 +42,29 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
         const routes: RouteTreeNode = {
             models: {
                 method: 'GET',
-                handler: RouteHandler.MODELS
+                handler: RouteHandler.MODELS,
+                protocol: 'models',
+                capability: Capability.MODELS
             },
             chat: {
                 completions: {
                     method: 'POST',
-                    requestType: RequestType.CHAT,
-                    handler: RouteHandler.REQUEST
+                    handler: RouteHandler.REQUEST,
+                    protocol: 'completions',
+                    capability: Capability.CHAT
                 }
             },
             responses: {
                 method: 'POST',
-                requestType: RequestType.RESPONSES,
-                handler: RouteHandler.REQUEST
+                handler: RouteHandler.REQUEST,
+                protocol: 'responses',
+                capability: Capability.CHAT
             },
             embeddings: {
                 method: 'POST',
-                requestType: RequestType.EMBED,
-                handler: RouteHandler.REQUEST
+                handler: RouteHandler.REQUEST,
+                protocol: 'embeddings',
+                capability: Capability.EMBED
             }
         };
         return {

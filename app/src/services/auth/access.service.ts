@@ -36,6 +36,16 @@ export class AccessService extends ClassLogger {
         return result;
     }
 
+    async getUserIdByEmail(email: string): Promise<string | null> {
+        const key = `${CACHE_PREFIX}:email:${email}`;
+        const cached = await this.redis.get<string>(key);
+        if (cached) return cached;
+
+        const result = await this.accessDB.getUserIdByEmail(email);
+        if (result) await this.redis.set(key, result, CACHE_TTL);
+        return result;
+    }
+
     async invalidateUser(userId: string): Promise<void> {
         const keys = await this.redis.keys(`${CACHE_PREFIX}:${userId}:*`);
         for (const key of keys) await this.redis.del(key);

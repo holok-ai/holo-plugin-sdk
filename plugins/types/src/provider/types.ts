@@ -1,6 +1,7 @@
 import type {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk, RequestType} from "../holo";
 import type {HoloWorkerRequest, WorkerResponseEnvelope} from "../worker";
-import type {LlmRequest, LlmResponse} from "../entities";
+import type {ProviderRequest, ProviderResponse} from "../entities";
+import {RouteDefinition} from "../routing";
 
 export type ProviderEvent =
     | { type: "stream_event"; requestId: string; seq: number; event: any; ts: number }
@@ -18,11 +19,12 @@ export type ProviderEvent =
 };
 
 export interface ProviderEnvelope {
-    model_slug: string;
+    access_model: string;
     system_prompt?: string;
 }
 
 export interface ProviderContext {
+    route: RouteDefinition;
     requestType?: RequestType;
     headers?: Record<string, string | string[]>;
     query?: Record<string, string>;
@@ -73,14 +75,14 @@ export interface IResponseFactory {
 export interface IAuditor {
     readonly provider: string;
 
-    auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest>;
+    auditRequest(workerRequest: HoloWorkerRequest): Promise<ProviderRequest>;
 
     createWorkerResponseEnvelope(workerRequest: HoloWorkerRequest, workerId?: string): Promise<WorkerResponseEnvelope>;
 
     auditResponse(
         responseEnvelope: WorkerResponseEnvelope,
         providerEvent: ProviderEvent,
-    ): Promise<LlmResponse>;
+    ): Promise<ProviderResponse>;
 }
 
 export interface IProviderTranslator {
@@ -125,6 +127,7 @@ export interface IWireAdapter {
 export interface WireAdapterParams {
     requestId: string;
     isStreaming: boolean;
+    route: RouteDefinition;
     requestType: RequestType;
 }
 
@@ -145,12 +148,12 @@ export interface IProvider {
         opts?: { signal?: AbortSignal }
     ): Promise<AsyncIterable<ProviderEvent>>;
 
-    auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest>;
+    auditRequest(workerRequest: HoloWorkerRequest): Promise<ProviderRequest>;
 
     auditResponse(
         workerEnvelope: WorkerResponseEnvelope,
         providerEvent: ProviderEvent
-    ): Promise<LlmResponse>;
+    ): Promise<ProviderResponse>;
 }
 
 export interface ProviderRunner<Final = any> {

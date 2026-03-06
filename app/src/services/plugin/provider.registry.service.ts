@@ -7,19 +7,23 @@ import {RequestType} from "@holokai/types/holo";
 import type {RouteDefinition, RouteTree} from "@holokai/types/routing";
 import {RouteHandler} from "@holokai/types/routing";
 import {ProviderController} from '../../api/controllers/provider.controller';
+import {PluginDB, ProtocolDB} from '../../db';
 
 @injectable()
 export class ProviderPluginRegistry extends ClassLogger implements IPluginRegistry<IProviderPlugin> {
     private readonly latestPlugins: Map<string, IProviderPlugin>;
     private readonly versionedPlugins: Map<string, Map<string, IProviderPlugin>>;
 
-    constructor() {
+    constructor(
+        private pluginDB: PluginDB,
+        private protocolDB: ProtocolDB,
+    ) {
         super();
         this.latestPlugins = new Map();
         this.versionedPlugins = new Map();
     }
 
-    registerPlugin(plugin: IProviderPlugin, version?: string, isLatest: boolean = true): void {
+    async registerPlugin(plugin: IProviderPlugin, version?: string, isLatest: boolean = true): Promise<void> {
         if (!plugin.family) {
             throw new Error(`Plugin ${plugin.manifest.name} has no family defined`);
         }
@@ -33,6 +37,29 @@ export class ProviderPluginRegistry extends ClassLogger implements IPluginRegist
 
         if (isLatest) {
             this.latestPlugins.set(family, plugin);
+        }
+
+        const dbPlugin = await this.pluginDB.upsert(family, plugin.manifest.name, pluginVersion);
+        if (isLatest) {
+            await this.pluginDB.setLatest(family, pluginVersion);
+        }
+
+        const routeTree = plugin.getRoutes();
+        await this.registerProtocols(dbPlugin.id, family, routeTree);
+    }
+
+    private async registerProtocols(pluginId: string, family: string, tree: RouteTree, basePath: string = ''): Promise<void> {
+        for (const [key, value] of Object.entries(tree)) {
+            if (this.isRouteDefinition(value)) {
+                const routeDef = value as RouteDefinition;
+                if (routeDef.protocol && routeDef.capability) {
+                    const path = basePath ? `${basePath}/${key}` : `/${key}`;
+                    const name = `${family} ${routeDef.protocol}`;
+                    await this.protocolDB.upsert(pluginId, routeDef.protocol, name, routeDef.capability, path);
+                }
+            } else {
+                await this.registerProtocols(pluginId, family, value as RouteTree, basePath ? `${basePath}/${key}` : `/${key}`);
+            }
         }
     }
 

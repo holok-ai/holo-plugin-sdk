@@ -1,6 +1,6 @@
 import {injectable} from "tsyringe";
 import {AppDB} from "./app.db";
-import {LlmRequest} from "@holokai/types/entities";
+import {ProviderRequest} from "@holokai/types/entities";
 
 @injectable()
 export class RequestDB {
@@ -8,47 +8,41 @@ export class RequestDB {
 
     }
 
-    async insert(request: Omit<LlmRequest, 'id'>) {
+    async insert(request: Omit<ProviderRequest, 'id'>) {
         const {
             organization_id,
             request_id,
-            request_type,
-            model_slug,
-            user_prompt,
-            options,
-            source_id,
-            user_id,
-            thread_id,
-            branch_id,
-            timestamp,
-            raw_request,
             application_id,
-            provider_slug,
-            system_prompt
+            provider_id,
+            protocol_id,
+            capability,
+            user_id,
+            client_identifier,
+            access_model,
+            thread_id,
+            timestamp,
+            metadata
         } = request;
 
         const query = `
-            INSERT INTO llm_requests
-            (organization_id, request_id, request_type, model_slug, user_prompt, options, source_id, user_id, thread_id, branch_id, timestamp, raw_request, application_id, provider_slug, system_prompt)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            INSERT INTO provider_requests
+            (organization_id, request_id, application_id, provider_id, protocol_id, capability, user_id, client_identifier, access_model, thread_id, timestamp, metadata)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         `;
 
         await this.db.query(query, [
             organization_id,
             request_id,
-            request_type,
-            model_slug,
-            user_prompt,
-            JSON.stringify(options),
-            source_id,
-            user_id,
-            thread_id,
-            branch_id,
-            timestamp,
-            JSON.stringify(raw_request),
             application_id,
-            provider_slug?.toUpperCase(),
-            system_prompt
+            provider_id,
+            protocol_id,
+            capability,
+            user_id,
+            client_identifier,
+            access_model,
+            thread_id,
+            timestamp,
+            JSON.stringify(metadata)
         ]);
     }
 }

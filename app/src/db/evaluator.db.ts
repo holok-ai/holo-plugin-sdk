@@ -1,6 +1,6 @@
 import {injectable} from "tsyringe";
 import {AppDB} from "./app.db";
-import {AnalysisResult, Application, Evaluator, EvaluatorData, LlmResponse, Prompt, Provider} from "@holokai/types/entities";
+import {AnalysisResult, Application, Evaluator, EvaluatorData, ProviderResponse, Prompt, Provider} from "@holokai/types/entities";
 
 @injectable()
 export class EvaluatorDB {
@@ -142,12 +142,12 @@ export class EvaluatorDB {
         return await this.db.queryOne<Provider>(query, [name]);
     }
 
-    async getResponse(id: string): Promise<LlmResponse | null> {
+    async getResponse(id: string): Promise<ProviderResponse | null> {
         const query = `
             SELECT *
-            FROM llm_responses
+            FROM provider_responses
             WHERE id = $1`;
-        return await this.db.queryOne<LlmResponse>(query, [id]);
+        return await this.db.queryOne<ProviderResponse>(query, [id]);
     }
 
     async getUserIdByEmail(email: string): Promise<string | null> {

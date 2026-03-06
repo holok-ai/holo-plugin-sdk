@@ -7,7 +7,7 @@ import {env} from "../env";
 import {AsyncEventQueue, ClassLogger} from "@holokai/sdk";
 import type {WireChunk} from "@holokai/types/provider";
 import type {HoloWorkerRequest} from "@holokai/types/worker";
-import {LlmResponse} from "@holokai/types/entities";
+import {ProviderResponse} from "@holokai/types/entities";
 
 @injectable()
 export class ResponseService extends ClassLogger {
@@ -135,7 +135,7 @@ export class ResponseService extends ClassLogger {
         await this.queueService.sendToExchange(env.queue.responseExchange, sourceId, data, {correlationId: requestId});
     }
 
-    async sendToAudit(requestId: string, data: LlmResponse) {
+    async sendToAudit(requestId: string, data: ProviderResponse) {
         await this.queueService.sendToExchange(env.queue.responseExchange, "audit", data, {correlationId: requestId});
     }
 }

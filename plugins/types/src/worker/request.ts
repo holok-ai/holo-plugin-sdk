@@ -1,4 +1,4 @@
-import {RequestType} from "../holo";
+import {Capability, RequestType} from "../holo";
 import {Prompt} from "../entities";
 
 export interface GuardResult {
@@ -24,6 +24,7 @@ export interface HoloWorkerRequest {
     branch_id?: string;
     requestId: string;
     type: RequestType;
+    protocol?: string;
     payload: any;
     timestamp: number;
     isStreaming: boolean;
@@ -35,4 +36,13 @@ export interface HoloWorkerRequest {
     rawRequest: RawRequest;
     isPassthrough?: boolean;
     passthroughPath?: string;
+
+    applicationId?: string;
+    applicationName?: string;
+    providerId?: string;
+    protocolId?: string;
+    protocolName?: string;
+    capability?: Capability;
+    clientIdentifier?: string;
+    tokenType?: string;
 }

@@ -10,7 +10,7 @@ import {manifest} from "./manifest.js";
 import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/types/provider";
 import type {RouteTree} from "@holokai/types/routing";
 import {RouteHandler} from "@holokai/types/routing";
-import {RequestType} from "@holokai/types/holo";
+import {Capability} from "@holokai/types/holo";
 import {ClaudeProvider} from "./claude.provider";
 import {ClaudeWireAdapter} from "./claude.wire.adapter";
 import {ClaudeTranslator} from "./claude.translator";
@@ -48,12 +48,15 @@ export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin 
             v1: {
                 models: {
                     method: 'GET',
-                    handler: RouteHandler.MODELS
+                    handler: RouteHandler.MODELS,
+                    protocol: 'models',
+                    capability: Capability.MODELS
                 },
                 messages: {
                     method: 'POST',
-                    requestType: RequestType.CHAT,
-                    handler: RouteHandler.REQUEST
+                    handler: RouteHandler.REQUEST,
+                    protocol: 'messages',
+                    capability: Capability.CHAT
                 }
             }
         }

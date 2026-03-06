@@ -58,6 +58,7 @@ export class RequestService extends ClassLogger {
             }
         }
 
+        req.auth!.application = application;
         const workerRequest = await this.parseRequest(providerType, application.provider!.name, type, req, isPassthrough);
 
         if (application.guards?.length) {

@@ -1,4 +1,5 @@
 export {AppDB} from './app.db';
+export {ApplicationDB} from './application.db';
 export {EvaluatorDB} from './evaluator.db';
 export {ProviderDB} from './provider.db';
 export {RequestDB} from './request.db';
@@ -7,3 +8,5 @@ export {ApiCredentialDB} from './api.credential.db';
 export {HoloTokenDB} from './holo.token.db';
 export {ModelDB} from './model.db';
 export {AccessDB} from './access.db';
+export {PluginDB} from './plugin.db';
+export {ProtocolDB} from './protocol.db';

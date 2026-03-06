@@ -6,7 +6,7 @@ import {QueueService} from "./queue.service";
 import {env} from '../env';
 import {ClassLogger} from "@holokai/sdk";
 import type {HoloWorkerRequest, HoloWorkerResponse} from "@holokai/types/worker";
-import {LlmRequest, LlmResponse} from "@holokai/types/entities";
+import {ProviderRequest, ProviderResponse} from "@holokai/types/entities";
 import {NotificationStoreToken} from "@holokai/sdk/notification";
 import type {NotificationEvent} from "@holokai/types/notification";
 import {PostgresNotificationStore} from "../db/notification.db";
@@ -33,10 +33,10 @@ export class AuditService extends ClassLogger {
 
     /**
      * Log LLM request to database with comprehensive audit trail
-     * Supports both HoloWorkerRequest and direct LlmRequest formats
-     * @param {HoloWorkerRequest | Omit<LlmRequest, 'id'>} content - Request data to log
+     * Supports both HoloWorkerRequest and direct ProviderRequest formats
+     * @param {HoloWorkerRequest | Omit<ProviderRequest, 'id'>} content - Request data to log
      */
-    async logRequest(content: HoloWorkerRequest | Omit<LlmRequest, 'id'>): Promise<void> {
+    async logRequest(content: HoloWorkerRequest | Omit<ProviderRequest, 'id'>): Promise<void> {
         const logger = this.mlog(this.logRequest);
         const startTime = Date.now();
 
@@ -61,12 +61,12 @@ export class AuditService extends ClassLogger {
 
     /**
      * Log LLM response to database with comprehensive audit trail
-     * Supports HoloWorkerResponse and direct LlmResponse formats
-     * @param {HoloWorkerResponse | Omit<LlmResponse, 'id'>} content - Response data to log
+     * Supports HoloWorkerResponse and direct ProviderResponse formats
+     * @param {HoloWorkerResponse | Omit<ProviderResponse, 'id'>} content - Response data to log
      * @param requestContext - Optional context for userId and applicationId
      */
 
-    async logResponse(content: Omit<LlmResponse, 'id'>): Promise<void> {
+    async logResponse(content: Omit<ProviderResponse, 'id'>): Promise<void> {
         const logger = this.mlog(this.logResponse);
         const startTime = Date.now();
 
@@ -148,15 +148,15 @@ export class AuditService extends ClassLogger {
 
     /**
      * Insert request record into database
-     * @param {Omit<LlmRequest, 'id'>} content - Request data to insert
+     * @param {Omit<ProviderRequest, 'id'>} content - Request data to insert
      * @private
      */
-    private async insertRequest(content: Omit<LlmRequest, 'id'>): Promise<void> {
+    private async insertRequest(content: Omit<ProviderRequest, 'id'>): Promise<void> {
         const logger = this.mlog(this.insertRequest);
         const startTime = Date.now();
         try {
             await this.requestDB.insert(content);
-            logger.info(`Successfully logged LlmRequest ${content.request_id} in ${Date.now() - startTime}ms`);
+            logger.info(`Successfully logged ProviderRequest ${content.request_id} in ${Date.now() - startTime}ms`);
         } catch (error) {
             logger.error(`Database insert failed for request ${content.request_id}: ${error instanceof Error ? error.message : 'Unknown error'}`, {
                 requestId: content.request_id,
@@ -186,10 +186,10 @@ export class AuditService extends ClassLogger {
 
     /**
      * Insert response record into database
-     * @param {Omit<LlmResponse, 'id'>} content - Response data to insert
+     * @param {Omit<ProviderResponse, 'id'>} content - Response data to insert
      * @private
      */
-    private async insertResponse(content: Omit<LlmResponse, 'id'>): Promise<string | null> {
+    private async insertResponse(content: Omit<ProviderResponse, 'id'>): Promise<string | null> {
         const logger = this.mlog(this.insertResponse);
         const startTime = Date.now();
         try {

@@ -2,14 +2,14 @@ import 'reflect-metadata';
 import {ProviderDB, ProviderWithCredential} from "../../db/provider.db";
 import {injectable} from "tsyringe";
 import type {IProvider} from "@holokai/types/provider";
-import {ProviderPluginRegistry} from "../plugin/provider.registry.service";
-import {CryptoService} from "../auth/crypto.service";
+import {ProviderPluginRegistry} from "../plugin";
+import {CryptoService} from "../auth";
 import {BaseEntityService} from "./base.entity.service";
 import {Provider} from "@holokai/types";
 import {RedisService} from "../redis.service";
 
 @injectable()
-export class ProviderService extends BaseEntityService<Provider>{
+export class ProviderService extends BaseEntityService<Provider> {
     serverId: string | undefined;
     private providers: Map<string, IProvider> = new Map();
 
@@ -20,10 +20,6 @@ export class ProviderService extends BaseEntityService<Provider>{
         private cryptoService: CryptoService
     ) {
         super(redis, {prefix: 'provider', ttl: 300});
-    }
-
-    get availableProviders(): string[] {
-        return this.providers.keys().toArray();
     }
 
     async init(serverId: string): Promise<void> {
