@@ -11,7 +11,7 @@ import {ProtocolCapability} from "@holokai/types/entities";
 
 export const ClaudeProtocols = {
     MESSAGES: 'claude.messages',
-    MODELS: 'claude.modes'
+    MODELS: 'claude.models'
 } as const;
 
 export type ClaudeProtocols = typeof ClaudeProtocols[keyof typeof ClaudeProtocols];

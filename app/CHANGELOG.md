@@ -1,4 +1,4 @@
-# @holokai/holo-provider-ollama
+# holo
 
 ## 2.0.0
 
@@ -22,17 +22,3 @@
 ### Patch Changes
 
 - fd64cb1: Moved app to separate workspace so that we can track with changeset.
-- Updated dependencies [af04a6e]
-- Updated dependencies [fd64cb1]
-  - @holokai/sdk@2.0.0
-
-## 1.0.0
-
-### Minor Changes
-
-- Broke up SDK to have dependency-less @holokai/types. Reorganized types and interfaces. Fixed up some types vs interfaces. Prefixed true interfaces that are used to describe classes vs TypeScript interfaces used to just describe an object.
-
-### Patch Changes
-
-- Updated dependencies
-  - @holokai/sdk@1.0.0
