@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import {QueueService} from "./queue.service";
-import {container, injectable} from "tsyringe";
+import {injectable} from "tsyringe";
 import {HoloApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
@@ -139,5 +139,3 @@ export class ResponseService extends ClassLogger {
         await this.queueService.sendToExchange(env.queue.responseExchange, "audit", data, {correlationId: requestId});
     }
 }
-
-container.registerSingleton(ResponseService)

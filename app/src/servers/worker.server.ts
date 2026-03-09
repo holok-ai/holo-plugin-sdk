@@ -1,24 +1,14 @@
 import 'reflect-metadata';
+import '../container/base.registry';
+import '../container/worker.registry';
 import {container, inject, injectable} from "tsyringe";
 import {withAdmin, withDB, withStats} from "./mixins";
 import {BaseServer} from "./base.server";
 import {env} from "../env";
-import {
-    CryptoService,
-    NotificationService,
-    PluginDiscoveryService,
-    PluginLoaderService,
-    PluginService,
-    ProviderImplService,
-    ProviderPluginService,
-    ProviderService,
-    ResponseService
-} from "../services";
-import {NotificationEventFactory, NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
+import {PluginService, ProviderImplService, ResponseService} from "../services";
+import {NotificationEventFactory, NotificationServiceToken} from "@holokai/sdk/notification";
 import {AIRequestStat, HoloWorkerRequest, IProvider, ProviderEvent} from "@holokai/types";
 import type {INotificationService} from "@holokai/types/notification";
-import {PostgresNotificationStore} from "../db/notification.db";
-import logger from "../utils/logger";
 import {ServerType} from "@holokai/types/entities";
 
 @injectable()
@@ -52,7 +42,6 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
 
                 const {sourceId, guardResult} = workerRequest;
 
-                // Setup the over-the-wire response for client-native streaming
                 const envelope = await ai.auditor.createWorkerResponseEnvelope(workerRequest, this.id);
 
                 if (guardResult && !guardResult.passed) {
@@ -175,48 +164,5 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
     }
 }
 
-container.registerSingleton(CryptoService)
-    .registerSingleton(PluginService)
-    .registerSingleton(PluginDiscoveryService)
-    .registerSingleton(PluginLoaderService)
-    .registerSingleton(ProviderPluginService)
-    .registerSingleton(ProviderImplService)
-    .registerSingleton(NotificationServiceToken, NotificationService)
-    .registerSingleton(NotificationStoreToken, PostgresNotificationStore)
-    .registerSingleton(ProviderService);
-
-let workerInstance: WorkerServer | null = null;
-
-async function startWorker() {
-    try {
-        workerInstance = container.resolve(WorkerServer);
-        await workerInstance.start();
-    } catch (error) {
-        logger.error(`Failed to start worker: ${(error as Error).message}`, {
-            className: 'startWorker',
-            methodName: 'startWorker',
-            stack: (error as Error).stack
-        });
-        process.exit(1);
-    }
-}
-
-['SIGBREAK', 'SIGINT', 'SIGTERM'].forEach((signal) => {
-    process.on(signal, () => {
-        logger.info(`Received ${signal}, shutting down worker server...`, {className: 'process', methodName: signal});
-        if (workerInstance) {
-            workerInstance.shutdown();
-        }
-        process.exit(0);
-    });
-});
-
-process.on("uncaughtException", (err) => {
-    logger.error(`Uncaught exception in worker server: ${err.message}`, {
-        className: 'process',
-        methodName: 'uncaughtException'
-    });
-    logger.error(err.stack);
-});
-
-await startWorker();
+const server = container.resolve(WorkerServer);
+await server.start();

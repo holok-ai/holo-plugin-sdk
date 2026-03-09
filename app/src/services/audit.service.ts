@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {AuditServiceEvent} from '../types';
-import {container, inject, injectable} from "tsyringe";
-import {AppDB, EvaluatorDB, RequestDB, ResponseDB} from "../db";
+import {inject, injectable} from "tsyringe";
+import {EvaluatorDB, RequestDB, ResponseDB} from "../db";
 import {QueueService} from "./queue.service";
 import {env} from '../env';
 import {ClassLogger} from "@holokai/sdk";
@@ -207,5 +207,3 @@ export class AuditService extends ClassLogger {
         }
     }
 }
-
-container.registerSingleton(AppDB);

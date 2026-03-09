@@ -32,7 +32,6 @@ export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
             await super.onInit(); // This calls withQueue's onInit, which calls Base's onInit
 
             logger.debug(`${this.id} is Admin Aware`);
-            await this.adminService.registerServer(this.id, this.type);
             let commandQueue = env.worker.adminCommandQueue;
             let exchange = env.queue.adminExchange;
             await this.queueService.assertQueue(commandQueue, {

@@ -84,6 +84,12 @@ export class PluginService extends BaseEntityService<Plugin> implements IPluginR
             }
         }
 
+        const registeredIds = Array.from(this.pluginImpls.keys());
+        const removed = await this.serverDB.syncPlugins(serverName, registeredIds);
+        if (removed > 0) {
+            log.info(`Removed ${removed} stale plugin(s) from server ${serverName}`);
+        }
+
         log.info('Plugin system initialized successfully');
     }
 

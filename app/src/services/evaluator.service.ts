@@ -1,6 +1,6 @@
 import 'reflect-metadata';
-import {container, injectable} from "tsyringe";
-import {AppDB, EvaluatorDB} from "../db";
+import {injectable} from "tsyringe";
+import {EvaluatorDB} from "../db";
 import {
     AnalysisEventMapper,
     EvaluatorEvent,
@@ -201,5 +201,3 @@ export class EvaluatorService extends ClassLogger {
     }
 
 }
-
-container.registerSingleton(AppDB);
