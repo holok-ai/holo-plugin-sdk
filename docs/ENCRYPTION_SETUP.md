@@ -61,4 +61,3 @@ CREDENTIAL_ENCRYPTION_KEY=oaJy1FWSpSIR+Fa1q2IcPSyMhk5I18qApHNT7kIvAxU=
 ❌ Store keys in application code
 ❌ Use weak or predictable encryption keys
 
-```
