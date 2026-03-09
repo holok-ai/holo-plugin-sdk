@@ -20,7 +20,7 @@ export class AccessDB extends ClassLogger {
 
     async getUserIdByEmail(email: string): Promise<string | null> {
         const result = await this.db.queryOne<{ id: string }>(
-            `SELECT id FROM app_users WHERE email = $1`, [email]
+            `SELECT id FROM app_users WHERE upper(email) = upper($1)`, [email]
         );
         return result?.id ?? null;
     }

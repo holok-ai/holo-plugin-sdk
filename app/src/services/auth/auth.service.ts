@@ -89,6 +89,7 @@ export class AuthService extends ClassLogger {
     }
 
     async authenticateJwt(token: string, appSlug?: string, provider?: string, useCache: boolean = true): Promise<Auth> {
+        const logger = this.mlog(this.authenticateJwt);
         const appSlugs = await this.tokenService.getAppSlugs(token, useCache);
         if (!appSlugs) {
             return Promise.reject('User is not provisioned with any applications.');
@@ -107,7 +108,9 @@ export class AuthService extends ClassLogger {
 
         if (tokenUserId && !validate(tokenUserId)) {
             clientIdentifier = tokenUserId;
+            logger.info(`Found token for token ${tokenUserId}`);
             userId = await this.accessService.getUserIdByEmail(tokenUserId) ?? undefined;
+            logger.info(`User is ${userId} for token ${tokenUserId}`);
         }
 
         const allApplications = await this.applicationService.getBySlugs(organizationId, appSlugs);

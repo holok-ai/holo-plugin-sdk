@@ -1,19 +1,18 @@
 import express from "express";
 import {container} from 'tsyringe';
 import {createCustomApplicationRoutes} from "./app.routes";
-import {ProviderController} from "../controllers/provider.controller";
-import {AuthService, ProviderPluginRegistry} from "../../services";
+import {AuthService} from "../../services";
 import {createNotificationRoutes} from "./notification.routes";
 import {createTokenRoutes} from "./token.routes";
 import {makeAuthMiddleware} from "../middleware";
+import {PluginRouteService} from "../../services/plugin/plugin.route.service";
 
-export function createRoutes(): express.Router {
+export async function createRoutes(): Promise<express.Router> {
     const router = express.Router();
 
-    const providerHandlers = container.resolve(ProviderController);
-    const providerRegistry = container.resolve(ProviderPluginRegistry);
+    const pluginRouteService = container.resolve(PluginRouteService);
 
-    providerRegistry.registerRoutes(router, providerHandlers);
+    await pluginRouteService.registerRoutes(router);
 
     const authService = container.resolve(AuthService);
 

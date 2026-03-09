@@ -3,7 +3,6 @@ import {QueueService} from "./queue.service";
 import {injectable} from "tsyringe";
 import {env} from "../env";
 import logger from "../utils/logger";
-import {ProviderService} from "./entities";
 import {PluginService} from "./plugin";
 import {ResponseService} from "./response.service";
 import {RedisService} from "./redis.service";
@@ -14,7 +13,6 @@ export class InitService {
 
     constructor(
         private pluginService: PluginService,
-        private providerService: ProviderService,
         private responseService: ResponseService,
         private queueService: QueueService,
         private redisService: RedisService
@@ -23,9 +21,8 @@ export class InitService {
     }
 
     async init(serverId: string): Promise<void> {
-        await this.pluginService.initializePluginSystem();
+        await this.pluginService.initializePluginSystem(this.serverId);
         await this.redisService.connect();
-        await this.providerService.init(serverId);
         await this.setupQueues(serverId);
         await this.responseService.startLLMResponseConsumer();
     }

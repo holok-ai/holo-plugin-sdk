@@ -4,15 +4,16 @@ import {GuardResult, GuardResultSchema} from "../types";
 import {env} from "../env";
 import {ClassLogger, pickDefined} from "@holokai/sdk";
 import {filterJoin, findLast} from "../utils";
-import type {HoloContent, HoloContentText, HoloRequest} from "@holokai/types/holo";
-import {RequestType} from "@holokai/types/holo";
+import {HoloContent, HoloContentText, HoloRequest, RequestType} from "@holokai/types/holo";
 import type {HoloWorkerRequest} from "@holokai/types/worker";
 import type {Auth} from "@holokai/types/api";
 import type {Prompt} from "@holokai/types/entities";
-import {ProviderPluginRegistry} from "./plugin";
+import {PluginService, ProviderPluginService} from "./plugin";
 import {ResponseService} from "./response.service";
 import {WorkerRequestFactory} from "./worker.request.factory";
 import {ProviderService} from "./entities";
+import {IProviderPlugin} from "@holokai/types/plugin";
+import {IProvider} from "@holokai/types";
 
 
 @injectable()
@@ -22,24 +23,25 @@ export class GuardService extends ClassLogger {
     constructor(
         private responseService: ResponseService,
         private providerService: ProviderService,
-        private providerRegistry: ProviderPluginRegistry
+        private pluginService: PluginService,
+        private providerPluginService: ProviderPluginService
     ) {
         super();
     }
 
-    async guard(workerRequest: HoloWorkerRequest, guards: Prompt[], auth: Auth) {
+    async guard(provider: IProvider, workerRequest: HoloWorkerRequest, guards: Prompt[], auth: Auth) {
         const logger = this.mlog(this.guard);
 
-        logger.debug(`Guard service invoked: guards.length=${guards?.length || 0}, requestId=${workerRequest.requestId}, requestType=${workerRequest.type}`);
+        logger.debug(`Guard service invoked: guards.length=${guards?.length || 0}, requestId=${workerRequest.requestId}, requestType=${workerRequest}`);
 
         if (!guards || !guards.length) {
             logger.debug(`No guards to execute - returning early`);
             return;
         }
 
-        const requestPlugin = this.providerRegistry.getByFamily(workerRequest.providerType);
+        const requestPlugin = provider.plugin;
         if (!requestPlugin) {
-            throw new Error(`No plugin found for provider type: ${workerRequest.providerType}`);
+            throw new Error(`No plugin found for provider: ${workerRequest.provider.name}`);
         }
 
         const request = await requestPlugin.translator.toHoloRequest(workerRequest.payload);
@@ -83,13 +85,16 @@ export class GuardService extends ClassLogger {
                             logger.warn(`Guard provider not found: ${guard.provider_id}`);
                             return {passed: true};
                         }
-                        const guardPlugin = this.providerRegistry.getByFamily(guardProvider.type);
+                        const guardPlugin = await this.pluginService.getImplById(guardProvider.plugin_id) as IProviderPlugin;
                         if (!guardPlugin) {
-                            logger.warn(`No plugin for guard provider type: ${guardProvider.type}`);
+                            logger.warn(`No plugin for guard provider: ${guardProvider.name}`);
                             return {passed: true};
                         }
 
+                        const guardProtocol = await this.providerPluginService.getProtocol(guardProvider.plugin_id, guardPlugin.defaultProtocol);
+
                         const holoRequest: HoloRequest = pickDefined({
+                            request_type: RequestType.GENERATE,
                             model: guard.model,
                             messages: [{
                                 role: "user",
@@ -102,9 +107,8 @@ export class GuardService extends ClassLogger {
 
                         const payload = await guardPlugin.translator.fromHoloRequest(holoRequest);
                         const guardRequest = WorkerRequestFactory.create(
-                            guardPlugin.family,
-                            guardProvider.name,
-                            RequestType.CHAT,
+                            guardProvider,
+                            guardProtocol,
                             payload,
                             this.serverId,
                             auth,

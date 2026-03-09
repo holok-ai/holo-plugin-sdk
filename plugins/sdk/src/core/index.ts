@@ -1,5 +1,6 @@
 export * from './logger';
 export * from './async-event-queue';
+export * from './sanitize.object';
 export * from './pick-defined';
 export * from './stringify-error';
 export * from './stable-id';

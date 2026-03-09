@@ -1,7 +1,22 @@
+export const ProtocolCapability = {
+    CHAT: 'chat',
+    GENERATE: 'generate',
+    EMBED: 'embed',
+    MODELS: 'models',
+} as const;
+
+export type ProtocolCapability = typeof ProtocolCapability[keyof typeof ProtocolCapability];
+
+
+export interface ProtocolDef {
+    id?: string;
+    name: string;
+    capability: ProtocolCapability;
+}
+
 export interface Protocol {
     id: string;
     plugin_id: string;
-    key: string;
     name: string;
     capability: string;
     path?: string;

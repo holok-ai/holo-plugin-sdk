@@ -14,7 +14,8 @@ import {
     PluginDiscoveryService,
     PluginLoaderService,
     PluginService,
-    ProviderPluginRegistry,
+    ProviderImplService,
+    ProviderPluginService,
     ProviderService,
     RedisService,
     ResponseService,
@@ -52,7 +53,8 @@ container.registerSingleton(RedisService)
     .registerSingleton(PluginService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
-    .registerSingleton(ProviderPluginRegistry)
+    .registerSingleton(ProviderPluginService)
+    .registerSingleton(ProviderImplService)
     .registerSingleton(NotificationServiceToken, NotificationService)
     .registerSingleton(NotificationStoreToken, PostgresNotificationStore)
     .registerSingleton(HoloTokenDB)
@@ -70,7 +72,7 @@ async function initApp(): Promise<void> {
         logger.debug(`Creating API Server with id ${env.api.apiServerId}`);
         await initService.init(env.api.apiServerId);
 
-        app.use('/api', createRoutes());
+        app.use('/api', await createRoutes());
         const server = app.listen(PORT, (): void => {
             logger.info(`Server running on port ${PORT}`);
             logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);

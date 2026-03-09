@@ -7,30 +7,32 @@ import {
     PluginDiscoveryService,
     PluginLoaderService,
     PluginService,
-    ProviderPluginRegistry,
+    ProviderImplService,
+    ProviderPluginService,
     ProviderService
 } from "../services";
-import {withDB, withQueue} from "./mixins";
+import {withAdmin, withDB, withQueue} from "./mixins";
 import {container, injectable} from "tsyringe";
 import logger from "../utils/logger";
 import {env} from "../env";
 import {NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
 import type {NotificationEvent} from "@holokai/types/notification";
 import {PostgresNotificationStore} from "../db/notification.db";
+import {ServerType} from "@holokai/types/entities";
 
 @injectable()
-export class AuditServer extends withQueue(withDB(BaseServer)) {
+export class AuditServer extends withAdmin(withQueue(withDB(BaseServer))) {
 
     constructor(
-        private providerService: ProviderService,
+        private pluginService: PluginService,
         private auditService: AuditService
     ) {
-        super(env.audit.serverId);
+        super(env.audit.serverId, ServerType.AUDIT);
     }
 
     async onInit(): Promise<void> {
         await super.onInit();
-        await this.providerService.init(this.id);
+        await this.pluginService.initializePluginSystem(this.id)
 
         await this.queueService.consume(env.queue.auditNotificationQueue, async (_id, content: NotificationEvent) => {
             await this.auditService.logNotification(content);
@@ -58,7 +60,8 @@ container.registerSingleton(CryptoService)
     .registerSingleton(PluginService)
     .registerSingleton(PluginDiscoveryService)
     .registerSingleton(PluginLoaderService)
-    .registerSingleton(ProviderPluginRegistry)
+    .registerSingleton(ProviderPluginService)
+    .registerSingleton(ProviderImplService)
     .registerSingleton(ProviderService)
     .registerSingleton(NotificationServiceToken, NotificationService)
     .registerSingleton(NotificationStoreToken, PostgresNotificationStore);
@@ -67,8 +70,6 @@ let auditServer: AuditServer | null = null;
 
 async function startAuditServer() {
     try {
-        const pluginService = container.resolve(PluginService);
-        await pluginService.initializePluginSystem();
         auditServer = container.resolve(AuditServer);
         await auditServer.start();
     } catch (error) {
@@ -80,8 +81,6 @@ async function startAuditServer() {
         process.exit(1);
     }
 }
-
-startAuditServer();
 
 ['SIGBREAK', 'SIGINT', 'SIGTERM'].forEach((signal) => {
     process.on(signal, () => {
@@ -97,3 +96,6 @@ process.on("uncaughtException", (err) => {
     logger.error(`Uncaught exception in worker server: ${err.message}`);
     logger.error(err.stack);
 });
+
+await startAuditServer();
+

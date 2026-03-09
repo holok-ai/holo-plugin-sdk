@@ -1,15 +1,11 @@
 import {BaseEntity} from "./base";
-
-export interface ProtocolDefinition {
-    name: string;
-    capability: string;
-    path?: string;
-}
+import {PluginType} from "../plugin";
 
 export interface Plugin extends BaseEntity {
     family: string;
     name: string;
+    type: PluginType;
     version: string;
-    is_latest: boolean;
+    is_default: boolean;
     active: boolean;
 }

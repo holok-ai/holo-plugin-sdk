@@ -7,7 +7,6 @@ export {NotificationService} from './notification.service';
 export {RedisService} from './redis.service';
 export {RequestService} from './request.service';
 export {ResponseService} from './response.service';
-export {WireService} from './wire.service';
 export {WorkerRequestFactory} from './worker.request.factory';
 export {WorkerResponseFactory} from './worker.response.factory';
 export * from './auth';

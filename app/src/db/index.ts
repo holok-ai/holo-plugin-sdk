@@ -10,3 +10,4 @@ export {ModelDB} from './model.db';
 export {AccessDB} from './access.db';
 export {PluginDB} from './plugin.db';
 export {ProtocolDB} from './protocol.db';
+export {ServerDB} from './server.db';

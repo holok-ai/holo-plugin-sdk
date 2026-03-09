@@ -32,8 +32,11 @@ export interface ProviderResponse {
     metadata: ProviderResponseMetadata;
 }
 
-export interface ProviderAuditResponse extends ProviderResponse {
+export interface ProviderResponseView extends ProviderResponse {
+    organization_name?: string;
     application_name?: string;
+    plugin_name?: string;
+    plugin_version?: string;
     provider_name?: string;
     protocol_name?: string;
 }

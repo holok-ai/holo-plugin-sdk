@@ -29,7 +29,7 @@ export class PostgresNotificationStore implements INotificationStore {
             INSERT INTO notifications
             (id, ts, organization_id, app_slug, user_id, thread_id, request_id, branch_id, type, severity, message,
              payload)
-            VALUES ($1, $2, $3::uuid, $4, $5, $6::uuid, $7::uuid, $8::uuid, $9, $10, $11, $12::jsonb)
+            VALUES ($1, $2, $3::uuid, $4, $5, $6::uuid, $7::uuid, $8, $9, $10, $11, $12::jsonb)
             ON CONFLICT (id) DO NOTHING
         `;
 
@@ -90,7 +90,7 @@ export class PostgresNotificationStore implements INotificationStore {
         }
 
         if (branchIds?.length) {
-            where.push(`branch_id = ANY($${++i}::uuid[])`);
+            where.push(`branch_id = ANY($${++i}::text[])`);
             values.push(branchIds);
         }
 

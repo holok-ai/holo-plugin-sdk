@@ -10,7 +10,7 @@ import {ProviderRequest, ProviderResponse} from "@holokai/types/entities";
 import {NotificationStoreToken} from "@holokai/sdk/notification";
 import type {NotificationEvent} from "@holokai/types/notification";
 import {PostgresNotificationStore} from "../db/notification.db";
-import {ProviderService} from "./entities";
+import {ProviderImplService} from "./plugin";
 
 /**
  * Service for auditing and logging LLM requests and responses
@@ -20,7 +20,7 @@ import {ProviderService} from "./entities";
 export class AuditService extends ClassLogger {
 
     constructor(
-        private readonly providerService: ProviderService,
+        private readonly providerImplService: ProviderImplService,
         @inject(NotificationStoreToken) private readonly notificationDB: PostgresNotificationStore,
         private evaluatorDB: EvaluatorDB,
         private requestDB: RequestDB,
@@ -34,24 +34,24 @@ export class AuditService extends ClassLogger {
     /**
      * Log LLM request to database with comprehensive audit trail
      * Supports both HoloWorkerRequest and direct ProviderRequest formats
-     * @param {HoloWorkerRequest | Omit<ProviderRequest, 'id'>} content - Request data to log
+     * @param {HoloWorkerRequest | Omit<ProviderRequest, 'id'>} request - Request data to log
      */
-    async logRequest(content: HoloWorkerRequest | Omit<ProviderRequest, 'id'>): Promise<void> {
+    async logRequest(request: HoloWorkerRequest | Omit<ProviderRequest, 'id'>): Promise<void> {
         const logger = this.mlog(this.logRequest);
         const startTime = Date.now();
 
         try {
             // Type guard to check if it's an HoloWorkerRequest
-            if (this.isHoloWorkerRequest(content)) {
-                const ai = await this.providerService.matchProvider(content.providerName);
-                const mappedRequest = await ai.auditRequest(content);
+            if (this.isHoloWorkerRequest(request)) {
+                const ai = await this.providerImplService.getProviderImplById(request.provider.id);
+                const mappedRequest = await ai.auditRequest(request);
                 await this.insertRequest(mappedRequest);
             } else {
-                await this.insertRequest(content);
+                await this.insertRequest(request);
             }
         } catch (error) {
-            logger.error(`Failed to log request: ${error instanceof Error ? error.message : 'Unknown error'}: ${JSON.stringify(content, null, 2)}`, {
-                requestId: this.isHoloWorkerRequest(content) ? content.requestId : content.request_id,
+            logger.error(`Failed to log request: ${error instanceof Error ? error.message : 'Unknown error'}: ${JSON.stringify(request, null, 2)}`, {
+                requestId: this.isHoloWorkerRequest(request) ? request.requestId : request.request_id,
                 error: error,
                 duration: Date.now() - startTime
             });
@@ -140,8 +140,8 @@ export class AuditService extends ClassLogger {
         const logger = this.mlog(this.isHoloWorkerRequest);
         const isWorkerRequest = obj.payload !== undefined &&
             obj.sourceId !== undefined &&
-            obj.providerType !== undefined &&
-            obj.type !== undefined;
+            obj.organizationId !== undefined &&
+            obj.requestId !== undefined;
         logger.debug(`Type guard check - isHoloWorkerRequest: ${isWorkerRequest}`);
         return isWorkerRequest;
     }

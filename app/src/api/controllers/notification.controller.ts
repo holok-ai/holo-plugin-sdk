@@ -28,11 +28,11 @@ export class NotificationController extends BaseController {
             return;
         }
 
-        const {organizationId, userId, application} = req.auth;
+        const {organizationId, userId, clientIdentifier, application} = req.auth;
 
         const filter = pickDefined({
             organizationId,
-            userId,
+            userId: userId ?? clientIdentifier,
             appSlug: application?.url_slug
         }) as NotificationSubscribeFilter;
 

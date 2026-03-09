@@ -10,30 +10,30 @@ export class ProtocolDB extends ClassLogger {
         super();
     }
 
-    async upsert(pluginId: string, key: string, name: string, capability: string, path?: string): Promise<Protocol> {
+    async upsert(pluginId: string, name: string, capability: string, path?: string): Promise<Protocol> {
         const query = `
-            INSERT INTO protocols (plugin_id, key, name, capability, path)
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (plugin_id, key) DO UPDATE SET
+            INSERT INTO protocols (plugin_id, name, capability, path)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (plugin_id, name) DO UPDATE SET
                 name = EXCLUDED.name,
                 capability = EXCLUDED.capability,
                 path = EXCLUDED.path
             RETURNING *
         `;
-        const result = await this.db.queryOne<Protocol>(query, [pluginId, key, name, capability, path || null]);
+        const result = await this.db.queryOne<Protocol>(query, [pluginId, name, capability, path || null]);
         return result!;
     }
 
-    async getByPluginAndKey(pluginId: string, key: string): Promise<Protocol | null> {
+    async getByPluginAndKey(pluginId: string, name: string): Promise<Protocol | null> {
         return this.db.queryOne<Protocol>(
-            `SELECT * FROM protocols WHERE plugin_id = $1 AND key = $2`,
-            [pluginId, key]
+            `SELECT * FROM protocols WHERE plugin_id = $1 AND name = $2`,
+            [pluginId, name]
         );
     }
 
     async getByPlugin(pluginId: string): Promise<Protocol[]> {
         return this.db.query<Protocol>(
-            `SELECT * FROM protocols WHERE plugin_id = $1 AND active = true ORDER BY key`,
+            `SELECT * FROM protocols WHERE plugin_id = $1 AND active = true ORDER BY name`,
             [pluginId]
         );
     }

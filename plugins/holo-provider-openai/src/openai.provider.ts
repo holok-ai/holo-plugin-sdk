@@ -2,7 +2,6 @@ import OpenAI from 'openai';
 import {BaseProvider} from '@holokai/sdk/provider';
 import type {IAuditor, IProviderTranslator, IResponseFactory} from '@holokai/types/provider';
 import {ProviderContext, RunHandle} from '@holokai/types/provider';
-import {RequestType} from '@holokai/types/holo';
 import {ResponseCreateParamsBase, ResponseErrorEvent, ResponseStreamEvent} from 'openai/resources/responses/responses';
 import {ChatCompletionCreateParamsBase} from 'openai/resources/chat/completions';
 import {OpenAIAuditor} from './openai.auditor';
@@ -13,6 +12,7 @@ import {APIError} from "openai/core/error";
 import {ChatCompletionCreateParamsStreaming} from "openai/resources/chat/completions/completions";
 import {Stream} from "openai/core/streaming";
 import {EmbeddingCreateParams} from "openai/resources";
+import {OpenAIProtocols} from "./plugin";
 
 /**
  * OpenAI provider for connecting to OpenAI API
@@ -71,10 +71,10 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase | EmbeddingCreateParams,
         ctx: ProviderContext
     ): Promise<RunHandle<any>> {
-        switch (ctx.requestType) {
-            case RequestType.RESPONSES:
+        switch (ctx.protocol.name) {
+            case OpenAIProtocols.RESPONSES:
                 return this.runResponses(payload as ResponseCreateParamsBase, ctx);
-            case RequestType.EMBED:
+            case OpenAIProtocols.EMBED:
                 return this.runEmbed(payload as EmbeddingCreateParams);
             default:
                 return this.runChatCompletions(payload as ChatCompletionCreateParamsBase, ctx);

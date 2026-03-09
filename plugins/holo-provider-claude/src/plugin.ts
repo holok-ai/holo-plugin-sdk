@@ -1,35 +1,38 @@
-/**
- * Claude Provider Plugin Implementation
- *
- * Implements IProviderPlugin contract for Claude/Anthropic API
- */
-
 import {BasePlugin} from '@holokai/sdk/plugin';
 import type {IProviderPlugin, PluginContext} from '@holokai/types/plugin';
 import {manifest} from "./manifest.js";
 import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/types/provider";
 import type {RouteTree} from "@holokai/types/routing";
 import {RouteHandler} from "@holokai/types/routing";
-import {Capability} from "@holokai/types/holo";
 import {ClaudeProvider} from "./claude.provider";
 import {ClaudeWireAdapter} from "./claude.wire.adapter";
 import {ClaudeTranslator} from "./claude.translator";
+import {ProtocolCapability} from "@holokai/types/entities";
+
+export const ClaudeProtocols = {
+    MESSAGES: 'claude.messages',
+    MODELS: 'claude.modes'
+} as const;
+
+export type ClaudeProtocols = typeof ClaudeProtocols[keyof typeof ClaudeProtocols];
 
 export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin {
     manifest = manifest;
     translator = ClaudeTranslator.instance();
     defaultRouteHandler = RouteHandler.PASSTHROUGH;
+    protocols = ClaudeProtocols;
+    defaultProtocol = ClaudeProtocols.MESSAGES;
 
-    async createProvider(config: any): Promise<IProvider> {
+    async createProvider(id: string, name: string, config: any): Promise<IProvider> {
         return new ClaudeProvider(
-            this.name,
-            this.family,
-            this.version,
+            id,
+            name,
+            this,
             config
         );
     }
 
-    createWireAdapter(params: WireAdapterParams): IWireAdapter {
+    async createWireAdapter(params: WireAdapterParams): Promise<IWireAdapter> {
         return new ClaudeWireAdapter(params.requestId, params.isStreaming);
     }
 
@@ -49,14 +52,18 @@ export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin 
                 models: {
                     method: 'GET',
                     handler: RouteHandler.MODELS,
-                    protocol: 'models',
-                    capability: Capability.MODELS
+                    protocol: {
+                        name: ClaudeProtocols.MODELS,
+                        capability: ProtocolCapability.MODELS
+                    }
                 },
                 messages: {
                     method: 'POST',
                     handler: RouteHandler.REQUEST,
-                    protocol: 'messages',
-                    capability: Capability.CHAT
+                    protocol: {
+                        name: ClaudeProtocols.MESSAGES,
+                        capability: ProtocolCapability.CHAT
+                    }
                 }
             }
         }

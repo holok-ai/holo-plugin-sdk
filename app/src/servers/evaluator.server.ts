@@ -5,13 +5,14 @@ import {withDB, withQueue} from "./mixins";
 import {container, injectable} from "tsyringe";
 import {env} from "../env";
 import {AuditServiceEvent, EvaluatorServiceEvent} from '../types';
+import {ServerType} from "@holokai/types/entities";
 
 @injectable()
 export class EvaluatorServer extends withQueue(withDB(BaseServer)) {
 
     constructor(
         private evaluatorService: EvaluatorService) {
-        super(env.evaluator.serverId);
+        super(env.evaluator.serverId, ServerType.EVALUATOR);
     }
 
     async onInit(): Promise<void> {

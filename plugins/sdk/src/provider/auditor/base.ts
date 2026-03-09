@@ -1,8 +1,8 @@
 import {
     HoloWorkerRequest,
+    LlmStatus,
     ProviderRequest,
     ProviderResponse,
-    LlmStatus,
     WorkerRequestEnvelope,
     WorkerResponseEnvelope
 } from "@holokai/types";
@@ -25,16 +25,12 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
         return pickDefined({
             request_id: workerRequest.requestId,
             organization_id: workerRequest.organizationId,
-            application_id: workerRequest.applicationId ?? workerRequest.appSlug ?? workerRequest.providerName,
-            provider_id: workerRequest.providerId ?? workerRequest.providerName,
-            protocol_id: workerRequest.protocolId,
-            capability: workerRequest.capability ?? workerRequest.type,
+            application: workerRequest.application,
+            provider: workerRequest.provider,
+            protocol: workerRequest.protocol,
             user_id: workerRequest.userId,
             thread_id: workerRequest.thread_id,
             timestamp: new Date(workerRequest.timestamp).toISOString(),
-            application_name: workerRequest.applicationName,
-            provider_name: workerRequest.providerName,
-            protocol_name: workerRequest.protocolName,
             metadata: pickDefined({
                 raw_request: workerRequest.payload,
                 source_id: workerRequest.sourceId,
@@ -55,16 +51,12 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
         return pickDefined({
             request_id: workerRequest.requestId,
             organization_id: workerRequest.organizationId,
-            application_id: workerRequest.applicationId ?? workerRequest.appSlug ?? workerRequest.providerName,
-            provider_id: workerRequest.providerId ?? workerRequest.providerName,
-            protocol_id: workerRequest.protocolId,
-            capability: workerRequest.capability ?? workerRequest.type,
+            application: workerRequest.application,
+            provider: workerRequest.provider,
+            protocol: workerRequest.protocol,
             user_id: workerRequest.userId,
             client_identifier: workerRequest.clientIdentifier,
             worker_id: workerId,
-            application_name: workerRequest.applicationName,
-            provider_name: workerRequest.providerName,
-            protocol_name: workerRequest.protocolName,
             ...providerEnvelope
         }) as WorkerResponseEnvelope;
     }
@@ -76,13 +68,13 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
             ...envelope.metadata,
         };
 
-        const llmRequest: Omit<ProviderRequest, 'id'> = {
+        const providerRequest: Omit<ProviderRequest, 'id'> = {
             request_id: envelope.request_id,
             organization_id: envelope.organization_id,
-            application_id: envelope.application_id,
-            provider_id: envelope.provider_id,
-            protocol_id: envelope.protocol_id,
-            capability: envelope.capability,
+            application_id: envelope.application?.id,
+            provider_id: envelope.provider.id,
+            protocol_id: envelope.protocol.id,
+            protocol_capability: envelope.protocol.capability,
             user_id: envelope.user_id,
             client_identifier: workerRequest.clientIdentifier,
             access_model: envelope.access_model,
@@ -91,10 +83,10 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
             metadata,
         } as Omit<ProviderRequest, 'id'>;
 
-        this.toHoloRequest(workerRequest, llmRequest);
-        this.mapProviderPayload(workerRequest, llmRequest);
+        this.toHoloRequest(workerRequest, providerRequest);
+        this.mapProviderPayload(workerRequest, providerRequest);
 
-        return pickDefined(llmRequest) as ProviderRequest;
+        return pickDefined(providerRequest) as ProviderRequest;
     }
 
     async auditResponse(
@@ -113,10 +105,10 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
         return pickDefined({
             request_id: responseEnvelope.request_id,
             organization_id: responseEnvelope.organization_id,
-            application_id: responseEnvelope.application_id,
-            provider_id: responseEnvelope.provider_id,
-            protocol_id: responseEnvelope.protocol_id,
-            capability: responseEnvelope.capability,
+            application_id: responseEnvelope.application?.id,
+            provider_id: responseEnvelope.provider.id,
+            protocol_id: responseEnvelope.protocol.id,
+            capability: responseEnvelope.protocol.capability,
             user_id: responseEnvelope.user_id,
             client_identifier: responseEnvelope.client_identifier,
             access_model: responseEnvelope.access_model,

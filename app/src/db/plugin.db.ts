@@ -3,6 +3,7 @@ import {injectable} from 'tsyringe';
 import {AppDB} from './app.db';
 import {ClassLogger} from '@holokai/sdk';
 import type {Plugin} from '@holokai/types/entities';
+import {PluginType} from "@holokai/types/plugin";
 
 @injectable()
 export class PluginDB extends ClassLogger {
@@ -10,43 +11,43 @@ export class PluginDB extends ClassLogger {
         super();
     }
 
-    async upsert(family: string, name: string, version: string): Promise<Plugin> {
+    async upsert(family: string, name: string, version: string, type: PluginType, isDefault = false): Promise<Plugin | null> {
         const query = `
-            INSERT INTO plugins (family, version, name, is_latest)
-            VALUES ($1, $2, $3, false)
+            INSERT INTO plugins (family, version, name, type, is_default)
+            VALUES ($1, $2, $3, $4, $5)
             ON CONFLICT (family, version) DO UPDATE SET name       = EXCLUDED.name,
                                                         updated_at = now()
             RETURNING *
         `;
-        const result = await this.db.queryOne<Plugin>(query, [
-            family.toUpperCase(), version, name
+        return this.db.queryOne<Plugin>(query, [
+            family.toUpperCase(), version, name, type.toUpperCase(), isDefault
         ]);
-        return result!;
     }
 
-    async setLatest(family: string, version: string): Promise<void> {
+    async setDefault(family: string, version: string): Promise<void> {
         await this.db.query(
             `UPDATE plugins
-             SET is_latest = false
-             WHERE family = $1
-               AND is_latest = true`,
-            [family.toUpperCase()]
-        );
-        await this.db.query(
-            `UPDATE plugins
-             SET is_latest = true
-             WHERE family = $1
-               AND version = $2`,
+             SET is_default = (version = $2)
+             WHERE family = $1`,
             [family.toUpperCase(), version]
         );
     }
 
-    async getLatest(family: string): Promise<Plugin | null> {
+    async listByType(type: PluginType, active = true): Promise<Plugin[]> {
+        return this.db.query(
+            `SELECT *
+             FROM plugins
+             WHERE type = $1
+               and active = $2`, [type, active]
+        )
+    }
+
+    async getDefault(family: string): Promise<Plugin | null> {
         return this.db.queryOne<Plugin>(
             `SELECT *
              FROM plugins
              WHERE family = $1
-               AND is_latest = true`,
+               AND is_default = true`,
             [family.toUpperCase()]
         );
     }

@@ -3,27 +3,38 @@ import type {IProviderPlugin, PluginContext} from '@holokai/types/plugin';
 import {manifest} from "./manifest.js";
 import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/types/provider";
 import {OpenAIProvider} from "./openai.provider";
-import {Capability} from "@holokai/types/holo";
 import {RouteHandler, RouteTree, RouteTreeNode} from "@holokai/types/routing";
 import {OpenAITranslator} from "./openai.translator";
 import {OpenAICompletionsWireAdapter, OpenAIResponsesWireAdapter} from "./openai.wire.adapter";
+import {ProtocolCapability} from "@holokai/types/entities";
+
+export const OpenAIProtocols = {
+    EMBED: 'openai.embeddings',
+    CHAT_COMPLETIONS: 'openai.chatCompletions',
+    RESPONSES: 'openai.responses',
+    MODELS: 'openai.models'
+} as const;
+
+export type OpenAIProtocols = typeof OpenAIProtocols[keyof typeof OpenAIProtocols];
 
 export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin {
     manifest = manifest;
     translator = OpenAITranslator.instance();
+    protocols = OpenAIProtocols;
+    defaultProtocol = OpenAIProtocols.RESPONSES;
 
-    async createProvider(config: any): Promise<IProvider> {
+    async createProvider(id: string, name: string, config: any): Promise<IProvider> {
         return new OpenAIProvider(
-            this.name,
-            this.family,
-            this.version,
+            id,
+            name,
+            this,
             config
         );
     }
 
-    createWireAdapter(params: WireAdapterParams): IWireAdapter {
-        const {requestId, isStreaming, requestType} = params;
-        return requestType === RequestType.RESPONSES
+    async createWireAdapter(params: WireAdapterParams): Promise<IWireAdapter> {
+        const {requestId, isStreaming, protocol} = params;
+        return protocol === OpenAIProtocols.RESPONSES
             ? new OpenAIResponsesWireAdapter(requestId, isStreaming)
             : new OpenAICompletionsWireAdapter(requestId, isStreaming);
     }
@@ -42,29 +53,37 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
         const routes: RouteTreeNode = {
             models: {
                 method: 'GET',
-                handler: RouteHandler.MODELS,
-                protocol: 'models',
-                capability: Capability.MODELS
+                protocol: {
+                    name: OpenAIProtocols.MODELS,
+                    capability: ProtocolCapability.MODELS,
+                },
+                handler: RouteHandler.MODELS
             },
             chat: {
                 completions: {
                     method: 'POST',
-                    handler: RouteHandler.REQUEST,
-                    protocol: 'completions',
-                    capability: Capability.CHAT
+                    protocol: {
+                        name: OpenAIProtocols.CHAT_COMPLETIONS,
+                        capability: ProtocolCapability.CHAT
+                    },
+                    handler: RouteHandler.REQUEST
                 }
             },
             responses: {
                 method: 'POST',
-                handler: RouteHandler.REQUEST,
-                protocol: 'responses',
-                capability: Capability.CHAT
+                protocol: {
+                    name: OpenAIProtocols.RESPONSES,
+                    capability: ProtocolCapability.CHAT
+                },
+                handler: RouteHandler.REQUEST
             },
             embeddings: {
                 method: 'POST',
-                handler: RouteHandler.REQUEST,
-                protocol: 'embeddings',
-                capability: Capability.EMBED
+                protocol: {
+                    name: OpenAIProtocols.EMBED,
+                    capability: ProtocolCapability.EMBED
+                },
+                handler: RouteHandler.REQUEST
             }
         };
         return {

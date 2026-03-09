@@ -1,7 +1,7 @@
-import type {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk, RequestType} from "../holo";
+import type {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "../holo";
 import type {HoloWorkerRequest, WorkerResponseEnvelope} from "../worker";
-import type {ProviderRequest, ProviderResponse} from "../entities";
-import {RouteDefinition} from "../routing";
+import type {Protocol, ProtocolCapability, ProviderRequest, ProviderResponse} from "../entities";
+import {IProviderPlugin} from "../plugin";
 
 export type ProviderEvent =
     | { type: "stream_event"; requestId: string; seq: number; event: any; ts: number }
@@ -24,8 +24,7 @@ export interface ProviderEnvelope {
 }
 
 export interface ProviderContext {
-    route: RouteDefinition;
-    requestType?: RequestType;
+    protocol: Protocol;
     headers?: Record<string, string | string[]>;
     query?: Record<string, string>;
     emitStreamEvent: (event: any) => void;
@@ -60,7 +59,7 @@ export interface ModelInfo {
 }
 
 export interface AIRequestStat {
-    type: RequestType;
+    type: ProtocolCapability;
     startTime: number;
     endTime: number;
     duration: number;
@@ -127,17 +126,16 @@ export interface IWireAdapter {
 export interface WireAdapterParams {
     requestId: string;
     isStreaming: boolean;
-    route: RouteDefinition;
-    requestType: RequestType;
+    protocol: string;
 }
 
 export interface IProvider {
+    id: string;
     name: string;
-    family: string;
-    version: string;
     auditor: IAuditor;
     translator: IProviderTranslator;
     responseFactory: IResponseFactory;
+    plugin: IProviderPlugin;
 
     getModels(allowedModels: string[] | true): Promise<any>;
 

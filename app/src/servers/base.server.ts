@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import {ClassLogger} from "@holokai/sdk";
+import {ServerType} from "@holokai/types/entities";
 
 export interface IAppServer {
     onError(error: Error): Promise<void>;
@@ -10,11 +11,14 @@ export interface IAppServer {
 }
 
 export class BaseServer extends ClassLogger implements IAppServer {
-
+    id!: string;
+    type!: ServerType;
     protected initialized = false;
 
-    constructor(readonly id: string) {
+    constructor(...args: any[]) {
         super();
+        this.id = args[0];
+        this.type = args[1];
         // logger.debug(`Server (${this.id}) Config: ${JSON.stringify(env, null, 2)}`)
         this.__className = `${this.constructor.name}-${this.id}`;
     }

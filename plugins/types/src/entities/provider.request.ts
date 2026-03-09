@@ -22,7 +22,7 @@ export interface ProviderRequest {
     application_id: string;
     provider_id: string;
     protocol_id?: string;
-    capability?: string;
+    protocol_capability?: string;
     user_id?: string;
     client_identifier?: string;
     access_model: string;

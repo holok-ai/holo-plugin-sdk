@@ -54,4 +54,16 @@ export class ProviderDB {
         `;
         return this.db.queryOne<ProviderWithCredential>(query, [id]);
     }
+
+    async findByPluginId(pluginId: string): Promise<ProviderWithCredential[]> {
+        return this.db.query(`
+            SELECT p.*,
+                   ac.encrypted_value,
+                   ac.initialization_vector
+            FROM providers p
+                     LEFT JOIN api_credentials ac ON p.api_credential_id = ac.id
+            WHERE p.plugin_id = $1
+              AND p.active = true
+        `, [pluginId])
+    }
 }
