@@ -89,17 +89,23 @@ export class PricingService extends ClassLogger {
         return result.totalCost;
     }
 
-    async recalculateCostsForDateRange(from: Date, to: Date): Promise<number> {
+    async recalculateCostsForDateRange(from: Date, to: Date, providerId?: string): Promise<{ rowCount: number; totalCost: number }> {
         const logger = this.mlog(this.recalculateCostsForDateRange);
-        logger.info(`Recalculating costs for ${from.toISOString()} to ${to.toISOString()}`);
 
-        const result = await this.bulkRecalculate(
-            `pr.created_at >= $1 AND pr.created_at < $2`,
-            [from.toISOString(), to.toISOString()]
-        );
+        const conditions = [`pr.created_at >= $1`, `pr.created_at < $2`];
+        const params: any[] = [from.toISOString(), to.toISOString()];
+
+        if (providerId) {
+            conditions.push(`pr.provider_id = $${params.length + 1}`);
+            params.push(providerId);
+        }
+
+        logger.info(`Recalculating costs: ${from.toISOString()} to ${to.toISOString()}${providerId ? ` provider=${providerId}` : ''}`);
+
+        const result = await this.bulkRecalculate(conditions.join(' AND '), params);
 
         logger.info(`Recalculated ${result.rowCount} responses, total cost: $${result.totalCost.toFixed(6)}`);
-        return result.totalCost;
+        return result;
     }
 
     private async bulkRecalculate(whereClause: string, params: any[]): Promise<{ rowCount: number; totalCost: number }> {
