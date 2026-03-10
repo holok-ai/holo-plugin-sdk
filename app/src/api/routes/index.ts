@@ -5,6 +5,7 @@ import {AuthService} from "../../services";
 import {createNotificationRoutes} from "./notification.routes";
 import {createTokenRoutes} from "./token.routes";
 import {createPricingRoutes} from "./pricing.routes";
+import {createCacheRoutes} from "./cache.routes";
 import {makeAuthMiddleware} from "../middleware";
 import {PluginRouteService} from "../../services/plugin/plugin.route.service";
 
@@ -21,5 +22,6 @@ export async function createRoutes(): Promise<express.Router> {
     router.use('/notifications', makeAuthMiddleware(authService), createNotificationRoutes());
     router.use('/tokens', makeAuthMiddleware(authService), createTokenRoutes());
     router.use('/pricing', makeAuthMiddleware(authService), createPricingRoutes());
+    router.use('/cache', makeAuthMiddleware(authService), createCacheRoutes());
     return router;
 }
