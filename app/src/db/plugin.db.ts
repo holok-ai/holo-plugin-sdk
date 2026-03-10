@@ -11,16 +11,29 @@ export class PluginDB extends ClassLogger {
         super();
     }
 
-    async upsert(family: string, name: string, version: string, type: PluginType, isDefault = false): Promise<Plugin | null> {
+    async upsert(family: string, name: string, version: string, type: PluginType): Promise<Plugin | null> {
         const query = `
-            INSERT INTO plugins (family, version, name, type, is_default)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO plugins (family, version, name, type)
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT (family, version) DO UPDATE SET name       = EXCLUDED.name,
                                                         updated_at = now()
             RETURNING *
         `;
         return this.db.queryOne<Plugin>(query, [
-            family.toUpperCase(), version, name, type.toUpperCase(), isDefault
+            family.toUpperCase(), version, name, type.toUpperCase()
+        ]);
+    }
+
+    async upsertLatest(family: string, name: string, type: PluginType): Promise<Plugin | null> {
+        const query = `
+            INSERT INTO plugins (family, version, name, type)
+            VALUES ($1, 'latest', $2, $3)
+            ON CONFLICT (family, version) DO UPDATE SET name       = EXCLUDED.name,
+                                                        updated_at = now()
+            RETURNING *
+        `;
+        return this.db.queryOne<Plugin>(query, [
+            family.toUpperCase(), name, type.toUpperCase()
         ]);
     }
 
@@ -48,6 +61,25 @@ export class PluginDB extends ClassLogger {
              FROM plugins
              WHERE family = $1
                AND is_default = true`,
+            [family.toUpperCase()]
+        );
+    }
+
+    async setDefaultPricingPlan(pluginId: string, planId: string): Promise<void> {
+        await this.db.query(
+            `UPDATE plugins SET default_pricing_plan_id = $1, updated_at = now() WHERE id = $2`,
+            [planId, pluginId]
+        );
+    }
+
+    async deactivateUnusedVersions(family: string): Promise<void> {
+        await this.db.query(
+            `UPDATE plugins
+             SET active = false, updated_at = now()
+             WHERE family = $1
+               AND version != 'latest'
+               AND active = true
+               AND id NOT IN (SELECT DISTINCT plugin_id FROM providers WHERE plugin_id IS NOT NULL)`,
             [family.toUpperCase()]
         );
     }

@@ -1,8 +1,12 @@
 import {PluginManifest, PluginType} from "@holokai/types/plugin";
+import {createRequire} from 'module';
+
+const require = createRequire(import.meta.url);
+const {version} = require('../package.json');
 
 export const manifest: PluginManifest = {
     name: '@holokai/provider-openai',
-    version: '1.0.0',
+    version,
     pluginType: PluginType.PROVIDER,
     family: 'openai',
     displayName: 'OpenAI Provider',

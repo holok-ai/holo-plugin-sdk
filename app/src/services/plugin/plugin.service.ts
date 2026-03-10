@@ -12,11 +12,12 @@ import {
 } from '@holokai/types/plugin';
 import type {HoloLogger} from "@holokai/types/logger";
 import logger from "../../utils/logger";
-import {PluginDB, ServerDB} from "../../db";
+import {PluginDB, PricingDB, ServerDB} from "../../db";
 import {BaseEntityService} from "../entities";
 import {Plugin} from "@holokai/types/entities";
 import {RedisService} from "../redis.service";
 import {ProviderImplService} from "./provider.impl.service";
+import {pickDefined} from "@holokai/sdk";
 
 /**
  * Service responsible for initializing and managing the plugin system
@@ -32,6 +33,7 @@ export class PluginService extends BaseEntityService<Plugin> implements IPluginR
     constructor(
         private readonly pluginDB: PluginDB,
         private readonly serverDB: ServerDB,
+        private readonly pricingDB: PricingDB,
         private readonly discovery: PluginDiscoveryService,
         private readonly loader: PluginLoaderService,
         private readonly providerPluginService: ProviderPluginService,
@@ -101,33 +103,125 @@ export class PluginService extends BaseEntityService<Plugin> implements IPluginR
         }
         const family = plugin.family.toUpperCase();
         const pluginVersion = plugin.version;
-        const dbPlugin = await this.pluginDB.upsert(family, plugin.manifest.name, pluginVersion, plugin.type, isLatest);
-        if (!dbPlugin) throw new Error(`Error registering plugin ${plugin.name}:${plugin.version} does not exist`);
 
-        await this.serverDB.registerPlugin(serverName, dbPlugin.id);
+        // 1. Upsert version-specific snapshot row (e.g., "1.2.0")
+        await this.pluginDB.upsert(family, plugin.manifest.name, pluginVersion, plugin.type);
 
-        this.pluginImpls.set(dbPlugin.id, plugin);
+        // 2. Upsert the "latest" alias row (stable UUID, always updated in-place)
+        const latestPlugin = await this.pluginDB.upsertLatest(family, plugin.manifest.name, plugin.type);
+        if (!latestPlugin) throw new Error(`Error registering latest plugin for ${plugin.name}`);
 
+        // 3. Mark "latest" as the default (atomically toggles is_default across the family)
+        if (isLatest) {
+            await this.pluginDB.setDefault(family, 'latest');
+            latestPlugin.is_default = true;
+        }
+
+        // 4. Register with server using the "latest" row
+        await this.serverDB.registerPlugin(serverName, latestPlugin.id);
+
+        // 5. Store in memory maps
+        this.pluginImpls.set(latestPlugin.id, plugin);
         if (!this.versionedPlugins.has(family)) {
             this.versionedPlugins.set(family, new Map());
         }
-        this.versionedPlugins.get(family)!.set(pluginVersion, dbPlugin);
-
-        if (dbPlugin.is_default) {
-            this.defaultPlugins.set(family, dbPlugin);
+        this.versionedPlugins.get(family)!.set('latest', latestPlugin);
+        this.versionedPlugins.get(family)!.set(pluginVersion, latestPlugin);
+        if (latestPlugin.is_default) {
+            this.defaultPlugins.set(family, latestPlugin);
         }
 
         const routeTree = plugin.getRoutes();
 
         switch (plugin.type) {
             case PluginType.PROVIDER:
-                await this.providerPluginService.registerProtocols(dbPlugin.id, routeTree, family);
-                await this.providerImplService.createProviderImpls(dbPlugin.id, plugin);
+                // 6. Register protocols against the "latest" row
+                await this.providerPluginService.registerProtocols(latestPlugin.id, routeTree, family);
+
+                // 7. Migrate providers from old versioned rows to "latest"
+                const migrated = await this.providerImplService.migrateProvidersToLatest(family, latestPlugin.id);
+                if (migrated > 0) {
+                    logger.info(`Migrated ${migrated} provider(s) to latest plugin for ${family}`);
+                }
+
+                // 8. Create impls for providers on "latest"
+                await this.providerImplService.createProviderImpls(latestPlugin.id, plugin);
+
+                // 9. Create impls for version-pinned providers (using current runtime code)
+                await this.providerImplService.createFamilyProviderImpls(family, latestPlugin.id, plugin);
+
+                // 10. Register default pricing against "latest"
+                await this.registerDefaultPricing(plugin, family, latestPlugin.id);
+
+                // 11. Deactivate old versioned rows with no providers
+                await this.pluginDB.deactivateUnusedVersions(family);
                 break;
             default:
                 throw new Error(`Unsupported plugin type ${plugin.type}`);
         }
 
+    }
+
+    private async registerDefaultPricing(plugin: IProviderPlugin, family: string, pluginId: string): Promise<void> {
+        const logger = this.mlog(this.registerDefaultPricing);
+        if (!plugin.getDefaultPricing) return;
+
+        const pricingData = plugin.getDefaultPricing();
+        if (!pricingData) return;
+
+        const plan = await this.pricingDB.upsertPlan(
+            family,
+            pricingData.name,
+            'plugin',
+            true,
+            true,
+        );
+        if (!plan) {
+            logger.warn(`Failed to upsert default pricing plan for ${family}`);
+            return;
+        }
+
+        await this.pluginDB.setDefaultPricingPlan(pluginId, plan.id);
+
+        const sheet = await this.pricingDB.upsertSheet(
+            plan.id,
+            pricingData.name,
+            pricingData.version,
+            pricingData.effective_from
+        );
+        if (!sheet) {
+            logger.warn(`Failed to upsert pricing sheet for ${family}`);
+            return;
+        }
+
+        for (const model of pricingData.models) {
+            await this.pricingDB.upsertSheetModel(sheet.id, model.model_name, pickDefined({
+                input_cost: model.input_cost,
+                output_cost: model.output_cost,
+                cache_read_cost: model.cache_read_cost,
+                cache_write_cost: model.cache_write_cost,
+                batch_input_cost: model.batch_input_cost,
+                batch_output_cost: model.batch_output_cost,
+                context_threshold: model.context_threshold,
+                extended_input_cost: model.extended_input_cost,
+                extended_output_cost: model.extended_output_cost,
+            }) as {
+                input_cost: number;
+                output_cost: number;
+                cache_read_cost?: number;
+                cache_write_cost?: number;
+                batch_input_cost?: number;
+                batch_output_cost?: number;
+                context_threshold?: number;
+                extended_input_cost?: number;
+                extended_output_cost?: number;
+            });
+        }
+
+        const currentModelNames = pricingData.models.map(m => m.model_name);
+        await this.pricingDB.deleteStaleModels(sheet.id, currentModelNames);
+
+        logger.info(`Registered default pricing for ${family}: ${pricingData.models.length} models`);
     }
 
     async unregisterPlugin(family: string, version?: string): Promise<void> {

@@ -35,6 +35,24 @@ export class ProviderImplService extends ClassLogger {
         }
     }
 
+    async migrateProvidersToLatest(family: string, latestPluginId: string): Promise<number> {
+        return this.providerService.migrateToLatestPlugin(family, latestPluginId);
+    }
+
+    async createFamilyProviderImpls(family: string, latestPluginId: string, plugin: IProviderPlugin) {
+        const logger = this.mlog(this.createFamilyProviderImpls);
+        const providers = await this.providerService.findByPluginFamily(family, latestPluginId);
+        if (providers.length === 0) return;
+        logger.info(`Creating impls for ${providers.length} version-pinned provider(s) in ${family}`);
+        for (const provider of providers) {
+            if (this.providerImpls.has(provider.id)) continue;
+            const cleanConfig = sanitizeObject(provider.config);
+            const configWithApiKey = await this.decryptAndInjectApiKey(provider, cleanConfig);
+            const p = await plugin.createProvider(provider.id, provider.name, configWithApiKey);
+            this.providerImpls.set(provider.id, p);
+        }
+    }
+
     async getProviderImplById(id: string): Promise<IProvider> {
         const logger = this.mlog(this.getProviderImplById);
         const provider = this.providerImpls.get(id);

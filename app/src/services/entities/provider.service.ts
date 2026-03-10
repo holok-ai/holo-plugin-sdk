@@ -34,4 +34,12 @@ export class ProviderService extends BaseEntityService<Provider> {
     async findByPluginId(pluginId: string): Promise<ProviderWithCredential[]> {
         return this.providerDB.findByPluginId(pluginId);
     }
+
+    async migrateToLatestPlugin(family: string, latestPluginId: string): Promise<number> {
+        return this.providerDB.migrateToLatestPlugin(family, latestPluginId);
+    }
+
+    async findByPluginFamily(family: string, excludePluginId?: string): Promise<ProviderWithCredential[]> {
+        return this.providerDB.findByPluginFamily(family, excludePluginId);
+    }
 }

@@ -7,5 +7,6 @@ export interface Plugin extends BaseEntity {
     type: PluginType;
     version: string;
     is_default: boolean;
+    default_pricing_plan_id?: string;
     active: boolean;
 }

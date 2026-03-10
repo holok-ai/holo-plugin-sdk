@@ -11,6 +11,7 @@ import {NotificationStoreToken} from "@holokai/sdk/notification";
 import type {NotificationEvent} from "@holokai/types/notification";
 import {PostgresNotificationStore} from "../db/notification.db";
 import {ProviderImplService} from "./plugin";
+import {PricingService} from "./pricing.service";
 
 /**
  * Service for auditing and logging LLM requests and responses
@@ -25,7 +26,8 @@ export class AuditService extends ClassLogger {
         private evaluatorDB: EvaluatorDB,
         private requestDB: RequestDB,
         private responseDB: ResponseDB,
-        private queueService: QueueService
+        private queueService: QueueService,
+        private pricingService: PricingService,
     ) {
         super();
         this.log.info('AuditService initialized');
@@ -195,6 +197,15 @@ export class AuditService extends ClassLogger {
         try {
             const result = await this.responseDB.insert(content);
             logger.debug(`Database insert successful for response ${content.request_id} new id ${result?.id} in ${Date.now() - startTime}ms`);
+
+            if (result?.id) {
+                try {
+                    await this.pricingService.calculateAndInsertCosts(result.id, {id: result.id, ...content});
+                } catch (pricingError) {
+                    logger.warn(`Cost calculation failed for response ${result.id}: ${pricingError instanceof Error ? pricingError.message : 'Unknown error'}`);
+                }
+            }
+
             return result ? result.id : null;
         } catch (error) {
             logger.error(`Database insert failed for response ${content.request_id}: ${error instanceof Error ? error.message : 'Unknown error'}\n\n ${JSON.stringify(content)}`, {

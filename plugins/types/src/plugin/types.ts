@@ -71,6 +71,26 @@ export interface IPluginRegistry<T extends IPlugin> {
     getImpls(filter?: (plugin: Plugin) => boolean): Promise<T[]>
 }
 
+export interface PluginPricingModel {
+    model_name: string;
+    input_cost: number;
+    output_cost: number;
+    cache_read_cost?: number;
+    cache_write_cost?: number;
+    batch_input_cost?: number;
+    batch_output_cost?: number;
+    context_threshold?: number;
+    extended_input_cost?: number;
+    extended_output_cost?: number;
+}
+
+export interface PluginPricingSheet {
+    name: string;
+    version: string;
+    effective_from: string;
+    models: PluginPricingModel[];
+}
+
 export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
     translator: IProviderTranslator;
     defaultRouteHandler?: RouteHandler;
@@ -84,4 +104,6 @@ export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
     getRoutes(): RouteTree;
 
     createWireAdapter(params: WireAdapterParams): Promise<IWireAdapter>;
+
+    getDefaultPricing?(): PluginPricingSheet;
 }

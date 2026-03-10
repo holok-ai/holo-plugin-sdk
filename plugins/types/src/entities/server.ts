@@ -6,6 +6,7 @@ export const ServerType = {
     AUDIT: 'audit',
     WORKER: 'worker',
     EVALUATOR: 'evaluator',
+    BATCH: 'batch',
 }
 
 export type ServerType = typeof ServerType[keyof typeof ServerType];
