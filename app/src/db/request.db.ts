@@ -9,6 +9,42 @@ export class RequestDB extends ClassLogger {
         super();
     }
 
+    async getById(id: string): Promise<ProviderRequest | null> {
+        return this.db.queryOne<ProviderRequest>(`SELECT * FROM provider_requests WHERE id = $1`, [id]);
+    }
+
+    async getByRequestId(requestId: string): Promise<ProviderRequest | null> {
+        return this.db.queryOne<ProviderRequest>(`SELECT * FROM provider_requests WHERE request_id = $1`, [requestId]);
+    }
+
+    async listPaginated(filters: {
+        org_id?: string; application_id?: string; provider_id?: string;
+        access_model?: string; user_id?: string; from?: string; to?: string;
+    }, limit: number, offset: number, sortBy: string, sortDir: string): Promise<{ rows: ProviderRequest[]; total: number }> {
+        const conditions: string[] = [];
+        const params: any[] = [];
+        let idx = 1;
+
+        if (filters.org_id) { conditions.push(`organization_id = $${idx++}`); params.push(filters.org_id); }
+        if (filters.application_id) { conditions.push(`application_id = $${idx++}`); params.push(filters.application_id); }
+        if (filters.provider_id) { conditions.push(`provider_id = $${idx++}`); params.push(filters.provider_id); }
+        if (filters.access_model) { conditions.push(`access_model = $${idx++}`); params.push(filters.access_model); }
+        if (filters.user_id) { conditions.push(`user_id = $${idx++}`); params.push(filters.user_id); }
+        if (filters.from) { conditions.push(`timestamp >= $${idx++}`); params.push(filters.from); }
+        if (filters.to) { conditions.push(`timestamp < $${idx++}`); params.push(filters.to); }
+
+        const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+        const allowedSorts = new Set(['timestamp', 'created_at', 'access_model']);
+        const col = allowedSorts.has(sortBy) ? sortBy : 'timestamp';
+        const dir = sortDir === 'asc' ? 'ASC' : 'DESC';
+
+        const [rows, countResult] = await Promise.all([
+            this.db.query<ProviderRequest>(`SELECT * FROM provider_requests ${where} ORDER BY ${col} ${dir} LIMIT $${idx++} OFFSET $${idx++}`, [...params, limit, offset]),
+            this.db.queryOne<{ count: string }>(`SELECT COUNT(*)::text as count FROM provider_requests ${where}`, params),
+        ]);
+        return {rows, total: parseInt(countResult?.count ?? '0')};
+    }
+
     async insert(request: Omit<ProviderRequest, 'id'>) {
         const {
             organization_id,

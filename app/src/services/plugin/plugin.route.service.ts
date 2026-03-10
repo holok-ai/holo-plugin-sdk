@@ -145,7 +145,7 @@ export class PluginRouteService extends ClassLogger {
                 for (const a of apps) {
                     const provider = a.provider!;
                     let ids = providerModelIds.get(provider.id);
-                    if (!ids) providerModelIds.set(provider.name, ids = new Set());
+                    if (!ids) providerModelIds.set(provider.id, ids = new Set());
 
                     for (const m of (a.models ?? [])) {
                         ids.add(m.name);

@@ -120,13 +120,12 @@ export class PluginService extends BaseEntityService<Plugin> implements IPluginR
         // 4. Register with server using the "latest" row
         await this.serverDB.registerPlugin(serverName, latestPlugin.id);
 
-        // 5. Store in memory maps
+        // 5. Store in memory maps (only the "latest" entry — versioned snapshots are DB-only)
         this.pluginImpls.set(latestPlugin.id, plugin);
         if (!this.versionedPlugins.has(family)) {
             this.versionedPlugins.set(family, new Map());
         }
         this.versionedPlugins.get(family)!.set('latest', latestPlugin);
-        this.versionedPlugins.get(family)!.set(pluginVersion, latestPlugin);
         if (latestPlugin.is_default) {
             this.defaultPlugins.set(family, latestPlugin);
         }

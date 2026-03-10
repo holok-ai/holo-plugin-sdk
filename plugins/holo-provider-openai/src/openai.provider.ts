@@ -24,6 +24,7 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         if (allowedModels === true) {
             return response;
         }
+        this.log.info(`Models: ${JSON.stringify(allowedModels)}`);
         const data = response.data.filter(model => allowedModels.includes(model.id));
 
         return {

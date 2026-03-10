@@ -81,6 +81,78 @@ export class ProviderDB {
         return (result as any).length ?? 0;
     }
 
+    async listPaginated(filters: {
+        org_id?: string; enabled?: boolean; search?: string;
+    }, limit: number, offset: number, sortBy: string, sortDir: string): Promise<{ rows: Provider[]; total: number }> {
+        const conditions: string[] = ['p.active = true'];
+        const params: any[] = [];
+        let idx = 1;
+
+        if (filters.org_id) { conditions.push(`p.organization_id = $${idx++}`); params.push(filters.org_id); }
+        if (filters.enabled !== undefined) { conditions.push(`p.enabled = $${idx++}`); params.push(filters.enabled); }
+        if (filters.search) { conditions.push(`p.name ILIKE $${idx++}`); params.push(`%${filters.search}%`); }
+
+        const where = conditions.join(' AND ');
+        const allowedSorts = new Set(['name', 'created_at', 'updated_at', 'type']);
+        const col = allowedSorts.has(sortBy) ? sortBy : 'created_at';
+        const dir = sortDir === 'asc' ? 'ASC' : 'DESC';
+
+        const [rows, countResult] = await Promise.all([
+            this.db.query<Provider>(
+                `SELECT p.* FROM providers p WHERE ${where} ORDER BY p.${col} ${dir} LIMIT $${idx++} OFFSET $${idx++}`,
+                [...params, limit, offset]
+            ),
+            this.db.queryOne<{ count: string }>(
+                `SELECT COUNT(*)::text as count FROM providers p WHERE ${where}`, params
+            ),
+        ]);
+        return {rows, total: parseInt(countResult?.count ?? '0')};
+    }
+
+    async create(provider: Omit<Provider, 'id' | 'created_at' | 'updated_at'>): Promise<Provider | null> {
+        return this.db.queryOne<Provider>(
+            `INSERT INTO providers (organization_id, name, type, description, config, api_credential_id, plugin_id, pricing_plan_id, enabled, available, deleted, active)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+             RETURNING *`,
+            [provider.organization_id, provider.name, provider.type, provider.description ?? null,
+             JSON.stringify(provider.config), provider.api_credential_id ?? null, provider.plugin_id,
+             provider.pricing_plan_id ?? null, provider.enabled, provider.available, provider.deleted, provider.active]
+        );
+    }
+
+    async update(id: string, fields: Partial<Provider>): Promise<Provider | null> {
+        const sets: string[] = [];
+        const params: any[] = [];
+        let idx = 1;
+
+        const updatable: (keyof Provider)[] = ['name', 'type', 'description', 'enabled', 'available', 'plugin_id', 'pricing_plan_id', 'api_credential_id'];
+        for (const key of updatable) {
+            if (fields[key] !== undefined) {
+                sets.push(`${key} = $${idx++}`);
+                params.push(fields[key]);
+            }
+        }
+        if (fields.config !== undefined) {
+            sets.push(`config = $${idx++}`);
+            params.push(JSON.stringify(fields.config));
+        }
+
+        if (sets.length === 0) return this.db.queryOne<Provider>(`SELECT * FROM providers WHERE id = $1`, [id]);
+
+        sets.push(`updated_at = now()`);
+        params.push(id);
+        return this.db.queryOne<Provider>(
+            `UPDATE providers SET ${sets.join(', ')} WHERE id = $${idx} AND active = true RETURNING *`, params
+        );
+    }
+
+    async softDelete(id: string): Promise<boolean> {
+        const result = await this.db.queryOne<Provider>(
+            `UPDATE providers SET active = false, deleted = true, updated_at = now() WHERE id = $1 RETURNING id`, [id]
+        );
+        return result !== null;
+    }
+
     async findByPluginFamily(family: string, excludePluginId?: string): Promise<ProviderWithCredential[]> {
         if (excludePluginId) {
             return this.db.query(`

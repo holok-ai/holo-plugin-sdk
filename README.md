@@ -210,7 +210,7 @@ The `server_plugins` junction table tracks which plugins each server has loaded,
 
 ## Notifications
 
-Real-time event streaming via SSE at `/api/notifications/stream`:
+Real-time event streaming via SSE at `/holo/api/notifications/stream`:
 
 - RabbitMQ topic exchange with routing key pattern `org.{id}.user.{id}.app.{slug}`
 - Event types: `request_started`, `guard_started`, `guard_passed`, `guard_failed`, `response_completed`, `status`
