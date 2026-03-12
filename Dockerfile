@@ -27,6 +27,11 @@ RUN if [ "$BUILD_MODE" = "dev" ]; then \
 COPY app/ /monorepo/app/
 COPY plugins/ /monorepo/plugins/
 
+# Build workspace packages (types, sdk, providers) so dist/ exists
+RUN if [ "$BUILD_MODE" = "dev" ]; then \
+      cd /monorepo && npm run build:workspaces; \
+    fi
+
 # --- Prod mode: app only, plugins from npm ---
 COPY app/tsconfig.json /app/tsconfig.json
 COPY app/package*.json /app/
