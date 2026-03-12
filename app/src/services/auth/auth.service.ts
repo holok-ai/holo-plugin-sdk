@@ -20,6 +20,7 @@ function buildAuth(
     applications: Application[],
     application?: Application,
     userId?: string,
+    clientIdentifier?: string,
 ): Auth {
     return pickDefined({
         organizationId,
@@ -27,6 +28,7 @@ function buildAuth(
         tokenType,
         application,
         applications,
+        clientIdentifier,
     }) as Auth;
 }
 
@@ -86,6 +88,7 @@ export class AuthService extends ClassLogger {
     }
 
     async authenticateJwt(token: string, appSlug?: string, provider?: string, useCache: boolean = true): Promise<Auth> {
+        const logger = this.mlog(this.authenticateJwt);
         const appSlugs = await this.tokenService.getAppSlugs(token, useCache);
         if (!appSlugs) {
             return Promise.reject('User is not provisioned with any applications.');
@@ -96,7 +99,15 @@ export class AuthService extends ClassLogger {
         }
 
         const decodedToken = this.tokenService.decodeToken(token);
-        const {organizationId, userId} = decodedToken;
+        const {organizationId, sub: userId, email} = decodedToken;
+
+        let clientIdentifier = email ?? await this.accessService.getUserEmailById(organizationId, userId);
+
+        if (!clientIdentifier) {
+            return Promise.reject('User no longer exists.');
+        }
+
+        logger.info(`User [${clientIdentifier}] logged in via JWT Token.`);
 
         const allApplications = await this.applicationService.getBySlugs(organizationId, appSlugs);
 
@@ -123,7 +134,7 @@ export class AuthService extends ClassLogger {
             return Promise.reject('User is not authorized for any providers.');
         }
 
-        return buildAuth('jwt', organizationId, filtered, application, userId);
+        return buildAuth('jwt', organizationId, filtered, application, userId, clientIdentifier);
     }
 
     async authenticateAnonymous(appSlug: string, provider?: string): Promise<Auth> {
@@ -178,7 +189,7 @@ export class AuthService extends ClassLogger {
                 return Promise.reject(`Application ${appSlug} not found.`);
             }
 
-            const allowed = await this.accessService.hasAccess(userId, application.id);
+            const allowed = await this.accessService.hasAccess(orgId, userId, application.id);
             if (!allowed) {
                 return Promise.reject('User is not authorized for this application.');
             }

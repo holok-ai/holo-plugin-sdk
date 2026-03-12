@@ -3,7 +3,7 @@ import {BaseAuditor} from "@holokai/sdk/provider";
 import {pickDefined} from "@holokai/sdk";
 import type {ProviderEnvelope, ProviderEvent} from "@holokai/types/provider";
 import type {HoloWorkerRequest} from "@holokai/types/worker";
-import type {LlmRequest} from "@holokai/types/entities";
+import type {ProviderRequest} from "@holokai/types/entities";
 import {LlmStatus} from "@holokai/types/entities";
 import {MessageCreateParamsBase} from "@anthropic-ai/sdk/resources/messages";
 import {MessageStreamParams} from "@anthropic-ai/sdk/resources/messages/messages";
@@ -13,24 +13,24 @@ import {BetaMessageStreamParams} from "@anthropic-ai/sdk/resources/beta/messages
 export class ClaudeAuditor extends BaseAuditor {
     readonly provider = 'claude';
 
-    protected toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
+    protected toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<ProviderRequest, 'id'>): void {
         const payload = workerRequest.payload as MessageStreamParams | BetaMessageStreamParams;
 
-        llmRequest.model_slug = payload.model;
+        llmRequest.access_model = payload.model;
 
         const userPrompt = this.extractUserPromptFromMessages(payload.messages);
         if (userPrompt !== undefined) {
-            llmRequest.user_prompt = userPrompt;
+            llmRequest.metadata.user_prompt = userPrompt;
         }
 
         if (payload.system !== undefined) {
-            llmRequest.system_prompt = typeof payload.system === 'string'
+            llmRequest.metadata.system_prompt = typeof payload.system === 'string'
                 ? payload.system
                 : JSON.stringify(payload.system);
         }
     }
 
-    protected mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
+    protected mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<ProviderRequest, 'id'>): void {
         const payload = workerRequest.payload as MessageStreamParams | BetaMessageStreamParams;
         const options: Record<string, any> = {};
 
@@ -43,7 +43,7 @@ export class ClaudeAuditor extends BaseAuditor {
         if (payload.metadata !== undefined) Object.assign(options, payload.metadata);
 
         if (Object.keys(options).length > 0) {
-            llmRequest.options = options;
+            llmRequest.metadata.options = options;
         }
     }
 
@@ -80,7 +80,7 @@ export class ClaudeAuditor extends BaseAuditor {
         }
 
         return pickDefined({
-            model_slug: payload.model,
+            access_model: payload.model,
             system_prompt: payload.system ?
                 (Array.isArray(payload.system) ? JSON.stringify(payload.system) : payload.system) : undefined
         }) as ProviderEnvelope;

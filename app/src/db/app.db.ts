@@ -100,6 +100,48 @@ export class AppDB {
         });
     }
 
+    async asUser<T>(orgId: string, callback: (client: any) => Promise<T>): Promise<T> {
+        return this.transaction(async (client) => {
+            await client.query(
+                `SELECT set_config('holokai.current_organization_id', $1, true)`,
+                [orgId]
+            );
+            return callback(client);
+        });
+    }
+
+    async asSystem<T>(callback: (client: any) => Promise<T>): Promise<T> {
+        return this.transaction(async (client) => {
+            await client.query(
+                `SELECT set_config('holokai.bypass_rls', 'true', true)`
+            );
+            return callback(client);
+        });
+    }
+
+    async systemQuery<T extends QueryResultRow = any>(text: string, params?: any[]): Promise<T[]> {
+        return this.asSystem(async (client) => {
+            const result = await client.query(text, params);
+            return result.rows;
+        });
+    }
+
+    async systemQueryOne<T = any>(text: string, params?: any[]): Promise<T | null> {
+        return this.asSystem(async (client) => {
+            const result = await client.query(text, params);
+            return result.rows[0] || null;
+        });
+    }
+
+    async systemQueryScalar<U = any>(text: string, params?: any[]): Promise<U | null> {
+        return this.asSystem(async (client) => {
+            const result = await client.query(text, params);
+            if (result.rows.length === 0) return null;
+            const firstRow = result.rows[0] as any;
+            return Object.values(firstRow)[0] as U;
+        });
+    }
+
     async transaction<T>(callback: (client: any) => Promise<T>): Promise<T> {
         const pool = this.getPool();
         const client = await pool.connect();

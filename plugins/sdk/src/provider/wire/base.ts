@@ -1,9 +1,8 @@
-import {ClassLogger, pickDefined, stringifyError} from '../../core';
+import {ClassLogger, pickDefined, stringifyAny} from '../../core';
 import type {IWireAdapter, ProviderEvent, WireChunk} from '@holokai/types/provider';
 
 export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapter {
     wireSeq = 0;
-
 
     constructor(
         public readonly requestId: string,
@@ -12,7 +11,7 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
         super();
     }
 
-    fromProviderEvent(ev: ProviderEvent): WireChunk[] {
+    async fromProviderEvent(ev: ProviderEvent): Promise<WireChunk[]> {
         if (!this.isStreaming) return this.fromNonStreaming(ev);
         return this.fromStreaming(ev);
     }
@@ -36,16 +35,18 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
         return (ev.type === 'error' || !this.isStreaming) ? this.nonStreamingHeaders() : this.streamingHeaders();
     }
 
-    protected chunkify(response: any, ev: ProviderEvent, done?: true, override?: {
+    protected async chunkify(ev: ProviderEvent, bodyFn: (ev: any) => Promise<string>, done?: true, options?: {
+        fullText?: string,
         status?: number;
         headers?: Record<string, string>
-    }): WireChunk {
+    }): Promise<WireChunk> {
         const isFirst = this.wireSeq == 0;
         const seq = this.wireSeq++;
-        const body = response === undefined ? '' :
-            ev.type === 'error' || ev.type === 'done' ? stringifyError(response) : this.formatWire(response);
+        const body = await bodyFn(ev);
+        const fullText = options?.fullText;
 
         const chunk = pickDefined({
+            fullText,
             requestId: this.requestId,
             seq,
             eventSeq: ev.seq,
@@ -54,35 +55,39 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
         }) as WireChunk;
 
         if (isFirst) {
-            const status = override?.status ?? (ev.type === 'error' ? (ev.status ?? 400) : 200);
+            const status = options?.status ?? (ev.type === 'error' ? (ev.status ?? 400) : 200);
             const headers =
-                override?.headers ??
+                options?.headers ??
                 (ev.type === 'error' && ev.headers ? ev.headers : undefined) ?? this.defaultHeadersForFirst(ev);
 
             chunk.status = status;
             chunk.headers = headers;
         } else {
             // generally do NOT send headers/status after first chunk; allow explicit override if needed
-            if (override?.status !== undefined) chunk.status = override.status;
-            if (override?.headers) chunk.headers = override.headers;
+            if (options?.status !== undefined) chunk.status = options.status;
+            if (options?.headers) chunk.headers = options.headers;
         }
 
         return chunk;
     }
 
     // --- non-streaming ---
-    protected fromNonStreaming(ev: ProviderEvent): WireChunk[] {
+    protected async fromNonStreaming(ev: ProviderEvent): Promise<WireChunk[]> {
         if (ev.type === 'done') {
-            return [this.chunkify(ev.message, ev, true)];
+            return [await this.chunkify(ev, async (ev: Extract<ProviderEvent, {
+                type: 'done'
+            }>) => stringifyAny(ev.message), true)];
         }
         if (ev.type === 'error') {
-            return [this.chunkify(ev.error, ev, true, pickDefined({status: ev.status ?? 400, headers: ev.headers}))];
+            return [await this.chunkify(ev, async (ev: Extract<ProviderEvent, {
+                type: 'error'
+            }>) => stringifyAny(ev.error), true, pickDefined({status: ev.status ?? 400, headers: ev.headers}))];
         }
         return [];
     }
 
     // --- streaming ---
-    protected fromStreaming(ev: ProviderEvent): WireChunk[] {
+    protected async fromStreaming(ev: ProviderEvent): Promise<WireChunk[]> {
         switch (ev.type) {
             case 'stream_event':
                 return this.onStreamEvent(ev);
@@ -96,19 +101,31 @@ export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapte
         }
     }
 
-    protected onStreamEvent(ev: Extract<ProviderEvent, { type: 'stream_event' }>): WireChunk[] {
-        return [this.chunkify(ev.event, ev)];
+    protected async onStreamEvent(ev: Extract<ProviderEvent, { type: 'stream_event' }>): Promise<WireChunk[]> {
+        return [await this.chunkify(ev, this.defaultStreamEventFormatter.bind(this))];
     }
 
-    protected onDoneStreaming(ev: Extract<ProviderEvent, { type: 'done' }>): WireChunk[] {
-        return [this.chunkify(ev.text, ev, true)];
+    protected async onDoneStreaming(ev: Extract<ProviderEvent, { type: 'done' }>): Promise<WireChunk[]> {
+        return [await this.chunkify(ev, this.defaultDoneStreamFormatter.bind(this), true, {fullText: ev.text})];
     }
 
-    protected onErrorStreaming(ev: Extract<ProviderEvent, { type: 'error' }>): WireChunk[] {
+    protected async onErrorStreaming(ev: Extract<ProviderEvent, { type: 'error' }>): Promise<WireChunk[]> {
         if (this.wireSeq === 0) {
-            return this.fromNonStreaming(ev);
+            return await this.fromNonStreaming(ev);
         }
         // Mid-stream: default behavior (provider adapters should usually override)
-        return [this.chunkify(ev.error, ev, true)];
+        return [await this.chunkify(ev, this.defaultStreamErrorFormatter.bind(this), true)];
+    }
+
+    protected async defaultDoneStreamFormatter(ev: Extract<ProviderEvent, { type: 'done' }>): Promise<string> {
+        return this.formatWire(ev.message);
+    }
+
+    protected async defaultStreamErrorFormatter(ev: Extract<ProviderEvent, { type: 'error' }>): Promise<string> {
+        return stringifyAny(ev.error);
+    }
+
+    protected async defaultStreamEventFormatter(ev: Extract<ProviderEvent, { type: 'stream_event' }>): Promise<string> {
+        return this.formatWire(ev.event);
     }
 }

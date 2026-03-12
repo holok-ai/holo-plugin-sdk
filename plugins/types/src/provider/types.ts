@@ -1,11 +1,20 @@
-import type {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk, RequestType} from "../holo";
+import type {HoloMessage, HoloRequest, HoloResponse, HoloStreamChunk} from "../holo";
 import type {HoloWorkerRequest, WorkerResponseEnvelope} from "../worker";
-import type {LlmRequest, LlmResponse} from "../entities";
+import type {Protocol, ProtocolCapability, ProviderRequest, ProviderResponse} from "../entities";
+import {IProviderPlugin} from "../plugin";
 
 export type ProviderEvent =
-    | { type: "stream_event"; requestId: string; seq: number; event: any; ts: number }
-    | { type: "text_delta"; requestId: string; seq: number; text: string; ts: number }
-    | { type: "done"; requestId: string; seq: number; message: any; text: string; metrics?: any; ts: number }
+    | { type: "stream_event"; requestId: string; seq: number; event: any; ts: number; }
+    | { type: "text_delta"; requestId: string; seq: number; text: string; ts: number; }
+    | {
+    type: "done";
+    requestId: string;
+    seq: number;
+    message: any;
+    text: string;
+    metrics?: any;
+    ts: number;
+}
     | {
     type: "error";
     requestId: string;
@@ -14,16 +23,16 @@ export type ProviderEvent =
     status?: number;
     headers?: Record<string, string>;
     metrics?: any;
-    ts: number
+    ts: number;
 };
 
 export interface ProviderEnvelope {
-    model_slug: string;
+    access_model: string;
     system_prompt?: string;
 }
 
 export interface ProviderContext {
-    requestType?: RequestType;
+    protocol: Protocol;
     headers?: Record<string, string | string[]>;
     query?: Record<string, string>;
     emitStreamEvent: (event: any) => void;
@@ -58,7 +67,7 @@ export interface ModelInfo {
 }
 
 export interface AIRequestStat {
-    type: RequestType;
+    type: ProtocolCapability;
     startTime: number;
     endTime: number;
     duration: number;
@@ -73,14 +82,14 @@ export interface IResponseFactory {
 export interface IAuditor {
     readonly provider: string;
 
-    auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest>;
+    auditRequest(workerRequest: HoloWorkerRequest): Promise<ProviderRequest>;
 
     createWorkerResponseEnvelope(workerRequest: HoloWorkerRequest, workerId?: string): Promise<WorkerResponseEnvelope>;
 
     auditResponse(
         responseEnvelope: WorkerResponseEnvelope,
         providerEvent: ProviderEvent,
-    ): Promise<LlmResponse>;
+    ): Promise<ProviderResponse>;
 }
 
 export interface IProviderTranslator {
@@ -112,6 +121,7 @@ export interface WireChunk {
     headers?: Record<string, string>;
     status?: number;
     body: string;
+    fullText?: string;
     done?: true;
 }
 
@@ -119,22 +129,22 @@ export interface IWireAdapter {
     requestId: string;
     isStreaming: boolean;
 
-    fromProviderEvent(ev: ProviderEvent): WireChunk[];
+    fromProviderEvent(ev: ProviderEvent): Promise<WireChunk[]>;
 }
 
 export interface WireAdapterParams {
     requestId: string;
     isStreaming: boolean;
-    requestType: RequestType;
+    protocol: string;
 }
 
 export interface IProvider {
+    id: string;
     name: string;
-    family: string;
-    version: string;
     auditor: IAuditor;
     translator: IProviderTranslator;
     responseFactory: IResponseFactory;
+    plugin: IProviderPlugin;
 
     getModels(allowedModels: string[] | true): Promise<any>;
 
@@ -145,12 +155,12 @@ export interface IProvider {
         opts?: { signal?: AbortSignal }
     ): Promise<AsyncIterable<ProviderEvent>>;
 
-    auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest>;
+    auditRequest(workerRequest: HoloWorkerRequest): Promise<ProviderRequest>;
 
     auditResponse(
         workerEnvelope: WorkerResponseEnvelope,
         providerEvent: ProviderEvent
-    ): Promise<LlmResponse>;
+    ): Promise<ProviderResponse>;
 }
 
 export interface ProviderRunner<Final = any> {

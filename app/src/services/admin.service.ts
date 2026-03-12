@@ -3,11 +3,24 @@ import {injectable} from 'tsyringe';
 import {QueueService} from "./index";
 import {env} from '../env';
 import logger from "../utils/logger";
+import {ServerDB} from "../db";
+import {ServerType} from "@holokai/types/entities";
 
 @injectable()
 export class AdminService {
 
-    constructor(private queueService: QueueService) {
+    constructor(
+        private queueService: QueueService,
+        private readonly serverDB: ServerDB
+    ) {
+    }
+
+    async registerServer(name: string, type: ServerType) {
+        const server = await this.serverDB.upsert(name, type);
+
+        if (!server) {
+            throw new Error(`Unable to register server.`);
+        }
     }
 
     async restartWorker(workerId: string, _payload: object) {

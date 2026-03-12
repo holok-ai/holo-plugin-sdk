@@ -1,8 +1,9 @@
 import type {IAuditor, IProvider, IProviderTranslator, IResponseFactory, ProviderRunner} from "@holokai/types/provider";
 import {ModelInfo, ProviderContext, ProviderEvent} from "@holokai/types/provider";
 import {HoloWorkerRequest, WorkerRequestEnvelope} from "@holokai/types/worker";
-import {LlmRequest, LlmResponse} from "@holokai/types/entities";
+import {ProviderRequest, ProviderResponse} from "@holokai/types/entities";
 import {AsyncEventQueue, ClassLogger, filterForwardableHeaders, pickDefined, pickHeadersByPrefix} from "../core";
+import {IProviderPlugin} from "@holokai/types";
 
 export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, Final = any> extends ClassLogger implements IProvider {
     public readonly auditor: IAuditor;
@@ -12,9 +13,9 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
     protected readonly client: ProviderClient;
 
     constructor(
+        public readonly id: string,
         public readonly name: string,
-        public readonly family: string,
-        public readonly version: string,
+        public readonly plugin: IProviderPlugin,
         protected readonly _config: any
     ) {
         super();
@@ -25,20 +26,16 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         this.responseFactory = this.createResponseFactory();
     }
 
-    get id(): string {
-        return this._config.id;
-    }
-
     abstract getModels(allowedModels: string[] | true): Promise<any>;
 
-    async auditRequest(workerRequest: HoloWorkerRequest): Promise<LlmRequest> {
+    async auditRequest(workerRequest: HoloWorkerRequest): Promise<ProviderRequest> {
         return this.auditor.auditRequest(workerRequest);
     }
 
     async auditResponse(
         workerEnvelope: WorkerRequestEnvelope,
         providerEvent: ProviderEvent
-    ): Promise<LlmResponse> {
+    ): Promise<ProviderResponse> {
         return this.auditor.auditResponse(workerEnvelope, providerEvent);
     }
 
@@ -52,7 +49,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
             return this.handlePassthrough(request, q);
         }
 
-        const {requestId, payload, rawRequest} = request;
+        const {requestId, protocol, payload, rawRequest} = request;
         const requestPayload = payload as RequestPayload;
 
         const start = Date.now();
@@ -68,7 +65,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         const push = this.createEventPusher(q, requestId);
 
         const ctx = pickDefined({
-            requestType: request.type,
+            protocol,
             headers: rawRequest.headers,
             query: rawRequest.query,
             emitStreamEvent: (event: any) =>

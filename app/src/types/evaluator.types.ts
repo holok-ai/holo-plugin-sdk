@@ -1,4 +1,4 @@
-import {EvaluatorData, LlmResponse, Prompt, Provider} from "@holokai/types/entities";
+import {EvaluatorData, ProviderResponse, Prompt, Provider} from "@holokai/types/entities";
 
 interface BaseEvent {
     timestamp: number;
@@ -72,7 +72,7 @@ export interface IPromptEvaluator extends IEvaluator {
     promptId: string;
     prompt: Prompt;
     provider: Provider;
-    llmResponse: LlmResponse;
+    llmResponse: ProviderResponse;
     evaluatorData: EvaluatorData;
 }
 
@@ -114,7 +114,7 @@ export class LlmResponseDTO {
     worker_id: string = '';
     request_id: string = '';
     provider_slug: string = '';
-    model_slug: string = '';
+    access_model: string = '';
     status: string = '';
     error_message?: string;
     response?: string;
@@ -138,7 +138,7 @@ export class LlmResponseMapper {
         response.worker_id = row.worker_id;
         response.request_id = row.request_id;
         response.provider_slug = row.provider_slug;
-        response.model_slug = row.model_slug;
+        response.access_model = row.access_model;
         response.status = row.status;
         response.error_message = row.error_message;
         response.response = row.response;

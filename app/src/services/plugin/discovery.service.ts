@@ -1,7 +1,7 @@
 import {injectable} from 'tsyringe';
 import {promises as fs} from 'fs';
 import path from 'path';
-import type {PluginType} from '@holokai/types/plugin';
+import {PluginType} from '@holokai/types/plugin';
 import {ClassLogger} from "@holokai/sdk";
 import {env} from "../../env";
 
@@ -128,7 +128,7 @@ export class PluginDiscoveryService extends ClassLogger {
 
     private inferPluginType(packageName: string): PluginType | null {
         const match = packageName.match(/@holokai\/(?:holo-)?provider-/);
-        return match ? 'provider' : null;
+        return match ? PluginType.PROVIDER : null;
     }
 
     /**

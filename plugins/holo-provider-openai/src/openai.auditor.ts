@@ -3,56 +3,54 @@ import {pickDefined} from "@holokai/sdk";
 import {BaseAuditor} from "@holokai/sdk/provider";
 import {HoloWorkerRequest} from "@holokai/types/worker";
 import {ProviderEnvelope, ProviderEvent} from "@holokai/types/provider";
-import {LlmRequest, LlmStatus} from "@holokai/types/entities";
-import {RequestType} from "@holokai/types/holo";
+import {LlmStatus, ProviderRequest} from "@holokai/types/entities";
 import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
 import {ResponseCreateParamsBase, ResponseUsage} from "openai/resources/responses/responses";
 import {CompletionUsage} from "openai/resources/completions";
+import {OpenAIProtocols} from "./plugin";
 
 @injectable()
 export class OpenAIAuditor extends BaseAuditor {
     readonly provider = 'openai';
 
-    protected toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
-        if (workerRequest.type === RequestType.RESPONSES) {
-            // Responses API: prompts are in payload.input[], not payload.messages[]
+    protected toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<ProviderRequest, 'id'>): void {
+        if (workerRequest.protocol.name === OpenAIProtocols.RESPONSES) {
             const payload = workerRequest.payload as ResponseCreateParamsBase;
 
             if (payload.model) {
-                llmRequest.model_slug = payload.model as string;
+                llmRequest.access_model = payload.model as string;
             }
 
             const userPrompt = this.extractUserPromptFromInput(payload.input);
             if (userPrompt !== undefined) {
-                llmRequest.user_prompt = userPrompt;
+                llmRequest.metadata.user_prompt = userPrompt;
             }
 
             const systemPrompt = this.extractSystemPromptFromInput(payload.input);
             if (systemPrompt !== undefined) {
-                llmRequest.system_prompt = systemPrompt;
+                llmRequest.metadata.system_prompt = systemPrompt;
             }
         } else {
-            // Chat Completions API: prompts are in payload.messages[]
             const payload = workerRequest.payload as ChatCompletionCreateParamsBase;
 
-            llmRequest.model_slug = payload.model;
+            llmRequest.access_model = payload.model;
 
             const userPrompt = this.extractUserPromptFromMessages(payload.messages);
             if (userPrompt !== undefined) {
-                llmRequest.user_prompt = userPrompt;
+                llmRequest.metadata.user_prompt = userPrompt;
             }
 
             const systemPrompt = this.extractSystemPromptFromMessages(payload.messages);
             if (systemPrompt !== undefined) {
-                llmRequest.system_prompt = systemPrompt;
+                llmRequest.metadata.system_prompt = systemPrompt;
             }
         }
     }
 
-    protected mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<LlmRequest, 'id'>): void {
+    protected mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<ProviderRequest, 'id'>): void {
         const options: Record<string, any> = {};
 
-        if (workerRequest.type === RequestType.RESPONSES) {
+        if (workerRequest.protocol.name === OpenAIProtocols.RESPONSES) {
             const payload = workerRequest.payload as ResponseCreateParamsBase;
             if (payload.max_output_tokens !== undefined) options.max_output_tokens = payload.max_output_tokens;
             if (payload.temperature !== undefined) options.temperature = payload.temperature;
@@ -79,7 +77,7 @@ export class OpenAIAuditor extends BaseAuditor {
         }
 
         if (Object.keys(options).length > 0) {
-            llmRequest.options = options;
+            llmRequest.metadata.options = options;
         }
     }
 
@@ -133,7 +131,7 @@ export class OpenAIAuditor extends BaseAuditor {
 
     protected async createProviderEnvelope(payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<ProviderEnvelope> {
         return pickDefined({
-            model_slug: payload.model
+            access_model: payload.model
         }) as ProviderEnvelope
     }
 

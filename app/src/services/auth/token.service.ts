@@ -101,10 +101,8 @@ export class TokenService {
                 return null;
             }
 
-            if (typeof auth.exp === 'number') {
-                const ttl = Math.max(1, auth.exp - Math.floor(Date.now() / 1000));
-                await this.redis.set(accessToken, slugs, ttl);
-            }
+            const ttl = Math.max(1, auth.exp - Math.floor(Date.now() / 1000));
+            await this.redis.set(accessToken, slugs, ttl);
             return slugs;
         } catch (e) {
             const err = e as Error;

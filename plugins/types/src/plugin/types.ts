@@ -1,17 +1,22 @@
 import type {HoloLogger} from "../logger";
 import type {IProvider, IProviderTranslator, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "../provider";
-import type {RouteHandler, RouteTree} from "../routing";
+import type {RouteDefinition, RouteHandler} from "../routing";
 import type {INotificationService} from "../notification";
+import {Plugin} from "../entities";
 
-export type PluginType = 'provider';
+export const PluginType = {
+    PROVIDER: 'PROVIDER'
+} as const;
+
+export type PluginType = typeof PluginType[keyof typeof PluginType];
 
 export const PluginState = {
-    UNINITIALIZED: 'uninitialized',
-    INITIALIZING: 'initializing',
-    READY: 'ready',
-    ERROR: 'error',
-    DESTROYING: 'destroying',
-    DESTROYED: 'destroyed',
+    UNINITIALIZED: 'UNINITIALIZED',
+    INITIALIZING: 'INITIALIZING',
+    READY: 'READY',
+    ERROR: 'ERROR',
+    DESTROYING: 'DESTROYING',
+    DESTROYED: 'DESTROYED',
 } as const;
 
 export type PluginState = typeof PluginState[keyof typeof PluginState];
@@ -43,8 +48,11 @@ export interface PluginContext {
 
 export interface IPlugin {
     readonly manifest: PluginManifest;
+    readonly name: string;
     readonly state: PluginState;
     readonly family: string;
+    readonly type: PluginType;
+    readonly version: string;
 
     initialize(context: PluginContext): Promise<void>;
 
@@ -54,22 +62,48 @@ export interface IPlugin {
 }
 
 export interface IPluginRegistry<T extends IPlugin> {
-    registerPlugin(plugin: T, version?: string, isLatest?: boolean): void;
+    registerPlugin(serverName: string, plugin: T, isLatest?: boolean): Promise<void>;
 
-    unregisterPlugin(id: string, version?: string): void;
+    unregisterPlugin(serverName: string, id: string, version?: string): Promise<void>;
 
-    listPlugins(): T[];
+    getPlugins(filter?: (plugin: Plugin) => boolean): Promise<Plugin[]>
+
+    getImpls(filter?: (plugin: Plugin) => boolean): Promise<T[]>
+}
+
+export interface PluginPricingModel {
+    model_name: string;
+    input_cost: number;
+    output_cost: number;
+    cache_read_cost?: number;
+    cache_write_cost?: number;
+    batch_input_cost?: number;
+    batch_output_cost?: number;
+    context_threshold?: number;
+    extended_input_cost?: number;
+    extended_output_cost?: number;
+}
+
+export interface PluginPricingSheet {
+    name: string;
+    version: string;
+    effective_from: string;
+    models: PluginPricingModel[];
 }
 
 export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
     translator: IProviderTranslator;
     defaultRouteHandler?: RouteHandler;
+    protocols: Record<string, string>;
+    defaultProtocol: string;
 
-    createProvider(config: any): Promise<TProvider>;
+    createProvider(id: string, name: string, config: any): Promise<TProvider>;
 
     getCapabilities(): ProviderCapabilities;
 
-    getRoutes(): RouteTree;
+    getRoutes(): RouteDefinition[];
 
-    createWireAdapter(params: WireAdapterParams): IWireAdapter;
+    createWireAdapter(params: WireAdapterParams): Promise<IWireAdapter>;
+
+    getDefaultPricing?(): PluginPricingSheet;
 }

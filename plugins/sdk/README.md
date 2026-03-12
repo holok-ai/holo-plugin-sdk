@@ -1,407 +1,203 @@
-# @holokai/common
+# @holokai/sdk
 
-> Common SDK for Holo plugin development - provides interfaces, types, and utilities for building provider plugins.
+SDK for Holo plugin development. Provides base classes, utilities, and types for building provider plugins.
 
 ## Installation
 
 ```bash
-npm install @holokai/common
+npm install @holokai/sdk
+```
+
+Plugins also need the types package:
+
+```bash
+npm install @holokai/types
 ```
 
 ## Overview
 
-The Common SDK is the foundation for developing Holo plugins. It provides:
+The SDK provides:
 
-- Type-safe interfaces for plugin lifecycle
-- Provider abstractions and base implementations
-- Universal Holo format definitions
-- Shared utilities and types
-
-## Usage
-
-### Plugin Development
-
-```typescript
-import {IPlugin, PluginManifest, PluginContext} from '@holokai/common/plugin';
-
-export class MyPlugin implements IPlugin {
-    public manifest: PluginManifest = {
-        name: '@myorg/my-plugin',
-        version: '1.0.0',
-        pluginType: 'provider',
-        description: 'My custom provider plugin',
-    };
-
-    async initialize(context: PluginContext): Promise<void> {
-        // Plugin initialization
-    }
-
-    async destroy(): Promise<void> {
-        // Cleanup resources
-    }
-}
-```
-
-### Provider Implementation
-
-```typescript
-import {IProvider} from '@holokai/common/provider';
-import {HoloRequest, HoloResponse} from '@holokai/common/holo';
-
-export class MyProvider implements IProvider {
-    async processRequest(request: HoloRequest): Promise<HoloResponse> {
-        // Transform Holo format to provider-specific format
-        // Call provider API
-        // Transform response back to Holo format
-        return response;
-    }
-}
-```
+- `BasePlugin` — lifecycle management (initialize, destroy, state machine)
+- `BaseProvider` — provider request processing and auditing
+- `BaseAuditor` — request/response audit record construction
+- `BaseTranslator` — Holo universal format translation
+- `BaseWireAdapter` — provider events to HTTP wire chunks
+- Core utilities (`ClassLogger`, `pickDefined`, `AsyncEventQueue`, etc.)
+- Notification factories and stores
 
 ## Package Exports
 
-The SDK is organized into focused subpath exports:
-
-### `/plugin`
-
-Core plugin interfaces and lifecycle management.
-
 ```typescript
-import {IPlugin, PluginManifest, PluginContext, PluginCapabilities} from '@holokai/common/plugin';
+import { BasePlugin } from '@holokai/sdk/plugin';
+import { BaseProvider, BaseAuditor, BaseTranslator, BaseWireAdapter } from '@holokai/sdk/provider';
+import { ClassLogger, pickDefined, stringifyError } from '@holokai/sdk';
+import { HoloRequestDefaults } from '@holokai/sdk/holo';
+import { NotificationServiceToken, NotificationEventFactory } from '@holokai/sdk/notification';
 ```
 
-### `/provider`
-
-Provider interfaces and base implementations.
-
-```typescript
-import {IProvider, IProviderPlugin, ProviderConfig} from '@holokai/common/provider';
-```
-
-### `/holo`
-
-Universal Holo format definitions for cross-provider compatibility.
-
-```typescript
-import {HoloRequest, HoloResponse, HoloMessage, HoloStream} from '@holokai/common/holo';
-```
-
-### `/utils`
-
-Shared utilities and helper types.
-
-```typescript
-import {Logger, ErrorResponse, HealthStatus, Result, AsyncResult} from '@holokai/common/utils';
-```
-
-## Type Safety
-
-All interfaces are fully typed with TypeScript:
-
-```typescript
-interface PluginManifest {
-    name: string;
-    version: string;
-    pluginType: 'provider' | 'transformer' | 'validator';
-    description?: string;
-    author?: string;
-    license?: string;
-    capabilities?: PluginCapabilities;
-}
-```
-
-## Best Practices
-
-1. **Import Boundaries**: Never import from the core platform (`../../src`)
-2. **Versioning**: Follow semantic versioning for your plugins
-3. **Error Handling**: Use provided error types for consistency
-4. **Logging**: Use the Logger interface for standardized logging
-5. **Configuration**: Use ConfigLoader for environment-based config
-
-## Provider Plugin Package Template
-
-When creating a new provider plugin, follow this standardized package structure:
+## Building a Provider Plugin
 
 ### Directory Structure
 
 ```
 plugins/holo-provider-{name}/
 ├── src/
-│   ├── index.ts            # Default export of plugin (REQUIRED)
-│   ├── plugin.ts           # IProviderPlugin implementation (REQUIRED)
-│   ├── provider.ts         # Provider implementation (REQUIRED)
-│   └── translator.ts       # Holo format translator (REQUIRED)
-├── tests/
-│   ├── integration/        # Real API tests (PRIMARY - 70% coverage)
-│   └── unit/              # Contract tests only (LIMITED - 30% coverage)
-├── package.json            # Package configuration (REQUIRED)
-├── tsconfig.json           # TypeScript configuration (REQUIRED)
-└── README.md               # Plugin documentation (REQUIRED)
+│   ├── index.ts              # Default export of plugin instance
+│   ├── manifest.ts           # Plugin manifest definition
+│   ├── plugin.ts             # IProviderPlugin implementation
+│   ├── {name}.provider.ts    # IProvider implementation
+│   ├── {name}.auditor.ts     # IAuditor implementation
+│   ├── {name}.translator.ts  # IProviderTranslator implementation
+│   ├── {name}.wire.adapter.ts # IWireAdapter implementation
+│   └── types.ts              # Provider-specific types
+├── package.json
+├── tsconfig.json
+└── README.md
 ```
 
-### package.json Template
-
-```json
-{
-  "name": "@holokai/provider-{name}",
-  "version": "1.0.0",
-  "description": "Holo provider plugin for {Provider Name}",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "peerDependencies": {
-    "@holokai/common": "^1.0.0"
-  },
-  "dependencies": {
-    "{provider-sdk}": "x.y.z"
-  },
-  "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^18.0.0"
-  },
-  "scripts": {
-    "build": "tsc",
-    "test": "jest",
-    "test:integration": "jest tests/integration"
-  },
-  "keywords": [
-    "holo",
-    "plugin",
-    "provider",
-    "{name}"
-  ],
-  "author": "Your Name",
-  "license": "MIT"
-}
-```
-
-**Important package.json rules:**
-
-- **Naming**: MUST follow `@holokai/provider-{name}` convention
-- **peerDependencies**: MUST include `@holokai/common` (shared version)
-- **dependencies**: Provider SDK with **EXACT version** (e.g., `"openai": "4.73.1"`, NOT `"^4.73.1"`)
-- **engines**: MUST specify `node >= 18.0.0`
-
-### src/index.ts Template
+### Plugin Implementation
 
 ```typescript
-import plugin from './plugin';
+// plugin.ts
+import { BasePlugin } from '@holokai/sdk/plugin';
+import type { IProviderPlugin, PluginContext } from '@holokai/types/plugin';
+import type { IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams } from '@holokai/types/provider';
+import type { RouteTree } from '@holokai/types/routing';
+import { RouteHandler } from '@holokai/types/routing';
+import { ProtocolCapability } from '@holokai/types/entities';
+import { manifest } from './manifest';
+import { MyProvider } from './my.provider';
+import { MyWireAdapter } from './my.wire.adapter';
+import { MyTranslator } from './my.translator';
 
-// Default export REQUIRED - this is what the plugin system loads
-export default plugin;
+export const MyProtocols = {
+    CHAT: 'my.chat',
+    MODELS: 'my.models'
+} as const;
 
-// Named exports for testing/utilities (optional)
-export {OpenAIProvider} from './provider';
-export {OpenAITranslator} from './translator';
-```
+export class MyProviderPlugin extends BasePlugin implements IProviderPlugin {
+    manifest = manifest;
+    translator = MyTranslator.instance();
+    protocols = MyProtocols;
+    defaultProtocol = MyProtocols.CHAT;
 
-### src/plugin.ts Template
-
-```typescript
-import {IProviderPlugin, PluginManifest, PluginContext} from '@holokai/common/plugin';
-import {ProviderConfig, ProviderCapabilities} from '@holokai/common/provider';
-import {OpenAIProvider} from './provider';
-
-class OpenAIProviderPlugin implements IProviderPlugin {
-    public manifest: PluginManifest = {
-        name: '@holokai/provider-openai',
-        version: '1.0.0',
-        pluginType: 'provider',
-        providerType: 'openai',
-        sdkVersion: 'openai@4.73.1',
-        commonSdkVersion: '^1.0.0',
-        capabilities: {
-            streaming: true,
-            tools: true,
-            vision: true,
-            reasoning: false
-        },
-        author: 'HoloKai Team',
-        source: 'official',
-        description: 'OpenAI provider plugin for GPT models'
-    };
-
-    private context?: PluginContext;
-    private initialized = false;
-
-    async initialize(context: PluginContext): Promise<void> {
-        if (this.initialized) return; // Idempotent
-        this.context = context;
-        this.initialized = true;
-        context.logger.info('[OpenAI Plugin] Initialized');
+    async createProvider(id: string, name: string, config: any): Promise<IProvider> {
+        return new MyProvider(this, config);
     }
 
-    async destroy(): Promise<void> {
-        this.context = undefined;
-        this.initialized = false;
-    }
-
-    createProvider(config: ProviderConfig): OpenAIProvider {
-        if (!this.initialized) {
-            throw new Error('Plugin not initialized');
-        }
-        return new OpenAIProvider(config, this.context!.logger);
-    }
-
-    validateConfig(config: unknown): boolean {
-        // Basic validation - plugins are lightweight
-        return typeof config === 'object' && config !== null;
+    async createWireAdapter(params: WireAdapterParams): Promise<IWireAdapter> {
+        return new MyWireAdapter(params.requestId, params.isStreaming);
     }
 
     getCapabilities(): ProviderCapabilities {
-        return this.manifest.capabilities!;
-    }
-}
-
-// Export singleton instance
-const plugin = new OpenAIProviderPlugin();
-export default plugin;
-```
-
-### src/provider.ts Template
-
-```typescript
-import {IProvider} from '@holokai/common/provider';
-import {HoloRequest, HoloResponse} from '@holokai/common/holo';
-import {Logger} from '@holokai/common/utils';
-import OpenAI from 'openai';
-
-export class OpenAIProvider implements IProvider {
-    private client: OpenAI;
-
-    constructor(
-        private config: { api_key: string; model: string },
-        private logger: Logger
-    ) {
-        this.client = new OpenAI({apiKey: config.api_key});
+        return { streaming: true, tools: true, vision: false, functionCalling: true, maxTokens: 128000 };
     }
 
-    async processRequest(request: HoloRequest): Promise<HoloResponse> {
-        // Transform Holo to OpenAI format
-        const openaiRequest = this.translator.toOpenAI(request);
-
-        // Call provider API
-        const response = await this.client.chat.completions.create(openaiRequest);
-
-        // Transform back to Holo format
-        return this.translator.fromOpenAI(response);
-    }
-
-    async processStreamRequest(request: HoloRequest): AsyncIterator<HoloStream> {
-        // Streaming implementation
-    }
-}
-```
-
-### src/translator.ts Template
-
-```typescript
-import {HoloRequest, HoloResponse} from '@holokai/common/holo';
-import {ChatCompletion, ChatCompletionCreateParams} from 'openai/resources';
-
-export class OpenAITranslator {
-    toOpenAI(holoRequest: HoloRequest): ChatCompletionCreateParams {
+    getRoutes(): RouteTree {
         return {
-            model: holoRequest.model,
-            messages: holoRequest.messages.map(msg => ({
-                role: msg.role,
-                content: msg.content
-            })),
-            temperature: holoRequest.temperature,
-            max_tokens: holoRequest.maxTokens,
-            stream: false
-        };
-    }
-
-    fromOpenAI(openaiResponse: ChatCompletion): HoloResponse {
-        return {
-            id: openaiResponse.id,
-            model: openaiResponse.model,
-            choices: openaiResponse.choices.map(choice => ({
-                index: choice.index,
-                message: {
-                    role: choice.message.role,
-                    content: choice.message.content || ''
+            v1: {
+                chat: {
+                    method: 'POST',
+                    handler: RouteHandler.REQUEST,
+                    protocol: { name: MyProtocols.CHAT, capability: ProtocolCapability.CHAT }
                 },
-                finishReason: choice.finish_reason
-            })),
-            usage: {
-                promptTokens: openaiResponse.usage?.prompt_tokens || 0,
-                completionTokens: openaiResponse.usage?.completion_tokens || 0,
-                totalTokens: openaiResponse.usage?.total_tokens || 0
-            },
-            created: openaiResponse.created
+                models: {
+                    method: 'GET',
+                    handler: RouteHandler.MODELS,
+                    protocol: { name: MyProtocols.MODELS, capability: ProtocolCapability.MODELS }
+                }
+            }
         };
+    }
+
+    protected onInitialize(_context: PluginContext): Promise<void> {
+        return Promise.resolve();
+    }
+
+    protected onDestroy(): Promise<void> {
+        return Promise.resolve();
     }
 }
 ```
 
-### tsconfig.json Template
+### Protocols and Capabilities
 
-```json
-{
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "composite": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
-  },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "tests"
-  ]
+Each route declares a **protocol** (wire format identifier) and **capability** (what kind of request it handles):
+
+| Capability | Description |
+|-----------|-------------|
+| `ProtocolCapability.CHAT` | Conversational LLM requests |
+| `ProtocolCapability.GENERATE` | Text generation (non-chat) |
+| `ProtocolCapability.EMBED` | Embedding generation |
+| `ProtocolCapability.MODELS` | Model listing |
+
+Protocols are registered in the database at startup. Each protocol is tied to a specific plugin version.
+
+### Auditor Implementation
+
+The auditor transforms worker requests/responses into `ProviderRequest`/`ProviderResponse` audit records:
+
+```typescript
+import { BaseAuditor } from '@holokai/sdk/provider';
+import type { HoloWorkerRequest } from '@holokai/types/worker';
+import type { ProviderRequest } from '@holokai/types/entities';
+
+export class MyAuditor extends BaseAuditor {
+    readonly provider = 'my-provider';
+
+    protected toHoloRequest(workerRequest: HoloWorkerRequest, req: Omit<ProviderRequest, 'id'>): void {
+        req.access_model = workerRequest.payload.model;
+        req.metadata.user_prompt = workerRequest.payload.messages?.at(-1)?.content;
+    }
+
+    protected mapProviderPayload(workerRequest: HoloWorkerRequest, req: Omit<ProviderRequest, 'id'>): void {
+        const { temperature, max_tokens } = workerRequest.payload;
+        req.metadata.options = { temperature, max_tokens };
+    }
+
+    protected async createProviderEnvelope(payload: any) {
+        return { access_model: payload.model || 'unknown' };
+    }
 }
 ```
 
-### Testing Structure
+Audit records use:
+- **Real columns** for queryable fields: `access_model`, `application_id`, `provider_id`, `protocol_id`, `user_id`, `client_identifier`, `thread_id`, token counts, timing, cost
+- **`metadata` JSONB** for extensible data: `user_prompt`, `system_prompt`, `options`, `raw_request`, `headers`, `response_raw`, `usage_raw`, etc.
 
-**Integration Tests (PRIMARY - tests/integration/):**
+### Manifest
 
-- Test real API calls with actual provider SDK
-- Verify request/response transformations work correctly
-- Test streaming functionality
-- Verify error handling with real API errors
-- Compare plugin output with expected Holo format
+```typescript
+// manifest.ts
+import type { PluginManifest } from '@holokai/types/plugin';
+import { PluginType } from '@holokai/types/plugin';
 
-**Unit Tests (LIMITED - tests/unit/):**
+export const manifest: PluginManifest = {
+    name: '@holokai/holo-provider-my',
+    version: '1.0.0',
+    pluginType: PluginType.PROVIDER,
+    family: 'MY_PROVIDER',
+    description: 'My custom provider plugin'
+};
+```
 
-- Test contract validation logic
-- Test manifest structure
-- Test plugin lifecycle (initialize, destroy)
-- Minimal mocking - focus on contracts only
+### Default Export
 
-### Complete Example
+```typescript
+// index.ts
+import { MyProviderPlugin } from './plugin';
 
-See [plugins/holo-provider-openai](../holo-provider-openai) for a complete reference implementation following this
-template.
+export default new MyProviderPlugin();
+```
 
-## Examples
+## Reference Implementations
 
-See the [OpenAI Provider Plugin](../holo-provider-openai) for a complete reference implementation.
-
-## API Reference
-
-Full API documentation is available in the [TypeScript definitions](./src/index.d.ts).
-
-## Contributing
-
-This SDK is part of the Holo platform. See the main [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines.
+| Plugin | Key Features |
+|--------|-------------|
+| [OpenAI](../holo-provider-openai) | Dual protocols (completions + responses), dual wire adapters, tool calling |
+| [Claude](../holo-provider-claude) | 6-event streaming lifecycle, content blocks, extended thinking, prompt caching |
+| [Ollama](../holo-provider-ollama) | Chat + generate protocols, local deployment, passthrough default handler |
 
 ## License
 

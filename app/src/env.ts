@@ -126,6 +126,9 @@ export namespace env {
         export const evaluatorQueue = process.env.RABBITMQ_ANALYSIS_REQUEST_QUEUE || 'evaluator-tasks';
         export const evaluatorRoutingKey = process.env.ANALYSIS_ROUTING_KEY || "evaluator-tasks";
 
+        export const batchQueue = process.env.RABBITMQ_BATCH_QUEUE || 'batch-jobs';
+        export const batchRoutingKey = process.env.BATCH_ROUTING_KEY || 'batch-jobs';
+
         export const queueExpiration = process.env.QUEUE_EXPIRATION || 3600000;
 
         export const managementQueue = process.env.PROXY_MANAGEMENT_QUEUE || 'proxy_management';
@@ -155,6 +158,11 @@ export namespace env {
     export namespace evaluator {
         export const serverId = process.env.ANALYSIS_ID ||
             `evaluator_${id}`;
+    }
+
+    export namespace batch {
+        export const serverId = process.env.BATCH_ID ||
+            `batch_${id}`;
     }
 
     export interface JWTConfig {

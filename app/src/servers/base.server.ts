@@ -1,5 +1,7 @@
 import 'reflect-metadata';
 import {ClassLogger} from "@holokai/sdk";
+import {ServerType} from "@holokai/types/entities";
+import logger from "../utils/logger";
 
 export interface IAppServer {
     onError(error: Error): Promise<void>;
@@ -10,49 +12,68 @@ export interface IAppServer {
 }
 
 export class BaseServer extends ClassLogger implements IAppServer {
-
+    id!: string;
+    type!: ServerType;
     protected initialized = false;
+    private shuttingDown = false;
 
-    constructor(readonly id: string) {
+    constructor(...args: any[]) {
         super();
-        // logger.debug(`Server (${this.id}) Config: ${JSON.stringify(env, null, 2)}`)
+        this.id = args[0];
+        this.type = args[1];
         this.__className = `${this.constructor.name}-${this.id}`;
     }
 
     async init() {
-        const logger = this.mlog(this.init);
+        const log = this.mlog(this.init);
         await this.onInit();
         this.initialized = true;
-        logger.info(`Server (${this.id}) started successfully.`);
+        log.info(`Server (${this.id}) started successfully.`);
     }
 
     async shutdown() {
-        const logger = this.mlog(this.shutdown);
+        if (this.shuttingDown) return;
+        this.shuttingDown = true;
+        const log = this.mlog(this.shutdown);
+        log.info(`Shutting down server (${this.id})...`);
         await this.onShutdown();
-        logger.info('Server shutdown gracefully.');
-        process.exit(0);
+        log.info('Server shutdown gracefully.');
     }
 
     async start() {
-        const logger = this.mlog(this.start);
+        const log = this.mlog(this.start);
+
+        this.registerProcessHandlers();
+
         try {
             await this.init();
-
-            for (const signal of ['SIGINT', 'SIGTERM']) {
-                process.on(signal, async () => {
-                    logger.info(`${signal} received, shutting down server gracefully...`);
-                    await this.shutdown();
-                    process.exit(0);
-                });
-            }
-            logger.info('Server is running...');
-
+            log.info('Server is running...');
         } catch (error) {
             await this.handleError(error as Error);
+            process.exit(1);
         }
     }
 
-    //required to resolve so that mixins can all call super.x
+    private registerProcessHandlers() {
+        for (const signal of ['SIGINT', 'SIGTERM', 'SIGBREAK']) {
+            process.on(signal, async () => {
+                logger.info(`${signal} received, shutting down ${this.id}...`);
+                await this.shutdown();
+                process.exit(0);
+            });
+        }
+
+        process.on('uncaughtException', (err) => {
+            logger.error(`Uncaught exception in ${this.id}: ${err.message}`, {stack: err.stack});
+            process.exit(1);
+        });
+
+        process.on('unhandledRejection', (reason) => {
+            logger.error(`Unhandled rejection in ${this.id}: ${reason}`);
+            process.exit(1);
+        });
+    }
+
     onInit(): Promise<void> {
         return Promise.resolve();
     }
@@ -66,10 +87,8 @@ export class BaseServer extends ClassLogger implements IAppServer {
     }
 
     private async handleError(error: Error) {
-        const logger = this.mlog(this.handleError);
-        logger.error(`Server error: ${(error as Error).message}`, {
-            stack: (error as Error).stack
-        });
+        const log = this.mlog(this.handleError);
+        log.error(`Server error: ${error.message}`, {stack: error.stack});
         await this.onError(error);
     }
 }

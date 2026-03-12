@@ -1,13 +1,13 @@
 import 'reflect-metadata';
 import {QueueService} from "./queue.service";
-import {container, injectable} from "tsyringe";
+import {injectable} from "tsyringe";
 import {HoloApiRequest} from "../api/types";
 import {Response} from "express";
 import {env} from "../env";
 import {AsyncEventQueue, ClassLogger} from "@holokai/sdk";
 import type {WireChunk} from "@holokai/types/provider";
 import type {HoloWorkerRequest} from "@holokai/types/worker";
-import {LlmResponse} from "@holokai/types/entities";
+import {ProviderResponse} from "@holokai/types/entities";
 
 @injectable()
 export class ResponseService extends ClassLogger {
@@ -46,7 +46,7 @@ export class ResponseService extends ClassLogger {
 
         queue.push(wire);
         if (wire.done) {
-            logger.debug(`Finished processing wire: ${wire.body}`);
+            logger.debug(`Finished processing wire: ${wire.fullText ?? wire.body}`);
             queue.end();
             this.queues.delete(requestId);
         }
@@ -135,9 +135,7 @@ export class ResponseService extends ClassLogger {
         await this.queueService.sendToExchange(env.queue.responseExchange, sourceId, data, {correlationId: requestId});
     }
 
-    async sendToAudit(requestId: string, data: LlmResponse) {
+    async sendToAudit(requestId: string, data: ProviderResponse) {
         await this.queueService.sendToExchange(env.queue.responseExchange, "audit", data, {correlationId: requestId});
     }
 }
-
-container.registerSingleton(ResponseService)

@@ -9,8 +9,11 @@ export class OpenAICompletionsWireAdapter extends BaseWireAdapter {
         return `data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`;
     }
 
-    protected onDoneStreaming(ev: Extract<ProviderEvent, { type: "done" }>): WireChunk[] {
-        return [this.chunkify('[DONE]', ev, true)];
+    protected async onDoneStreaming(ev: Extract<ProviderEvent, { type: "done" }>): Promise<WireChunk[]> {
+        return [
+            await this.chunkify(ev, async (_ev) => this.formatWire(ev.message)),
+            await this.chunkify(ev, async (_ev) => this.formatWire('[DONE]'), true, {fullText: ev.text})
+        ];
     }
 }
 

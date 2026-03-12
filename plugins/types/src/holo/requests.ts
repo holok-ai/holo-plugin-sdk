@@ -7,16 +7,14 @@ export interface HoloRequestMetadata {
 }
 
 export const RequestType = {
-    CHAT: 'chat',
     GENERATE: 'generate',
-    RESPONSES: 'responses',
-    EMBED: 'embed'
+    CHAT: 'chat'
 } as const;
 
 export type RequestType = typeof RequestType[keyof typeof RequestType];
 
 export interface HoloRequest {
-    request_type?: RequestType;
+    request_type: RequestType;
     model: string;
     messages?: HoloMessage[];
     temperature?: number;

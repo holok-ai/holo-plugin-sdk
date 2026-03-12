@@ -35,7 +35,8 @@ export class ClaudeResponseMessageTranslator extends BaseTranslator<HoloMessage,
                     type: 'tool_use',
                     id: tc.id ?? createStableId(`${tc.function.name}#${idx}`, tc.function.arguments),
                     name: tc.function.name,
-                    input: tc.function.arguments || {}
+                    input: tc.function.arguments || {},
+                    caller: {type: "direct"}
                 });
             });
         }

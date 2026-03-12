@@ -1,27 +1,26 @@
+import {Application, Protocol, Provider} from "../entities";
+
 export interface WorkerRequestEnvelope {
     request_id: string;
-    request_type: string;
-    organization_id?: string;
-    application_id: string;
-    source_id?: string;
+    organization_id: string;
+    application?: Application;
+    provider: Provider;
+    protocol: Protocol;
     user_id?: string;
+    access_model: string;
     thread_id?: string;
-    branch_id?: string;
     timestamp: string;
-    model_slug: string;
-    provider_slug: string;
-    system_prompt?: string;
-    raw_request?: Record<string, any>;
+    metadata: Record<string, any>;
 }
 
 export interface WorkerResponseEnvelope {
     request_id: string;
-    request_type: string;
-    organization_id?: string;
-    application_id: string;
-    worker_id?: string;
+    organization_id: string;
+    application?: Application;
+    provider: Provider;
+    protocol: Protocol;
     user_id?: string;
-    model_slug: string;
-    provider_slug: string;
-    system_prompt?: string;
+    client_identifier?: string;
+    access_model: string;
+    worker_id?: string;
 }

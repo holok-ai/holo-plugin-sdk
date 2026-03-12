@@ -9,13 +9,43 @@ export class AccessDB extends ClassLogger {
         super();
     }
 
-    async hasAccess(userId: string, applicationId: string): Promise<boolean> {
-        return await this.db.queryScalar<boolean>(ACCESS_CHECK_QUERY, [userId, applicationId]) ?? false;
+    async hasAccess(orgId: string, userId: string, applicationId: string): Promise<boolean> {
+        return this.db.asUser(orgId, async (client) => {
+            const result = await client.query(ACCESS_CHECK_QUERY, [userId, applicationId]);
+            return result.rows[0]?.exists ?? false;
+        });
     }
 
     async getAccessibleApplicationIds(userId: string, orgId: string): Promise<string[]> {
-        const rows = await this.db.query<{ id: string }>(ACCESSIBLE_APPS_QUERY, [userId, orgId]);
-        return rows.map(r => r.id);
+        return this.db.asUser(orgId, async (client) => {
+            const result = await client.query(ACCESSIBLE_APPS_QUERY, [userId, orgId]);
+            return result.rows.map((r: { id: string }) => r.id);
+        });
+    }
+
+    async getUserEmailById(orgId: string, userId: string): Promise<string | null> {
+        return this.db.asUser(orgId, async (client) => {
+            const result = await client.query(
+                `SELECT email FROM app_users WHERE id = $1`, [userId]
+            );
+            return result.rows[0]?.email ?? null;
+        });
+    }
+
+    async getUserIdByEmail(orgId: string, email: string): Promise<string | null> {
+        return this.db.asUser(orgId, async (client) => {
+            const result = await client.query(
+                `SELECT id FROM app_users WHERE upper(email) = upper($1)`, [email]
+            );
+            return result.rows[0]?.id ?? null;
+        });
+    }
+
+    async hasModelAccess(orgId: string, userId: string, applicationId: string, accessModel: string): Promise<boolean> {
+        return this.db.asUser(orgId, async (client) => {
+            const result = await client.query(MODEL_ACCESS_QUERY, [userId, applicationId, accessModel]);
+            return result.rows[0]?.exists ?? false;
+        });
     }
 }
 
@@ -53,5 +83,31 @@ const ACCESSIBLE_APPS_QUERY = `
             SELECT 1 FROM app_users u WHERE u.id = $1 AND u.organization_id = a.organization_id
         ))
         OR a.access_level = 'anonymous'
+    )
+`;
+
+const MODEL_ACCESS_QUERY = `
+    SELECT EXISTS (
+        SELECT 1
+        FROM applications a
+            JOIN application_models am ON am.application_id = a.id
+            JOIN models m ON m.id = am.model_id
+        WHERE a.id = $2
+          AND m.access_model = $3
+          AND m.active = true
+          AND (
+              EXISTS (SELECT 1 FROM user_applications WHERE user_id = $1 AND application_id = a.id)
+              OR EXISTS (
+                  SELECT 1 FROM user_teams ut
+                      JOIN teams user_team ON ut.team_id = user_team.id
+                      JOIN team_applications ta ON ta.application_id = a.id
+                      JOIN teams app_team ON ta.team_id = app_team.id
+                  WHERE ut.user_id = $1 AND app_team.path <@ user_team.path
+              )
+              OR (a.access_level = 'organization' AND EXISTS (
+                  SELECT 1 FROM app_users u WHERE u.id = $1 AND u.organization_id = a.organization_id
+              ))
+              OR a.access_level = 'anonymous'
+          )
     )
 `;

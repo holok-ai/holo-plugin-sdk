@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {Response} from "express";
 import {inject, injectable} from "tsyringe";
-import {pickDefined, stringifyError} from "@holokai/sdk";
+import {pickDefined, stringifyAny} from "@holokai/sdk";
 import {BaseController} from "../../utils";
 import type {
     INotificationService,
@@ -28,11 +28,11 @@ export class NotificationController extends BaseController {
             return;
         }
 
-        const {organizationId, userId, application} = req.auth;
+        const {organizationId, userId, clientIdentifier, application} = req.auth;
 
         const filter = pickDefined({
             organizationId,
-            userId,
+            userId: userId ?? clientIdentifier,
             appSlug: application?.url_slug
         }) as NotificationSubscribeFilter;
 
@@ -110,7 +110,7 @@ export class NotificationController extends BaseController {
                     type: "provider_error",
                     severity: "error",
                     message: "notification_stream_error",
-                    payload: {error: stringifyError(e?.message ?? e)},
+                    payload: {error: stringifyAny(e?.message ?? e)},
                 }) as NotificationEvent);
             } catch {
                 // ignore

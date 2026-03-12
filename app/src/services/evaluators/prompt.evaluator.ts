@@ -1,6 +1,6 @@
 import {EvaluatorEvent, EvaluatorResult, IEvaluator} from '../../types';
 import {EvaluatorDB} from '../../db';
-import {Evaluator, EvaluatorData, LlmResponse, Prompt, Provider} from "@holokai/types/entities";
+import {Evaluator, EvaluatorData, ProviderResponse, Prompt, Provider} from "@holokai/types/entities";
 
 export class PromptEvaluator implements IEvaluator {
     evaluatorId: string;
@@ -49,8 +49,8 @@ export class PromptEvaluator implements IEvaluator {
         throw new Error('Prompt and Provider are not configured for this evaluator');
         // }
 
-        // // Extract LlmResponse and EvaluatorData from context if available
-        // let llmResponse: LlmResponse | null = null;
+        // // Extract ProviderResponse and EvaluatorData from context if available
+        // let llmResponse: ProviderResponse | null = null;
         // let evaluatorData: EvaluatorData | null = null;
         //
         // if (event.context) {
@@ -124,7 +124,7 @@ export class PromptEvaluator implements IEvaluator {
     protected substituteTags(
         template: string,
         prompt: Prompt,
-        llmResponse: LlmResponse | null,
+        llmResponse: ProviderResponse | null,
         evalData: EvaluatorData | null
     ): string {
         const dataContext = {
@@ -146,9 +146,9 @@ export class PromptEvaluator implements IEvaluator {
 
                 if (tableObject && typeof tableObject === 'object' && fieldName in tableObject) {
                     let value = (tableObject as any)[fieldName];
-                    if (llmResponse && llmResponse.provider_slug?.toLowerCase() === 'anthropic' &&
-                        tableName === 'llm_responses' && fieldName === 'response') {
-                        value = (tableObject as any)['response_raw'];
+                    if (llmResponse && tableName === 'llm_responses' && fieldName === 'response'
+                        && llmResponse.metadata?.response_raw) {
+                        value = llmResponse.metadata.response_raw;
                     }
 
                     if (typeof value === 'object' && value !== null) {

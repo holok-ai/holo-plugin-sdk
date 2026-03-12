@@ -1,9 +1,10 @@
-import {PluginManifest, IPlugin, PluginContext, PluginState} from "@holokai/types/plugin";
+import {PluginManifest, IPlugin, PluginContext, PluginState, PluginType} from "@holokai/types/plugin";
 import {PluginError, PluginErrorCode} from "./errors";
 import {ClassLogger} from "../core";
 
 
 export abstract class BasePlugin extends ClassLogger implements IPlugin {
+    id?: string;
     abstract readonly manifest: PluginManifest;
 
     private _context: PluginContext | undefined;
@@ -15,6 +16,10 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
 
     get name(): string {
         return this.manifest.name;
+    }
+
+    get type(): PluginType {
+        return this.manifest.pluginType;
     }
 
     get family(): string {

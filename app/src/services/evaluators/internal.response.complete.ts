@@ -1,7 +1,7 @@
 import {InternalEvaluatorBase} from './internal.base';
 import {AuditServiceEvent, EvaluatorResult} from '../../types';
 import logger from '../../utils/logger';
-import {LlmResponse} from "@holokai/types/entities";
+import {ProviderResponse} from "@holokai/types/entities";
 
 class CodeBlock {
     language!: string;
@@ -163,7 +163,7 @@ export class ResponseCompleteEvaluator extends InternalEvaluatorBase {
      * @returns Evaluation result with unified diff blocks for code visualization
      */
     async evaluate(auditEvent: AuditServiceEvent): Promise<EvaluatorResult> {
-        let llmResponse: LlmResponse | null = null;
+        let llmResponse: ProviderResponse | null = null;
         if (auditEvent.context) {
             llmResponse = auditEvent.context.find(c => c.key === "llm_responses")?.value as any;
         }
@@ -188,8 +188,8 @@ export class ResponseCompleteEvaluator extends InternalEvaluatorBase {
                 diffBlocks = this.createUniDiff(codeBlocks);
             }
         }
-        if (llmResponse?.response_raw) {
-            const anthroDiffBlocks: UnifiedDiffBlock[] = this.extractAnthropicDiffBlocks(llmResponse?.response_raw || '');
+        if (llmResponse?.metadata?.response_raw) {
+            const anthroDiffBlocks: UnifiedDiffBlock[] = this.extractAnthropicDiffBlocks(llmResponse.metadata.response_raw);
             if (anthroDiffBlocks.length > 0) {
                 diffBlocks = [...diffBlocks, ...anthroDiffBlocks];
             }

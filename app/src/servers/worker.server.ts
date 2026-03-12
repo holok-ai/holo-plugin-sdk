@@ -1,24 +1,15 @@
 import 'reflect-metadata';
+import '../container/base.registry';
+import '../container/worker.registry';
 import {container, inject, injectable} from "tsyringe";
 import {withAdmin, withDB, withStats} from "./mixins";
 import {BaseServer} from "./base.server";
 import {env} from "../env";
-import {
-    CryptoService,
-    NotificationService,
-    PluginDiscoveryService,
-    PluginLoaderService,
-    PluginService,
-    ProviderPluginRegistry,
-    ProviderService,
-    ResponseService,
-    WireService
-} from "../services";
-import {NotificationEventFactory, NotificationServiceToken, NotificationStoreToken} from "@holokai/sdk/notification";
+import {PluginService, ProviderImplService, ResponseService} from "../services";
+import {NotificationEventFactory, NotificationServiceToken} from "@holokai/sdk/notification";
 import {AIRequestStat, HoloWorkerRequest, IProvider, ProviderEvent} from "@holokai/types";
 import type {INotificationService} from "@holokai/types/notification";
-import {PostgresNotificationStore} from "../db/notification.db";
-import logger from "../utils/logger";
+import {ServerType} from "@holokai/types/entities";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -26,40 +17,40 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
     protected __className = `${this.constructor.name}-${env.worker.serverId}`;
 
     constructor(
-        private providerService: ProviderService,
+        private pluginService: PluginService,
+        private providerPluginService: ProviderImplService,
         private responseService: ResponseService,
-        private wireService: WireService,
         @inject(NotificationServiceToken) private readonly notificationService: INotificationService
     ) {
-        super(env.worker.serverId);
+        super(env.worker.serverId, ServerType.WORKER);
     }
 
     async onInit(): Promise<void> {
         await super.onInit();
-        await this.providerService.init(this.id);
+        await this.pluginService.initializePluginSystem(this.id);
         this.adminHandlers.set('worker.restart', this.adminService.restartWorker)
         let requestQueue = env.queue.requestQueue;
 
         const logger = this.mlog('workerConsume')
         await this.queueService.consume(requestQueue, async (requestId, workerRequest: HoloWorkerRequest) => {
             this.stats.totalRequests++;
-            logger.info(`Worker ${this.id} handling request: ${requestId} provider: ${workerRequest.providerName} from server ${workerRequest.sourceId} and queue ${requestQueue}...`);
+            logger.info(`Worker ${this.id} handling request: ${requestId} provider: ${workerRequest.provider.name} from server ${workerRequest.sourceId} and queue ${requestQueue}...`);
             try {
-                const ai: IProvider = await this.providerService.matchProvider(workerRequest.providerName);
+                const ai: IProvider = await this.providerPluginService.getProviderImplById(workerRequest.provider.id);
+                const plugin = ai.plugin;
                 logger.info(`resolved ai provider: ${ai.name}`);
 
                 const {sourceId, guardResult} = workerRequest;
 
-                // Setup the over-the-wire response for client-native streaming
                 const envelope = await ai.auditor.createWorkerResponseEnvelope(workerRequest, this.id);
 
                 if (guardResult && !guardResult.passed) {
                     logger.info('Guards failed. Sending back guard errors.');
 
-                    const wire = await this.wireService.matchWireAdapter(ai.family, ai.version, {
+                    const wire = await plugin.createWireAdapter({
                         requestId,
                         isStreaming: false,
-                        requestType: workerRequest.type,
+                        protocol: ai.plugin.defaultProtocol
                     });
 
                     const errorMessage = guardResult.errors?.join('\n\n') || 'Policy violation';
@@ -73,7 +64,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         error: ai.responseFactory.createError(errorMessage,)
                     } as ProviderEvent;
 
-                    for (const wireChunk of wire.fromProviderEvent(evt)) {
+                    for (const wireChunk of await wire.fromProviderEvent(evt)) {
                         logger.debug(`Guard failed response: ${JSON.stringify(wireChunk)}`);
                         await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                     }
@@ -88,16 +79,16 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         )
                     );
                 } else {
-                    const wire = await this.wireService.matchWireAdapter(ai.family, ai.version, {
+                    const wire = await plugin.createWireAdapter({
                         requestId,
                         isStreaming: workerRequest.isStreaming,
-                        requestType: workerRequest.type,
+                        protocol: workerRequest.protocol.name
                     });
 
                     const q = await ai.processWorkerRequest(workerRequest);
 
                     for await (const evt of q) {
-                        for (const wireChunk of wire.fromProviderEvent(evt)) {
+                        for (const wireChunk of await wire.fromProviderEvent(evt)) {
                             await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                         }
                         if (evt.type === "done" || evt.type === "error") {
@@ -173,49 +164,5 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
     }
 }
 
-container.registerSingleton(CryptoService)
-    .registerSingleton(PluginService)
-    .registerSingleton(PluginDiscoveryService)
-    .registerSingleton(PluginLoaderService)
-    .registerSingleton(ProviderPluginRegistry)
-    .registerSingleton(NotificationServiceToken, NotificationService)
-    .registerSingleton(NotificationStoreToken, PostgresNotificationStore)
-    .registerSingleton(ProviderService);
-
-let workerInstance: WorkerServer | null = null;
-
-async function startWorker() {
-    try {
-        const pluginService = container.resolve(PluginService);
-        await pluginService.initializePluginSystem();
-        workerInstance = container.resolve(WorkerServer);
-        await workerInstance.start();
-    } catch (error) {
-        logger.error(`Failed to start worker: ${(error as Error).message}`, {
-            className: 'startWorker',
-            methodName: 'startWorker',
-            stack: (error as Error).stack
-        });
-        process.exit(1);
-    }
-}
-
-startWorker();
-
-['SIGBREAK', 'SIGINT', 'SIGTERM'].forEach((signal) => {
-    process.on(signal, () => {
-        logger.info(`Received ${signal}, shutting down worker server...`, {className: 'process', methodName: signal});
-        if (workerInstance) {
-            workerInstance.shutdown();
-        }
-        process.exit(0);
-    });
-});
-
-process.on("uncaughtException", (err) => {
-    logger.error(`Uncaught exception in worker server: ${err.message}`, {
-        className: 'process',
-        methodName: 'uncaughtException'
-    });
-    logger.error(err.stack);
-});
+const server = container.resolve(WorkerServer);
+await server.start();

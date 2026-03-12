@@ -6,12 +6,14 @@ import {withQueue} from "./with.queue";
 import {env} from "../../env";
 import {Constructor} from "../../utils";
 import {AdminService} from "../../services";
+import {ServerType} from "@holokai/types/entities";
 
 export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
 
     @injectable()
     class WithAdminServer extends withQueue(Base) implements IAppServer {
         id!: string;
+        type!: ServerType;
         adminHandlers = new Map<string, (workerId: string, payload: object) => Promise<object>>();
         adminCommandQueue: string;
         adminExchange: string;
@@ -20,6 +22,7 @@ export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
         constructor(...args: any[]) {
             super(...args);
             this.id = args[0];
+            this.type = args[1];
             this.adminCommandQueue = env.queue.adminCommandQueue;
             this.adminExchange = env.queue.adminExchange;
             this.adminService = container.resolve(AdminService);
