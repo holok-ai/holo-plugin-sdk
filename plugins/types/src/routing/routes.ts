@@ -14,13 +14,8 @@ export function isRouteDefinition(value: any): value is RouteDefinition {
 }
 
 export interface RouteDefinition {
+    paths: string[];
     method: 'GET' | 'POST';
     handler: RouteHandler;
     protocol: ProtocolDef
-}
-
-export type RouteTreeNode = RouteDefinition | { [key: string]: RouteTreeNode };
-
-export interface RouteTree {
-    [key: string]: RouteTreeNode;
 }

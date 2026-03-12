@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {ClassLogger} from '@holokai/sdk';
-import {isRouteDefinition, RouteDefinition, RouteTree} from "@holokai/types/routing";
+import {RouteDefinition} from "@holokai/types/routing";
 import {ProtocolDB} from '../../db';
 import {Protocol} from "@holokai/types/entities";
 
@@ -16,29 +16,22 @@ export class ProviderPluginService extends ClassLogger {
         super();
     }
 
-    async registerProtocols(pluginId: string, tree: RouteTree, basePath: string = ''): Promise<void> {
+    async registerProtocols(pluginId: string, routes: RouteDefinition[]): Promise<void> {
         const logger = this.mlog(this.registerProtocols);
         let protocols = this.pluginProtocols.get(pluginId);
         if (!protocols) {
             protocols = new Map();
             this.pluginProtocols.set(pluginId, protocols);
         }
-        for (const [key, value] of Object.entries(tree)) {
-            if (isRouteDefinition(value)) {
-                const routeDef = value as RouteDefinition;
-                if (routeDef) {
-                    const {protocol} = routeDef;
-                    const path = basePath ? `${basePath}/${key}` : `/${key}`;
-                    const dbProtocol = await this.protocolDB.upsert(pluginId, protocol.name, protocol.capability, path);
+        for (const routeDef of routes) {
+            const {protocol} = routeDef;
+            const path = routeDef.paths.join(',');
+            const dbProtocol = await this.protocolDB.upsert(pluginId, protocol.name, protocol.capability, path);
 
-                    if (!dbProtocol) {
-                        logger.warn(`Unable to upsert protocol ${protocol.name}`);
-                    } else {
-                        protocols.set(dbProtocol.name, dbProtocol);
-                    }
-                }
+            if (!dbProtocol) {
+                logger.warn(`Unable to upsert protocol ${protocol.name}`);
             } else {
-                await this.registerProtocols(pluginId, value as RouteTree, basePath ? `${basePath}/${key}` : `/${key}`);
+                protocols.set(dbProtocol.name, dbProtocol);
             }
         }
     }

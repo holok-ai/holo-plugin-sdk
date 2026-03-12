@@ -64,7 +64,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         error: ai.responseFactory.createError(errorMessage,)
                     } as ProviderEvent;
 
-                    for (const wireChunk of wire.fromProviderEvent(evt)) {
+                    for (const wireChunk of await wire.fromProviderEvent(evt)) {
                         logger.debug(`Guard failed response: ${JSON.stringify(wireChunk)}`);
                         await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                     }
@@ -88,7 +88,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                     const q = await ai.processWorkerRequest(workerRequest);
 
                     for await (const evt of q) {
-                        for (const wireChunk of wire.fromProviderEvent(evt)) {
+                        for (const wireChunk of await wire.fromProviderEvent(evt)) {
                             await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                         }
                         if (evt.type === "done" || evt.type === "error") {

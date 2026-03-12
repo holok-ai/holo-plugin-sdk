@@ -1,6 +1,5 @@
 import 'reflect-metadata';
 import crypto from 'crypto';
-import {validate} from 'uuid';
 import {ClassLogger, pickDefined} from "@holokai/sdk";
 import type {Auth} from "@holokai/types/api";
 import type {Application, HoloToken} from "@holokai/types/entities";
@@ -100,18 +99,15 @@ export class AuthService extends ClassLogger {
         }
 
         const decodedToken = this.tokenService.decodeToken(token);
-        const {organizationId, userId: tokenUserId} = decodedToken;
+        const {organizationId, sub: userId, email} = decodedToken;
 
-        let userId = tokenUserId;
-        let clientIdentifier: string | undefined;
+        let clientIdentifier = email ?? await this.accessService.getUserEmailById(organizationId, userId);
 
-
-        if (tokenUserId && !validate(tokenUserId)) {
-            clientIdentifier = tokenUserId;
-            logger.info(`Found token for token ${tokenUserId}`);
-            userId = await this.accessService.getUserIdByEmail(tokenUserId) ?? undefined;
-            logger.info(`User is ${userId} for token ${tokenUserId}`);
+        if (!clientIdentifier) {
+            return Promise.reject('User no longer exists.');
         }
+
+        logger.info(`User [${clientIdentifier}] logged in via JWT Token.`);
 
         const allApplications = await this.applicationService.getBySlugs(organizationId, appSlugs);
 
@@ -193,7 +189,7 @@ export class AuthService extends ClassLogger {
                 return Promise.reject(`Application ${appSlug} not found.`);
             }
 
-            const allowed = await this.accessService.hasAccess(userId, application.id);
+            const allowed = await this.accessService.hasAccess(orgId, userId, application.id);
             if (!allowed) {
                 return Promise.reject('User is not authorized for this application.');
             }

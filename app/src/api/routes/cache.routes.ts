@@ -11,6 +11,7 @@ export function createCacheRoutes(): express.Router {
     router.post('/invalidate/access', controller.invalidateAccess);
     router.post('/invalidate/auth', controller.invalidateAuth);
     router.post('/invalidate/org', controller.invalidateOrg);
+    router.post('/invalidate/user', controller.invalidateUser);
 
     return router;
 }

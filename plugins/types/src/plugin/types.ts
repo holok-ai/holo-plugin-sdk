@@ -1,6 +1,6 @@
 import type {HoloLogger} from "../logger";
 import type {IProvider, IProviderTranslator, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "../provider";
-import type {RouteHandler, RouteTree} from "../routing";
+import type {RouteDefinition, RouteHandler} from "../routing";
 import type {INotificationService} from "../notification";
 import {Plugin} from "../entities";
 
@@ -101,7 +101,7 @@ export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
 
     getCapabilities(): ProviderCapabilities;
 
-    getRoutes(): RouteTree;
+    getRoutes(): RouteDefinition[];
 
     createWireAdapter(params: WireAdapterParams): Promise<IWireAdapter>;
 

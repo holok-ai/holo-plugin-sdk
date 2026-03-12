@@ -34,22 +34,22 @@ export class ApplicationDB {
     constructor(private db: AppDB) {}
 
     async getById(id: string): Promise<Application | null> {
-        return this.db.queryOne<Application>(POPULATED_APPLICATION_QUERY + ` AND a.id = $1`, [id]);
+        return this.db.systemQueryOne<Application>(POPULATED_APPLICATION_QUERY + ` AND a.id = $1`, [id]);
     }
 
     async getBySlug(orgId: string, urlSlug: string): Promise<Application | null> {
-        return this.db.queryOne<Application>(
+        return this.db.systemQueryOne<Application>(
             POPULATED_APPLICATION_QUERY + ` AND a.organization_id = $1 AND a.url_slug = $2`,
             [orgId, urlSlug],
         );
     }
 
     async getBySlugUnscoped(urlSlug: string): Promise<Application | null> {
-        return this.db.queryOne<Application>(POPULATED_APPLICATION_QUERY + ` AND a.url_slug = $1`, [urlSlug]);
+        return this.db.systemQueryOne<Application>(POPULATED_APPLICATION_QUERY + ` AND a.url_slug = $1`, [urlSlug]);
     }
 
     async getAllByOrg(orgId: string): Promise<Application[]> {
-        return this.db.query<Application>(POPULATED_APPLICATION_QUERY + ` AND a.organization_id = $1 ORDER BY a.name`, [orgId]);
+        return this.db.systemQuery<Application>(POPULATED_APPLICATION_QUERY + ` AND a.organization_id = $1 ORDER BY a.name`, [orgId]);
     }
 
     async listPaginated(filters: {
@@ -68,20 +68,27 @@ export class ApplicationDB {
         const col = allowedSorts.has(sortBy) ? sortBy : 'created_at';
         const dir = sortDir === 'asc' ? 'ASC' : 'DESC';
 
-        const [rows, countResult] = await Promise.all([
-            this.db.query<Application>(
-                `SELECT a.*, row_to_json(p.*) AS provider
-                 FROM applications a JOIN providers p ON a.provider_id = p.id
-                 WHERE ${where} ORDER BY a.${col} ${dir} LIMIT $${idx++} OFFSET $${idx++}`,
-                [...params, limit, offset]
-            ),
-            this.db.queryOne<{ count: string }>(`SELECT COUNT(*)::text as count FROM applications a WHERE ${where}`, params),
-        ]);
-        return {rows, total: parseInt(countResult?.count ?? '0')};
+        const limitIdx = idx++;
+        const offsetIdx = idx++;
+        return this.db.asSystem(async (client) => {
+            const [rowsResult, countResult] = await Promise.all([
+                client.query(
+                    `SELECT a.*, row_to_json(p.*) AS provider
+                     FROM applications a JOIN providers p ON a.provider_id = p.id
+                     WHERE ${where} ORDER BY a.${col} ${dir} LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+                    [...params, limit, offset]
+                ),
+                client.query(`SELECT COUNT(*)::text as count FROM applications a WHERE ${where}`, params),
+            ]);
+            return {
+                rows: rowsResult.rows as Application[],
+                total: parseInt(countResult.rows[0]?.count ?? '0'),
+            };
+        });
     }
 
     async create(app: Record<string, any>): Promise<Application | null> {
-        return this.db.queryOne<Application>(
+        return this.db.systemQueryOne<Application>(
             `INSERT INTO applications (organization_id, name, url_slug, description, provider_id, system_prompt_id, enabled, available, active)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
              RETURNING *`,
@@ -104,11 +111,11 @@ export class ApplicationDB {
 
         sets.push(`updated_at = now()`);
         params.push(id);
-        return this.db.queryOne<Application>(`UPDATE applications SET ${sets.join(', ')} WHERE id = $${idx} AND active = true RETURNING *`, params);
+        return this.db.systemQueryOne<Application>(`UPDATE applications SET ${sets.join(', ')} WHERE id = $${idx} AND active = true RETURNING *`, params);
     }
 
     async softDelete(id: string): Promise<boolean> {
-        const result = await this.db.queryOne<Application>(`UPDATE applications SET active = false, updated_at = now() WHERE id = $1 RETURNING id`, [id]);
+        const result = await this.db.systemQueryOne<Application>(`UPDATE applications SET active = false, updated_at = now() WHERE id = $1 RETURNING id`, [id]);
         return result !== null;
     }
 }

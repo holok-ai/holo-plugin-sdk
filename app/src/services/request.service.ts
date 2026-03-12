@@ -11,6 +11,7 @@ import type {INotificationService} from '@holokai/types/notification';
 import {NotificationEventFactory, NotificationServiceToken} from "@holokai/sdk/notification";
 import {Application, Plugin, Protocol, Provider} from "@holokai/types/entities";
 import {ProviderImplService} from "./plugin";
+import {AccessService} from "./auth/access.service";
 
 
 @injectable()
@@ -21,6 +22,7 @@ export class RequestService extends ClassLogger {
         private readonly responseService: ResponseService,
         private readonly guardService: GuardService,
         private readonly providerImplService: ProviderImplService,
+        private readonly accessService: AccessService,
         @inject(NotificationServiceToken) readonly notificationService: INotificationService
     ) {
         super();
@@ -47,7 +49,7 @@ export class RequestService extends ClassLogger {
                 if (candidateProvider.plugin_id === plugin.id) {
                     provider = await this.providerImplService.getProviderImplById(candidateProvider.id);
                     const modelName = await provider.getModelNameFromRequest(req.body);
-                    if (modelName) {
+                    if (modelName && auth.userId && await this.accessService.hasModelAccess(auth.organizationId, auth.userId, candidate.id, modelName)) {
                         logger.debug(`No app declared. Defaulting to: ${candidate.url_slug}`);
                         application = candidate;
                         break;
@@ -83,8 +85,7 @@ export class RequestService extends ClassLogger {
         await this.responseService.sendRequest(req, res, workerRequest);
 
         logger.info(`Request processed: ${protocol.name}`, {
-            requestId: workerRequest.requestId,
-            isPassthrough
+            requestId: workerRequest.requestId
         });
     }
 

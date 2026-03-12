@@ -6,7 +6,7 @@ import {
     WorkerRequestEnvelope,
     WorkerResponseEnvelope
 } from "@holokai/types";
-import {ClassLogger, pickDefined, stringifyError} from "../../core";
+import {ClassLogger, pickDefined, stringifyAny} from "../../core";
 import type {IAuditor} from "@holokai/types/provider";
 import {ProviderEnvelope, ProviderEvent} from "@holokai/types/provider";
 import type {ProviderRequestMetadata, ProviderResponseMetadata} from "@holokai/types/entities";
@@ -97,7 +97,7 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
 
         const metadata: ProviderResponseMetadata = pickDefined({
             response_raw: providerEvent as any,
-            error_message: providerEvent.type === 'error' ? stringifyError(providerEvent.error) : undefined,
+            error_message: providerEvent.type === 'error' ? stringifyAny(providerEvent.error) : undefined,
             worker_id: responseEnvelope.worker_id,
             usage_raw: (metrics as any).usage_raw,
         }) as ProviderResponseMetadata;

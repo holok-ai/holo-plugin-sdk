@@ -5,11 +5,12 @@ import {Anthropic} from '@anthropic-ai/sdk/client';
 import {MessageCreateParamsBase} from '@anthropic-ai/sdk/resources/messages';
 import {ModelInfosPage} from '@anthropic-ai/sdk/resources/models';
 import {ClaudeAuditor} from './claude.auditor';
-import {Message} from '@anthropic-ai/sdk/resources/messages/messages';
+import {Message, MessageCountTokensParams} from '@anthropic-ai/sdk/resources/messages/messages';
 import {ClaudeTranslator} from './claude.translator';
 import {ClaudeResponseFactory} from './claude.response.factory';
 import {APIError} from "@anthropic-ai/sdk";
 import {ErrorObject, ErrorResponse} from "@anthropic-ai/sdk/resources/shared";
+import {ClaudeProtocols} from "./plugin";
 
 export class ClaudeProvider extends BaseProvider<Anthropic, MessageCreateParamsBase> {
 
@@ -43,21 +44,29 @@ export class ClaudeProvider extends BaseProvider<Anthropic, MessageCreateParamsB
         return ClaudeResponseFactory.instance();
     }
 
-    protected async handleRequest(payload: MessageCreateParamsBase, ctx: ProviderContext) {
+    protected async handleRequest(payload: MessageCreateParamsBase | MessageCountTokensParams, ctx: ProviderContext) {
         const headers = ctx.headers ? pickHeadersByPrefix(ctx.headers, ['anthropic-']) : [];
         const options = {
             headers
         };
-        if (payload.stream) {
-            const s = this.client.messages.stream(payload, options);
-            s.on('streamEvent', (event: any) => ctx.emitStreamEvent(event));
-            s.on('text', (delta: string) => ctx.emitTextDelta(delta));
-            return {final: () => s.finalMessage()};
-        }
 
-        // Non-streaming
-        const req = {...payload, stream: false};
-        return {final: () => this.client.messages.create(req, options) as Promise<Message>};
+        switch (ctx.protocol.name) {
+            case ClaudeProtocols.COUNT_TOKENS:
+                const tokenParams = payload as MessageCountTokensParams;
+                return {final: () => this.client.messages.countTokens(tokenParams)};
+            default:
+                const messageParams = payload as MessageCreateParamsBase;
+                if (messageParams.stream) {
+                    const s = this.client.messages.stream(messageParams, options);
+                    s.on('streamEvent', (event: any) => ctx.emitStreamEvent(event));
+                    s.on('text', (delta: string) => ctx.emitTextDelta(delta));
+                    return {final: () => s.finalMessage()};
+                }
+
+                // Non-streaming
+                const req = {...messageParams, stream: false};
+                return {final: () => this.client.messages.create(req, options) as Promise<Message>};
+        }
     }
 
     protected async handleError(error: APIError): Promise<ErrorResponse> {

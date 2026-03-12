@@ -1,10 +1,12 @@
 export interface JWTPayload {
-    organizationId: string;
     userId?: string;
+    email?: string;
     appSlugs?: string[];
-    appSlug?: string;
-    iat?: number;
-    exp?: number;
+    organizationId: string;
+    sub: string;
+    iss: string;
+    iat: number;
+    exp: number;
 }
 
 export interface TokenRefreshRequest {

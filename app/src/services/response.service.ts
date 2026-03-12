@@ -46,7 +46,7 @@ export class ResponseService extends ClassLogger {
 
         queue.push(wire);
         if (wire.done) {
-            logger.debug(`Finished processing wire: ${wire.body}`);
+            logger.debug(`Finished processing wire: ${wire.fullText ?? wire.body}`);
             queue.end();
             this.queues.delete(requestId);
         }

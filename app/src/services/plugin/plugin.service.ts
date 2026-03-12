@@ -130,12 +130,12 @@ export class PluginService extends BaseEntityService<Plugin> implements IPluginR
             this.defaultPlugins.set(family, latestPlugin);
         }
 
-        const routeTree = plugin.getRoutes();
+        const routes = plugin.getRoutes();
 
         switch (plugin.type) {
             case PluginType.PROVIDER:
                 // 6. Register protocols against the "latest" row
-                await this.providerPluginService.registerProtocols(latestPlugin.id, routeTree, family);
+                await this.providerPluginService.registerProtocols(latestPlugin.id, routes);
 
                 // 7. Migrate providers from old versioned rows to "latest"
                 const migrated = await this.providerImplService.migrateProvidersToLatest(family, latestPlugin.id);

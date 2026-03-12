@@ -4,9 +4,17 @@ import type {Protocol, ProtocolCapability, ProviderRequest, ProviderResponse} fr
 import {IProviderPlugin} from "../plugin";
 
 export type ProviderEvent =
-    | { type: "stream_event"; requestId: string; seq: number; event: any; ts: number }
-    | { type: "text_delta"; requestId: string; seq: number; text: string; ts: number }
-    | { type: "done"; requestId: string; seq: number; message: any; text: string; metrics?: any; ts: number }
+    | { type: "stream_event"; requestId: string; seq: number; event: any; ts: number; }
+    | { type: "text_delta"; requestId: string; seq: number; text: string; ts: number; }
+    | {
+    type: "done";
+    requestId: string;
+    seq: number;
+    message: any;
+    text: string;
+    metrics?: any;
+    ts: number;
+}
     | {
     type: "error";
     requestId: string;
@@ -15,7 +23,7 @@ export type ProviderEvent =
     status?: number;
     headers?: Record<string, string>;
     metrics?: any;
-    ts: number
+    ts: number;
 };
 
 export interface ProviderEnvelope {
@@ -113,6 +121,7 @@ export interface WireChunk {
     headers?: Record<string, string>;
     status?: number;
     body: string;
+    fullText?: string;
     done?: true;
 }
 
@@ -120,7 +129,7 @@ export interface IWireAdapter {
     requestId: string;
     isStreaming: boolean;
 
-    fromProviderEvent(ev: ProviderEvent): WireChunk[];
+    fromProviderEvent(ev: ProviderEvent): Promise<WireChunk[]>;
 }
 
 export interface WireAdapterParams {

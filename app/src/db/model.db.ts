@@ -17,7 +17,7 @@ export class ModelDB {
               AND available = true
             ORDER BY name
         `;
-        return this.db.query<Model>(query);
+        return this.db.systemQuery<Model>(query);
     }
 
     async get(name: string): Promise<Model | null> {
@@ -26,7 +26,7 @@ export class ModelDB {
                        WHERE name = $1
                          AND available = true
                          AND enabled = true`;
-        return this.db.queryOne<Model>(query, [name]);
+        return this.db.systemQueryOne<Model>(query, [name]);
     }
 
     async getById(id: string): Promise<Model | null> {
@@ -35,7 +35,7 @@ export class ModelDB {
             FROM models
             WHERE id = $1 AND active = true
         `;
-        return this.db.queryOne<Model>(query, [id]);
+        return this.db.systemQueryOne<Model>(query, [id]);
     }
 
     async listByProvider(providerId: string): Promise<Model[]> {
@@ -45,7 +45,7 @@ export class ModelDB {
             WHERE provider_id = $1 AND active = true
             ORDER BY name
         `;
-        return this.db.query<Model>(query, [providerId]);
+        return this.db.systemQuery<Model>(query, [providerId]);
     }
 
     async listByOrganization(orgId: string): Promise<Model[]> {
@@ -55,7 +55,7 @@ export class ModelDB {
             WHERE organization_id = $1 AND active = true
             ORDER BY name
         `;
-        return this.db.query<Model>(query, [orgId]);
+        return this.db.systemQuery<Model>(query, [orgId]);
     }
 
     async listPaginated(filters: {
@@ -74,15 +74,22 @@ export class ModelDB {
         const col = allowedSorts.has(sortBy) ? sortBy : 'created_at';
         const dir = sortDir === 'asc' ? 'ASC' : 'DESC';
 
-        const [rows, countResult] = await Promise.all([
-            this.db.query<Model>(`SELECT * FROM models WHERE ${where} ORDER BY ${col} ${dir} LIMIT $${idx++} OFFSET $${idx++}`, [...params, limit, offset]),
-            this.db.queryOne<{ count: string }>(`SELECT COUNT(*)::text as count FROM models WHERE ${where}`, params),
-        ]);
-        return {rows, total: parseInt(countResult?.count ?? '0')};
+        const limitIdx = idx++;
+        const offsetIdx = idx++;
+        return this.db.asSystem(async (client) => {
+            const [rowsResult, countResult] = await Promise.all([
+                client.query(`SELECT * FROM models WHERE ${where} ORDER BY ${col} ${dir} LIMIT $${limitIdx} OFFSET $${offsetIdx}`, [...params, limit, offset]),
+                client.query(`SELECT COUNT(*)::text as count FROM models WHERE ${where}`, params),
+            ]);
+            return {
+                rows: rowsResult.rows as Model[],
+                total: parseInt(countResult.rows[0]?.count ?? '0'),
+            };
+        });
     }
 
     async create(model: Omit<Model, 'id' | 'created_at' | 'updated_at'>): Promise<Model | null> {
-        return this.db.queryOne<Model>(
+        return this.db.systemQueryOne<Model>(
             `INSERT INTO models (name, access_model, provider_id, organization_id, version, description, context_length, modalities, parameters, metadata, pricing_per_tokens, benchmarks, customization, enabled, available, deleted, active)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
              RETURNING *`,
@@ -108,15 +115,15 @@ export class ModelDB {
             if (fields[key] !== undefined) { sets.push(`${key} = $${idx++}`); params.push(JSON.stringify(fields[key])); }
         }
 
-        if (sets.length === 0) return this.db.queryOne<Model>(`SELECT * FROM models WHERE id = $1`, [id]);
+        if (sets.length === 0) return this.db.systemQueryOne<Model>(`SELECT * FROM models WHERE id = $1`, [id]);
 
         sets.push(`updated_at = now()`);
         params.push(id);
-        return this.db.queryOne<Model>(`UPDATE models SET ${sets.join(', ')} WHERE id = $${idx} AND active = true RETURNING *`, params);
+        return this.db.systemQueryOne<Model>(`UPDATE models SET ${sets.join(', ')} WHERE id = $${idx} AND active = true RETURNING *`, params);
     }
 
     async softDelete(id: string): Promise<boolean> {
-        const result = await this.db.queryOne<Model>(`UPDATE models SET active = false, deleted = true, updated_at = now() WHERE id = $1 RETURNING id`, [id]);
+        const result = await this.db.systemQueryOne<Model>(`UPDATE models SET active = false, deleted = true, updated_at = now() WHERE id = $1 RETURNING id`, [id]);
         return result !== null;
     }
 }

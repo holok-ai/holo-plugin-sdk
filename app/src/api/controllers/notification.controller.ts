@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {Response} from "express";
 import {inject, injectable} from "tsyringe";
-import {pickDefined, stringifyError} from "@holokai/sdk";
+import {pickDefined, stringifyAny} from "@holokai/sdk";
 import {BaseController} from "../../utils";
 import type {
     INotificationService,
@@ -110,7 +110,7 @@ export class NotificationController extends BaseController {
                     type: "provider_error",
                     severity: "error",
                     message: "notification_stream_error",
-                    payload: {error: stringifyError(e?.message ?? e)},
+                    payload: {error: stringifyAny(e?.message ?? e)},
                 }) as NotificationEvent);
             } catch {
                 // ignore

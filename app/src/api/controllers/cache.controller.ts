@@ -76,13 +76,35 @@ export class CacheController extends BaseController {
             }
 
             if (email) {
-                if (await this.redis.del(`access:email:${email}`)) deleted++;
+                if (await this.redis.del(`access:email:${email.trim().toLowerCase()}`)) deleted++;
             }
 
             this.log.info(`Cache invalidation complete: access — ${deleted} key(s) deleted`);
             res.json({success: true, data: {deleted}, timestamp: new Date().toISOString()});
         } catch (error) {
             this.handleError(res, error as Error, 'Failed to invalidate access cache');
+        }
+    };
+
+    invalidateUser = async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
+        try {
+            const {user_id, email} = req.body;
+            this.log.info(`Cache invalidation: user`, {user_id, email, caller: req.auth?.userId});
+            let deleted = 0;
+
+            if (user_id) {
+                deleted += await this.scanDelete(`access:${user_id}:*`);
+                deleted += await this.scanDelete(`auth:${user_id}:*`);
+            }
+
+            if (email) {
+                if (await this.redis.del(`access:email:${email.trim().toLowerCase()}`)) deleted++;
+            }
+
+            this.log.info(`Cache invalidation complete: user — ${deleted} key(s) deleted`);
+            res.json({success: true, data: {deleted}, timestamp: new Date().toISOString()});
+        } catch (error) {
+            this.handleError(res, error as Error, 'Failed to invalidate user cache');
         }
     };
 

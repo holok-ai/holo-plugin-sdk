@@ -18,7 +18,10 @@ export abstract class BaseEntityService<T> extends ClassLogger {
 
     protected async cached(key: string, query: () => Promise<T | null>): Promise<T | null> {
         const cached = await this.redis.get<T>(key);
-        if (cached) return cached;
+        if (cached) {
+            this.log.info(`Cache ${key}: true`);
+            return cached;
+        }
 
         const result = await query();
         if (!result) return null;

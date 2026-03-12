@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import {injectable} from "tsyringe";
 import {ClassLogger} from "@holokai/sdk";
 import {RequestService} from "../request.service";
-import {IProviderPlugin, isRouteDefinition, PluginType, RouteDefinition, RouteHandler, RouteTree} from "@holokai/types";
+import {IProviderPlugin, PluginType, RouteHandler} from "@holokai/types";
 import {Router} from "express";
 import {PluginService} from "./plugin.service";
 import {Plugin, Protocol} from "@holokai/types/entities";
@@ -29,7 +29,6 @@ export class PluginRouteService extends ClassLogger {
         const logger = this.mlog(this.registerRoutes);
         logger.info('Registering plugin routes...');
         for (const plugin of await this.pluginService.getPlugins()) {
-            logger.info(JSON.stringify(plugin));
             switch (plugin.type) {
                 case PluginType.PROVIDER:
                     const impl = await this.pluginService.getImplById(plugin.id) as IProviderPlugin;
@@ -41,88 +40,39 @@ export class PluginRouteService extends ClassLogger {
 
     async registerRoute(plugin: Plugin, pluginImpl: IProviderPlugin, router: Router) {
         const logger = this.mlog(this.registerRoute);
-        const {family} = plugin;
+        const family = plugin.family.toLowerCase();
 
         logger.info(`Registering routes for plugin: ${pluginImpl.name}`);
 
         const pluginRouter = Router();
-
-        const pluginHandlers = {
-            noOpHandler: this.createNoOpHandler(family),
-            modelsHandler: this.createModelsHandler(),
-            requestHandler: (protocol: Protocol) =>
-                this.createRequestHandler(plugin, protocol),
-            passthroughHandler: this.createNoOpHandler(family)
-        };
-
-        const routeTree = pluginImpl.getRoutes();
         const authMiddleware = this.createMiddleware(family);
 
-        await this.buildRoutesFromTree(plugin, pluginRouter, routeTree, pluginHandlers, authMiddleware, family);
+        for (const route of pluginImpl.getRoutes()) {
 
-        const defaultHandler = pluginImpl.defaultRouteHandler;
+            let handler;
+            switch (route.handler) {
+                case RouteHandler.MODELS:
+                    handler = this.createModelsHandler();
+                    break;
+                case RouteHandler.REQUEST:
+                    const protocol = await this.providerPluginService.getProtocol(plugin.id, route.protocol.name);
+                    handler = this.createRequestHandler(plugin, protocol);
+                    break;
+                default:
+                    handler = this.createNoOpHandler(family);
+                    break;
+            }
 
-        if (defaultHandler === RouteHandler.NOOP) {
-            pluginRouter.all('/*', authMiddleware, pluginHandlers.noOpHandler);
-            logger.info(`  * (catch-all) /api/${family}/* -> NOOP`);
-        } else if (defaultHandler === RouteHandler.PASSTHROUGH) {
-            pluginRouter.all('/*', authMiddleware, pluginHandlers.passthroughHandler);
-            logger.info(`  * (catch-all) /api/${family}/* -> PASSTHROUGH`);
+            const method = route.method.toLowerCase() as 'get' | 'post';
+            for (const path of route.paths) {
+                pluginRouter[method](`${path}`, authMiddleware, handler);
+            }
         }
 
         if (plugin.is_default) {
-            router.use(`/${family.toLowerCase()}`, pluginRouter);
+            router.use(`/${family}`, pluginRouter);
         }
         // router.use(`/plugins/${family.toLowerCase()}/${plugin.version}`, pluginRouter);
-    }
-
-    private async buildRoutesFromTree(
-        plugin: Plugin,
-        router: Router,
-        tree: RouteTree,
-        handlers: {
-            noOpHandler: any;
-            modelsHandler: any;
-            requestHandler: (protocol: Protocol) => any,
-            passthroughHandler: any
-        },
-        authMiddleware: any,
-        family: string,
-        basePath: string = ''
-    ): Promise<void> {
-        const logger = this.mlog(this.buildRoutesFromTree);
-
-        for (const [key, value] of Object.entries(tree)) {
-            const currentPath = `${basePath}/${key}`;
-
-            if (isRouteDefinition(value)) {
-                const routeDef = value as RouteDefinition;
-
-                let handler;
-                switch (routeDef.handler) {
-                    case RouteHandler.MODELS:
-                        handler = handlers.modelsHandler;
-                        break;
-                    case RouteHandler.REQUEST:
-                        const protocol = await this.providerPluginService.getProtocol(plugin.id, routeDef.protocol.name);
-                        handler = handlers.requestHandler(protocol);
-                        break;
-                    case RouteHandler.PASSTHROUGH:
-                        handler = handlers.passthroughHandler;
-                        break;
-                    default:
-                        handler = handlers.noOpHandler;
-                        break;
-                }
-
-                const method = routeDef.method.toLowerCase() as 'get' | 'post';
-                router[method](currentPath, authMiddleware, handler);
-
-                logger.info(`  ${routeDef.method} /api/${family.toLowerCase()}${currentPath}`);
-            } else {
-                await this.buildRoutesFromTree(plugin, router, value as RouteTree, handlers, authMiddleware, family, currentPath);
-            }
-        }
     }
 
     createMiddleware(providerFamily: string) {

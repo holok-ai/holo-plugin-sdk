@@ -25,7 +25,7 @@ export class ProviderDB {
               AND p.available = true
             ORDER BY p.name
         `;
-        return this.db.query<ProviderWithCredential>(query);
+        return this.db.systemQuery<ProviderWithCredential>(query);
     }
 
     async get(name: string): Promise<ProviderWithCredential | null> {
@@ -39,7 +39,7 @@ export class ProviderDB {
               AND p.enabled = true
               AND p.available = true
         `;
-        return this.db.queryOne<ProviderWithCredential>(query, [name]);
+        return this.db.systemQueryOne<ProviderWithCredential>(query, [name]);
     }
 
     async getById(id: string): Promise<ProviderWithCredential | null> {
@@ -52,11 +52,11 @@ export class ProviderDB {
             WHERE p.id = $1
               AND p.active = true
         `;
-        return this.db.queryOne<ProviderWithCredential>(query, [id]);
+        return this.db.systemQueryOne<ProviderWithCredential>(query, [id]);
     }
 
     async findByPluginId(pluginId: string): Promise<ProviderWithCredential[]> {
-        return this.db.query(`
+        return this.db.systemQuery(`
             SELECT p.*,
                    ac.encrypted_value,
                    ac.initialization_vector
@@ -68,7 +68,7 @@ export class ProviderDB {
     }
 
     async migrateToLatestPlugin(family: string, latestPluginId: string): Promise<number> {
-        const result = await this.db.query(
+        const result = await this.db.systemQuery(
             `UPDATE providers p
              SET plugin_id = $2, updated_at = now()
              FROM plugins pl
@@ -97,20 +97,27 @@ export class ProviderDB {
         const col = allowedSorts.has(sortBy) ? sortBy : 'created_at';
         const dir = sortDir === 'asc' ? 'ASC' : 'DESC';
 
-        const [rows, countResult] = await Promise.all([
-            this.db.query<Provider>(
-                `SELECT p.* FROM providers p WHERE ${where} ORDER BY p.${col} ${dir} LIMIT $${idx++} OFFSET $${idx++}`,
-                [...params, limit, offset]
-            ),
-            this.db.queryOne<{ count: string }>(
-                `SELECT COUNT(*)::text as count FROM providers p WHERE ${where}`, params
-            ),
-        ]);
-        return {rows, total: parseInt(countResult?.count ?? '0')};
+        const limitIdx = idx++;
+        const offsetIdx = idx++;
+        return this.db.asSystem(async (client) => {
+            const [rowsResult, countResult] = await Promise.all([
+                client.query(
+                    `SELECT p.* FROM providers p WHERE ${where} ORDER BY p.${col} ${dir} LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+                    [...params, limit, offset]
+                ),
+                client.query(
+                    `SELECT COUNT(*)::text as count FROM providers p WHERE ${where}`, params
+                ),
+            ]);
+            return {
+                rows: rowsResult.rows as Provider[],
+                total: parseInt(countResult.rows[0]?.count ?? '0'),
+            };
+        });
     }
 
     async create(provider: Omit<Provider, 'id' | 'created_at' | 'updated_at'>): Promise<Provider | null> {
-        return this.db.queryOne<Provider>(
+        return this.db.systemQueryOne<Provider>(
             `INSERT INTO providers (organization_id, name, type, description, config, api_credential_id, plugin_id, pricing_plan_id, enabled, available, deleted, active)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
              RETURNING *`,
@@ -137,17 +144,17 @@ export class ProviderDB {
             params.push(JSON.stringify(fields.config));
         }
 
-        if (sets.length === 0) return this.db.queryOne<Provider>(`SELECT * FROM providers WHERE id = $1`, [id]);
+        if (sets.length === 0) return this.db.systemQueryOne<Provider>(`SELECT * FROM providers WHERE id = $1`, [id]);
 
         sets.push(`updated_at = now()`);
         params.push(id);
-        return this.db.queryOne<Provider>(
+        return this.db.systemQueryOne<Provider>(
             `UPDATE providers SET ${sets.join(', ')} WHERE id = $${idx} AND active = true RETURNING *`, params
         );
     }
 
     async softDelete(id: string): Promise<boolean> {
-        const result = await this.db.queryOne<Provider>(
+        const result = await this.db.systemQueryOne<Provider>(
             `UPDATE providers SET active = false, deleted = true, updated_at = now() WHERE id = $1 RETURNING id`, [id]
         );
         return result !== null;
@@ -155,7 +162,7 @@ export class ProviderDB {
 
     async findByPluginFamily(family: string, excludePluginId?: string): Promise<ProviderWithCredential[]> {
         if (excludePluginId) {
-            return this.db.query(`
+            return this.db.systemQuery(`
                 SELECT p.*, ac.encrypted_value, ac.initialization_vector
                 FROM providers p
                     LEFT JOIN api_credentials ac ON p.api_credential_id = ac.id
@@ -165,7 +172,7 @@ export class ProviderDB {
                   AND p.active = true
             `, [family.toUpperCase(), excludePluginId]);
         }
-        return this.db.query(`
+        return this.db.systemQuery(`
             SELECT p.*, ac.encrypted_value, ac.initialization_vector
             FROM providers p
                 LEFT JOIN api_credentials ac ON p.api_credential_id = ac.id

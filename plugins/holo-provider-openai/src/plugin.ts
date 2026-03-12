@@ -1,13 +1,12 @@
 import {BasePlugin} from '@holokai/sdk/plugin';
-import type {IProviderPlugin, PluginContext} from '@holokai/types/plugin';
+import type {IProviderPlugin, PluginContext, PluginPricingSheet} from '@holokai/types/plugin';
 import {manifest} from "./manifest.js";
 import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/types/provider";
 import {OpenAIProvider} from "./openai.provider";
-import {RouteHandler, RouteTree, RouteTreeNode} from "@holokai/types/routing";
+import {RouteDefinition, RouteHandler} from "@holokai/types/routing";
 import {OpenAITranslator} from "./openai.translator";
 import {OpenAICompletionsWireAdapter, OpenAIResponsesWireAdapter} from "./openai.wire.adapter";
 import {ProtocolCapability} from "@holokai/types/entities";
-import type {PluginPricingSheet} from "@holokai/types/plugin";
 
 export const OpenAIProtocols = {
     EMBED: 'openai.embeddings',
@@ -50,9 +49,10 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
         };
     }
 
-    getRoutes(): RouteTree {
-        const routes: RouteTreeNode = {
-            models: {
+    getRoutes(): RouteDefinition[] {
+        return [
+            {
+                paths: ['/models', '/v1/models'],
                 method: 'GET',
                 protocol: {
                     name: OpenAIProtocols.MODELS,
@@ -60,17 +60,17 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
                 },
                 handler: RouteHandler.MODELS
             },
-            chat: {
-                completions: {
-                    method: 'POST',
-                    protocol: {
-                        name: OpenAIProtocols.CHAT_COMPLETIONS,
-                        capability: ProtocolCapability.CHAT
-                    },
-                    handler: RouteHandler.REQUEST
-                }
+            {
+                paths: ['/chat/completions', '/v1/chat/completions'],
+                method: 'POST',
+                protocol: {
+                    name: OpenAIProtocols.CHAT_COMPLETIONS,
+                    capability: ProtocolCapability.CHAT
+                },
+                handler: RouteHandler.REQUEST
             },
-            responses: {
+            {
+                paths: ['/responses', '/v1/responses'],
                 method: 'POST',
                 protocol: {
                     name: OpenAIProtocols.RESPONSES,
@@ -78,7 +78,8 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
                 },
                 handler: RouteHandler.REQUEST
             },
-            embeddings: {
+            {
+                paths: ['/embeddings', '/v1/embeddings'],
                 method: 'POST',
                 protocol: {
                     name: OpenAIProtocols.EMBED,
@@ -86,11 +87,8 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
                 },
                 handler: RouteHandler.REQUEST
             }
-        };
-        return {
-            ...routes,
-            v1: routes
-        }
+
+        ]
     }
 
     getDefaultPricing(): PluginPricingSheet {
@@ -103,7 +101,14 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
                 // ── o-series reasoning models ──────────────────────────────
                 ...[
                     'o1', 'o1-2024-12-17',
-                ].map(m => ({model_name: m, input_cost: 15 / M, output_cost: 60 / M, cache_read_cost: 7.5 / M, batch_input_cost: 7.5 / M, batch_output_cost: 30 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 15 / M,
+                    output_cost: 60 / M,
+                    cache_read_cost: 7.5 / M,
+                    batch_input_cost: 7.5 / M,
+                    batch_output_cost: 30 / M
+                })),
 
                 ...[
                     'o1-pro', 'o1-pro-2025-03-19',
@@ -111,17 +116,44 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
 
                 ...[
                     'o3', 'o3-2025-04-16',
-                ].map(m => ({model_name: m, input_cost: 2 / M, output_cost: 8 / M, cache_read_cost: 1 / M, batch_input_cost: 1 / M, batch_output_cost: 4 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 2 / M,
+                    output_cost: 8 / M,
+                    cache_read_cost: 1 / M,
+                    batch_input_cost: 1 / M,
+                    batch_output_cost: 4 / M
+                })),
 
                 ...[
                     'o3-mini', 'o3-mini-2025-01-31',
-                ].map(m => ({model_name: m, input_cost: 1.1 / M, output_cost: 4.4 / M, cache_read_cost: 0.275 / M, batch_input_cost: 0.55 / M, batch_output_cost: 2.2 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 1.1 / M,
+                    output_cost: 4.4 / M,
+                    cache_read_cost: 0.275 / M,
+                    batch_input_cost: 0.55 / M,
+                    batch_output_cost: 2.2 / M
+                })),
 
-                {model_name: 'o3-pro', input_cost: 20 / M, output_cost: 80 / M, batch_input_cost: 10 / M, batch_output_cost: 40 / M},
+                {
+                    model_name: 'o3-pro',
+                    input_cost: 20 / M,
+                    output_cost: 80 / M,
+                    batch_input_cost: 10 / M,
+                    batch_output_cost: 40 / M
+                },
 
                 ...[
                     'o4-mini', 'o4-mini-2025-04-16',
-                ].map(m => ({model_name: m, input_cost: 1.1 / M, output_cost: 4.4 / M, cache_read_cost: 0.275 / M, batch_input_cost: 0.55 / M, batch_output_cost: 2.2 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 1.1 / M,
+                    output_cost: 4.4 / M,
+                    cache_read_cost: 0.275 / M,
+                    batch_input_cost: 0.55 / M,
+                    batch_output_cost: 2.2 / M
+                })),
 
                 ...[
                     'o4-mini-deep-research', 'o4-mini-deep-research-2025-06-26',
@@ -130,58 +162,140 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
                 // ── GPT-5.2 family ─────────────────────────────────────────
                 ...[
                     'gpt-5.2', 'gpt-5.2-2025-12-11', 'gpt-5.2-chat-latest', 'gpt-5.2-codex',
-                ].map(m => ({model_name: m, input_cost: 1.75 / M, output_cost: 14 / M, cache_read_cost: 0.0875 / M, batch_input_cost: 0.875 / M, batch_output_cost: 7 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 1.75 / M,
+                    output_cost: 14 / M,
+                    cache_read_cost: 0.0875 / M,
+                    batch_input_cost: 0.875 / M,
+                    batch_output_cost: 7 / M
+                })),
 
                 ...[
                     'gpt-5.2-pro', 'gpt-5.2-pro-2025-12-11',
-                ].map(m => ({model_name: m, input_cost: 21 / M, output_cost: 168 / M, batch_input_cost: 10.5 / M, batch_output_cost: 84 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 21 / M,
+                    output_cost: 168 / M,
+                    batch_input_cost: 10.5 / M,
+                    batch_output_cost: 84 / M
+                })),
 
                 // ── GPT-5.1 family ─────────────────────────────────────────
                 ...[
                     'gpt-5.1', 'gpt-5.1-2025-11-13', 'gpt-5.1-chat-latest',
                     'gpt-5.1-codex', 'gpt-5.1-codex-max', 'gpt-5.1-codex-mini',
-                ].map(m => ({model_name: m, input_cost: 1.25 / M, output_cost: 10 / M, cache_read_cost: 0.0625 / M, batch_input_cost: 0.625 / M, batch_output_cost: 5 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 1.25 / M,
+                    output_cost: 10 / M,
+                    cache_read_cost: 0.0625 / M,
+                    batch_input_cost: 0.625 / M,
+                    batch_output_cost: 5 / M
+                })),
 
                 // ── GPT-5 family ───────────────────────────────────────────
                 ...[
                     'gpt-5', 'gpt-5-2025-08-07', 'gpt-5-chat-latest', 'gpt-5-codex',
                     'gpt-5-search-api', 'gpt-5-search-api-2025-10-14',
-                ].map(m => ({model_name: m, input_cost: 1.25 / M, output_cost: 10 / M, cache_read_cost: 0.0625 / M, batch_input_cost: 0.625 / M, batch_output_cost: 5 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 1.25 / M,
+                    output_cost: 10 / M,
+                    cache_read_cost: 0.0625 / M,
+                    batch_input_cost: 0.625 / M,
+                    batch_output_cost: 5 / M
+                })),
 
                 ...[
                     'gpt-5-mini', 'gpt-5-mini-2025-08-07',
-                ].map(m => ({model_name: m, input_cost: 0.25 / M, output_cost: 2 / M, cache_read_cost: 0.0125 / M, batch_input_cost: 0.125 / M, batch_output_cost: 1 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 0.25 / M,
+                    output_cost: 2 / M,
+                    cache_read_cost: 0.0125 / M,
+                    batch_input_cost: 0.125 / M,
+                    batch_output_cost: 1 / M
+                })),
 
                 ...[
                     'gpt-5-nano', 'gpt-5-nano-2025-08-07',
-                ].map(m => ({model_name: m, input_cost: 0.05 / M, output_cost: 0.4 / M, cache_read_cost: 0.0025 / M, batch_input_cost: 0.025 / M, batch_output_cost: 0.2 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 0.05 / M,
+                    output_cost: 0.4 / M,
+                    cache_read_cost: 0.0025 / M,
+                    batch_input_cost: 0.025 / M,
+                    batch_output_cost: 0.2 / M
+                })),
 
                 ...[
                     'gpt-5-pro', 'gpt-5-pro-2025-10-06',
-                ].map(m => ({model_name: m, input_cost: 15 / M, output_cost: 120 / M, batch_input_cost: 7.5 / M, batch_output_cost: 60 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 15 / M,
+                    output_cost: 120 / M,
+                    batch_input_cost: 7.5 / M,
+                    batch_output_cost: 60 / M
+                })),
 
                 // ── GPT-4.1 family (1M context, cache = 75% off) ──────────
                 ...[
                     'gpt-4.1', 'gpt-4.1-2025-04-14',
-                ].map(m => ({model_name: m, input_cost: 2 / M, output_cost: 8 / M, cache_read_cost: 0.5 / M, batch_input_cost: 1 / M, batch_output_cost: 4 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 2 / M,
+                    output_cost: 8 / M,
+                    cache_read_cost: 0.5 / M,
+                    batch_input_cost: 1 / M,
+                    batch_output_cost: 4 / M
+                })),
 
                 ...[
                     'gpt-4.1-mini', 'gpt-4.1-mini-2025-04-14',
-                ].map(m => ({model_name: m, input_cost: 0.4 / M, output_cost: 1.6 / M, cache_read_cost: 0.1 / M, batch_input_cost: 0.2 / M, batch_output_cost: 0.8 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 0.4 / M,
+                    output_cost: 1.6 / M,
+                    cache_read_cost: 0.1 / M,
+                    batch_input_cost: 0.2 / M,
+                    batch_output_cost: 0.8 / M
+                })),
 
                 ...[
                     'gpt-4.1-nano', 'gpt-4.1-nano-2025-04-14',
-                ].map(m => ({model_name: m, input_cost: 0.1 / M, output_cost: 0.4 / M, cache_read_cost: 0.025 / M, batch_input_cost: 0.05 / M, batch_output_cost: 0.2 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 0.1 / M,
+                    output_cost: 0.4 / M,
+                    cache_read_cost: 0.025 / M,
+                    batch_input_cost: 0.05 / M,
+                    batch_output_cost: 0.2 / M
+                })),
 
                 // ── GPT-4o family (cache = 50% off) ───────────────────────
                 ...[
                     'gpt-4o', 'gpt-4o-2024-05-13', 'gpt-4o-2024-08-06', 'gpt-4o-2024-11-20',
                     'chatgpt-4o-latest',
-                ].map(m => ({model_name: m, input_cost: 2.5 / M, output_cost: 10 / M, cache_read_cost: 1.25 / M, batch_input_cost: 1.25 / M, batch_output_cost: 5 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 2.5 / M,
+                    output_cost: 10 / M,
+                    cache_read_cost: 1.25 / M,
+                    batch_input_cost: 1.25 / M,
+                    batch_output_cost: 5 / M
+                })),
 
                 ...[
                     'gpt-4o-mini', 'gpt-4o-mini-2024-07-18',
-                ].map(m => ({model_name: m, input_cost: 0.15 / M, output_cost: 0.6 / M, cache_read_cost: 0.075 / M, batch_input_cost: 0.075 / M, batch_output_cost: 0.3 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 0.15 / M,
+                    output_cost: 0.6 / M,
+                    cache_read_cost: 0.075 / M,
+                    batch_input_cost: 0.075 / M,
+                    batch_output_cost: 0.3 / M
+                })),
 
                 // GPT-4o search variants (same text token pricing as gpt-4o)
                 ...[
@@ -236,7 +350,13 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
                 // ── Legacy GPT-3.5 ────────────────────────────────────────
                 ...[
                     'gpt-3.5-turbo', 'gpt-3.5-turbo-0125', 'gpt-3.5-turbo-1106', 'gpt-3.5-turbo-16k',
-                ].map(m => ({model_name: m, input_cost: 0.5 / M, output_cost: 1.5 / M, batch_input_cost: 0.25 / M, batch_output_cost: 0.75 / M})),
+                ].map(m => ({
+                    model_name: m,
+                    input_cost: 0.5 / M,
+                    output_cost: 1.5 / M,
+                    batch_input_cost: 0.25 / M,
+                    batch_output_cost: 0.75 / M
+                })),
 
                 ...[
                     'gpt-3.5-turbo-instruct', 'gpt-3.5-turbo-instruct-0914',
@@ -247,7 +367,12 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
                 {model_name: 'davinci-002', input_cost: 2 / M, output_cost: 2 / M},
 
                 // ── Codex ─────────────────────────────────────────────────
-                {model_name: 'codex-mini-latest', input_cost: 1.25 / M, output_cost: 10 / M, cache_read_cost: 0.0625 / M},
+                {
+                    model_name: 'codex-mini-latest',
+                    input_cost: 1.25 / M,
+                    output_cost: 10 / M,
+                    cache_read_cost: 0.0625 / M
+                },
 
                 // ── Embeddings (input only) ───────────────────────────────
                 ...[

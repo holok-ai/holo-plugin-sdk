@@ -36,6 +36,7 @@ export class ClaudeMessageDeltaEventTranslator extends StreamTranslator<HoloStre
         const event: Partial<RawMessageDeltaEvent> = {
             type: 'message_delta' as const,
             delta: {
+                container: null,
                 stop_reason: stop_reason ?? null,
                 stop_sequence: null
             },

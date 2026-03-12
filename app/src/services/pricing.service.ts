@@ -111,103 +111,105 @@ export class PricingService extends ClassLogger {
     private async bulkRecalculate(whereClause: string, params: any[]): Promise<{ rowCount: number; totalCost: number }> {
         const logger = this.mlog(this.bulkRecalculate);
 
-        // Delete existing cost records for the matching responses
-        await this.db.query(
-            `DELETE FROM provider_response_costs
-             WHERE response_id IN (SELECT pr.id FROM provider_responses pr WHERE ${whereClause})`,
-            params
-        );
+        return this.db.asSystem(async (client) => {
+            // Delete existing cost records for the matching responses
+            await client.query(
+                `DELETE FROM provider_response_costs
+                 WHERE response_id IN (SELECT pr.id FROM provider_responses pr WHERE ${whereClause})`,
+                params
+            );
 
-        // Single query: join responses → providers → plugins → pricing plans → sheets → model costs
-        // Insert calculated cost rows and return totals
-        const insertQuery = `
-            WITH matched AS (
-                SELECT
-                    pr.id AS response_id,
-                    ps.id AS pricing_sheet_id,
-                    pp.currency,
-                    COALESCE(pr.input_tokens, 0) AS input_tokens,
-                    COALESCE(pr.output_tokens, 0) AS output_tokens,
-                    COALESCE((pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int,
-                             (pr.metadata->'usage_raw'->>'cached_tokens')::int, 0) AS cache_read_tokens,
-                    COALESCE((pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0) AS cache_write_tokens,
-                    CASE
-                        WHEN psm.context_threshold IS NOT NULL
-                             AND psm.extended_input_cost IS NOT NULL
-                             AND (COALESCE(pr.input_tokens, 0)
-                                  + COALESCE((pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int, 0)
-                                  + COALESCE((pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0))
-                                 > psm.context_threshold
-                        THEN psm.extended_input_cost
-                        ELSE psm.input_cost
-                    END AS effective_input_cost,
-                    CASE
-                        WHEN psm.context_threshold IS NOT NULL
-                             AND psm.extended_output_cost IS NOT NULL
-                             AND (COALESCE(pr.input_tokens, 0)
-                                  + COALESCE((pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int, 0)
-                                  + COALESCE((pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0))
-                                 > psm.context_threshold
-                        THEN psm.extended_output_cost
-                        ELSE psm.output_cost
-                    END AS effective_output_cost,
-                    psm.cache_read_cost AS cache_read_cost_per_token,
-                    psm.cache_write_cost AS cache_write_cost_per_token
-                FROM provider_responses pr
-                    JOIN providers prov ON pr.provider_id = prov.id
-                    JOIN plugins pl ON prov.plugin_id = pl.id
-                    LEFT JOIN pricing_plans pp ON pp.id = COALESCE(prov.pricing_plan_id, pl.default_pricing_plan_id)
-                    LEFT JOIN pricing_sheets ps ON ps.plan_id = pp.id
-                        AND ps.effective_from <= pr.created_at
-                        AND (ps.effective_to IS NULL OR ps.effective_to > pr.created_at)
-                    LEFT JOIN pricing_sheet_models psm ON psm.sheet_id = ps.id
-                        AND psm.model_name = pr.access_model
-                WHERE ${whereClause}
-                  AND pp.id IS NOT NULL
-                  AND ps.id IS NOT NULL
-                  AND psm.id IS NOT NULL
-            ),
-            inserted AS (
-                INSERT INTO provider_response_costs
-                    (response_id, cost_type, pricing_sheet_id,
-                     input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
-                     input_cost, output_cost, cache_read_cost, cache_write_cost,
-                     total_cost, currency)
-                SELECT
-                    response_id, 'provider', pricing_sheet_id,
-                    input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
-                    input_tokens * effective_input_cost,
-                    output_tokens * effective_output_cost,
-                    cache_read_tokens * cache_read_cost_per_token,
-                    cache_write_tokens * cache_write_cost_per_token,
-                    (input_tokens * effective_input_cost)
-                        + (output_tokens * effective_output_cost)
-                        + (cache_read_tokens * cache_read_cost_per_token)
-                        + (cache_write_tokens * cache_write_cost_per_token),
-                    currency
-                FROM matched
-                RETURNING response_id, total_cost
-            )
-            SELECT COUNT(*)::int AS row_count, COALESCE(SUM(total_cost), 0)::float AS total_cost
-            FROM inserted
-        `;
+            // Single query: join responses → providers → plugins → pricing plans → sheets → model costs
+            // Insert calculated cost rows and return totals
+            const insertQuery = `
+                WITH matched AS (
+                    SELECT
+                        pr.id AS response_id,
+                        ps.id AS pricing_sheet_id,
+                        pp.currency,
+                        COALESCE(pr.input_tokens, 0) AS input_tokens,
+                        COALESCE(pr.output_tokens, 0) AS output_tokens,
+                        COALESCE((pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int,
+                                 (pr.metadata->'usage_raw'->>'cached_tokens')::int, 0) AS cache_read_tokens,
+                        COALESCE((pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0) AS cache_write_tokens,
+                        CASE
+                            WHEN psm.context_threshold IS NOT NULL
+                                 AND psm.extended_input_cost IS NOT NULL
+                                 AND (COALESCE(pr.input_tokens, 0)
+                                      + COALESCE((pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int, 0)
+                                      + COALESCE((pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0))
+                                     > psm.context_threshold
+                            THEN psm.extended_input_cost
+                            ELSE psm.input_cost
+                        END AS effective_input_cost,
+                        CASE
+                            WHEN psm.context_threshold IS NOT NULL
+                                 AND psm.extended_output_cost IS NOT NULL
+                                 AND (COALESCE(pr.input_tokens, 0)
+                                      + COALESCE((pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int, 0)
+                                      + COALESCE((pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0))
+                                     > psm.context_threshold
+                            THEN psm.extended_output_cost
+                            ELSE psm.output_cost
+                        END AS effective_output_cost,
+                        psm.cache_read_cost AS cache_read_cost_per_token,
+                        psm.cache_write_cost AS cache_write_cost_per_token
+                    FROM provider_responses pr
+                        JOIN providers prov ON pr.provider_id = prov.id
+                        JOIN plugins pl ON prov.plugin_id = pl.id
+                        LEFT JOIN pricing_plans pp ON pp.id = COALESCE(prov.pricing_plan_id, pl.default_pricing_plan_id)
+                        LEFT JOIN pricing_sheets ps ON ps.plan_id = pp.id
+                            AND ps.effective_from <= pr.created_at
+                            AND (ps.effective_to IS NULL OR ps.effective_to > pr.created_at)
+                        LEFT JOIN pricing_sheet_models psm ON psm.sheet_id = ps.id
+                            AND psm.model_name = pr.access_model
+                    WHERE ${whereClause}
+                      AND pp.id IS NOT NULL
+                      AND ps.id IS NOT NULL
+                      AND psm.id IS NOT NULL
+                ),
+                inserted AS (
+                    INSERT INTO provider_response_costs
+                        (response_id, cost_type, pricing_sheet_id,
+                         input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
+                         input_cost, output_cost, cache_read_cost, cache_write_cost,
+                         total_cost, currency)
+                    SELECT
+                        response_id, 'provider', pricing_sheet_id,
+                        input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
+                        input_tokens * effective_input_cost,
+                        output_tokens * effective_output_cost,
+                        cache_read_tokens * cache_read_cost_per_token,
+                        cache_write_tokens * cache_write_cost_per_token,
+                        (input_tokens * effective_input_cost)
+                            + (output_tokens * effective_output_cost)
+                            + (cache_read_tokens * cache_read_cost_per_token)
+                            + (cache_write_tokens * cache_write_cost_per_token),
+                        currency
+                    FROM matched
+                    RETURNING response_id, total_cost
+                )
+                SELECT COUNT(*)::int AS row_count, COALESCE(SUM(total_cost), 0)::float AS total_cost
+                FROM inserted
+            `;
 
-        const rows = await this.db.query<{ row_count: number; total_cost: number }>(insertQuery, params);
-        const result = rows[0] ?? { row_count: 0, total_cost: 0 };
+            const insertResult = await client.query(insertQuery, params);
+            const result = insertResult.rows[0] ?? { row_count: 0, total_cost: 0 };
 
-        // Update denormalized cost on provider_responses
-        await this.db.query(
-            `UPDATE provider_responses pr
-             SET cost = prc.total_cost
-             FROM provider_response_costs prc
-             WHERE prc.response_id = pr.id
-               AND prc.cost_type = 'provider'
-               AND pr.id IN (SELECT pr2.id FROM provider_responses pr2 WHERE ${whereClause})`,
-            params
-        );
+            // Update denormalized cost on provider_responses
+            await client.query(
+                `UPDATE provider_responses pr
+                 SET cost = prc.total_cost
+                 FROM provider_response_costs prc
+                 WHERE prc.response_id = pr.id
+                   AND prc.cost_type = 'provider'
+                   AND pr.id IN (SELECT pr2.id FROM provider_responses pr2 WHERE ${whereClause})`,
+                params
+            );
 
-        logger.info(`Bulk recalculated ${result.row_count} cost records`);
-        return { rowCount: result.row_count, totalCost: result.total_cost };
+            logger.info(`Bulk recalculated ${result.row_count} cost records`);
+            return { rowCount: result.row_count, totalCost: result.total_cost };
+        });
     }
 
     private extractTokens(response: ProviderResponse): TokenBreakdown {

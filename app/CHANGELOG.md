@@ -1,23 +1,30 @@
 # holo
 
+## 1.2.0
+
+### Minor Changes
+
+- Pricing system, cache invalidation, `/holo/api` route prefix, model access checks, Claude SDK update.
+  - Pricing system: plans, sheets, per-model token costs with bulk recalculation via CTE
+  - Cache invalidation endpoints for Redis flush on application/provider updates
+  - Moved Holo management APIs to `/holo/api` prefix to separate from provider routes
+  - Model access validation in request pipeline
+  - Updated Claude provider SDK and response translators
+  - Plugin route and protocol type updates
+
 ## 1.1.0
 
 ### Minor Changes
 
-- af04a6e: Plugin/protocol system, audit table redesign, unified server lifecycle.
-  - Added plugins table and protocol registration system (plugins define protocols with capabilities)
-  - Replaced llm_requests/llm_responses with provider_requests/provider_responses (UUID FKs, metadata JSONB)
-  - Renamed model_slug to access_model, added client_identifier column
-  - Added ProviderRequest/ProviderResponse entity types with metadata
-  - Added ProtocolCapability enum (chat, generate, embed, models)
-  - Each plugin declares protocols in RouteTree with { name, capability } objects
-  - Unified server startup: all servers extend BaseServer with mixins (withDB, withQueue, withAdmin)
-  - API server converted to BaseServer subclass (ApiServer)
-  - Centralized DI registrations in container/ directory
-  - Server registration and periodic heartbeat via withDB mixin
-  - Auth middleware: added allowJwt/allowHoloToken options, JWT email-to-UUID resolution
-  - Guards use provider_id FK instead of provider name string lookup
-  - ApplicationDB extracted from ApplicationService for proper layering
+- Plugin/protocol system with capability-based registration
+- Audit tables: `provider_requests`/`provider_responses` replacing `llm_requests`/`llm_responses`
+- Unified server lifecycle via BaseServer with composable mixins (withDB, withQueue, withAdmin, withStats)
+- Centralized DI registrations in `container/` directory
+- Auth middleware: unified `makeAuthMiddleware` with JWT, HoloToken, anonymous support
+- ApplicationDB extracted from ApplicationService for proper DB/service layering
+- Pricing system: plans, sheets, per-model costs, bulk recalculation
+- Cache invalidation endpoints for Redis flush
+- Holo management APIs moved to `/holo/api` prefix
 
 ### Patch Changes
 

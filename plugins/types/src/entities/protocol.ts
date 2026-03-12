@@ -3,6 +3,7 @@ export const ProtocolCapability = {
     GENERATE: 'generate',
     EMBED: 'embed',
     MODELS: 'models',
+    METRICS: 'metrics'
 } as const;
 
 export type ProtocolCapability = typeof ProtocolCapability[keyof typeof ProtocolCapability];
