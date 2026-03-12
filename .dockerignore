@@ -1,0 +1,15 @@
+**/node_modules
+.git
+.gitignore
+*.md
+!README.md
+.changeset
+.claude
+.env
+.env.*
+logs
+*.log
+dist
+coverage
+.idea
+.vscode

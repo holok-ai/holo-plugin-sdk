@@ -7,10 +7,11 @@
  * The application entry points (app.ts, worker.server.ts, audit.server.ts) have been
  * configured to load dotenv before any other imports.
  */
+import {resolve} from 'path';
 import dotenv from 'dotenv';
 import {parseArray, parseBoolean, parseNumber} from "./utils";
 
-dotenv.config();
+dotenv.config({ path: [resolve(import.meta.dirname, '../../.env'), '.env'] });
 
 export namespace env {
     export const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -181,10 +182,7 @@ export namespace env {
         algorithm: 'HS384'
     };
 
-    export const mokuUrl = process.env.MOKU_URL;
-    if (!mokuUrl) {
-        throw new Error('MOKU_URL environment variable is required for the application to start');
-    }
+    export const mokuUrl = process.env.MOKU_URL || 'http://localhost:8080';
 
     export namespace security {
         export const encryptionKey = process.env.CREDENTIAL_ENCRYPTION_KEY;
