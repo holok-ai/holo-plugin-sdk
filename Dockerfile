@@ -1,40 +1,57 @@
-FROM node:18-alpine
+FROM node:22-alpine
+
+ARG BUILD_MODE=dev
 
 WORKDIR /app
 
-# Copy tsconfig files (app/tsconfig.json extends ../tsconfig.json)
-COPY tsconfig.json /tsconfig.json
-COPY app/tsconfig.json /app/tsconfig.json
-
-# Copy package files
-COPY app/package*.json /app/
-
-# Install PostgreSQL client for audit service
 RUN apk --no-cache add postgresql-client
 
-# Install from npm
-RUN npm install && \
-    npm install \
-      @holokai/holo-provider-claude@latest \
-      @holokai/holo-provider-openai@latest \
-      @holokai/holo-provider-ollama@latest
+# Root tsconfig (app/tsconfig.json extends ../tsconfig.json)
+COPY tsconfig.json /tsconfig.json
 
-# Copy source code
-COPY app/src/ ./src/
+# --- Dev mode: install deps first (cached), then copy source ---
+COPY package*.json /monorepo/
+COPY tsconfig.json /monorepo/tsconfig.json
+COPY app/package*.json /monorepo/app/
+COPY plugins/types/package*.json /monorepo/plugins/types/
+COPY plugins/sdk/package*.json /monorepo/plugins/sdk/
+COPY plugins/holo-provider-openai/package*.json /monorepo/plugins/holo-provider-openai/
+COPY plugins/holo-provider-claude/package*.json /monorepo/plugins/holo-provider-claude/
+COPY plugins/holo-provider-ollama/package*.json /monorepo/plugins/holo-provider-ollama/
 
-# Create logs directory and set permissions
-RUN mkdir -p /app/logs \
-    && chmod 777 /app/logs
+RUN if [ "$BUILD_MODE" = "dev" ]; then \
+      cd /monorepo && npm install; \
+    fi
 
-# Copy startup script
+# Dev source (only invalidates layers after npm install)
+COPY app/ /monorepo/app/
+COPY plugins/ /monorepo/plugins/
+
+# --- Prod mode: app only, plugins from npm ---
+COPY app/tsconfig.json /app/tsconfig.json
+COPY app/package*.json /app/
+
+RUN if [ "$BUILD_MODE" = "prod" ]; then \
+      cd /app && npm install && \
+      npm install \
+        @holokai/holo-provider-claude@latest \
+        @holokai/holo-provider-openai@latest \
+        @holokai/holo-provider-ollama@latest; \
+    fi
+
+COPY app/src/ /app/src/
+COPY app/scripts/ /app/scripts/
+
+# Logs
+RUN mkdir -p /app/logs && chmod 777 /app/logs
+
+# Entrypoint
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-COPY app/scripts/register-ts-node.mjs /app/register-ts-node.mjs
 RUN chmod +x /app/docker-entrypoint.sh
 
-# Set environment variables
 ENV NODE_ENV=production
+ENV BUILD_MODE=${BUILD_MODE}
 
 EXPOSE 3000
 
-# Use the startup script to run all services
 CMD ["/app/docker-entrypoint.sh"]

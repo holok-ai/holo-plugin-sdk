@@ -1,34 +1,85 @@
+x-common-env: &common-env
+  NODE_ENV: ${NODE_ENV:-development}
+  RABBITMQ_URL: ${RABBITMQ_URL:-amqp://holokai-mq:5672}
+  AUDIT_PG_HOST: ${AUDIT_PG_HOST:-holokai-db}
+  AUDIT_PG_PORT: ${AUDIT_PG_PORT:-5432}
+  AUDIT_PG_DATABASE: ${AUDIT_PG_DATABASE}
+  AUDIT_PG_USER: ${AUDIT_PG_USER}
+  AUDIT_PG_PASSWORD: ${AUDIT_PG_PASSWORD}
+  REDIS_URL: redis://holokai-redis:6379
+  CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY}
+  JWT_SECRET: ${JWT_SECRET}
+  MOKU_URL: ${MOKU_URL:-http://host.docker.internal:8080}
+
+x-common: &common
+  image: "${DOCKER_REGISTRY:-holo}:${IMAGE_TAG:-latest}"
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  restart: unless-stopped
+  networks:
+    - holokai-network
+
 services:
-  holo:
-    container_name: holokai-holo
+  api:
+    <<: *common
+    container_name: holokai-api
     build:
       context: .
-      dockerfile: Dockerfile
+      args:
+        BUILD_MODE: dev
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
-      - RABBITMQ_URL=amqp://holokai-mq:5672
-      - PORT=3000
-      - AUDIT_PG_HOST=holokai-db
-      - AUDIT_PG_PORT=5432
-      - AUDIT_PG_DATABASE=holokai
-      - AUDIT_PG_USER=holo
-      - AUDIT_PG_PASSWORD=holopassword
-      - AUDIT_ENABLED=true
-      - JWT_SECRET=your-super-secret-key-at-least-32-characters-long-and-random
-      - MOKU_URL=http://host.docker.internal:8080
-      - API_SERVER_ID=duan_api
-      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY}
-      - API_PLUGINS_DIR=node_modules
-      - REDIS_URL=redis://holokai-redis:6379
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      <<: *common-env
+      PORT: 3000
+      API_SERVER_ID: ${API_SERVER_ID:-api}
+      API_CONFIG_TIMEOUT: ${API_CONFIG_TIMEOUT:-120000}
+      AUDIT_ENABLED: "true"
+      ENABLE_API: "true"
+      ENABLE_WORKER: "false"
+      ENABLE_AUDIT: "false"
+      ENABLE_BATCH: "false"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  worker:
+    <<: *common
+    container_name: holokai-worker
+    environment:
+      <<: *common-env
+      ENABLE_API: "false"
+      ENABLE_WORKER: "true"
+      ENABLE_AUDIT: "false"
+      ENABLE_BATCH: "false"
+    deploy:
+      replicas: 1
+
+  audit:
+    <<: *common
+    container_name: holokai-audit
+    environment:
+      <<: *common-env
+      AUDIT_ENABLED: "true"
+      ENABLE_API: "false"
+      ENABLE_WORKER: "false"
+      ENABLE_AUDIT: "true"
+      ENABLE_BATCH: "false"
     volumes:
       - audit_logs:/app/logs
-    restart: unless-stopped
-    networks:
-      - holokai-network
+
+  batch:
+    <<: *common
+    container_name: holokai-batch
+    environment:
+      <<: *common-env
+      ENABLE_API: "false"
+      ENABLE_WORKER: "false"
+      ENABLE_AUDIT: "false"
+      ENABLE_BATCH: "true"
 
   redis:
     container_name: holokai-redis

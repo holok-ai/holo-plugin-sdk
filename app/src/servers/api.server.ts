@@ -27,7 +27,9 @@ export class ApiServer extends withAdmin(withDB(BaseServer)) {
     }
 
     private setupMiddleware() {
-        this.expressApp.use(morgan('dev'));
+        this.expressApp.use(morgan('dev', {
+            skip: (req) => req.path === '/health'
+        }));
         this.expressApp.use(bodyParser.json({limit: '10mb'}));
         this.expressApp.use(nocorsMiddleware);
         this.expressApp.use(errorMiddleware);
