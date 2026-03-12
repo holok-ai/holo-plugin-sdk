@@ -1,6 +1,6 @@
 {
   "name": "@holokai/holo-provider-claude",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "description": "Claude provider plugin for Holo LLM Gateway",
   "author": "Holokai",
