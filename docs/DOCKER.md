@@ -91,18 +91,25 @@ In `docker-compose.yml`, each service explicitly sets its own toggle to `true` a
 | `development` | On push | Dev environment | `dev`, `dev-<sha>` |
 | `main` | On push/merge | Production | `<version>`, `latest` |
 
+### ECR Authentication
+
+```sh
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin 671482219051.dkr.ecr.us-east-1.amazonaws.com
+```
+
 ### CI: Build and Publish
 
 ```sh
 # Development branch
-docker build -t registry.example.com/holo:dev \
-             -t registry.example.com/holo:dev-$(git rev-parse --short HEAD) .
-docker push registry.example.com/holo --all-tags
+docker build -t 671482219051.dkr.ecr.us-east-1.amazonaws.com/holokai/dev/holo:dev \
+             -t 671482219051.dkr.ecr.us-east-1.amazonaws.com/holokai/dev/holo:dev-$(git rev-parse --short HEAD) .
+docker push 671482219051.dkr.ecr.us-east-1.amazonaws.com/holokai/dev/holo --all-tags
 
 # Main branch (release)
-docker build -t registry.example.com/holo:1.2.0 \
-             -t registry.example.com/holo:latest .
-docker push registry.example.com/holo --all-tags
+docker build -t 671482219051.dkr.ecr.us-east-1.amazonaws.com/holokai/dev/holo:1.2.0 \
+             -t 671482219051.dkr.ecr.us-east-1.amazonaws.com/holokai/dev/holo:latest .
+docker push 671482219051.dkr.ecr.us-east-1.amazonaws.com/holokai/dev/holo --all-tags
 ```
 
 ### CD: Deploy
@@ -113,7 +120,7 @@ Each environment needs only:
 
 ```sh
 # Example .env on a deployment host
-DOCKER_REGISTRY=registry.example.com/holo
+DOCKER_REGISTRY=671482219051.dkr.ecr.us-east-1.amazonaws.com/holokai/dev/holo
 IMAGE_TAG=1.2.0
 NODE_ENV=production
 AUDIT_PG_HOST=prod-db.internal
