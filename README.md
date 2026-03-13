@@ -22,6 +22,7 @@ plugins/
   holo-provider-openai/
   holo-provider-claude/
   holo-provider-ollama/
+  holo-provider-gemini/
 docs/             Documentation
 ```
 
@@ -86,6 +87,7 @@ npm run test:workspaces     # Plugin workspace tests
 | [Docker](docs/DOCKER.md) | Build modes, running, publishing, full environment variable reference |
 | [Authentication](docs/AUTHENTICATION.md) | Auth methods (JWT, HoloToken, anonymous), middleware, caching |
 | [Encryption Setup](docs/ENCRYPTION_SETUP.md) | Generating and managing the credential encryption key |
+| [Provider Plugin Guide](docs/PROVIDER_PLUGIN_GUIDE.md) | Step-by-step guide for building new provider plugins |
 
 ## License
 

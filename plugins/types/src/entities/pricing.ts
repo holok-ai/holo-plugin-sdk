@@ -47,6 +47,14 @@ export interface PricingSheetModel extends BaseEntity {
     context_threshold?: number;
     extended_input_cost?: number;
     extended_output_cost?: number;
+    token_costs?: Record<string, number>;
+}
+
+export interface CostResult {
+    input_cost: number;
+    output_cost: number;
+    total_cost: number;
+    detail: Record<string, { tokens: number; cost: number }>;
 }
 
 export interface ProviderResponseCost {
@@ -64,5 +72,6 @@ export interface ProviderResponseCost {
     cache_write_cost: number;
     total_cost: number;
     currency: string;
+    metadata?: Record<string, any>;
     created_at: string;
 }

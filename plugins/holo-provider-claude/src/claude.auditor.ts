@@ -2,12 +2,13 @@ import {injectable} from 'tsyringe';
 import {BaseAuditor} from "@holokai/sdk/provider";
 import {pickDefined} from "@holokai/sdk";
 import type {ProviderEnvelope, ProviderEvent} from "@holokai/types/provider";
-import type {HoloWorkerRequest} from "@holokai/types/worker";
+import type {HoloWorkerRequest, WorkerResponseEnvelope} from "@holokai/types/worker";
 import type {ProviderRequest} from "@holokai/types/entities";
 import {LlmStatus} from "@holokai/types/entities";
 import {MessageCreateParamsBase} from "@anthropic-ai/sdk/resources/messages";
 import {MessageStreamParams} from "@anthropic-ai/sdk/resources/messages/messages";
 import {BetaMessageStreamParams} from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import {ClaudeProtocols} from "./plugin";
 
 @injectable()
 export class ClaudeAuditor extends BaseAuditor {
@@ -47,28 +48,40 @@ export class ClaudeAuditor extends BaseAuditor {
         }
     }
 
-    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, { type: 'done' | 'error' }>) {
-        const metrics = await super.mapResponseMetrics(providerEvent);
+    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, { type: 'done' | 'error' }>, envelope: WorkerResponseEnvelope) {
+        const metrics = await super.mapResponseMetrics(providerEvent, envelope);
 
         if (providerEvent.type === 'error') {
             return metrics;
         }
-        const {usage} = providerEvent.message
 
-        return pickDefined({
-            ...metrics,
-            usage_raw: usage,
-            input_tokens: usage.input_tokens,
-            output_tokens: usage.output_tokens
-        });
+        switch (envelope.protocol.name) {
+            case ClaudeProtocols.COUNT_TOKENS:
+                return pickDefined({
+                    ...metrics,
+                    usage_raw: providerEvent.message,
+                    input_tokens: providerEvent.message?.input_tokens,
+                });
+            default: {
+                const usage = providerEvent.message?.usage;
+                if (!usage) return metrics;
+
+                return pickDefined({
+                    ...metrics,
+                    usage_raw: usage,
+                    input_tokens: usage.input_tokens,
+                    output_tokens: usage.output_tokens
+                });
+            }
+        }
     }
 
-    protected async mapResponseStatus(providerEvent: ProviderEvent): Promise<LlmStatus> {
+    protected async mapResponseStatus(providerEvent: ProviderEvent, envelope: WorkerResponseEnvelope): Promise<LlmStatus> {
         if (providerEvent.type === 'done') {
-            const {stop_reason} = providerEvent.message;
-            if (stop_reason && stop_reason === 'max_tokens') return LlmStatus.PARTIAL;
+            const stop_reason = providerEvent.message?.stop_reason;
+            if (stop_reason === 'max_tokens') return LlmStatus.PARTIAL;
         }
-        return super.mapResponseStatus(providerEvent);
+        return super.mapResponseStatus(providerEvent, envelope);
     }
 
     protected async createProviderEnvelope(
@@ -84,6 +97,16 @@ export class ClaudeAuditor extends BaseAuditor {
             system_prompt: payload.system ?
                 (Array.isArray(payload.system) ? JSON.stringify(payload.system) : payload.system) : undefined
         }) as ProviderEnvelope;
+    }
+
+    protected extractExtraTokens(metrics: Record<string, any>, base: Record<string, number>): Record<string, number> {
+        const usage = metrics.usage_raw;
+        if (!usage) return base;
+        return pickDefined({
+            ...base,
+            cache_read: usage.cache_read_input_tokens,
+            cache_write: usage.cache_creation_input_tokens,
+        });
     }
 
     private extractUserPromptFromMessages(messages?: any[]): string | undefined {

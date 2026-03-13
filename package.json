@@ -25,6 +25,7 @@
     "type-check": "npm run build:workspaces && tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "holo-test": "cd plugins/test-harness && node --import ./register.mjs src/cli.ts",
     "validate:boundaries": "node app/scripts/validate-boundaries.js",
     "validate:plugin-boundaries": "bash app/scripts/validate-plugin-boundaries.sh",
     "docs:serve": "npx http-server ./docs -p 3001",

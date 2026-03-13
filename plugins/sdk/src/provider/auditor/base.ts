@@ -93,13 +93,16 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
         responseEnvelope: WorkerResponseEnvelope,
         providerEvent: ProviderEvent
     ): Promise<ProviderResponse> {
-        const metrics = providerEvent.type === 'done' || providerEvent.type === 'error' ? await this.mapResponseMetrics(providerEvent) : {};
+        const metrics = providerEvent.type === 'done' || providerEvent.type === 'error' ? await this.mapResponseMetrics(providerEvent, responseEnvelope) : {};
+
+        const tokenBreakdown = this.buildTokenBreakdown(metrics);
 
         const metadata: ProviderResponseMetadata = pickDefined({
             response_raw: providerEvent as any,
             error_message: providerEvent.type === 'error' ? stringifyAny(providerEvent.error) : undefined,
             worker_id: responseEnvelope.worker_id,
             usage_raw: (metrics as any).usage_raw,
+            token_breakdown: tokenBreakdown,
         }) as ProviderResponseMetadata;
 
         return pickDefined({
@@ -112,7 +115,7 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
             user_id: responseEnvelope.user_id,
             client_identifier: responseEnvelope.client_identifier,
             access_model: responseEnvelope.access_model,
-            status: await this.mapResponseStatus(providerEvent),
+            status: await this.mapResponseStatus(providerEvent, responseEnvelope),
             response: providerEvent.type === 'done' || providerEvent.type === 'text_delta' ? providerEvent.text : JSON.stringify(providerEvent),
             input_tokens: (metrics as any).input_tokens,
             output_tokens: (metrics as any).output_tokens,
@@ -124,7 +127,7 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
         }) as ProviderResponse;
     }
 
-    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, { type: 'done' | 'error' }>) {
+    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, { type: 'done' | 'error' }>, _envelope: WorkerResponseEnvelope) {
         const metrics = providerEvent.metrics;
 
         if (!metrics) return {};
@@ -138,7 +141,7 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
         });
     }
 
-    protected async mapResponseStatus(providerEvent: ProviderEvent): Promise<LlmStatus> {
+    protected async mapResponseStatus(providerEvent: ProviderEvent, _envelope: WorkerResponseEnvelope): Promise<LlmStatus> {
         switch (providerEvent.type) {
             case 'done':
                 return LlmStatus.SUCCESS;
@@ -148,6 +151,17 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
                 return LlmStatus.PARTIAL
         }
     }
+
+    private buildTokenBreakdown(metrics: Record<string, any>): Record<string, number> | undefined {
+        if (!metrics.input_tokens && !metrics.output_tokens) return undefined;
+        const base: Record<string, number> = {input: metrics.input_tokens ?? 0, output: metrics.output_tokens ?? 0};
+        return this.extractExtraTokens(metrics, base);
+    }
+
+    protected abstract extractExtraTokens(
+        metrics: Record<string, any>,
+        base: Record<string, number>
+    ): Record<string, number>;
 
     protected abstract toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<ProviderRequest, 'id'>): void;
 

@@ -8,6 +8,7 @@ import {AsyncEventQueue, ClassLogger} from "@holokai/sdk";
 import type {WireChunk} from "@holokai/types/provider";
 import type {HoloWorkerRequest} from "@holokai/types/worker";
 import {ProviderResponse} from "@holokai/types/entities";
+import {writeWireToResponse} from "@holokai/lib";
 
 @injectable()
 export class ResponseService extends ClassLogger {
@@ -67,26 +68,8 @@ export class ResponseService extends ClassLogger {
 
         await this.sendRequestToExchange(request, requestId);
 
-        let headersSent = false;
         try {
-            for await (const wire of queue) {
-                if (wire.headers && !headersSent) {
-                    if (wire.status) res.status(wire.status);
-                    Object.entries(wire.headers).forEach(([k, v]) => res.setHeader(k, v));
-                    headersSent = true;
-                }
-
-                if (wire.body) {
-                    if (!res.write(wire.body)) {
-                        await new Promise<void>(resolve => res.once('drain', resolve));
-                    }
-
-                }
-
-                if (wire.done) {
-                    res.end();
-                }
-            }
+            await writeWireToResponse(queue, res);
         } catch (error) {
             logger.error(`Error streaming response: ${(error as Error).message}`);
             if (!res.headersSent) {

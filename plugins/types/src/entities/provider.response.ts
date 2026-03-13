@@ -4,6 +4,7 @@ export interface ProviderResponseMetadata {
     error_message?: string;
     response_raw?: Record<string, any>;
     usage_raw?: Record<string, any>;
+    token_breakdown?: Record<string, number>;
     worker_id?: string;
     token_type?: string;
     [key: string]: any;

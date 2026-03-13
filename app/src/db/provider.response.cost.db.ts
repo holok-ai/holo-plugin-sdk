@@ -13,8 +13,8 @@ export class ProviderResponseCostDB {
                 (response_id, cost_type, pricing_sheet_id,
                  input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
                  input_cost, output_cost, cache_read_cost, cache_write_cost,
-                 total_cost, currency)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                 total_cost, currency, metadata)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING id
         `;
         return this.db.queryOne<{ id: string }>(query, [
@@ -30,7 +30,8 @@ export class ProviderResponseCostDB {
             cost.cache_read_cost,
             cost.cache_write_cost,
             cost.total_cost,
-            cost.currency
+            cost.currency,
+            cost.metadata ? JSON.stringify(cost.metadata) : '{}',
         ]);
     }
 

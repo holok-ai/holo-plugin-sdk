@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import {injectable} from "tsyringe";
 import {ClassLogger} from "@holokai/sdk";
 import {RequestService} from "../request.service";
-import {IProviderPlugin, PluginType, RouteHandler} from "@holokai/types";
-import {Router} from "express";
+import {IProviderPlugin, PluginType, RouteHandler, RouteDefinition} from "@holokai/types";
+import {NextFunction, Router} from "express";
 import {PluginService} from "./plugin.service";
 import {Plugin, Protocol} from "@holokai/types/entities";
 import {HoloApiRequest} from "../../api/types";
@@ -64,8 +64,9 @@ export class PluginRouteService extends ClassLogger {
             }
 
             const method = route.method.toLowerCase() as 'get' | 'post';
+            const paramInjector = this.createParamInjector(route);
             for (const path of route.paths) {
-                pluginRouter[method](`${path}`, authMiddleware, handler);
+                pluginRouter[method](`${path}`, authMiddleware, paramInjector, handler);
             }
         }
 
@@ -77,6 +78,25 @@ export class PluginRouteService extends ClassLogger {
 
     createMiddleware(providerFamily: string) {
         return makeAuthMiddleware(this.authService, {useCache: true, providerFamily});
+    }
+
+    createParamInjector(route: RouteDefinition) {
+        return (req: HoloApiRequest, _res: ApiResponse, next: NextFunction) => {
+            if (req.params) {
+                for (const [key, value] of Object.entries(req.params)) {
+                    if (req.body[key] === undefined) {
+                        req.body[key] = value;
+                    }
+                }
+            }
+            if (route.streaming) {
+                req.body.stream = true;
+            }
+            if (req.query.alt === 'sse') {
+                req.body.stream = true;
+            }
+            next();
+        };
     }
 
     createModelsHandler() {

@@ -4,6 +4,8 @@ import {ClassLogger} from '@holokai/sdk';
 import {PricingDB, ProviderResponseCostDB, ProviderDB, PluginDB, AppDB} from '../db';
 import type {ProviderResponse, PricingSheetModel, ProviderResponseCost} from '@holokai/types/entities';
 import {CostType} from '@holokai/types/entities';
+import type {IProviderPlugin} from '@holokai/types/plugin';
+import {PluginService} from './plugin/plugin.service';
 
 @injectable()
 export class PricingService extends ClassLogger {
@@ -12,6 +14,7 @@ export class PricingService extends ClassLogger {
         private readonly costDB: ProviderResponseCostDB,
         private readonly providerDB: ProviderDB,
         private readonly pluginDB: PluginDB,
+        private readonly pluginService: PluginService,
         private readonly db: AppDB,
     ) {
         super();
@@ -53,6 +56,38 @@ export class PricingService extends ClassLogger {
         if (!modelPricing) {
             logger.debug(`No pricing for model ${response.access_model} in sheet ${sheet.name}`);
             return 0;
+        }
+
+        const tokenBreakdown = response.metadata?.token_breakdown;
+
+        if (tokenBreakdown) {
+            const pluginImpl = await this.pluginService.getImplByFamily(provider.type) as IProviderPlugin | null;
+            if (pluginImpl) {
+                const costResult = pluginImpl.calculateCost(tokenBreakdown, modelPricing);
+
+                const costRecord: Omit<ProviderResponseCost, 'id' | 'created_at'> = {
+                    response_id: responseId,
+                    cost_type: CostType.PROVIDER,
+                    pricing_sheet_id: sheet.id,
+                    input_tokens: tokenBreakdown.input ?? 0,
+                    output_tokens: tokenBreakdown.output ?? 0,
+                    cache_read_tokens: tokenBreakdown.cache_read ?? 0,
+                    cache_write_tokens: tokenBreakdown.cache_write ?? 0,
+                    input_cost: costResult.input_cost,
+                    output_cost: costResult.output_cost,
+                    cache_read_cost: costResult.detail.cache_read?.cost ?? 0,
+                    cache_write_cost: costResult.detail.cache_write?.cost ?? 0,
+                    total_cost: costResult.total_cost,
+                    currency: plan.currency,
+                    metadata: costResult.detail,
+                };
+
+                await this.costDB.insert(costRecord);
+                await this.updateResponseCost(responseId, costResult.total_cost);
+
+                logger.debug(`Calculated cost for response ${responseId}: $${costResult.total_cost.toFixed(8)} (${response.access_model})`);
+                return costResult.total_cost;
+            }
         }
 
         const tokens = this.extractTokens(response);
@@ -120,24 +155,29 @@ export class PricingService extends ClassLogger {
             );
 
             // Single query: join responses → providers → plugins → pricing plans → sheets → model costs
-            // Insert calculated cost rows and return totals
+            // Reads token_breakdown JSONB first, falls back to usage_raw for legacy records
             const insertQuery = `
                 WITH matched AS (
                     SELECT
                         pr.id AS response_id,
                         ps.id AS pricing_sheet_id,
                         pp.currency,
-                        COALESCE(pr.input_tokens, 0) AS input_tokens,
-                        COALESCE(pr.output_tokens, 0) AS output_tokens,
-                        COALESCE((pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int,
+                        COALESCE((pr.metadata->'token_breakdown'->>'input')::int, pr.input_tokens, 0) AS input_tokens,
+                        COALESCE((pr.metadata->'token_breakdown'->>'output')::int, pr.output_tokens, 0) AS output_tokens,
+                        COALESCE((pr.metadata->'token_breakdown'->>'cache_read')::int,
+                                 (pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int,
                                  (pr.metadata->'usage_raw'->>'cached_tokens')::int, 0) AS cache_read_tokens,
-                        COALESCE((pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0) AS cache_write_tokens,
+                        COALESCE((pr.metadata->'token_breakdown'->>'cache_write')::int,
+                                 (pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0) AS cache_write_tokens,
                         CASE
                             WHEN psm.context_threshold IS NOT NULL
                                  AND psm.extended_input_cost IS NOT NULL
-                                 AND (COALESCE(pr.input_tokens, 0)
-                                      + COALESCE((pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int, 0)
-                                      + COALESCE((pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0))
+                                 AND (COALESCE((pr.metadata->'token_breakdown'->>'input')::int, pr.input_tokens, 0)
+                                      + COALESCE((pr.metadata->'token_breakdown'->>'cache_read')::int,
+                                                 (pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int,
+                                                 (pr.metadata->'usage_raw'->>'cached_tokens')::int, 0)
+                                      + COALESCE((pr.metadata->'token_breakdown'->>'cache_write')::int,
+                                                 (pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0))
                                      > psm.context_threshold
                             THEN psm.extended_input_cost
                             ELSE psm.input_cost
@@ -145,15 +185,20 @@ export class PricingService extends ClassLogger {
                         CASE
                             WHEN psm.context_threshold IS NOT NULL
                                  AND psm.extended_output_cost IS NOT NULL
-                                 AND (COALESCE(pr.input_tokens, 0)
-                                      + COALESCE((pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int, 0)
-                                      + COALESCE((pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0))
+                                 AND (COALESCE((pr.metadata->'token_breakdown'->>'input')::int, pr.input_tokens, 0)
+                                      + COALESCE((pr.metadata->'token_breakdown'->>'cache_read')::int,
+                                                 (pr.metadata->'usage_raw'->>'cache_read_input_tokens')::int,
+                                                 (pr.metadata->'usage_raw'->>'cached_tokens')::int, 0)
+                                      + COALESCE((pr.metadata->'token_breakdown'->>'cache_write')::int,
+                                                 (pr.metadata->'usage_raw'->>'cache_creation_input_tokens')::int, 0))
                                      > psm.context_threshold
                             THEN psm.extended_output_cost
                             ELSE psm.output_cost
                         END AS effective_output_cost,
                         psm.cache_read_cost AS cache_read_cost_per_token,
-                        psm.cache_write_cost AS cache_write_cost_per_token
+                        psm.cache_write_cost AS cache_write_cost_per_token,
+                        COALESCE((pr.metadata->'token_breakdown'->>'thinking')::int, 0) AS thinking_tokens,
+                        COALESCE((psm.token_costs->>'thinking')::numeric, 0) AS thinking_cost_per_token
                     FROM provider_responses pr
                         JOIN providers prov ON pr.provider_id = prov.id
                         JOIN plugins pl ON prov.plugin_id = pl.id
@@ -184,7 +229,8 @@ export class PricingService extends ClassLogger {
                         (input_tokens * effective_input_cost)
                             + (output_tokens * effective_output_cost)
                             + (cache_read_tokens * cache_read_cost_per_token)
-                            + (cache_write_tokens * cache_write_cost_per_token),
+                            + (cache_write_tokens * cache_write_cost_per_token)
+                            + (thinking_tokens * thinking_cost_per_token),
                         currency
                     FROM matched
                     RETURNING response_id, total_cost
@@ -212,7 +258,7 @@ export class PricingService extends ClassLogger {
         });
     }
 
-    private extractTokens(response: ProviderResponse): TokenBreakdown {
+    private extractTokens(response: ProviderResponse): LegacyTokenBreakdown {
         const usageRaw = response.metadata?.usage_raw;
 
         return {
@@ -223,7 +269,7 @@ export class PricingService extends ClassLogger {
         };
     }
 
-    private computeCost(pricing: PricingSheetModel, tokens: TokenBreakdown): CostBreakdown {
+    private computeCost(pricing: PricingSheetModel, tokens: LegacyTokenBreakdown): LegacyCostBreakdown {
         let inputCostPerToken = Number(pricing.input_cost);
         let outputCostPerToken = Number(pricing.output_cost);
 
@@ -257,14 +303,14 @@ export class PricingService extends ClassLogger {
     }
 }
 
-interface TokenBreakdown {
+interface LegacyTokenBreakdown {
     input: number;
     output: number;
     cacheRead: number;
     cacheWrite: number;
 }
 
-interface CostBreakdown {
+interface LegacyCostBreakdown {
     inputCost: number;
     outputCost: number;
     cacheReadCost: number;

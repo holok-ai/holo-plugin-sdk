@@ -18,6 +18,7 @@ COPY plugins/sdk/package*.json /monorepo/plugins/sdk/
 COPY plugins/holo-provider-openai/package*.json /monorepo/plugins/holo-provider-openai/
 COPY plugins/holo-provider-claude/package*.json /monorepo/plugins/holo-provider-claude/
 COPY plugins/holo-provider-ollama/package*.json /monorepo/plugins/holo-provider-ollama/
+COPY plugins/holo-provider-gemini/package*.json /monorepo/plugins/holo-provider-gemini/
 
 RUN if [ "$BUILD_MODE" = "dev" ]; then \
       cd /monorepo && npm install; \
@@ -41,7 +42,8 @@ RUN if [ "$BUILD_MODE" = "prod" ]; then \
       npm install \
         @holokai/holo-provider-claude@latest \
         @holokai/holo-provider-openai@latest \
-        @holokai/holo-provider-ollama@latest; \
+        @holokai/holo-provider-ollama@latest \
+        @holokai/holo-provider-gemini@latest; \
     fi
 
 COPY app/src/ /app/src/

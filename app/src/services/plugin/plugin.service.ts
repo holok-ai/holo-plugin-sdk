@@ -163,14 +163,22 @@ export class PluginService extends BaseEntityService<Plugin> implements IPluginR
 
     private async registerDefaultPricing(plugin: IProviderPlugin, family: string, pluginId: string): Promise<void> {
         const logger = this.mlog(this.registerDefaultPricing);
-        if (!plugin.getDefaultPricing) return;
 
-        const pricingData = plugin.getDefaultPricing();
-        if (!pricingData) return;
+        const sheets = plugin.getPricingSheets?.();
+        const fallbackSheet = !sheets ? plugin.getDefaultPricing?.() : undefined;
+        if (!sheets && !fallbackSheet) return;
+
+        const sheetMap: Map<string, import('@holokai/types/plugin').PluginPricingSheet> =
+            sheets ?? new Map([[fallbackSheet!.version, fallbackSheet!]]);
+
+        const sorted = Array.from(sheetMap.values()).sort(
+            (a, b) => b.effective_from.localeCompare(a.effective_from)
+        );
+        const latestSheet = sorted[0];
 
         const plan = await this.pricingDB.upsertPlan(
             family,
-            pricingData.name,
+            latestSheet.name,
             'plugin',
             true,
             true,
@@ -182,45 +190,56 @@ export class PluginService extends BaseEntityService<Plugin> implements IPluginR
 
         await this.pluginDB.setDefaultPricingPlan(pluginId, plan.id);
 
-        const sheet = await this.pricingDB.upsertSheet(
-            plan.id,
-            pricingData.name,
-            pricingData.version,
-            pricingData.effective_from
-        );
-        if (!sheet) {
-            logger.warn(`Failed to upsert pricing sheet for ${family}`);
-            return;
+        let totalModels = 0;
+        for (const pricingData of sheetMap.values()) {
+            const sheet = await this.pricingDB.upsertSheet(
+                plan.id,
+                pricingData.name,
+                pricingData.version,
+                pricingData.effective_from,
+                pricingData.effective_to,
+            );
+            if (!sheet) {
+                logger.warn(`Failed to upsert pricing sheet ${pricingData.version} for ${family}`);
+                continue;
+            }
+
+            for (const model of pricingData.models) {
+                await this.pricingDB.upsertSheetModel(sheet.id, model.model_name, pickDefined({
+                    input_cost: model.input_cost,
+                    output_cost: model.output_cost,
+                    cache_read_cost: model.cache_read_cost,
+                    cache_write_cost: model.cache_write_cost,
+                    batch_input_cost: model.batch_input_cost,
+                    batch_output_cost: model.batch_output_cost,
+                    context_threshold: model.context_threshold,
+                    extended_input_cost: model.extended_input_cost,
+                    extended_output_cost: model.extended_output_cost,
+                    token_costs: model.token_costs,
+                }) as {
+                    input_cost: number;
+                    output_cost: number;
+                    cache_read_cost?: number;
+                    cache_write_cost?: number;
+                    batch_input_cost?: number;
+                    batch_output_cost?: number;
+                    context_threshold?: number;
+                    extended_input_cost?: number;
+                    extended_output_cost?: number;
+                    token_costs?: Record<string, number>;
+                });
+            }
+
+            // Only delete stale models on the latest sheet
+            if (pricingData === latestSheet) {
+                const currentModelNames = pricingData.models.map(m => m.model_name);
+                await this.pricingDB.deleteStaleModels(sheet.id, currentModelNames);
+            }
+
+            totalModels += pricingData.models.length;
         }
 
-        for (const model of pricingData.models) {
-            await this.pricingDB.upsertSheetModel(sheet.id, model.model_name, pickDefined({
-                input_cost: model.input_cost,
-                output_cost: model.output_cost,
-                cache_read_cost: model.cache_read_cost,
-                cache_write_cost: model.cache_write_cost,
-                batch_input_cost: model.batch_input_cost,
-                batch_output_cost: model.batch_output_cost,
-                context_threshold: model.context_threshold,
-                extended_input_cost: model.extended_input_cost,
-                extended_output_cost: model.extended_output_cost,
-            }) as {
-                input_cost: number;
-                output_cost: number;
-                cache_read_cost?: number;
-                cache_write_cost?: number;
-                batch_input_cost?: number;
-                batch_output_cost?: number;
-                context_threshold?: number;
-                extended_input_cost?: number;
-                extended_output_cost?: number;
-            });
-        }
-
-        const currentModelNames = pricingData.models.map(m => m.model_name);
-        await this.pricingDB.deleteStaleModels(sheet.id, currentModelNames);
-
-        logger.info(`Registered default pricing for ${family}: ${pricingData.models.length} models`);
+        logger.info(`Registered default pricing for ${family}: ${sheetMap.size} sheet(s), ${totalModels} model entries`);
     }
 
     async unregisterPlugin(family: string, version?: string): Promise<void> {

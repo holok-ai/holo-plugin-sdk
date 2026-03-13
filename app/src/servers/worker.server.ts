@@ -10,6 +10,7 @@ import {NotificationEventFactory, NotificationServiceToken} from "@holokai/sdk/n
 import {AIRequestStat, HoloWorkerRequest, IProvider, ProviderEvent} from "@holokai/types";
 import type {INotificationService} from "@holokai/types/notification";
 import {ServerType} from "@holokai/types/entities";
+import {runRequestPipeline} from "@holokai/lib";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -86,43 +87,39 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                     });
 
                     const q = await ai.processWorkerRequest(workerRequest);
+                    const result = await runRequestPipeline(q, wire, ai.auditor, envelope);
 
-                    for await (const evt of q) {
-                        for (const wireChunk of await wire.fromProviderEvent(evt)) {
-                            await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
-                        }
-                        if (evt.type === "done" || evt.type === "error") {
-                            if (evt.type === "error") {
-                                logger.error(`Error response: ${JSON.stringify(evt.error)}`, {requestId});
-                            } else {
-                                logger.debug(`Final response: ${JSON.stringify(evt.message)}`, {requestId});
-                            }
-                            await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt));
-                            if (evt.type === "done") {
-                                await this.notificationService.publish(
-                                    NotificationEventFactory.fromRequest(
-                                        'response_completed',
-                                        workerRequest,
-                                        'Response completed',
-                                        {status: 'success', eventType: evt.type}
-                                    )
-                                );
-                            } else if (evt.type === "error") {
-                                await this.notificationService.publish(
-                                    NotificationEventFactory.fromRequest(
-                                        'response_completed',
-                                        workerRequest,
-                                        'Response completed',
-                                        {
-                                            status: 'error',
-                                            eventType: evt.type,
-                                            error: evt.error
-                                        },
-                                        "error"
-                                    )
-                                );
-                            }
-                            break;
+                    for (const chunk of result.wireChunks) {
+                        await this.responseService.sendResponseChunk(sourceId, requestId, chunk);
+                    }
+
+                    if (result.auditRecord) {
+                        await this.responseService.sendToAudit(requestId, result.auditRecord);
+                    }
+
+                    const terminalEvent = result.events.find(e => e.type === 'done' || e.type === 'error');
+                    if (terminalEvent) {
+                        if (terminalEvent.type === 'error') {
+                            logger.error(`Error response: ${JSON.stringify(terminalEvent.error)}`, {requestId});
+                            await this.notificationService.publish(
+                                NotificationEventFactory.fromRequest(
+                                    'response_completed',
+                                    workerRequest,
+                                    'Response completed',
+                                    {status: 'error', eventType: terminalEvent.type, error: terminalEvent.error},
+                                    "error"
+                                )
+                            );
+                        } else {
+                            logger.debug(`Final response: ${JSON.stringify(terminalEvent.message)}`, {requestId});
+                            await this.notificationService.publish(
+                                NotificationEventFactory.fromRequest(
+                                    'response_completed',
+                                    workerRequest,
+                                    'Response completed',
+                                    {status: 'success', eventType: terminalEvent.type}
+                                )
+                            );
                         }
                     }
                 }

@@ -95,35 +95,35 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
             };
         }
 
-        const finalPromise = (async () => {
-            const stream = await this.client.responses.create({
-                ...req,
-                stream: true
-            } as ResponseCreateParamsBase) as Stream<ResponseStreamEvent>;
+        return {
+            final: async () => {
+                const stream = await this.client.responses.create({
+                    ...req,
+                    stream: true
+                } as ResponseCreateParamsBase) as Stream<ResponseStreamEvent>;
 
-            let finalChunk;
+                let finalChunk;
 
-            for await (const event of stream) {
-                if (
-                    event.type === 'response.completed' ||
-                    event.type === 'response.failed' ||
-                    event.type === 'response.incomplete' ||
-                    event.type === 'error'
-                ) {
-                    finalChunk = event;
-                    break;
+                for await (const event of stream) {
+                    if (
+                        event.type === 'response.completed' ||
+                        event.type === 'response.failed' ||
+                        event.type === 'response.incomplete' ||
+                        event.type === 'error'
+                    ) {
+                        finalChunk = event;
+                        break;
+                    }
+                    ctx.emitStreamEvent(event);
+
+                    if (event.type === 'response.output_text.delta') {
+                        ctx.emitTextDelta(event.delta);
+                    }
                 }
-                ctx.emitStreamEvent(event);
 
-                if (event.type === 'response.output_text.delta') {
-                    ctx.emitTextDelta(event.delta);
-                }
+                return finalChunk;
             }
-
-            return finalChunk;
-        })();
-
-        return {final: () => finalPromise};
+        };
     }
 
     // --- Chat Completions API ---
@@ -140,30 +140,28 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         }
 
         const streamingReq = req as ChatCompletionCreateParamsStreaming;
-
-        this.client.chat.completions.create(streamingReq);
         const includesUsage = streamingReq.stream_options?.include_usage === true
 
-        const finalPromise = (async () => {
-            const stream = await this.client.chat.completions.create(streamingReq);
+        return {
+            final: async () => {
+                const stream = await this.client.chat.completions.create(streamingReq);
 
-            let finalChunk;
-            for await (const chunk of stream) {
-                if ((includesUsage && !!chunk.usage) ||
-                    (!includesUsage && !!chunk.choices?.[0]?.finish_reason)) {
-                    finalChunk = chunk;
-                    break;
+                let finalChunk;
+                for await (const chunk of stream) {
+                    if ((includesUsage && !!chunk.usage) ||
+                        (!includesUsage && !!chunk.choices?.[0]?.finish_reason)) {
+                        finalChunk = chunk;
+                        break;
+                    }
+                    const delta = chunk.choices?.[0]?.delta?.content;
+                    ctx.emitStreamEvent(chunk);
+                    if (typeof delta === 'string' && delta.length) {
+                        ctx.emitTextDelta(delta);
+                    }
                 }
-                const delta = chunk.choices?.[0]?.delta?.content;
-                ctx.emitStreamEvent(chunk);
-                if (typeof delta === 'string' && delta.length) {
-                    ctx.emitTextDelta(delta);
-                }
+                return finalChunk;
             }
-            return finalChunk;
-        })();
-
-        return {final: () => finalPromise};
+        };
     }
 
 }

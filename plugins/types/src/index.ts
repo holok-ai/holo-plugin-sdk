@@ -19,6 +19,7 @@ export {
     PricingSheet,
     PricingSheetModel,
     ProviderResponseCost,
+    CostResult,
     PricingSource,
     CostType,
 } from './entities';

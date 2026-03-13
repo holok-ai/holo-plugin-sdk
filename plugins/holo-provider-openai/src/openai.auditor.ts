@@ -1,7 +1,7 @@
 import {injectable} from 'tsyringe';
 import {pickDefined} from "@holokai/sdk";
 import {BaseAuditor} from "@holokai/sdk/provider";
-import {HoloWorkerRequest} from "@holokai/types/worker";
+import {HoloWorkerRequest, WorkerResponseEnvelope} from "@holokai/types/worker";
 import {ProviderEnvelope, ProviderEvent} from "@holokai/types/provider";
 import {LlmStatus, ProviderRequest} from "@holokai/types/entities";
 import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
@@ -81,8 +81,8 @@ export class OpenAIAuditor extends BaseAuditor {
         }
     }
 
-    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, { type: 'done' | 'error' }>) {
-        const metrics = await super.mapResponseMetrics(providerEvent);
+    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, { type: 'done' | 'error' }>, envelope: WorkerResponseEnvelope) {
+        const metrics = await super.mapResponseMetrics(providerEvent, envelope);
         if (providerEvent.type === 'error') {
             return metrics;
         }
@@ -114,7 +114,7 @@ export class OpenAIAuditor extends BaseAuditor {
         });
     }
 
-    protected async mapResponseStatus(providerEvent: ProviderEvent): Promise<LlmStatus> {
+    protected async mapResponseStatus(providerEvent: ProviderEvent, envelope: WorkerResponseEnvelope): Promise<LlmStatus> {
         if (providerEvent.type === 'done') {
             const payload = providerEvent.message;
             const choice = payload.choices?.[0];
@@ -126,13 +126,22 @@ export class OpenAIAuditor extends BaseAuditor {
                 }
             }
         }
-        return super.mapResponseStatus(providerEvent);
+        return super.mapResponseStatus(providerEvent, envelope);
     }
 
     protected async createProviderEnvelope(payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<ProviderEnvelope> {
         return pickDefined({
             access_model: payload.model
         }) as ProviderEnvelope
+    }
+
+    protected extractExtraTokens(metrics: Record<string, any>, base: Record<string, number>): Record<string, number> {
+        const usage = metrics.usage_raw;
+        if (!usage) return base;
+        return pickDefined({
+            ...base,
+            cache_read: usage.prompt_tokens_details?.cached_tokens ?? usage.cached_tokens,
+        });
     }
 
     private extractUserPromptFromInput(input: ResponseCreateParamsBase['input']): string | undefined {
