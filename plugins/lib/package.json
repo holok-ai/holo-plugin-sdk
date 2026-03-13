@@ -1,6 +1,7 @@
 {
   "name": "@holokai/lib",
   "version": "1.2.1",
+  "private": true,
   "type": "module",
   "description": "Core pipeline functions for Holo — event processing, wire chunking, and HTTP writing",
   "author": "Holokai",

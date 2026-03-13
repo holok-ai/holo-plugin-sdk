@@ -9,7 +9,9 @@
       "@holokai/sdk",
       "@holokai/holo-provider-claude",
       "@holokai/holo-provider-openai",
-      "@holokai/holo-provider-ollama"
+      "@holokai/holo-provider-ollama",
+      "@holokai/lib",
+      "@holokai/test-harness"
     ]
   ],
   "linked": [],

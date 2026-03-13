@@ -1,6 +1,7 @@
 {
   "name": "@holokai/test-harness",
   "version": "1.2.1",
+  "private": true,
   "type": "module",
   "description": "Standalone test runner for Holo provider plugins — wire format, audit, and SDK round-trip testing",
   "author": "Holokai",
