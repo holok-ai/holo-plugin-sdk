@@ -33,7 +33,9 @@ export class NotificationService extends ClassLogger implements INotificationSer
     }
 
     async publish(event: NotificationEvent): Promise<void> {
+        const logger = this.mlog(this.publish);
         const rk = NotificationTopic.publishKey(event.organizationId, event.userId, event.appSlug);
+        logger.info(`Publishing notification: type=${event.type}, severity=${event.severity}, routingKey=${rk}, eventId=${event.id}`);
         await this.queueService.sendToExchange(this.exchange, rk, event, {
             correlationId: event.id,
         });
@@ -106,6 +108,8 @@ export class NotificationService extends ClassLogger implements INotificationSer
         );
 
         this.consumers.set(userKey, {queueName, started: true});
+        const logger = this.mlog(this.ensureUserQueueConsumer);
+        logger.info(`Notification consumer started: userKey=${userKey}, queue=${queueName}`);
     }
 
     private async addBindingRef(userKey: string, binding: string) {
@@ -144,15 +148,34 @@ export class NotificationService extends ClassLogger implements INotificationSer
     private fanoutToUser(userKey: string, ev: NotificationEvent) {
         const logger = this.mlog(this.fanoutToUser);
         const subs = this.subs.get(userKey);
-        if (!subs || subs.size === 0) return;
+        if (!subs || subs.size === 0) {
+            logger.info(`No SSE subscribers for userKey=${userKey}, event type=${ev.type} dropped`);
+            return;
+        }
 
         let notified = 0;
         for (const sub of subs.values()) {
-            if (sub.appSlug && ev.appSlug !== sub.appSlug) continue;
+            if (!this.matchesFilter(sub.filter, ev)) continue;
             sub.q.push(ev);
             notified++;
         }
-        logger.info(`${ev.type} → ${notified} subscriber(s)`);
+        logger.info(`Fanout: type=${ev.type}, userKey=${userKey}, totalSubs=${subs.size}, notified=${notified}`);
+    }
+
+    private matchesFilter(filter: NotificationSubscribeFilter, ev: NotificationEvent): boolean {
+        if (ev.organizationId !== filter.organizationId) return false;
+        if (filter.appSlug && ev.appSlug !== filter.appSlug) return false;
+
+        const matchesUser = filter.userId ? ev.userId === filter.userId : false;
+        if (matchesUser) return true;
+
+        const matchesThread = !!ev.threadId && !!filter.threadIds?.includes(ev.threadId);
+        if (!matchesThread) return false;
+        if (filter.requestIds?.length && (!ev.requestId || !filter.requestIds.includes(ev.requestId))) return false;
+        if (filter.branchIds?.length && (!ev.branchId || !filter.branchIds.includes(ev.branchId))) return false;
+        if (filter.types?.length && !filter.types.includes(ev.type)) return false;
+
+        return true;
     }
 
 }
