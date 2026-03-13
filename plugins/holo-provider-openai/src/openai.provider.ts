@@ -140,8 +140,6 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         }
 
         const streamingReq = req as ChatCompletionCreateParamsStreaming;
-
-        this.client.chat.completions.create(streamingReq);
         const includesUsage = streamingReq.stream_options?.include_usage === true
 
         const finalPromise = (async () => {

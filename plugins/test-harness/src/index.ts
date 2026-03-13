@@ -5,6 +5,8 @@ export {loadPlugin} from './services/plugin-loader.js';
 export {testWire, type TestResult} from './services/wire-tester.js';
 export {testAudit} from './services/audit-tester.js';
 export {testPipeline} from './services/pipeline-tester.js';
+export {testRoundTrip} from './services/sdk-roundtrip-tester.js';
+export {HttpFixtureServer} from './services/http-fixture-server.js';
 export {parseSseBody, type SseFrame} from './services/sse-parser.js';
 export {parseNdjsonBody} from './services/ndjson-parser.js';
 export type {FixtureScenario, SdkAdapter} from './fixtures/types.js';

@@ -1,5 +1,6 @@
 import type {FixtureScenario} from '@holokai/test-harness';
 import {LlmStatus} from '@holokai/types/entities';
+import sdkAdapter from '../sdk-adapter.js';
 
 const chunk1 = {
     id: 'chatcmpl-test-123',
@@ -76,6 +77,17 @@ const fixture: FixtureScenario = {
         output_tokens: 6,
         status: LlmStatus.SUCCESS,
     },
+
+    sdkAdapter,
+    sdkRequest: {
+        model: 'gpt-4o',
+        messages: [{role: 'user', content: 'Hello!'}],
+    },
+    expectedSdkResult: [
+        {id: 'chatcmpl-test-123', model: 'gpt-4o'},
+        {id: 'chatcmpl-test-123', model: 'gpt-4o'},
+        {id: 'chatcmpl-test-123', model: 'gpt-4o'},
+    ],
 
     tags: ['chat', 'streaming'],
 };

@@ -23,6 +23,7 @@ export interface FixtureScenario {
 
     expectedSdkResult?: any;
     sdkRequest?: any;
+    sdkAdapter?: SdkAdapter;
 
     tags?: string[];
 }

@@ -3,6 +3,7 @@ import {loadPlugin} from '../services/plugin-loader.js';
 import {testWire, type TestResult} from '../services/wire-tester.js';
 import {testAudit} from '../services/audit-tester.js';
 import {testPipeline} from '../services/pipeline-tester.js';
+import {testRoundTrip} from '../services/sdk-roundtrip-tester.js';
 import {reportResults} from '../runner/test-reporter.js';
 import type {FixtureScenario} from '../fixtures/types.js';
 
@@ -99,6 +100,9 @@ class SuiteBuilder {
             }
             if (runAll || this._categories.has('pipeline')) {
                 results.push(await testPipeline(pluginImpl, fixture));
+            }
+            if (this._categories.has('roundtrip') && fixture.sdkAdapter && fixture.sdkRequest) {
+                results.push(await testRoundTrip(fixture, fixture.sdkAdapter));
             }
         }
 
