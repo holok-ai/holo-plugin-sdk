@@ -7,11 +7,11 @@ export async function loadFixtures(baseDir: string, filter?: {
     tag?: string | undefined;
 }): Promise<FixtureScenario[]> {
     const pattern = `${baseDir}/**/*.fixture.{ts,js}`;
-    const files = await glob(pattern);
+    const files = await glob(pattern, {});
 
     const fixtures: FixtureScenario[] = [];
 
-    for (const file of files.sort()) {
+    for (const file of [...files].sort()) {
         const mod = await import(pathToFileURL(file).href);
         const scenario: FixtureScenario = mod.default ?? mod.fixture;
         if (!scenario) continue;
