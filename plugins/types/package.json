@@ -1,6 +1,6 @@
 {
   "name": "@holokai/types",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "type": "module",
   "description": "Pure type definitions for the Holo platform",
   "author": "Holokai",

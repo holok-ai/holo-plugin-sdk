@@ -1,6 +1,6 @@
 {
   "name": "@holokai/holo-provider-gemini",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "type": "module",
   "description": "Google Gemini provider plugin for Holo LLM Gateway",
   "author": "Holokai",
