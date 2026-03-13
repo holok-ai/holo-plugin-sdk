@@ -22,7 +22,11 @@ else
     export API_PLUGINS_DIR=${API_PLUGINS_DIR:-node_modules}
 fi
 
-export NODE_OPTIONS="--import ./scripts/register-ts-node.mjs"
+if [ "${BUILD_MODE}" = "dev" ]; then
+    export NODE_OPTIONS="--import /monorepo/app/scripts/register-ts-node.mjs"
+else
+    export NODE_OPTIONS="--import /app/scripts/register-ts-node.mjs"
+fi
 
 # ENABLE_ALL overrides individual toggles when set
 if [ "${ENABLE_ALL}" = "true" ]; then
