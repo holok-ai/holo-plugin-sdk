@@ -33,9 +33,7 @@ export class NotificationService extends ClassLogger implements INotificationSer
     }
 
     async publish(event: NotificationEvent): Promise<void> {
-        const logger = this.mlog(this.publish);
         const rk = NotificationTopic.publishKey(event.organizationId, event.userId, event.appSlug);
-        logger.info(`Publishing notification: type=${event.type}, severity=${event.severity}, routingKey=${rk}, eventId=${event.id}`);
         await this.queueService.sendToExchange(this.exchange, rk, event, {
             correlationId: event.id,
         });
@@ -108,8 +106,6 @@ export class NotificationService extends ClassLogger implements INotificationSer
         );
 
         this.consumers.set(userKey, {queueName, started: true});
-        const logger = this.mlog(this.ensureUserQueueConsumer);
-        logger.info(`Notification consumer started: userKey=${userKey}, queue=${queueName}`);
     }
 
     private async addBindingRef(userKey: string, binding: string) {
@@ -148,10 +144,7 @@ export class NotificationService extends ClassLogger implements INotificationSer
     private fanoutToUser(userKey: string, ev: NotificationEvent) {
         const logger = this.mlog(this.fanoutToUser);
         const subs = this.subs.get(userKey);
-        if (!subs || subs.size === 0) {
-            logger.info(`No SSE subscribers for userKey=${userKey}, event type=${ev.type} dropped`);
-            return;
-        }
+        if (!subs || subs.size === 0) return;
 
         let notified = 0;
         for (const sub of subs.values()) {
