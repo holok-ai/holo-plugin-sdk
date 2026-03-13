@@ -78,6 +78,12 @@
       ],
       "@holokai/types/plugin": [
         "./plugins/types/src/plugin/index.ts"
+      ],
+      "@holokai/lib": [
+        "./plugins/lib/src/index.ts"
+      ],
+      "@holokai/lib/pipeline": [
+        "./plugins/lib/src/pipeline/index.ts"
       ]
     }
   }
