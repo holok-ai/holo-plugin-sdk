@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import type {ChatCompletionCreateParamsStreaming} from 'openai/resources/chat/completions';
+import type {ResponseCreateParamsStreaming} from 'openai/resources/responses/responses';
 import type {SdkAdapter, FixtureScenario} from '@holokai/test-harness';
 
 const adapter: SdkAdapter = {
@@ -15,7 +17,7 @@ const adapter: SdkAdapter = {
                 const stream = await client.chat.completions.create({
                     ...fixture.sdkRequest,
                     stream: true,
-                });
+                } as ChatCompletionCreateParamsStreaming);
                 const chunks = [];
                 for await (const chunk of stream) {
                     chunks.push(chunk);
@@ -33,7 +35,7 @@ const adapter: SdkAdapter = {
                 const stream = await client.responses.create({
                     ...fixture.sdkRequest,
                     stream: true,
-                });
+                } as ResponseCreateParamsStreaming);
                 const events = [];
                 for await (const event of stream) {
                     events.push(event);
