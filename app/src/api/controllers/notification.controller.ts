@@ -13,6 +13,16 @@ import {NotificationServiceToken} from '@holokai/sdk/notification';
 
 import {HoloApiRequest} from "../types";
 
+function normalizeQueryValues(...values: unknown[]): string[] | undefined {
+    const normalized = values
+        .flatMap((value) => Array.isArray(value) ? value : [value])
+        .flatMap((value) => typeof value === "string" ? value.split(",") : [])
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+    return normalized.length ? normalized : undefined;
+}
+
 @injectable()
 export class NotificationController extends BaseController {
     constructor(
@@ -29,11 +39,13 @@ export class NotificationController extends BaseController {
         }
 
         const {organizationId, userId, clientIdentifier, application} = req.auth;
+        const threadIds = normalizeQueryValues(req.query.threadId, req.query.threadIds, req.query.thread_id);
 
         const filter = pickDefined({
             organizationId,
             userId: userId ?? clientIdentifier,
-            appSlug: application?.url_slug
+            appSlug: application?.url_slug,
+            threadIds,
         }) as NotificationSubscribeFilter;
 
         // SSE headers
@@ -78,8 +90,12 @@ export class NotificationController extends BaseController {
         const write = async (ev: NotificationEvent) => {
             if (closed) return;
             if (ev.organizationId !== organizationId) return;
-            if (filter.userId && ev.userId !== filter.userId) return;
             if (filter.appSlug && ev.appSlug !== filter.appSlug) return;
+            const matchesUser = filter.userId ? ev.userId === filter.userId : false;
+            if (!matchesUser) {
+                const matchesThread = !!ev.threadId && !!filter.threadIds?.includes(ev.threadId);
+                if (!matchesThread) return;
+            }
 
             const chunk =
                 `id: ${ev.id}\n` +
@@ -94,9 +110,10 @@ export class NotificationController extends BaseController {
         try {
             sub = await this.notificationService.subscribe(filter);
             for await (const ev of sub.q) {
-                logger.info(`Received ${JSON.stringify(ev)}`);
                 await write(ev);
             }
+
+            await close();
         } catch (e: any) {
             logger.error(`notification stream error: ${e?.message ?? e}`);
 

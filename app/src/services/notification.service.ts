@@ -53,7 +53,7 @@ export class NotificationService extends ClassLogger implements INotificationSer
 
         await this.ensureUserQueueConsumer(userKey);
 
-        const bindingKey = NotificationTopic.userApp(organizationId, userId, appSlug);
+        const bindingKey = NotificationTopic.userApp(organizationId, '*', appSlug);
         await this.addBindingRef(userKey, bindingKey);
 
         let m = this.subs.get(userKey);
@@ -73,8 +73,8 @@ export class NotificationService extends ClassLogger implements INotificationSer
             subs.delete(id);
             sub.q.end();
 
-            const {organizationId, userId, appSlug} = sub.filter;
-            await this.releaseBindingRef(userKey, NotificationTopic.userApp(organizationId, userId, appSlug));
+            const {organizationId, appSlug} = sub.filter;
+            await this.releaseBindingRef(userKey, NotificationTopic.userApp(organizationId, '*', appSlug));
 
             if (subs.size === 0) {
                 this.subs.delete(userKey);
@@ -142,13 +142,33 @@ export class NotificationService extends ClassLogger implements INotificationSer
     }
 
     private fanoutToUser(userKey: string, ev: NotificationEvent) {
+        const logger = this.mlog(this.fanoutToUser);
         const subs = this.subs.get(userKey);
         if (!subs || subs.size === 0) return;
 
+        let notified = 0;
         for (const sub of subs.values()) {
-            if (sub.appSlug && ev.appSlug !== sub.appSlug) continue;
+            if (!this.matchesFilter(sub.filter, ev)) continue;
             sub.q.push(ev);
+            notified++;
         }
+        logger.info(`Fanout: type=${ev.type}, userKey=${userKey}, totalSubs=${subs.size}, notified=${notified}`);
+    }
+
+    private matchesFilter(filter: NotificationSubscribeFilter, ev: NotificationEvent): boolean {
+        if (ev.organizationId !== filter.organizationId) return false;
+        if (filter.appSlug && ev.appSlug !== filter.appSlug) return false;
+
+        const matchesUser = filter.userId ? ev.userId === filter.userId : false;
+        if (matchesUser) return true;
+
+        const matchesThread = !!ev.threadId && !!filter.threadIds?.includes(ev.threadId);
+        if (!matchesThread) return false;
+        if (filter.requestIds?.length && (!ev.requestId || !filter.requestIds.includes(ev.requestId))) return false;
+        if (filter.branchIds?.length && (!ev.branchId || !filter.branchIds.includes(ev.branchId))) return false;
+        if (filter.types?.length && !filter.types.includes(ev.type)) return false;
+
+        return true;
     }
 
 }
