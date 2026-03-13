@@ -90,7 +90,32 @@ export interface PluginPricingSheet {
     name: string;
     version: string;
     effective_from: string;
+    effective_to?: string;
     models: PluginPricingModel[];
+}
+
+export interface PricingSnapshot {
+    name: string;
+    version: string;
+    effective_from: string;
+    models: PluginPricingModel[];
+}
+
+export interface PricingModelId {
+    model_id: string;
+    family: string;
+    kind: string;
+    release_date: string;
+    shutdown_date: string | null;
+    pricing_snapshot: string | null;
+    aliases?: string[];
+}
+
+export interface PricingDataset {
+    name: string;
+    version: string;
+    pricing_snapshots: PricingSnapshot[];
+    model_ids: PricingModelId[];
 }
 
 export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
@@ -108,6 +133,8 @@ export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
     createWireAdapter(params: WireAdapterParams): Promise<IWireAdapter>;
 
     getDefaultPricing?(): PluginPricingSheet;
+
+    getPricingSheets?(): Map<string, PluginPricingSheet>;
 
     calculateCost(tokens: Record<string, number>, pricing: PricingSheetModel): CostResult;
 }

@@ -56,20 +56,22 @@ export class PricingDB extends ClassLogger {
         name: string,
         version: string,
         effectiveFrom: string,
+        effectiveTo?: string,
         notes?: string
     ): Promise<PricingSheet | null> {
         const query = `
-            INSERT INTO pricing_sheets (plan_id, name, version, effective_from, notes)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO pricing_sheets (plan_id, name, version, effective_from, effective_to, notes)
+            VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (plan_id, version)
                 DO UPDATE SET name           = EXCLUDED.name,
                               effective_from = EXCLUDED.effective_from,
+                              effective_to   = EXCLUDED.effective_to,
                               notes          = EXCLUDED.notes,
                               updated_at     = now()
             RETURNING *
         `;
         return this.db.queryOne<PricingSheet>(query, [
-            planId, name, version, effectiveFrom, notes ?? null
+            planId, name, version, effectiveFrom, effectiveTo ?? null, notes ?? null
         ]);
     }
 

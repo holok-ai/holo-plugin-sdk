@@ -1,4 +1,4 @@
-import {BasePlugin} from '@holokai/sdk/plugin';
+import {BasePlugin, normalizePricingDataset} from '@holokai/sdk/plugin';
 import type {IProviderPlugin, PluginContext, PluginPricingSheet} from '@holokai/types/plugin';
 import type {PricingSheetModel} from '@holokai/types/entities';
 import {manifest} from "./manifest.js";
@@ -8,6 +8,7 @@ import {GeminiProvider} from "./gemini.provider.js";
 import {GeminiWireAdapter} from "./gemini.wire.adapter.js";
 import {GeminiTranslator} from "./gemini.translator.js";
 import {ProtocolCapability} from "@holokai/types/entities";
+import {GEMINI_PRICING_DATASET} from "./gemini.pricing.js";
 
 export const GeminiProtocols = {
     GENERATE_CONTENT: 'gemini.generateContent',
@@ -89,70 +90,16 @@ export class GeminiProviderPlugin extends BasePlugin implements IProviderPlugin 
         ];
     }
 
+    getPricingSheets(): Map<string, PluginPricingSheet> {
+        return normalizePricingDataset(GEMINI_PRICING_DATASET);
+    }
+
     getDefaultPricing(): PluginPricingSheet {
-        const M = 1_000_000;
-        return {
-            name: 'Google Gemini Standard 2026-03',
-            version: '2026-03',
-            effective_from: '2026-03-01',
-            models: [
-                // ── Gemini 2.5 Pro ($1.25/$10 per MTok, 200K threshold) ──
-                {
-                    model_name: 'gemini-2.5-pro',
-                    input_cost: 1.25 / M,
-                    output_cost: 10 / M,
-                    token_costs: {thinking: 10 / M},
-                    context_threshold: 200_000,
-                    extended_input_cost: 2.50 / M,
-                    extended_output_cost: 15 / M
-                },
-
-                // ── Gemini 2.5 Flash ($0.15/$0.60 per MTok, 200K threshold) ──
-                {
-                    model_name: 'gemini-2.5-flash',
-                    input_cost: 0.15 / M,
-                    output_cost: 0.60 / M,
-                    token_costs: {thinking: 0.60 / M},
-                    context_threshold: 200_000,
-                    extended_input_cost: 0.30 / M,
-                    extended_output_cost: 1.20 / M
-                },
-
-                // ── Gemini 2.0 Flash ($0.10/$0.40 per MTok) ──
-                {
-                    model_name: 'gemini-2.0-flash',
-                    input_cost: 0.10 / M,
-                    output_cost: 0.40 / M
-                },
-
-                // ── Gemini 2.0 Flash Lite ($0.025/$0.10 per MTok) ──
-                {
-                    model_name: 'gemini-2.0-flash-lite',
-                    input_cost: 0.025 / M,
-                    output_cost: 0.10 / M
-                },
-
-                // ── Gemini 1.5 Pro ($1.25/$5.00 per MTok, 128K threshold) ──
-                {
-                    model_name: 'gemini-1.5-pro',
-                    input_cost: 1.25 / M,
-                    output_cost: 5.00 / M,
-                    context_threshold: 128_000,
-                    extended_input_cost: 2.50 / M,
-                    extended_output_cost: 10.00 / M
-                },
-
-                // ── Gemini 1.5 Flash ($0.075/$0.30 per MTok, 128K threshold) ──
-                {
-                    model_name: 'gemini-1.5-flash',
-                    input_cost: 0.075 / M,
-                    output_cost: 0.30 / M,
-                    context_threshold: 128_000,
-                    extended_input_cost: 0.15 / M,
-                    extended_output_cost: 0.60 / M
-                }
-            ]
-        };
+        const sheets = this.getPricingSheets();
+        const sorted = Array.from(sheets.values()).sort(
+            (a, b) => b.effective_from.localeCompare(a.effective_from)
+        );
+        return sorted[0];
     }
 
     protected calculateExtraCosts(tokens: Record<string, number>, pricing: PricingSheetModel) {

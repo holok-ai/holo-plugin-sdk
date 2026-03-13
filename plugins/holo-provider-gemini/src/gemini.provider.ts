@@ -3,7 +3,7 @@ import type {IAuditor, IProviderTranslator, IResponseFactory, ProviderContext} f
 import {GoogleGenAI} from '@google/genai';
 import {GeminiAuditor} from './gemini.auditor.js';
 import {GeminiTranslator} from './gemini.translator.js';
-import {GeminiResponseFactory, GeminiErrorResponse, GeminiErrorStatus} from './gemini.response.factory.js';
+import {GeminiErrorResponse, GeminiErrorStatus, GeminiResponseFactory} from './gemini.response.factory.js';
 import {GeminiProtocols} from './plugin.js';
 
 export class GeminiProvider extends BaseProvider<GoogleGenAI, any> {
@@ -59,28 +59,30 @@ export class GeminiProvider extends BaseProvider<GoogleGenAI, any> {
                 const isStreaming = ctx.query?.alt === 'sse' || payload.stream === true;
 
                 if (isStreaming) {
-                    const stream = await this.client.models.generateContentStream({
-                        model,
-                        contents,
-                        config
-                    });
-
-                    const finalPromise = (async () => {
-                        let finalResponse: any;
-                        for await (const chunk of stream) {
-                            ctx.emitStreamEvent(chunk);
-                            finalResponse = chunk;
-
-                            const text = chunk.candidates?.[0]?.content?.parts?.[0]?.text;
-                            if (text) {
-                                ctx.emitTextDelta(text);
-                            }
-                        }
-                        return finalResponse;
-                    })();
-
                     return {
-                        final: () => finalPromise
+                        final: async () => {
+                            const stream = await this.client.models.generateContentStream({
+                                model,
+                                contents,
+                                config
+                            });
+
+                            let finalResponse: any;
+                            for await (const chunk of stream) {
+                                if (chunk.candidates?.[0]?.finishReason) {
+                                    finalResponse = chunk;
+                                    break;
+                                }
+
+                                ctx.emitStreamEvent(chunk);
+
+                                const text = chunk.candidates?.[0]?.content?.parts?.[0]?.text;
+                                if (text) {
+                                    ctx.emitTextDelta(text);
+                                }
+                            }
+                            return finalResponse;
+                        }
                     };
                 }
 
@@ -110,13 +112,20 @@ export class GeminiProvider extends BaseProvider<GoogleGenAI, any> {
 
     private mapHttpStatusToGeminiStatus(status: number): GeminiErrorStatus {
         switch (status) {
-            case 400: return 'INVALID_ARGUMENT';
-            case 401: return 'UNAUTHENTICATED';
-            case 403: return 'PERMISSION_DENIED';
-            case 404: return 'NOT_FOUND';
-            case 429: return 'RESOURCE_EXHAUSTED';
-            case 503: return 'UNAVAILABLE';
-            default: return 'INTERNAL';
+            case 400:
+                return 'INVALID_ARGUMENT';
+            case 401:
+                return 'UNAUTHENTICATED';
+            case 403:
+                return 'PERMISSION_DENIED';
+            case 404:
+                return 'NOT_FOUND';
+            case 429:
+                return 'RESOURCE_EXHAUSTED';
+            case 503:
+                return 'UNAVAILABLE';
+            default:
+                return 'INTERNAL';
         }
     }
 }
