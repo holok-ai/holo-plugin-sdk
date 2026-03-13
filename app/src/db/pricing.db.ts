@@ -105,14 +105,15 @@ export class PricingDB extends ClassLogger {
             context_threshold?: number;
             extended_input_cost?: number;
             extended_output_cost?: number;
+            token_costs?: Record<string, number>;
         }
     ): Promise<PricingSheetModel | null> {
         const query = `
             INSERT INTO pricing_sheet_models
                 (sheet_id, model_name, input_cost, output_cost,
                  cache_read_cost, cache_write_cost, batch_input_cost, batch_output_cost,
-                 context_threshold, extended_input_cost, extended_output_cost)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                 context_threshold, extended_input_cost, extended_output_cost, token_costs)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             ON CONFLICT (sheet_id, model_name)
                 DO UPDATE SET input_cost          = EXCLUDED.input_cost,
                               output_cost         = EXCLUDED.output_cost,
@@ -123,6 +124,7 @@ export class PricingDB extends ClassLogger {
                               context_threshold   = EXCLUDED.context_threshold,
                               extended_input_cost = EXCLUDED.extended_input_cost,
                               extended_output_cost = EXCLUDED.extended_output_cost,
+                              token_costs         = EXCLUDED.token_costs,
                               updated_at          = now()
             RETURNING *
         `;
@@ -137,7 +139,8 @@ export class PricingDB extends ClassLogger {
             costs.batch_output_cost ?? 0,
             costs.context_threshold ?? null,
             costs.extended_input_cost ?? null,
-            costs.extended_output_cost ?? null
+            costs.extended_output_cost ?? null,
+            costs.token_costs ? JSON.stringify(costs.token_costs) : '{}',
         ]);
     }
 

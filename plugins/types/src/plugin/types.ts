@@ -3,6 +3,7 @@ import type {IProvider, IProviderTranslator, IWireAdapter, ProviderCapabilities,
 import type {RouteDefinition, RouteHandler} from "../routing";
 import type {INotificationService} from "../notification";
 import {Plugin} from "../entities";
+import type {CostResult, PricingSheetModel} from "../entities";
 
 export const PluginType = {
     PROVIDER: 'PROVIDER'
@@ -82,6 +83,7 @@ export interface PluginPricingModel {
     context_threshold?: number;
     extended_input_cost?: number;
     extended_output_cost?: number;
+    token_costs?: Record<string, number>;
 }
 
 export interface PluginPricingSheet {
@@ -106,4 +108,6 @@ export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
     createWireAdapter(params: WireAdapterParams): Promise<IWireAdapter>;
 
     getDefaultPricing?(): PluginPricingSheet;
+
+    calculateCost(tokens: Record<string, number>, pricing: PricingSheetModel): CostResult;
 }

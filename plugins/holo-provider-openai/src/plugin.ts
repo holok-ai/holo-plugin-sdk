@@ -1,5 +1,6 @@
 import {BasePlugin} from '@holokai/sdk/plugin';
 import type {IProviderPlugin, PluginContext, PluginPricingSheet} from '@holokai/types/plugin';
+import type {PricingSheetModel} from '@holokai/types/entities';
 import {manifest} from "./manifest.js";
 import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/types/provider";
 import {OpenAIProvider} from "./openai.provider";
@@ -398,6 +399,17 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
                     'omni-moderation-latest', 'omni-moderation-2024-09-26',
                 ].map(m => ({model_name: m, input_cost: 0, output_cost: 0})),
             ]
+        };
+    }
+
+    protected calculateExtraCosts(tokens: Record<string, number>, pricing: PricingSheetModel) {
+        const cacheReadRate = pricing.token_costs?.cache_read ?? Number(pricing.cache_read_cost ?? 0);
+        const cacheReadCost = (tokens.cache_read ?? 0) * cacheReadRate;
+        return {
+            total: cacheReadCost,
+            detail: {
+                cache_read: {tokens: tokens.cache_read ?? 0, cost: cacheReadCost},
+            }
         };
     }
 

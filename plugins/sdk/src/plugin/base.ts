@@ -1,6 +1,7 @@
 import {PluginManifest, IPlugin, PluginContext, PluginState, PluginType} from "@holokai/types/plugin";
 import {PluginError, PluginErrorCode} from "./errors";
 import {ClassLogger} from "../core";
+import type {CostResult, PricingSheetModel} from "@holokai/types/entities";
 
 
 export abstract class BasePlugin extends ClassLogger implements IPlugin {
@@ -108,6 +109,41 @@ export abstract class BasePlugin extends ClassLogger implements IPlugin {
             );
         }
     }
+
+    calculateCost(tokens: Record<string, number>, pricing: PricingSheetModel): CostResult {
+        let inputRate = Number(pricing.input_cost);
+        let outputRate = Number(pricing.output_cost);
+
+        if (pricing.context_threshold && pricing.extended_input_cost && pricing.extended_output_cost) {
+            const totalInput = Object.entries(tokens)
+                .filter(([k]) => k !== 'output')
+                .reduce((sum, [, v]) => sum + v, 0);
+            if (totalInput > pricing.context_threshold) {
+                inputRate = Number(pricing.extended_input_cost);
+                outputRate = Number(pricing.extended_output_cost);
+            }
+        }
+
+        const inputCost = (tokens.input ?? 0) * inputRate;
+        const outputCost = (tokens.output ?? 0) * outputRate;
+        const extraCosts = this.calculateExtraCosts(tokens, pricing);
+
+        return {
+            input_cost: inputCost,
+            output_cost: outputCost,
+            total_cost: inputCost + outputCost + extraCosts.total,
+            detail: {
+                input: {tokens: tokens.input ?? 0, cost: inputCost},
+                output: {tokens: tokens.output ?? 0, cost: outputCost},
+                ...extraCosts.detail,
+            }
+        };
+    }
+
+    protected abstract calculateExtraCosts(
+        tokens: Record<string, number>,
+        pricing: PricingSheetModel
+    ): { total: number; detail: Record<string, { tokens: number; cost: number }> };
 
     protected abstract onInitialize(context: PluginContext): Promise<void>;
 

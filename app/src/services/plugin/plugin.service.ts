@@ -204,6 +204,7 @@ export class PluginService extends BaseEntityService<Plugin> implements IPluginR
                 context_threshold: model.context_threshold,
                 extended_input_cost: model.extended_input_cost,
                 extended_output_cost: model.extended_output_cost,
+                token_costs: model.token_costs,
             }) as {
                 input_cost: number;
                 output_cost: number;
@@ -214,6 +215,7 @@ export class PluginService extends BaseEntityService<Plugin> implements IPluginR
                 context_threshold?: number;
                 extended_input_cost?: number;
                 extended_output_cost?: number;
+                token_costs?: Record<string, number>;
             });
         }
 

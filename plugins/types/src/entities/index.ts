@@ -20,6 +20,7 @@ export {
     type PricingSheet,
     type PricingSheetModel,
     type ProviderResponseCost,
+    type CostResult,
     PricingSource,
     CostType
 } from "./pricing";

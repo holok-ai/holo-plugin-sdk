@@ -17,5 +17,6 @@ export interface RouteDefinition {
     paths: string[];
     method: 'GET' | 'POST';
     handler: RouteHandler;
-    protocol: ProtocolDef
+    protocol: ProtocolDef;
+    streaming?: boolean;
 }

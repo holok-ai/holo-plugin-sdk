@@ -1,5 +1,6 @@
 import {BasePlugin} from '@holokai/sdk/plugin';
 import type {IProviderPlugin, PluginContext, PluginPricingSheet} from '@holokai/types/plugin';
+import type {PricingSheetModel} from '@holokai/types/entities';
 import {manifest} from "./manifest.js";
 import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "@holokai/types/provider";
 import {RouteDefinition, RouteHandler} from "@holokai/types/routing";
@@ -185,6 +186,20 @@ export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin 
                     batch_output_cost: 0.625 / M
                 },
             ]
+        };
+    }
+
+    protected calculateExtraCosts(tokens: Record<string, number>, pricing: PricingSheetModel) {
+        const cacheReadRate = pricing.token_costs?.cache_read ?? Number(pricing.cache_read_cost ?? 0);
+        const cacheWriteRate = pricing.token_costs?.cache_write ?? Number(pricing.cache_write_cost ?? 0);
+        const cacheReadCost = (tokens.cache_read ?? 0) * cacheReadRate;
+        const cacheWriteCost = (tokens.cache_write ?? 0) * cacheWriteRate;
+        return {
+            total: cacheReadCost + cacheWriteCost,
+            detail: {
+                cache_read: {tokens: tokens.cache_read ?? 0, cost: cacheReadCost},
+                cache_write: {tokens: tokens.cache_write ?? 0, cost: cacheWriteCost},
+            }
         };
     }
 
