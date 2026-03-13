@@ -78,7 +78,6 @@ export class NotificationController extends BaseController {
         const write = async (ev: NotificationEvent) => {
             if (closed) return;
             if (ev.organizationId !== organizationId) return;
-            if (filter.userId && ev.userId !== filter.userId) return;
             if (filter.appSlug && ev.appSlug !== filter.appSlug) return;
 
             const chunk =
@@ -94,7 +93,6 @@ export class NotificationController extends BaseController {
         try {
             sub = await this.notificationService.subscribe(filter);
             for await (const ev of sub.q) {
-                logger.info(`Received ${JSON.stringify(ev)}`);
                 await write(ev);
             }
         } catch (e: any) {
