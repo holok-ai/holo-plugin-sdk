@@ -63,6 +63,15 @@ describe('HoloClient', () => {
             expect(init.headers['Content-Type']).toBeUndefined();
         });
 
+        it('sends User-Agent header', async () => {
+            const fetchFn = mockFetchOk({success: true, data: []});
+            const client = new HoloClient({baseUrl: 'http://localhost', token: 'tok', fetch: fetchFn});
+            await client.request('GET', '/models');
+
+            const [, init] = fetchFn.mock.calls[0]!;
+            expect(init.headers['User-Agent']).toMatch(/^holo-sdk-js/);
+        });
+
         it('sends POST with JSON body and Content-Type', async () => {
             const fetchFn = mockFetchOk({model: 'gpt-4o', output: [], created: 1, finish_reason: null, usage: {}});
             const client = new HoloClient({baseUrl: 'http://localhost', token: 'tok', fetch: fetchFn});
@@ -95,7 +104,7 @@ describe('HoloClient', () => {
     });
 
     describe('streamRequest()', () => {
-        it('returns body stream on success with Accept header', async () => {
+        it('returns body stream on success with Accept and User-Agent headers', async () => {
             const stream = new ReadableStream({start(c) { c.close(); }});
             const fetchFn = vi.fn().mockResolvedValue(new Response(stream, {status: 200}));
             const client = new HoloClient({baseUrl: 'http://localhost', token: 'tok', fetch: fetchFn});
@@ -105,6 +114,7 @@ describe('HoloClient', () => {
 
             const [, init] = fetchFn.mock.calls[0]!;
             expect(init.headers['Accept']).toBe('text/event-stream');
+            expect(init.headers['User-Agent']).toMatch(/^holo-sdk-js/);
         });
 
         it('throws HoloApiError on error response', async () => {

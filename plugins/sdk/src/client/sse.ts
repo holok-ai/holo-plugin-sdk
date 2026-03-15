@@ -67,12 +67,8 @@ function extractEvents(buffer: string): ParsedEvents {
 
 function parseSSEBlock(block: string): HoloStreamEvent | null {
     const dataLines: string[] = [];
-    let eventType = '';
-
     for (const line of block.split('\n')) {
-        if (line.startsWith('event:')) {
-            eventType = line.slice(6).trim();
-        } else if (line.startsWith('data: ')) {
+        if (line.startsWith('data: ')) {
             dataLines.push(line.slice(6));
         } else if (line.startsWith('data:')) {
             dataLines.push(line.slice(5));

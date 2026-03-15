@@ -109,6 +109,22 @@ describe('HoloStreamAccumulator', () => {
         const tcBlock = content[0] as HoloContentToolCall;
         expect(tcBlock.raw_arguments).toBe('{invalid json');
         expect(tcBlock.arguments).toEqual({});
+
+        expect(msg.invalid_tool_calls).toHaveLength(1);
+        expect(msg.invalid_tool_calls![0]!.error).toBe('Failed to parse tool call arguments as JSON');
+        expect(msg.invalid_tool_calls![0]!.raw_arguments).toBe('{invalid json');
+        expect(msg.invalid_tool_calls![0]!.id).toBe('tc1');
+        expect(msg.invalid_tool_calls![0]!.name).toBe('fn');
+    });
+
+    it('does not set invalid_tool_calls when all tool calls parse successfully', () => {
+        const acc = new HoloStreamAccumulator();
+        acc.push({type: 'response.tool_call.delta', index: 0, tool_call_delta: {id: 'tc1', name: 'fn'}});
+        acc.push({type: 'response.tool_call.delta', index: 0, tool_call_delta: {arguments_delta: '{"a":1}'}});
+
+        const res = acc.toResponse();
+        const msg = res.output[0]!;
+        expect(msg.invalid_tool_calls).toBeUndefined();
     });
 
     it('handles response.failed', () => {

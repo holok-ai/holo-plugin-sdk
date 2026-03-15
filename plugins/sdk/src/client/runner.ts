@@ -1,6 +1,5 @@
 import type {
     HoloContent,
-    HoloContentToolCall,
     HoloMessage,
     HoloResponse,
     HoloTool,
@@ -8,6 +7,7 @@ import type {
 } from '@holokai/types/holo';
 import type {HoloStream} from './stream';
 import type {HoloChatParams} from './types';
+import {HoloOutput} from './output';
 
 /** Extracted tool call information passed to the user's tool handler. */
 export interface HoloToolCallInfo {
@@ -151,7 +151,12 @@ export class HoloToolRunner {
                 return response;
             }
 
-            const toolCalls = this.extractToolCalls(response);
+            const rawCalls = HoloOutput.toolCalls(response);
+            const toolCalls = rawCalls.map(tc => ({
+                id: tc.id ?? '',
+                name: tc.function.name,
+                arguments: tc.function.arguments,
+            }));
             if (toolCalls.length === 0) {
                 return response;
             }
@@ -183,37 +188,6 @@ export class HoloToolRunner {
 
         if (lastResponse) return lastResponse;
         throw new Error('Runner did not produce a response');
-    }
-
-    private extractToolCalls(response: HoloResponse): HoloToolCallInfo[] {
-        const calls: HoloToolCallInfo[] = [];
-
-        if (response.output) {
-            for (const msg of response.output) {
-                if (msg.tool_calls && msg.tool_calls.length > 0) {
-                    for (const tc of msg.tool_calls) {
-                        calls.push({
-                            id: tc.id ?? '',
-                            name: tc.function.name,
-                            arguments: tc.function.arguments,
-                        });
-                    }
-                } else if (Array.isArray(msg.content)) {
-                    for (const block of msg.content) {
-                        if ((block as HoloContentToolCall).type === 'tool_call') {
-                            const tc = block as HoloContentToolCall;
-                            calls.push({
-                                id: tc.id ?? '',
-                                name: tc.name,
-                                arguments: tc.arguments,
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        return calls;
     }
 
     private emit<K extends RunnerEventType>(event: K, data: RunnerEventMap[K]): void {

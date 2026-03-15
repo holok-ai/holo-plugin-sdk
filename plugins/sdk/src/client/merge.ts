@@ -4,6 +4,7 @@ import type {
     HoloContentText,
     HoloContentToolCall,
     HoloFinishReason,
+    HoloInvalidToolCall,
     HoloMessage,
     HoloResponse,
     HoloStreamEvent,
@@ -24,6 +25,7 @@ export class HoloStreamAccumulator {
     private textParts: string[] = [];
     private reasoningParts: string[] = [];
     private toolCalls: Map<number, { id?: string; name: string; arguments: string }> = new Map();
+    private invalidToolCalls: HoloInvalidToolCall[] = [];
     private usage?: HoloUsage;
     private finishReason: HoloFinishReason = null;
 
@@ -119,6 +121,9 @@ export class HoloStreamAccumulator {
 
                 if (hasToolCalls) {
                     message.tool_calls = this.buildToolCallProjections();
+                    if (this.invalidToolCalls.length > 0) {
+                        message.invalid_tool_calls = this.invalidToolCalls;
+                    }
                 }
 
                 output.push(message);
@@ -155,6 +160,13 @@ export class HoloStreamAccumulator {
             if (tc.id) block.id = tc.id;
             if (parsed === null) {
                 block.raw_arguments = tc.arguments;
+                const invalid: HoloInvalidToolCall = {
+                    error: 'Failed to parse tool call arguments as JSON',
+                    raw_arguments: tc.arguments,
+                };
+                if (tc.id) invalid.id = tc.id;
+                if (tc.name) invalid.name = tc.name;
+                this.invalidToolCalls.push(invalid);
             }
             blocks.push(block);
         }

@@ -1,11 +1,11 @@
 import type {HoloContent, HoloMessage, HoloRequest, HoloResponse} from '@holokai/types/holo';
 import type {HoloApplicationInfo, HoloChatParams, HoloClientOptions, HoloModelInfo} from './types';
-import {HoloApiError, HoloTimeoutError} from './errors';
 import {HoloStream} from './stream';
 import {HoloRequestBuilder} from './builder';
 import type {HoloToolRunnerOptions} from './runner';
 import {HoloToolRunner} from './runner';
 import {parseSSEStream} from './sse';
+import {FetchTransport} from './transport';
 
 /**
  * Main entry point for the Holo SDK. Provides namespaced access to chat, models, and applications APIs.
@@ -45,20 +45,19 @@ export class HoloClient {
     readonly chat: ChatNamespace;
     readonly models: ModelsNamespace;
     readonly applications: ApplicationsNamespace;
-    private readonly baseUrl: string;
-    private readonly token: string;
+    private readonly transport: FetchTransport;
     private readonly defaultModel?: string;
     private readonly defaultApplication?: string;
-    private readonly _fetch: typeof globalThis.fetch;
-    private readonly timeout?: number;
 
     constructor(options: HoloClientOptions) {
-        this.baseUrl = options.baseUrl.replace(/\/+$/, '');
-        this.token = options.token;
+        this.transport = new FetchTransport({
+            baseUrl: options.baseUrl,
+            token: options.token,
+            fetch: options.fetch,
+            timeout: options.timeout,
+        });
         if (options.defaultModel) this.defaultModel = options.defaultModel;
         if (options.defaultApplication) this.defaultApplication = options.defaultApplication;
-        this._fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
-        if (options.timeout !== undefined) this.timeout = options.timeout;
 
         this.chat = new ChatNamespace(this);
         this.models = new ModelsNamespace(this);
@@ -66,62 +65,14 @@ export class HoloClient {
     }
 
     async request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-        const url = `${this.baseUrl}/holo/api/v1${path}`;
-        const headers: Record<string, string> = {
-            'Authorization': `Bearer ${this.token}`,
-        };
-        if (body) headers['Content-Type'] = 'application/json';
-
-        const init: RequestInit = {method, headers};
-        if (body) init.body = JSON.stringify(body);
-
-        const effectiveSignal = this.applyTimeout(signal);
-        if (effectiveSignal) init.signal = effectiveSignal;
-
-        try {
-            const response = await this._fetch(url, init);
-
-            if (!response.ok) {
-                await this.handleErrorResponse(response);
-            }
-
-            return response.json() as Promise<T>;
-        } catch (e) {
-            throw this.classifyAbortError(e, signal);
-        }
+        return this.transport.request<T>({method, path, body, signal});
     }
 
     async streamRequest(path: string, body: unknown, signal?: AbortSignal): Promise<{
         body: ReadableStream<Uint8Array>;
         response: Response;
     }> {
-        const url = `${this.baseUrl}/holo/api/v1${path}`;
-        const headers: Record<string, string> = {
-            'Authorization': `Bearer ${this.token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'text/event-stream',
-        };
-
-        const init: RequestInit = {method: 'POST', headers, body: JSON.stringify(body)};
-
-        const effectiveSignal = this.applyTimeout(signal);
-        if (effectiveSignal) init.signal = effectiveSignal;
-
-        try {
-            const response = await this._fetch(url, init);
-
-            if (!response.ok) {
-                await this.handleErrorResponse(response);
-            }
-
-            if (!response.body) {
-                throw new HoloApiError('No response body for stream', 500);
-            }
-
-            return {body: response.body, response};
-        } catch (e) {
-            throw this.classifyAbortError(e, signal);
-        }
+        return this.transport.streamRequest({path, body, signal});
     }
 
     getDefaults(): { model?: string; application?: string } {
@@ -129,49 +80,6 @@ export class HoloClient {
         if (this.defaultModel) result.model = this.defaultModel;
         if (this.defaultApplication) result.application = this.defaultApplication;
         return result;
-    }
-
-    private async handleErrorResponse(response: Response): Promise<never> {
-        let errorBody: unknown;
-        let code: string | undefined;
-        try {
-            errorBody = await response.json();
-            if (typeof errorBody === 'object' && errorBody !== null && 'code' in errorBody) {
-                code = String((errorBody as Record<string, unknown>).code);
-            }
-        } catch {
-            errorBody = await response.text();
-        }
-        throw new HoloApiError(
-            `HTTP ${response.status}: ${response.statusText}`,
-            response.status,
-            code,
-            errorBody,
-        );
-    }
-
-    private applyTimeout(externalSignal?: AbortSignal): AbortSignal | undefined {
-        if (!this.timeout && !externalSignal) return undefined;
-        if (!this.timeout) return externalSignal;
-
-        const timeoutSignal = AbortSignal.timeout(this.timeout);
-        if (!externalSignal) return timeoutSignal;
-
-        return AbortSignal.any([externalSignal, timeoutSignal]);
-    }
-
-    private classifyAbortError(e: unknown, externalSignal?: AbortSignal): unknown {
-        if (e instanceof HoloApiError || e instanceof HoloTimeoutError) return e;
-
-        if (e instanceof DOMException && e.name === 'AbortError') {
-            if (externalSignal?.aborted) return e;
-            if (this.timeout) return new HoloTimeoutError(this.timeout);
-        }
-        if (e instanceof DOMException && e.name === 'TimeoutError') {
-            if (this.timeout) return new HoloTimeoutError(this.timeout);
-        }
-
-        return e;
     }
 }
 
