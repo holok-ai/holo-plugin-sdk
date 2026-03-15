@@ -3,6 +3,7 @@ import type {
     HoloContentToolResult,
     HoloMessage,
     HoloRequest,
+    HoloRequestMetadata,
     HoloResponse,
     HoloResponseFormat,
     HoloTool,
@@ -44,6 +45,8 @@ export class HoloRequestBuilder {
     private _tools?: HoloTool[];
     private _toolChoice?: HoloToolChoice;
     private _responseFormat?: HoloResponseFormat;
+    private _metadata?: HoloRequestMetadata | null;
+    private _serviceTier?: 'auto' | 'default' | 'standard_only';
     private _provider?: string;
     private _threadId?: string;
     private _branch?: string;
@@ -155,12 +158,18 @@ export class HoloRequestBuilder {
     }
 
     /** Shorthand to set `response_format` to `json_schema` with strict validation. */
-    jsonSchema(_name: string, schema: Record<string, unknown>): this {
+    jsonSchema(schema: Record<string, unknown>): this {
         this._responseFormat = {type: 'json_schema', schema, strict: true};
         return this;
     }
 
-    metadata(_m: Record<string, unknown>): this {
+    metadata(m: HoloRequestMetadata | null): this {
+        this._metadata = m;
+        return this;
+    }
+
+    serviceTier(tier: 'auto' | 'default' | 'standard_only'): this {
+        this._serviceTier = tier;
         return this;
     }
 
@@ -181,8 +190,13 @@ export class HoloRequestBuilder {
 
     /** Assemble the current builder state into a {@link HoloRequest} without sending it. */
     build(): HoloRequest {
+        const model = this._model;
+        if (!model) {
+            throw new Error('No model specified. Set a model via .model() or provide a defaultModel in HoloClientOptions.');
+        }
+
         const request: HoloRequest = {
-            model: this._model ?? '',
+            model,
             messages: this._messages,
         };
 
@@ -199,6 +213,8 @@ export class HoloRequestBuilder {
         if (this._tools) request.tools = this._tools;
         if (this._toolChoice) request.tool_choice = this._toolChoice;
         if (this._responseFormat) request.response_format = this._responseFormat;
+        if (this._metadata !== undefined) request.metadata = this._metadata;
+        if (this._serviceTier) request.service_tier = this._serviceTier;
         if (this._threadId) request.thread_id = this._threadId;
         if (this._branch) request.branch = this._branch;
 

@@ -60,6 +60,11 @@ function toolCallResponse(): HoloResponse {
                 name: 'get_weather',
                 arguments: {city: 'SF'},
             }],
+            tool_calls: [{
+                id: 'tc1',
+                type: 'function',
+                function: {name: 'get_weather', arguments: {city: 'SF'}},
+            }],
         }],
         created: Date.now(),
         finish_reason: 'tool_calls',
@@ -106,6 +111,36 @@ describe('HoloToolRunner', () => {
         expect(toolHandler).toHaveBeenCalledOnce();
     });
 
+    it('prefers msg.tool_calls over content blocks (no double-counting)', async () => {
+        const response: HoloResponse = {
+            model: 'gpt-4o',
+            output: [{
+                role: 'assistant',
+                content: [{type: 'tool_call', id: 'tc1', name: 'fn', arguments: {a: 1}}],
+                tool_calls: [{id: 'tc1', type: 'function', function: {name: 'fn', arguments: {a: 1}}}],
+            }],
+            created: Date.now(),
+            finish_reason: 'tool_calls',
+            usage: {},
+        };
+
+        const streamFn = vi.fn()
+            .mockResolvedValueOnce(makeStreamFromResponse(response))
+            .mockResolvedValueOnce(makeStreamFromResponse(stopResponse('done')));
+
+        const toolHandler = vi.fn().mockResolvedValue({tool_call_id: 'tc1', content: 'ok'});
+
+        const options: HoloToolRunnerOptions = {
+            messages: [{role: 'user', content: 'hi'}],
+            tools: [{name: 'fn', parameters: {}}],
+            toolHandler,
+        };
+
+        const runner = new HoloToolRunner(streamFn, options);
+        await runner.finalResponse();
+        expect(toolHandler).toHaveBeenCalledOnce();
+    });
+
     it('respects maxIterations cap', async () => {
         const streamFn = vi.fn().mockImplementation(() =>
             Promise.resolve(makeStreamFromResponse(toolCallResponse()))
@@ -141,6 +176,45 @@ describe('HoloToolRunner', () => {
         runner.abort();
 
         await expect(runner.finalResponse()).rejects.toThrow('Runner aborted');
+    });
+
+    it('abort during active stream calls stream.abort()', async () => {
+        let capturedStream: HoloStream | undefined;
+        let resolveStream: (() => void) | undefined;
+
+        const slowEvents = {
+            async next(): Promise<IteratorResult<HoloStreamEvent>> {
+                // Block until abort triggers
+                await new Promise<void>((r) => { resolveStream = r; });
+                return {done: true as const, value: undefined};
+            },
+            async return() { return {done: true as const, value: undefined}; },
+            async throw(e: unknown) { throw e; },
+            [Symbol.asyncIterator]() { return this; },
+        } as AsyncGenerator<HoloStreamEvent>;
+
+        const streamFn = vi.fn().mockImplementation(() => {
+            const stream = new HoloStream(slowEvents, new AbortController());
+            capturedStream = stream;
+            vi.spyOn(stream, 'abort');
+            return Promise.resolve(stream);
+        });
+
+        const options: HoloToolRunnerOptions = {
+            messages: [{role: 'user', content: 'hi'}],
+            tools: [],
+            toolHandler: vi.fn(),
+        };
+
+        const runner = new HoloToolRunner(streamFn, options);
+        const promise = runner.finalResponse();
+        // Wait for stream to be created
+        await new Promise((r) => setTimeout(r, 10));
+        runner.abort();
+        resolveStream?.();
+        try { await promise; } catch { /* expected */ }
+        expect(capturedStream).toBeDefined();
+        expect(capturedStream!.abort).toHaveBeenCalled();
     });
 
     it('emits iteration events', async () => {

@@ -1,6 +1,6 @@
 import type {HoloContent, HoloMessage, HoloRequest, HoloResponse} from '@holokai/types/holo';
 import type {HoloApplicationInfo, HoloChatParams, HoloClientOptions, HoloModelInfo} from './types';
-import {HoloApiError} from './errors';
+import {HoloApiError, HoloTimeoutError} from './errors';
 import {HoloStream} from './stream';
 import {HoloRequestBuilder} from './builder';
 import type {HoloToolRunnerOptions} from './runner';
@@ -50,6 +50,7 @@ export class HoloClient {
     private readonly defaultModel?: string;
     private readonly defaultApplication?: string;
     private readonly _fetch: typeof globalThis.fetch;
+    private readonly timeout?: number;
 
     constructor(options: HoloClientOptions) {
         this.baseUrl = options.baseUrl.replace(/\/+$/, '');
@@ -57,6 +58,7 @@ export class HoloClient {
         if (options.defaultModel) this.defaultModel = options.defaultModel;
         if (options.defaultApplication) this.defaultApplication = options.defaultApplication;
         this._fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
+        if (options.timeout !== undefined) this.timeout = options.timeout;
 
         this.chat = new ChatNamespace(this);
         this.models = new ModelsNamespace(this);
@@ -67,31 +69,26 @@ export class HoloClient {
         const url = `${this.baseUrl}/holo/api/v1${path}`;
         const headers: Record<string, string> = {
             'Authorization': `Bearer ${this.token}`,
-            'Content-Type': 'application/json',
         };
+        if (body) headers['Content-Type'] = 'application/json';
 
         const init: RequestInit = {method, headers};
         if (body) init.body = JSON.stringify(body);
-        if (signal) init.signal = signal;
 
-        const response = await this._fetch(url, init);
+        const effectiveSignal = this.applyTimeout(signal);
+        if (effectiveSignal) init.signal = effectiveSignal;
 
-        if (!response.ok) {
-            let errorBody: unknown;
-            try {
-                errorBody = await response.json();
-            } catch {
-                errorBody = await response.text();
+        try {
+            const response = await this._fetch(url, init);
+
+            if (!response.ok) {
+                await this.handleErrorResponse(response);
             }
-            throw new HoloApiError(
-                `HTTP ${response.status}: ${response.statusText}`,
-                response.status,
-                undefined,
-                errorBody,
-            );
-        }
 
-        return response.json() as Promise<T>;
+            return response.json() as Promise<T>;
+        } catch (e) {
+            throw this.classifyAbortError(e, signal);
+        }
     }
 
     async streamRequest(path: string, body: unknown, signal?: AbortSignal): Promise<{
@@ -102,33 +99,29 @@ export class HoloClient {
         const headers: Record<string, string> = {
             'Authorization': `Bearer ${this.token}`,
             'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
         };
 
         const init: RequestInit = {method: 'POST', headers, body: JSON.stringify(body)};
-        if (signal) init.signal = signal;
 
-        const response = await this._fetch(url, init);
+        const effectiveSignal = this.applyTimeout(signal);
+        if (effectiveSignal) init.signal = effectiveSignal;
 
-        if (!response.ok) {
-            let errorBody: unknown;
-            try {
-                errorBody = await response.json();
-            } catch {
-                errorBody = await response.text();
+        try {
+            const response = await this._fetch(url, init);
+
+            if (!response.ok) {
+                await this.handleErrorResponse(response);
             }
-            throw new HoloApiError(
-                `HTTP ${response.status}: ${response.statusText}`,
-                response.status,
-                undefined,
-                errorBody,
-            );
-        }
 
-        if (!response.body) {
-            throw new HoloApiError('No response body for stream', 500);
-        }
+            if (!response.body) {
+                throw new HoloApiError('No response body for stream', 500);
+            }
 
-        return {body: response.body, response};
+            return {body: response.body, response};
+        } catch (e) {
+            throw this.classifyAbortError(e, signal);
+        }
     }
 
     getDefaults(): { model?: string; application?: string } {
@@ -136,6 +129,49 @@ export class HoloClient {
         if (this.defaultModel) result.model = this.defaultModel;
         if (this.defaultApplication) result.application = this.defaultApplication;
         return result;
+    }
+
+    private async handleErrorResponse(response: Response): Promise<never> {
+        let errorBody: unknown;
+        let code: string | undefined;
+        try {
+            errorBody = await response.json();
+            if (typeof errorBody === 'object' && errorBody !== null && 'code' in errorBody) {
+                code = String((errorBody as Record<string, unknown>).code);
+            }
+        } catch {
+            errorBody = await response.text();
+        }
+        throw new HoloApiError(
+            `HTTP ${response.status}: ${response.statusText}`,
+            response.status,
+            code,
+            errorBody,
+        );
+    }
+
+    private applyTimeout(externalSignal?: AbortSignal): AbortSignal | undefined {
+        if (!this.timeout && !externalSignal) return undefined;
+        if (!this.timeout) return externalSignal;
+
+        const timeoutSignal = AbortSignal.timeout(this.timeout);
+        if (!externalSignal) return timeoutSignal;
+
+        return AbortSignal.any([externalSignal, timeoutSignal]);
+    }
+
+    private classifyAbortError(e: unknown, externalSignal?: AbortSignal): unknown {
+        if (e instanceof HoloApiError || e instanceof HoloTimeoutError) return e;
+
+        if (e instanceof DOMException && e.name === 'AbortError') {
+            if (externalSignal?.aborted) return e;
+            if (this.timeout) return new HoloTimeoutError(this.timeout);
+        }
+        if (e instanceof DOMException && e.name === 'TimeoutError') {
+            if (this.timeout) return new HoloTimeoutError(this.timeout);
+        }
+
+        return e;
     }
 }
 
@@ -227,16 +263,29 @@ class ChatNamespace {
 
     private paramsToRequest(params: HoloChatParams, stream: boolean): HoloRequest {
         const defaults = this.client.getDefaults();
+        const model = params.model ?? defaults.model;
+        if (!model) {
+            throw new Error('No model specified. Set a model in params or provide a defaultModel in HoloClientOptions.');
+        }
+
         const request: HoloRequest = {
-            model: params.model ?? defaults.model ?? '',
+            model,
             messages: params.messages,
             stream,
         };
         if (params.temperature !== undefined) request.temperature = params.temperature;
         if (params.max_tokens !== undefined) request.max_tokens = params.max_tokens;
+        if (params.top_p !== undefined) request.top_p = params.top_p;
+        if (params.top_k !== undefined) request.top_k = params.top_k;
+        if (params.frequency_penalty !== undefined) request.frequency_penalty = params.frequency_penalty;
+        if (params.presence_penalty !== undefined) request.presence_penalty = params.presence_penalty;
+        if (params.seed !== undefined) request.seed = params.seed;
+        if (params.stop_sequences) request.stop_sequences = params.stop_sequences;
         if (params.tools) request.tools = params.tools;
         if (params.tool_choice) request.tool_choice = params.tool_choice;
         if (params.response_format) request.response_format = params.response_format;
+        if (params.metadata !== undefined) request.metadata = params.metadata;
+        if (params.service_tier) request.service_tier = params.service_tier;
         if (params.provider) request.provider = params.provider;
         const app = params.application ?? defaults.application;
         if (app) request.application = app;

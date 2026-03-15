@@ -42,6 +42,7 @@ export class HoloStream implements AsyncIterable<HoloStreamEvent> {
     private readonly abortController: AbortController;
     private readonly accumulator = new HoloStreamAccumulator();
     private completedResponse?: HoloResponse;
+    private failedError?: Error;
     private iterationStarted = false;
     private eventHandlers: Map<string, EventHandler<any>[]> = new Map();
 
@@ -69,6 +70,9 @@ export class HoloStream implements AsyncIterable<HoloStreamEvent> {
                 if (event.type === 'response.completed' && event.response) {
                     self.completedResponse = event.response;
                 }
+                if (event.type === 'response.failed') {
+                    self.failedError = new HoloStreamError(event.error?.message ?? 'Stream failed', event);
+                }
 
                 return {done: false, value: event};
             },
@@ -91,12 +95,14 @@ export class HoloStream implements AsyncIterable<HoloStreamEvent> {
     /** Consume the entire stream and return the concatenated text output. */
     async text(): Promise<string> {
         await this.consume();
+        if (this.failedError) throw this.failedError;
         return this.accumulator.getText();
     }
 
     /** Consume the entire stream and return the assembled {@link HoloResponse}. */
     async finalResponse(): Promise<HoloResponse> {
         await this.consume();
+        if (this.failedError) throw this.failedError;
         if (this.completedResponse) return this.completedResponse;
         return this.accumulator.toResponse();
     }
@@ -107,7 +113,7 @@ export class HoloStream implements AsyncIterable<HoloStreamEvent> {
     }
 
     private async consume(): Promise<void> {
-        if (this.completedResponse) return;
+        if (this.completedResponse || this.failedError) return;
 
         for await (const _event of this) {
             // iteration handles accumulation via [Symbol.asyncIterator]

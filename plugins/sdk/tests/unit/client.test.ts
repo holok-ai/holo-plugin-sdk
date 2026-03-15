@@ -1,6 +1,6 @@
 import {describe, it, expect, vi} from 'vitest';
 import {HoloClient} from '../../src/client/client.js';
-import {HoloApiError} from '../../src/client/errors.js';
+import {HoloApiError, HoloTimeoutError} from '../../src/client/errors.js';
 
 function mockFetchOk(body: unknown) {
     return vi.fn().mockResolvedValue(new Response(JSON.stringify(body), {
@@ -52,7 +52,7 @@ describe('HoloClient', () => {
     });
 
     describe('request()', () => {
-        it('sends GET with auth header', async () => {
+        it('sends GET with auth header and no Content-Type', async () => {
             const fetchFn = mockFetchOk({success: true, data: []});
             const client = new HoloClient({baseUrl: 'http://localhost', token: 'my-token', fetch: fetchFn});
             await client.request('GET', '/models');
@@ -60,9 +60,10 @@ describe('HoloClient', () => {
             const [, init] = fetchFn.mock.calls[0]!;
             expect(init.method).toBe('GET');
             expect(init.headers['Authorization']).toBe('Bearer my-token');
+            expect(init.headers['Content-Type']).toBeUndefined();
         });
 
-        it('sends POST with JSON body', async () => {
+        it('sends POST with JSON body and Content-Type', async () => {
             const fetchFn = mockFetchOk({model: 'gpt-4o', output: [], created: 1, finish_reason: null, usage: {}});
             const client = new HoloClient({baseUrl: 'http://localhost', token: 'tok', fetch: fetchFn});
             const body = {model: 'gpt-4o', messages: [{role: 'user', content: 'hi'}]};
@@ -70,6 +71,7 @@ describe('HoloClient', () => {
 
             const [, init] = fetchFn.mock.calls[0]!;
             expect(init.method).toBe('POST');
+            expect(init.headers['Content-Type']).toBe('application/json');
             expect(JSON.parse(init.body)).toEqual(body);
         });
 
@@ -82,16 +84,27 @@ describe('HoloClient', () => {
             expect(err.status).toBe(401);
             expect(err.body).toEqual({error: 'unauthorized'});
         });
+
+        it('extracts error code from structured body', async () => {
+            const fetchFn = mockFetchError(429, {error: 'rate limited', code: 'rate_limit_exceeded'});
+            const client = new HoloClient({baseUrl: 'http://localhost', token: 'tok', fetch: fetchFn});
+
+            const err = await client.request('GET', '/models').catch((e: unknown) => e) as HoloApiError;
+            expect(err.code).toBe('rate_limit_exceeded');
+        });
     });
 
     describe('streamRequest()', () => {
-        it('returns body stream on success', async () => {
+        it('returns body stream on success with Accept header', async () => {
             const stream = new ReadableStream({start(c) { c.close(); }});
             const fetchFn = vi.fn().mockResolvedValue(new Response(stream, {status: 200}));
             const client = new HoloClient({baseUrl: 'http://localhost', token: 'tok', fetch: fetchFn});
 
             const result = await client.streamRequest('/chat', {model: 'gpt-4o', messages: []});
             expect(result.body).toBeInstanceOf(ReadableStream);
+
+            const [, init] = fetchFn.mock.calls[0]!;
+            expect(init.headers['Accept']).toBe('text/event-stream');
         });
 
         it('throws HoloApiError on error response', async () => {
@@ -99,6 +112,38 @@ describe('HoloClient', () => {
             const client = new HoloClient({baseUrl: 'http://localhost', token: 'tok', fetch: fetchFn});
 
             await expect(client.streamRequest('/chat', {})).rejects.toThrow(HoloApiError);
+        });
+    });
+
+    describe('timeout', () => {
+        it('throws HoloTimeoutError when fetch exceeds timeout', async () => {
+            const fetchFn = vi.fn().mockImplementation(() =>
+                new Promise((_resolve, reject) => {
+                    const err = new DOMException('The operation was aborted', 'AbortError');
+                    setTimeout(() => reject(err), 10);
+                })
+            );
+            const client = new HoloClient({
+                baseUrl: 'http://localhost', token: 'tok', fetch: fetchFn, timeout: 50,
+            });
+
+            await expect(client.request('GET', '/models')).rejects.toThrow(HoloTimeoutError);
+        });
+
+        it('preserves external abort signal error', async () => {
+            const externalController = new AbortController();
+            externalController.abort();
+            const fetchFn = vi.fn().mockRejectedValue(
+                new DOMException('The operation was aborted', 'AbortError')
+            );
+            const client = new HoloClient({
+                baseUrl: 'http://localhost', token: 'tok', fetch: fetchFn, timeout: 5000,
+            });
+
+            const err = await client.request('GET', '/models', undefined, externalController.signal)
+                .catch((e: unknown) => e);
+            expect(err).toBeInstanceOf(DOMException);
+            expect(err).not.toBeInstanceOf(HoloTimeoutError);
         });
     });
 });

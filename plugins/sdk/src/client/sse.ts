@@ -16,10 +16,21 @@ export async function* parseSSEStream(
             if (done) break;
 
             buffer += decoder.decode(value, {stream: true});
+            buffer = buffer.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
             const events = extractEvents(buffer);
             buffer = events.remaining;
 
+            for (const event of events.parsed) {
+                yield event;
+            }
+        }
+
+        // Flush any remaining bytes from the decoder
+        const flushed = decoder.decode();
+        if (flushed) {
+            buffer += flushed.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            const events = extractEvents(buffer);
             for (const event of events.parsed) {
                 yield event;
             }
@@ -55,17 +66,24 @@ function extractEvents(buffer: string): ParsedEvents {
 }
 
 function parseSSEBlock(block: string): HoloStreamEvent | null {
-    let data = '';
+    const dataLines: string[] = [];
+    let eventType = '';
 
     for (const line of block.split('\n')) {
-        if (line.startsWith('data: ')) {
-            data += line.slice(6);
+        if (line.startsWith('event:')) {
+            eventType = line.slice(6).trim();
+        } else if (line.startsWith('data: ')) {
+            dataLines.push(line.slice(6));
         } else if (line.startsWith('data:')) {
-            data += line.slice(5);
+            dataLines.push(line.slice(5));
         }
     }
 
-    if (!data) return null;
+    if (dataLines.length === 0) return null;
+
+    const data = dataLines.join('\n');
+
+    if (data === '[DONE]') return null;
 
     try {
         return JSON.parse(data) as HoloStreamEvent;

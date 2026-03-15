@@ -1,5 +1,6 @@
 import {describe, it, expect} from 'vitest';
 import {HoloStream} from '../../src/client/stream.js';
+import {HoloStreamError} from '../../src/client/errors.js';
 import type {HoloStreamEvent} from '@holokai/types/holo';
 
 function makeEvents(events: HoloStreamEvent[]) {
@@ -117,9 +118,43 @@ describe('HoloStream', () => {
             ];
             const stream = new HoloStream(makeEvents(events), new AbortController());
             stream.on('response.failed', (e) => errors.push(e));
-            await stream.text();
+            // for-await iteration doesn't throw on failed
+            for await (const _e of stream) { /* consume */ }
             expect(errors).toHaveLength(1);
             expect(errors[0]!.message).toBe('boom');
+        });
+    });
+
+    describe('failed-event rejection', () => {
+        it('text() throws HoloStreamError on response.failed', async () => {
+            const events: HoloStreamEvent[] = [
+                {type: 'response.output_text.delta', delta: 'partial'},
+                {type: 'response.failed', error: {message: 'upstream timeout'}},
+            ];
+            const stream = new HoloStream(makeEvents(events), new AbortController());
+            await expect(stream.text()).rejects.toThrow(HoloStreamError);
+            await expect(stream.text()).rejects.toThrow('upstream timeout');
+        });
+
+        it('finalResponse() throws HoloStreamError on response.failed', async () => {
+            const events: HoloStreamEvent[] = [
+                {type: 'response.failed', error: {message: 'model error'}},
+            ];
+            const stream = new HoloStream(makeEvents(events), new AbortController());
+            await expect(stream.finalResponse()).rejects.toThrow(HoloStreamError);
+        });
+
+        it('for-await iteration is unaffected by response.failed', async () => {
+            const events: HoloStreamEvent[] = [
+                {type: 'response.output_text.delta', delta: 'hi'},
+                {type: 'response.failed', error: {message: 'oops'}},
+            ];
+            const stream = new HoloStream(makeEvents(events), new AbortController());
+            const collected: HoloStreamEvent[] = [];
+            for await (const event of stream) {
+                collected.push(event);
+            }
+            expect(collected).toHaveLength(2);
         });
     });
 

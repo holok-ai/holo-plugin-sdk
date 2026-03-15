@@ -44,6 +44,37 @@ describe('ChatNamespace', () => {
             const body = JSON.parse(fetchFn.mock.calls[0]![1].body);
             expect(body.model).toBe('claude-3');
         });
+
+        it('throws when no model specified and no default', async () => {
+            const fetchFn = vi.fn();
+            const client = new HoloClient({baseUrl: 'http://localhost', token: 'tok', fetch: fetchFn});
+            await expect(client.chat.create({messages: [{role: 'user', content: 'hi'}]}))
+                .rejects.toThrow('No model specified');
+        });
+
+        it('passes new HoloChatParams fields through', async () => {
+            const {client, fetchFn} = createClient();
+            await client.chat.create({
+                messages: [{role: 'user', content: 'hi'}],
+                top_p: 0.9,
+                top_k: 40,
+                frequency_penalty: 0.1,
+                presence_penalty: 0.2,
+                seed: 42,
+                stop_sequences: ['END'],
+                metadata: {user_id: 'u1'},
+                service_tier: 'auto',
+            });
+            const body = JSON.parse(fetchFn.mock.calls[0]![1].body);
+            expect(body.top_p).toBe(0.9);
+            expect(body.top_k).toBe(40);
+            expect(body.frequency_penalty).toBe(0.1);
+            expect(body.presence_penalty).toBe(0.2);
+            expect(body.seed).toBe(42);
+            expect(body.stop_sequences).toEqual(['END']);
+            expect(body.metadata).toEqual({user_id: 'u1'});
+            expect(body.service_tier).toBe('auto');
+        });
     });
 
     describe('proxy methods', () => {

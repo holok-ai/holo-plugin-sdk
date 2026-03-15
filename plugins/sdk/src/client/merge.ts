@@ -1,4 +1,15 @@
-import type {HoloFinishReason, HoloResponse, HoloStreamEvent, HoloUsage} from '@holokai/types/holo';
+import type {
+    HoloContent,
+    HoloContentReasoning,
+    HoloContentText,
+    HoloContentToolCall,
+    HoloFinishReason,
+    HoloMessage,
+    HoloResponse,
+    HoloStreamEvent,
+    HoloToolCall,
+    HoloUsage,
+} from '@holokai/types/holo';
 
 /**
  * Accumulates {@link HoloStreamEvent} deltas into a complete {@link HoloResponse}.
@@ -75,10 +86,45 @@ export class HoloStreamAccumulator {
     /** Assemble all accumulated deltas into a complete {@link HoloResponse}. */
     toResponse(): HoloResponse {
         const text = this.textParts.join('');
-        const output = [];
+        const reasoning = this.reasoningParts.join('');
+        const hasText = text.length > 0;
+        const hasReasoning = reasoning.length > 0;
+        const hasToolCalls = this.toolCalls.size > 0;
 
-        if (text) {
-            output.push({role: 'assistant' as const, content: text});
+        const output: HoloMessage[] = [];
+
+        if (hasText || hasReasoning || hasToolCalls) {
+            const isStructured = hasReasoning || hasToolCalls;
+
+            if (isStructured) {
+                const contentBlocks: HoloContent[] = [];
+
+                if (hasReasoning) {
+                    const block: HoloContentReasoning = {type: 'reasoning'};
+                    block.text = reasoning;
+                    contentBlocks.push(block);
+                }
+
+                if (hasText) {
+                    const block: HoloContentText = {type: 'text', text};
+                    contentBlocks.push(block);
+                }
+
+                if (hasToolCalls) {
+                    const toolCallBlocks = this.buildToolCallBlocks();
+                    contentBlocks.push(...toolCallBlocks);
+                }
+
+                const message: HoloMessage = {role: 'assistant', content: contentBlocks};
+
+                if (hasToolCalls) {
+                    message.tool_calls = this.buildToolCallProjections();
+                }
+
+                output.push(message);
+            } else {
+                output.push({role: 'assistant', content: text});
+            }
         }
 
         const response: HoloResponse = {
@@ -95,5 +141,53 @@ export class HoloStreamAccumulator {
     /** Return the concatenated text output accumulated so far. */
     getText(): string {
         return this.textParts.join('');
+    }
+
+    private buildToolCallBlocks(): HoloContentToolCall[] {
+        const blocks: HoloContentToolCall[] = [];
+        for (const [, tc] of [...this.toolCalls.entries()].sort((a, b) => a[0] - b[0])) {
+            const parsed = this.parseArguments(tc.arguments);
+            const block: HoloContentToolCall = {
+                type: 'tool_call',
+                name: tc.name,
+                arguments: parsed ?? {},
+            };
+            if (tc.id) block.id = tc.id;
+            if (parsed === null) {
+                block.raw_arguments = tc.arguments;
+            }
+            blocks.push(block);
+        }
+        return blocks;
+    }
+
+    private buildToolCallProjections(): HoloToolCall[] {
+        const calls: HoloToolCall[] = [];
+        for (const [, tc] of [...this.toolCalls.entries()].sort((a, b) => a[0] - b[0])) {
+            const parsed = this.parseArguments(tc.arguments);
+            const call: HoloToolCall = {
+                type: 'function',
+                function: {
+                    name: tc.name,
+                    arguments: parsed ?? {},
+                },
+            };
+            if (tc.id) call.id = tc.id;
+            calls.push(call);
+        }
+        return calls;
+    }
+
+    private parseArguments(raw: string): Record<string, unknown> | null {
+        if (!raw) return {};
+        try {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+                return parsed as Record<string, unknown>;
+            }
+            return {};
+        } catch {
+            return null;
+        }
     }
 }

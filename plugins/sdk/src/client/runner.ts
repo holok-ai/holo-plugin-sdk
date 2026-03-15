@@ -7,6 +7,7 @@ import type {
     HoloToolChoice,
 } from '@holokai/types/holo';
 import type {HoloStream} from './stream';
+import type {HoloChatParams} from './types';
 
 /** Extracted tool call information passed to the user's tool handler. */
 export interface HoloToolCallInfo {
@@ -81,13 +82,14 @@ type RunnerEventType = keyof RunnerEventMap;
  */
 export class HoloToolRunner {
     private readonly options: HoloToolRunnerOptions;
-    private readonly streamFn: (params: any) => Promise<HoloStream>;
+    private readonly streamFn: (params: HoloChatParams) => Promise<HoloStream>;
     private handlers = new Map<RunnerEventType, EventHandler<any>[]>();
     private abortController = new AbortController();
     private aborted = false;
+    private currentStream: HoloStream | undefined;
 
     constructor(
-        streamFn: (params: any) => Promise<HoloStream>,
+        streamFn: (params: HoloChatParams) => Promise<HoloStream>,
         options: HoloToolRunnerOptions,
     ) {
         this.streamFn = streamFn;
@@ -105,6 +107,7 @@ export class HoloToolRunner {
     /** Abort the runner, cancelling any in-flight stream. */
     abort(): void {
         this.aborted = true;
+        this.currentStream?.abort();
         this.abortController.abort();
     }
 
@@ -119,24 +122,27 @@ export class HoloToolRunner {
                 throw new Error('Runner aborted');
             }
 
-            const stream = await this.streamFn({
-                model: this.options.model,
-                messages,
-                tools: this.options.tools,
-                tool_choice: this.options.tool_choice,
-                application: this.options.application,
-                provider: this.options.provider,
-                thread_id: this.options.thread_id,
-                branch: this.options.branch,
-                temperature: this.options.temperature,
-                max_tokens: this.options.max_tokens,
-            });
+            const params: HoloChatParams = {messages};
+            if (this.options.model !== undefined) params.model = this.options.model;
+            if (this.options.tools) params.tools = this.options.tools;
+            if (this.options.tool_choice) params.tool_choice = this.options.tool_choice;
+            if (this.options.application !== undefined) params.application = this.options.application;
+            if (this.options.provider !== undefined) params.provider = this.options.provider;
+            if (this.options.thread_id !== undefined) params.thread_id = this.options.thread_id;
+            if (this.options.branch !== undefined) params.branch = this.options.branch;
+            if (this.options.temperature !== undefined) params.temperature = this.options.temperature;
+            if (this.options.max_tokens !== undefined) params.max_tokens = this.options.max_tokens;
+
+            const stream = await this.streamFn(params);
+
+            this.currentStream = stream;
 
             stream.on('response.output_text.delta', (delta: string) => {
                 this.emit('text.delta', delta);
             });
 
             const response = await stream.finalResponse();
+            this.currentStream = undefined;
             lastResponse = response;
 
             this.emit('iteration', {index: i, response});
@@ -184,7 +190,7 @@ export class HoloToolRunner {
 
         if (response.output) {
             for (const msg of response.output) {
-                if (msg.tool_calls) {
+                if (msg.tool_calls && msg.tool_calls.length > 0) {
                     for (const tc of msg.tool_calls) {
                         calls.push({
                             id: tc.id ?? '',
@@ -192,9 +198,7 @@ export class HoloToolRunner {
                             arguments: tc.function.arguments,
                         });
                     }
-                }
-
-                if (Array.isArray(msg.content)) {
+                } else if (Array.isArray(msg.content)) {
                     for (const block of msg.content) {
                         if ((block as HoloContentToolCall).type === 'tool_call') {
                             const tc = block as HoloContentToolCall;

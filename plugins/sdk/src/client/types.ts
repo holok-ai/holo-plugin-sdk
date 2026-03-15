@@ -1,4 +1,4 @@
-import type {HoloApplicationInfo, HoloMessage, HoloModelInfo, HoloRequest,} from '@holokai/types/holo';
+import type {HoloApplicationInfo, HoloMessage, HoloModelInfo, HoloRequest, HoloRequestMetadata,} from '@holokai/types/holo';
 
 /** Parameters accepted by {@link ChatNamespace.create} and {@link ChatNamespace.stream}. */
 export interface HoloChatParams {
@@ -6,9 +6,17 @@ export interface HoloChatParams {
     messages: HoloMessage[];
     temperature?: number;
     max_tokens?: number;
+    top_p?: number;
+    top_k?: number;
+    frequency_penalty?: number;
+    presence_penalty?: number;
+    seed?: number;
+    stop_sequences?: string[];
     tools?: HoloRequest['tools'];
     tool_choice?: HoloRequest['tool_choice'];
     response_format?: HoloRequest['response_format'];
+    metadata?: HoloRequestMetadata | null;
+    service_tier?: HoloRequest['service_tier'];
     provider?: string;
     application?: string;
     thread_id?: string;
