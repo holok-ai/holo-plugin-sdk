@@ -1,5 +1,5 @@
 import type {FixtureScenario, SdkAdapter} from '../fixtures/types.js';
-import {assertPartialMatch, type AssertionError} from '../dsl/assertions.js';
+import {type AssertionError, assertPartialMatch} from '../dsl/assertions.js';
 import type {TestResult} from './wire-tester.js';
 import {HttpFixtureServer} from './http-fixture-server.js';
 import {loadPlugin} from './plugin-loader.js';

@@ -30,6 +30,8 @@ export interface FixtureScenario {
 
 export interface SdkAdapter {
     family: string;
+
     call(fixture: FixtureScenario, port: number): Promise<any>;
+
     routes(fixture: FixtureScenario): { method: string; path: string } | undefined;
 }

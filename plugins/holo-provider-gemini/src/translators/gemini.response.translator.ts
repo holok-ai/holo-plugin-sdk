@@ -4,10 +4,10 @@ import {injectable} from 'tsyringe';
 import {BaseTranslator} from "@holokai/sdk/provider";
 import {pickDefined} from "@holokai/sdk";
 import type {HoloMessage, HoloResponse} from "@holokai/types/holo";
-import {FinishReason} from "@google/genai";
 import type {GenerateContentResponse} from "@google/genai";
+import {FinishReason} from "@google/genai";
 import {GeminiResponseMessageTranslator} from "./gemini.response.message.translator";
-import {toHoloFinishReason, toGeminiFinishReason} from '../utils/finish.reason.mapper.js';
+import {toGeminiFinishReason, toHoloFinishReason} from '../utils/finish.reason.mapper.js';
 
 @injectable()
 export class GeminiResponseTranslator extends BaseTranslator<HoloResponse, GenerateContentResponse> {

@@ -3,8 +3,8 @@ import {injectable} from 'tsyringe';
 import {BaseTranslator} from "@holokai/sdk/provider";
 import {pickDefined} from "@holokai/sdk";
 import type {HoloTool, HoloToolChoice} from "@holokai/types/holo";
+import type {FunctionCallingConfig, FunctionDeclaration} from "@google/genai";
 import {FunctionCallingConfigMode} from "@google/genai";
-import type {FunctionDeclaration, FunctionCallingConfig} from "@google/genai";
 
 @injectable()
 export class GeminiToolTranslator extends BaseTranslator<HoloTool, FunctionDeclaration> {

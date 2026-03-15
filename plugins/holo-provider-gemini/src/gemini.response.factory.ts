@@ -134,13 +134,20 @@ export class GeminiResponseFactory implements IResponseFactory {
 
     private statusToHttpCode(status: GeminiErrorStatus): number {
         switch (status) {
-            case 'INVALID_ARGUMENT': return 400;
-            case 'UNAUTHENTICATED': return 401;
-            case 'PERMISSION_DENIED': return 403;
-            case 'NOT_FOUND': return 404;
-            case 'RESOURCE_EXHAUSTED': return 429;
-            case 'INTERNAL': return 500;
-            case 'UNAVAILABLE': return 503;
+            case 'INVALID_ARGUMENT':
+                return 400;
+            case 'UNAUTHENTICATED':
+                return 401;
+            case 'PERMISSION_DENIED':
+                return 403;
+            case 'NOT_FOUND':
+                return 404;
+            case 'RESOURCE_EXHAUSTED':
+                return 429;
+            case 'INTERNAL':
+                return 500;
+            case 'UNAVAILABLE':
+                return 503;
         }
     }
 }

@@ -72,15 +72,15 @@ Add a provider configuration to your Holo deployment:
 ### Usage in Code
 
 ```typescript
-import { HoloRequest, HoloResponse } from '@holokai/sdk';
+import {HoloRequest, HoloResponse} from '@holokai/sdk';
 
 const request: HoloRequest = {
-  model: 'gpt-4o',
-  messages: [
-    { role: 'user', content: 'Explain quantum computing briefly.' }
-  ],
-  max_tokens: 1000,
-  temperature: 0.7
+    model: 'gpt-4o',
+    messages: [
+        {role: 'user', content: 'Explain quantum computing briefly.'}
+    ],
+    max_tokens: 1000,
+    temperature: 0.7
 };
 
 // Plugin handles translation automatically
@@ -216,7 +216,15 @@ src/providers/openai/
 The provider intelligently routes requests based on structure:
 
 ```typescript
-private isResponsesAPIRequest(payload: ProviderRequest): payload is OpenAIResponseCreateParams {
+private
+isResponsesAPIRequest(payload
+:
+ProviderRequest
+):
+payload
+is
+OpenAIResponseCreateParams
+{
     return 'input' in payload && !('messages' in payload);
 }
 ```
@@ -324,10 +332,18 @@ This plugin implements the official Holo format mappings as documented in the SD
 
 ```typescript
 // Holo
-{ type: 'text', text: 'Hello' }
+{
+    type: 'text', text
+:
+    'Hello'
+}
 
 // OpenAI (direct)
-{ type: 'text', text: 'Hello' }
+{
+    type: 'text', text
+:
+    'Hello'
+}
 ```
 
 #### Image Content
@@ -351,30 +367,30 @@ This plugin implements the official Holo format mappings as documented in the SD
 ```typescript
 // OpenAI Response
 {
-  choices: [{
-    message: {
-      role: 'assistant',
-      content: '',
-      tool_calls: [{
-        id: 'call_abc',
-        type: 'function',
-        function: { name: 'get_weather', arguments: '{"location":"SF"}' }
-      }]
-    }
-  }]
+    choices: [{
+        message: {
+            role: 'assistant',
+            content: '',
+            tool_calls: [{
+                id: 'call_abc',
+                type: 'function',
+                function: {name: 'get_weather', arguments: '{"location":"SF"}'}
+            }]
+        }
+    }]
 }
 
 // Holo Response (extracted)
 {
-  messages: [{
-    role: 'assistant',
-    content: '',
-    tool_calls: [{
-      id: 'call_abc',
-      type: 'function',
-      function: { name: 'get_weather', arguments: { location: 'SF' } }
+    messages: [{
+        role: 'assistant',
+        content: '',
+        tool_calls: [{
+            id: 'call_abc',
+            type: 'function',
+            function: {name: 'get_weather', arguments: {location: 'SF'}}
+        }]
     }]
-  }]
 }
 ```
 
@@ -393,39 +409,65 @@ OpenAI uses incremental deltas for streaming:
 ```typescript
 // Chunk 1: Role initialization
 {
-  id: 'chatcmpl-123',
-  model: 'gpt-4o',
-  created: 1234567890,
-  choices: [{
-    index: 0,
-    delta: { role: 'assistant', content: '' },
-    finish_reason: null
-  }]
+    id: 'chatcmpl-123',
+        model
+:
+    'gpt-4o',
+        created
+:
+    1234567890,
+        choices
+:
+    [{
+        index: 0,
+        delta: {role: 'assistant', content: ''},
+        finish_reason: null
+    }]
 }
 
 // Chunk 2: Content delta
 {
-  id: 'chatcmpl-123',
-  model: 'gpt-4o',
-  created: 1234567890,
-  choices: [{
-    index: 0,
-    delta: { content: 'Hello' },
-    finish_reason: null
-  }]
+    id: 'chatcmpl-123',
+        model
+:
+    'gpt-4o',
+        created
+:
+    1234567890,
+        choices
+:
+    [{
+        index: 0,
+        delta: {content: 'Hello'},
+        finish_reason: null
+    }]
 }
 
 // Chunk 3: Final chunk with usage
 {
-  id: 'chatcmpl-123',
-  model: 'gpt-4o',
-  created: 1234567890,
-  choices: [{
-    index: 0,
-    delta: {},
-    finish_reason: 'stop'
-  }],
-  usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 }
+    id: 'chatcmpl-123',
+        model
+:
+    'gpt-4o',
+        created
+:
+    1234567890,
+        choices
+:
+    [{
+        index: 0,
+        delta: {},
+        finish_reason: 'stop'
+    }],
+        usage
+:
+    {
+        prompt_tokens: 10, completion_tokens
+    :
+        5, total_tokens
+    :
+        15
+    }
 }
 ```
 
@@ -472,23 +514,27 @@ OpenAI supports multiple completions via the `n` parameter:
 ```typescript
 // OpenAI request
 {
-  model: 'gpt-4o',
-  messages: [...],
-  n: 3  // Generate 3 completions
+    model: 'gpt-4o',
+        messages
+:
+    [...],
+        n
+:
+    3  // Generate 3 completions
 }
 
 // OpenAI response chunks include choice index
 {
-  choices: [{
-    index: 0,  // First completion
-    delta: { content: 'Option A' }
-  }]
+    choices: [{
+        index: 0,  // First completion
+        delta: {content: 'Option A'}
+    }]
 }
 {
-  choices: [{
-    index: 1,  // Second completion
-    delta: { content: 'Option B' }
-  }]
+    choices: [{
+        index: 1,  // Second completion
+        delta: {content: 'Option B'}
+    }]
 }
 ```
 
@@ -505,19 +551,19 @@ Enable JSON schema validation:
 
 ```typescript
 const request: HoloRequest = {
-  model: 'gpt-4o',
-  messages: [{ role: 'user', content: 'Generate a user profile' }],
-  response_format: {
-    type: 'json_schema',
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string' },
-        age: { type: 'number' }
-      },
-      required: ['name', 'age']
+    model: 'gpt-4o',
+    messages: [{role: 'user', content: 'Generate a user profile'}],
+    response_format: {
+        type: 'json_schema',
+        schema: {
+            type: 'object',
+            properties: {
+                name: {type: 'string'},
+                age: {type: 'number'}
+            },
+            required: ['name', 'age']
+        }
     }
-  }
 };
 ```
 
@@ -527,11 +573,11 @@ Force JSON output without schema:
 
 ```typescript
 const request: HoloRequest = {
-  model: 'gpt-4o',
-  messages: [{ role: 'user', content: 'Generate JSON' }],
-  response_format: {
-    type: 'json_object'
-  }
+    model: 'gpt-4o',
+    messages: [{role: 'user', content: 'Generate JSON'}],
+    response_format: {
+        type: 'json_object'
+    }
 };
 ```
 
@@ -545,9 +591,9 @@ Request priority tier:
 
 ```typescript
 const request: HoloRequest = {
-  model: 'gpt-4o',
-  messages: [{ role: 'user', content: 'Urgent request' }],
-  service_tier: 'default'  // or 'auto'
+    model: 'gpt-4o',
+    messages: [{role: 'user', content: 'Urgent request'}],
+    service_tier: 'default'  // or 'auto'
 };
 ```
 
@@ -557,12 +603,12 @@ const request: HoloRequest = {
 
 ```typescript
 const request: HoloRequest = {
-  model: 'gpt-4o',
-  messages: [{ role: 'user', content: 'Hello' }],
-  provider_config: {
-    logprobs: true,
-    top_logprobs: 5
-  }
+    model: 'gpt-4o',
+    messages: [{role: 'user', content: 'Hello'}],
+    provider_config: {
+        logprobs: true,
+        top_logprobs: 5
+    }
 };
 ```
 
@@ -576,11 +622,11 @@ This plugin uses strict SDK types exclusively:
 
 ```typescript
 import type {
-  HoloRequest,
-  HoloResponse,
-  HoloMessage,
-  HoloTool,
-  HoloJsonSchema  // ✅ Proper JSON Schema types
+    HoloRequest,
+    HoloResponse,
+    HoloMessage,
+    HoloTool,
+    HoloJsonSchema  // ✅ Proper JSON Schema types
 } from '@holokai/sdk';
 
 // ❌ NO: Record<string, unknown>
@@ -602,10 +648,10 @@ interface HoloTool {
 **After** (Plugin SDK):
 
 ```typescript
-import type { HoloTool, HoloJsonSchema } from '@holokai/sdk';
+import type {HoloTool, HoloJsonSchema} from '@holokai/sdk';
 
 interface HoloTool {
-  parameters?: HoloJsonSchema; // ✅ Strict JSON Schema Draft 7
+    parameters?: HoloJsonSchema; // ✅ Strict JSON Schema Draft 7
 }
 ```
 
@@ -621,16 +667,16 @@ The plugin exposes a JSON Schema for configuration validation:
 
 ```typescript
 {
-  apiKey: string;              // Required
-  organizationId?: string;     // Optional organization ID
-  baseUrl?: string;            // Optional custom endpoint
-  defaultModel?: string;       // Fallback model
-  allowedModels?: string[];    // Model allowlist
-  timeoutMs?: number;          // Request timeout (default: 60000)
-  maxRetries?: number;         // Retry attempts (default: 2)
-  enableVision?: boolean;      // Vision support (default: true)
-  logRequests?: boolean;       // Observability (default: false)
-  telemetrySampleRate?: number;// Sampling rate (default: 1.0)
+    apiKey: string;              // Required
+    organizationId ? : string;     // Optional organization ID
+    baseUrl ? : string;            // Optional custom endpoint
+    defaultModel ? : string;       // Fallback model
+    allowedModels ? : string[];    // Model allowlist
+    timeoutMs ? : number;          // Request timeout (default: 60000)
+    maxRetries ? : number;         // Retry attempts (default: 2)
+    enableVision ? : boolean;      // Vision support (default: true)
+    logRequests ? : boolean;       // Observability (default: false)
+    telemetrySampleRate ? : number;// Sampling rate (default: 1.0)
 }
 ```
 

@@ -7,6 +7,7 @@ export interface ProviderResponseMetadata {
     token_breakdown?: Record<string, number>;
     worker_id?: string;
     token_type?: string;
+
     [key: string]: any;
 }
 

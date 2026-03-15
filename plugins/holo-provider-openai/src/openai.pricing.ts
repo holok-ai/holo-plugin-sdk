@@ -212,13 +212,48 @@ export const OPENAI_PRICING_DATASET: PricingDataset = {
             version: '2025-06',
             effective_from: '2025-06-26',
             models: [
-                {model_name: 'o4-mini-deep-research', input_cost: 1.1 / M, output_cost: 4.4 / M, cache_read_cost: 0.275 / M},
-                {model_name: 'gpt-4o-search-preview', input_cost: 2.5 / M, output_cost: 10 / M, cache_read_cost: 1.25 / M},
-                {model_name: 'gpt-4o-mini-search-preview', input_cost: 2.5 / M, output_cost: 10 / M, cache_read_cost: 1.25 / M},
-                {model_name: 'gpt-4o-audio-preview', input_cost: 2.5 / M, output_cost: 10 / M, cache_read_cost: 1.25 / M},
-                {model_name: 'gpt-4o-mini-audio-preview', input_cost: 2.5 / M, output_cost: 10 / M, cache_read_cost: 1.25 / M},
-                {model_name: 'gpt-4o-realtime-preview', input_cost: 2.5 / M, output_cost: 10 / M, cache_read_cost: 1.25 / M},
-                {model_name: 'gpt-4o-mini-realtime-preview', input_cost: 2.5 / M, output_cost: 10 / M, cache_read_cost: 1.25 / M},
+                {
+                    model_name: 'o4-mini-deep-research',
+                    input_cost: 1.1 / M,
+                    output_cost: 4.4 / M,
+                    cache_read_cost: 0.275 / M
+                },
+                {
+                    model_name: 'gpt-4o-search-preview',
+                    input_cost: 2.5 / M,
+                    output_cost: 10 / M,
+                    cache_read_cost: 1.25 / M
+                },
+                {
+                    model_name: 'gpt-4o-mini-search-preview',
+                    input_cost: 2.5 / M,
+                    output_cost: 10 / M,
+                    cache_read_cost: 1.25 / M
+                },
+                {
+                    model_name: 'gpt-4o-audio-preview',
+                    input_cost: 2.5 / M,
+                    output_cost: 10 / M,
+                    cache_read_cost: 1.25 / M
+                },
+                {
+                    model_name: 'gpt-4o-mini-audio-preview',
+                    input_cost: 2.5 / M,
+                    output_cost: 10 / M,
+                    cache_read_cost: 1.25 / M
+                },
+                {
+                    model_name: 'gpt-4o-realtime-preview',
+                    input_cost: 2.5 / M,
+                    output_cost: 10 / M,
+                    cache_read_cost: 1.25 / M
+                },
+                {
+                    model_name: 'gpt-4o-mini-realtime-preview',
+                    input_cost: 2.5 / M,
+                    output_cost: 10 / M,
+                    cache_read_cost: 1.25 / M
+                },
                 {model_name: 'gpt-4o-transcribe', input_cost: 2.5 / M, output_cost: 10 / M},
                 {model_name: 'gpt-4o-transcribe-diarize', input_cost: 2.5 / M, output_cost: 10 / M},
                 {model_name: 'gpt-4o-mini-transcribe', input_cost: 2.5 / M, output_cost: 10 / M},

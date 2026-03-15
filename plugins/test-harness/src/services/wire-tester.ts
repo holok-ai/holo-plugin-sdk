@@ -1,7 +1,7 @@
 import type {IProviderPlugin} from '@holokai/types/plugin';
 import type {ProviderEvent, WireChunk} from '@holokai/types/provider';
 import type {FixtureScenario} from '../fixtures/types.js';
-import {assertEqual, assertArrayEqual, type AssertionError} from '../dsl/assertions.js';
+import {assertArrayEqual, assertEqual, type AssertionError} from '../dsl/assertions.js';
 
 export interface TestResult {
     name: string;

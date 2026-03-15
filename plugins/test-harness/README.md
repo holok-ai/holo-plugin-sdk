@@ -1,6 +1,7 @@
 # @holokai/test-harness
 
-Standalone test runner for Holo provider plugins. Tests wire format correctness, audit record mapping, full pipeline behavior, and native SDK round-trip parsing — all without running the Holo app, RabbitMQ, or Postgres.
+Standalone test runner for Holo provider plugins. Tests wire format correctness, audit record mapping, full pipeline
+behavior, and native SDK round-trip parsing — all without running the Holo app, RabbitMQ, or Postgres.
 
 ## Quick Start
 
@@ -33,7 +34,8 @@ Options:
   --help, -h          Show this help
 ```
 
-With no category flags, `--wire`, `--audit`, and `--pipeline` all run. `--roundtrip` must be explicitly requested (it requires SDK adapters and spins up an HTTP server).
+With no category flags, `--wire`, `--audit`, and `--pipeline` all run. `--roundtrip` must be explicitly requested (it
+requires SDK adapters and spins up an HTTP server).
 
 ## Architecture
 
@@ -51,18 +53,22 @@ With no category flags, `--wire`, `--audit`, and `--pipeline` all run. `--roundt
 └────────────┴─────────────┴──────────────┴─────────────────────────┘
 ```
 
-- **Wire** — feeds `providerChunks` through the plugin's `IWireAdapter`, asserts the output body strings, HTTP status, and headers match expectations.
-- **Audit** — feeds the terminal chunk through the plugin's `IAuditor`, asserts `access_model`, token counts, `LlmStatus`, and metadata fields.
-- **Pipeline** — runs the full `runPipelineFromFixture()` from `@holokai/lib` (the same code path used in production), asserts both wire output and audit record.
-- **Round-trip** — starts an Express server that serves the fixture's wire output at the correct route, then points the native provider SDK at it and verifies the SDK can parse the response.
+- **Wire** — feeds `providerChunks` through the plugin's `IWireAdapter`, asserts the output body strings, HTTP status,
+  and headers match expectations.
+- **Audit** — feeds the terminal chunk through the plugin's `IAuditor`, asserts `access_model`, token counts,
+  `LlmStatus`, and metadata fields.
+- **Pipeline** — runs the full `runPipelineFromFixture()` from `@holokai/lib` (the same code path used in production),
+  asserts both wire output and audit record.
+- **Round-trip** — starts an Express server that serves the fixture's wire output at the correct route, then points the
+  native provider SDK at it and verifies the SDK can parse the response.
 
 ## Fixture Format
 
 Fixtures are TypeScript files matching `**/*.fixture.ts`. Each exports a `FixtureScenario`:
 
 ```typescript
-import type { FixtureScenario } from '@holokai/test-harness';
-import { LlmStatus } from '@holokai/types/entities';
+import type {FixtureScenario} from '@holokai/test-harness';
+import {LlmStatus} from '@holokai/types/entities';
 
 const fixture: FixtureScenario = {
     // ── Identity ──────────────────────────────────────────────
@@ -105,8 +111,8 @@ const fixture: FixtureScenario = {
 
     // ── SDK round-trip (optional) ─────────────────────────────
     sdkAdapter: adapter,                     // SdkAdapter instance
-    sdkRequest: { model: 'gpt-4o', ... },    // request payload for the SDK
-    expectedSdkResult: { id: '...', ... },   // partial match on SDK output
+    sdkRequest: {model: 'gpt-4o', ...},    // request payload for the SDK
+    expectedSdkResult: {id: '...', ...},   // partial match on SDK output
 
     // ── Filtering ─────────────────────────────────────────────
     tags: ['chat', 'streaming'],
@@ -117,28 +123,29 @@ export default fixture;
 
 ### Field Reference
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | yes | Unique fixture name, shown in test output |
-| `plugin` | yes | Plugin family: `openai`, `claude`, `gemini`, `ollama` |
-| `protocol` | yes | Protocol name (e.g. `openai.chatCompletions`, `claude.messages`) |
-| `streaming` | yes | Whether the wire adapter runs in streaming mode |
-| `providerChunks` | yes | Raw provider SDK objects. Last = terminal (done event). |
-| `expectedText` | yes | Full accumulated response text |
-| `expectedWire` | yes | Expected body string for each `WireChunk` |
-| `expectedStatus` | yes | HTTP status code on first chunk |
-| `expectedHeaders` | yes | HTTP headers on first chunk (partial match) |
-| `expectedAudit` | no | Audit record assertions. Omit to skip audit tests. |
-| `sdkAdapter` | no | `SdkAdapter` for round-trip tests. Required with `sdkRequest`. |
-| `sdkRequest` | no | Request payload sent via the native SDK |
-| `expectedSdkResult` | no | Partial match on what the SDK returns |
-| `tags` | no | Tags for filtering with `--tag` |
+| Field               | Required | Description                                                      |
+|---------------------|----------|------------------------------------------------------------------|
+| `name`              | yes      | Unique fixture name, shown in test output                        |
+| `plugin`            | yes      | Plugin family: `openai`, `claude`, `gemini`, `ollama`            |
+| `protocol`          | yes      | Protocol name (e.g. `openai.chatCompletions`, `claude.messages`) |
+| `streaming`         | yes      | Whether the wire adapter runs in streaming mode                  |
+| `providerChunks`    | yes      | Raw provider SDK objects. Last = terminal (done event).          |
+| `expectedText`      | yes      | Full accumulated response text                                   |
+| `expectedWire`      | yes      | Expected body string for each `WireChunk`                        |
+| `expectedStatus`    | yes      | HTTP status code on first chunk                                  |
+| `expectedHeaders`   | yes      | HTTP headers on first chunk (partial match)                      |
+| `expectedAudit`     | no       | Audit record assertions. Omit to skip audit tests.               |
+| `sdkAdapter`        | no       | `SdkAdapter` for round-trip tests. Required with `sdkRequest`.   |
+| `sdkRequest`        | no       | Request payload sent via the native SDK                          |
+| `expectedSdkResult` | no       | Partial match on what the SDK returns                            |
+| `tags`              | no       | Tags for filtering with `--tag`                                  |
 
 ## Adding a New Fixture
 
 ### Step 1: Capture provider output
 
-The easiest way to get fixture data is to capture real API responses. Add temporary logging in the provider's `handleRequest` or use the Holo audit `metadata.response_raw` field.
+The easiest way to get fixture data is to capture real API responses. Add temporary logging in the provider's
+`handleRequest` or use the Holo audit `metadata.response_raw` field.
 
 For streaming, capture each chunk. For non-streaming, capture the full response.
 
@@ -153,13 +160,13 @@ touch plugins/holo-provider-openai/tests/fixtures/chat-tool-calling.streaming.fi
 
 Run the provider chunks through the wire adapter mentally (or in a scratch script):
 
-| Plugin | Format | Stream event | Done event |
-|--------|--------|-------------|------------|
-| **OpenAI Chat** | SSE | `data: {json}\n\n` | `data: {json}\n\n` + `data: [DONE]\n\n` |
-| **OpenAI Responses** | SSE | `event: {type}\ndata: {json}\n\n` | same format |
-| **Claude** | SSE | `event: {type}\ndata: {json}\n\n` | same format |
-| **Gemini** | SSE | `data: {json}\n\n` | same format |
-| **Ollama** | NDJSON | `{json}\n` | same format |
+| Plugin               | Format | Stream event                      | Done event                              |
+|----------------------|--------|-----------------------------------|-----------------------------------------|
+| **OpenAI Chat**      | SSE    | `data: {json}\n\n`                | `data: {json}\n\n` + `data: [DONE]\n\n` |
+| **OpenAI Responses** | SSE    | `event: {type}\ndata: {json}\n\n` | same format                             |
+| **Claude**           | SSE    | `event: {type}\ndata: {json}\n\n` | same format                             |
+| **Gemini**           | SSE    | `data: {json}\n\n`                | same format                             |
+| **Ollama**           | NDJSON | `{json}\n`                        | same format                             |
 
 For non-streaming, all plugins emit a single chunk: `JSON.stringify(response)` with `Content-Type: application/json`.
 
@@ -167,13 +174,13 @@ For non-streaming, all plugins emit a single chunk: `JSON.stringify(response)` w
 
 Check the plugin's auditor to understand how it maps tokens:
 
-| Plugin | Input tokens | Output tokens | Extra tokens |
-|--------|-------------|--------------|-------------|
-| **OpenAI Chat** | `usage.prompt_tokens` | `usage.completion_tokens` | `cache_read` |
-| **OpenAI Responses** | `response.usage.input_tokens` | `response.usage.output_tokens` | `cache_read` |
-| **Claude** | `usage.input_tokens` | `usage.output_tokens` | `cache_read_input_tokens`, `cache_creation_input_tokens` |
-| **Gemini** | `usageMetadata.promptTokenCount` | `usageMetadata.candidatesTokenCount` | `thoughtsTokenCount`, `cachedContentTokenCount` |
-| **Ollama** | `prompt_eval_count` | `eval_count` | none |
+| Plugin               | Input tokens                     | Output tokens                        | Extra tokens                                             |
+|----------------------|----------------------------------|--------------------------------------|----------------------------------------------------------|
+| **OpenAI Chat**      | `usage.prompt_tokens`            | `usage.completion_tokens`            | `cache_read`                                             |
+| **OpenAI Responses** | `response.usage.input_tokens`    | `response.usage.output_tokens`       | `cache_read`                                             |
+| **Claude**           | `usage.input_tokens`             | `usage.output_tokens`                | `cache_read_input_tokens`, `cache_creation_input_tokens` |
+| **Gemini**           | `usageMetadata.promptTokenCount` | `usageMetadata.candidatesTokenCount` | `thoughtsTokenCount`, `cachedContentTokenCount`          |
+| **Ollama**           | `prompt_eval_count`              | `eval_count`                         | none                                                     |
 
 ### Step 5: Verify
 
@@ -186,7 +193,7 @@ npm run holo-test -- --fixtures $PWD/plugins/holo-provider-openai/tests/fixtures
 For programmatic use (e.g. in Jest or custom scripts):
 
 ```typescript
-import { suite } from '@holokai/test-harness';
+import {suite} from '@holokai/test-harness';
 
 // Wire + audit for one plugin
 await suite()
@@ -213,14 +220,15 @@ await suite()
 
 ## SDK Round-Trip Testing
 
-Round-trip tests verify that the native provider SDK can parse the wire output. This catches format issues that string comparison might miss (e.g. missing required fields that the SDK validates).
+Round-trip tests verify that the native provider SDK can parse the wire output. This catches format issues that string
+comparison might miss (e.g. missing required fields that the SDK validates).
 
 ### Writing an SDK Adapter
 
 Each plugin needs an `sdk-adapter.ts` in its `tests/` directory:
 
 ```typescript
-import type { SdkAdapter, FixtureScenario } from '@holokai/test-harness';
+import type {SdkAdapter, FixtureScenario} from '@holokai/test-harness';
 import SomeSDK from 'some-provider-sdk';
 
 const adapter: SdkAdapter = {
@@ -239,7 +247,7 @@ const adapter: SdkAdapter = {
     // Map protocol → HTTP route the fixture server should serve
     routes(fixture: FixtureScenario) {
         if (fixture.protocol === 'myplugin.chat') {
-            return { method: 'POST', path: '/v1/chat' };
+            return {method: 'POST', path: '/v1/chat'};
         }
         return undefined;
     },
@@ -256,12 +264,13 @@ import sdkAdapter from '../sdk-adapter.js';
 const fixture: FixtureScenario = {
     // ... other fields ...
     sdkAdapter,
-    sdkRequest: { model: 'my-model', messages: [...] },
-    expectedSdkResult: { id: 'expected-id' },  // partial match
+    sdkRequest: {model: 'my-model', messages: [...]},
+    expectedSdkResult: {id: 'expected-id'},  // partial match
 };
 ```
 
 Run with `--roundtrip`:
+
 ```bash
 npm run holo-test -- --fixtures $PWD/plugins --roundtrip --verbose
 ```

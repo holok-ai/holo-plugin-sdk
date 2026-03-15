@@ -89,16 +89,22 @@ tool_calls: [{
 **Required Action**:
 
 ```typescript
-private parseToolCallArguments(toolCalls: OpenAIToolCall[]): HoloToolCall[] {
-  return toolCalls.map(tc => ({
-    ...tc,
-    function: {
-      ...tc.function,
-      arguments: typeof tc.function.arguments === 'string'
-        ? JSON.parse(tc.function.arguments)  // ✅ Parse to object
-        : tc.function.arguments
-    }
-  }));
+private
+parseToolCallArguments(toolCalls
+:
+OpenAIToolCall[]
+):
+HoloToolCall[]
+{
+    return toolCalls.map(tc => ({
+        ...tc,
+        function: {
+            ...tc.function,
+            arguments: typeof tc.function.arguments === 'string'
+                ? JSON.parse(tc.function.arguments)  // ✅ Parse to object
+                : tc.function.arguments
+        }
+    }));
 }
 ```
 
@@ -410,13 +416,20 @@ export class OpenAIProviderPlugin {
 **Optimization**:
 
 ```typescript
-private timestampCache = new Map<number, number>();
+private
+timestampCache = new Map<number, number>();
 
-private convertTimestamp(seconds: number): number {
-  if (!this.timestampCache.has(seconds)) {
-    this.timestampCache.set(seconds, seconds * 1000);
-  }
-  return this.timestampCache.get(seconds)!;
+private
+convertTimestamp(seconds
+:
+number
+):
+number
+{
+    if (!this.timestampCache.has(seconds)) {
+        this.timestampCache.set(seconds, seconds * 1000);
+    }
+    return this.timestampCache.get(seconds)!;
 }
 ```
 

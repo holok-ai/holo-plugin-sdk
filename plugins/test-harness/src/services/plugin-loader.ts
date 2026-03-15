@@ -17,7 +17,8 @@ function ensureLoggerFactory() {
     if (loggerRegistered) return;
     loggerRegistered = true;
 
-    const noop = () => {};
+    const noop = () => {
+    };
     const noopLogger: HoloLogger = {
         info: noop,
         warn: noop,
@@ -35,7 +36,8 @@ function ensureLoggerFactory() {
 }
 
 function createMockContext(): PluginContext {
-    const noop = () => {};
+    const noop = () => {
+    };
     return {
         logger: {
             info: noop,
@@ -45,7 +47,16 @@ function createMockContext(): PluginContext {
             trace: noop,
             verbose: noop,
             fatal: noop,
-            child: () => ({info: noop, warn: noop, error: noop, debug: noop, trace: noop, verbose: noop, fatal: noop, child: () => ({})} as any),
+            child: () => ({
+                info: noop,
+                warn: noop,
+                error: noop,
+                debug: noop,
+                trace: noop,
+                verbose: noop,
+                fatal: noop,
+                child: () => ({})
+            } as any),
         } as any,
     };
 }

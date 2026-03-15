@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import {injectable} from "tsyringe";
 import {
-    GeminiContentTranslator,
     GeminiContentDeltaTranslator,
+    GeminiContentTranslator,
     GeminiMessageDeltaTranslator,
     GeminiMessageStartTranslator,
     GeminiMessageStopTranslator,

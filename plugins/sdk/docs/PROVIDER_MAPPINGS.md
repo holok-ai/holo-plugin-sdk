@@ -144,7 +144,7 @@ supported in generate mode (chat API only).
 | `model`                             | `model`                         | Direct                          | Always present                          |
 | `role: 'assistant'`                 | `messages[0].role: 'assistant'` | Wrap in array                   | Always 'assistant'                      |
 | **🟡 Structure Transforms**         |                                 |                                 |                                         |
-| `content[]` (blocks)                | `output[0].content`           | Transform blocks to HoloContent | See Content Mappings                    |
+| `content[]` (blocks)                | `output[0].content`             | Transform blocks to HoloContent | See Content Mappings                    |
 | `stop_reason`                       | `finish_reason`                 | Map reason codes                | See Finish Reason table                 |
 | `usage.input_tokens`                | `usage.input_tokens`            | Direct                          | Optional                                |
 | `usage.output_tokens`               | `usage.output_tokens`           | Direct                          | Optional                                |
@@ -171,7 +171,7 @@ supported in generate mode (chat API only).
 | `created`                                   | `created`                 | Multiply by 1000                        | OpenAI seconds → Holo ms    |
 | `service_tier`                              | `service_tier`            | Direct                                  | Optional, top-level         |
 | **🟡 Structure Transforms**                 |                           |                                         |                             |
-| `choices[0].message`                        | `output[0]`             | Extract first choice                    | Canonical Holo response     |
+| `choices[0].message`                        | `output[0]`               | Extract first choice                    | Canonical Holo response     |
 | `choices[0].finish_reason`                  | `finish_reason`           | Direct                                  | See Finish Reason table     |
 | `choices[]`                                 | `choices[]`               | Optional, for OpenAI compatibility only | Not used by core Holo logic |
 | `usage.prompt_tokens`                       | `usage.input_tokens`      | Rename                                  | Optional                    |
@@ -192,8 +192,8 @@ supported in generate mode (chat API only).
 |-------------------------------|-----------------------------|-------------------------------------------|---------------------------|
 | **🟢 Direct 1:1**             |                             |                                           |                           |
 | `model`                       | `model`                     | Direct                                    | Always present            |
-| `message.role`                | `output[0].role`          | Wrap in array                             | Always 'assistant'        |
-| `message.content`             | `output[0].content`       | Wrap in array                             | Text content              |
+| `message.role`                | `output[0].role`            | Wrap in array                             | Always 'assistant'        |
+| `message.content`             | `output[0].content`         | Wrap in array                             | Text content              |
 | **🟡 Structure Transforms**   |                             |                                           |                           |
 | `created_at`                  | `created`                   | Parse ISO8601 to milliseconds since epoch | Optional                  |
 | `done`                        | (not mapped)                | Used only to signal stream completion     | Orchestrator decides done |
@@ -206,7 +206,7 @@ supported in generate mode (chat API only).
 | `prompt_eval_duration` (ns)   | `usage.timings.prompt_eval` | Direct                                    | Optional                  |
 | `eval_duration` (ns)          | `usage.timings.eval`        | Direct                                    | Optional                  |
 | **🟡 Generate Mode Only**     |                             |                                           |                           |
-| `response`                    | `output[0].content`       | Direct (text)                             | Generate mode             |
+| `response`                    | `output[0].content`         | Direct (text)                             | Generate mode             |
 | `context`                     | ❌ Drop                      | -                                         | Conversation state        |
 | **🟡 OpenAI Compatibility**   |                             |                                           |                           |
 | Generate                      | `id`                        | Generate UUID                             | Ollama has no ID          |

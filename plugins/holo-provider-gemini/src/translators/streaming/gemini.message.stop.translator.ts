@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import type {HoloStreamChunk} from "@holokai/types/holo";
 import {StreamTranslator} from "@holokai/sdk/provider";
-import {FinishReason} from "@google/genai";
 import type {GenerateContentResponse} from "@google/genai";
+import {FinishReason} from "@google/genai";
 
 @injectable()
 export class GeminiMessageStopTranslator extends StreamTranslator<HoloStreamChunk, GenerateContentResponse> {

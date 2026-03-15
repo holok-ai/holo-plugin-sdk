@@ -81,7 +81,9 @@ export class OpenAIAuditor extends BaseAuditor {
         }
     }
 
-    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, { type: 'done' | 'error' }>, envelope: WorkerResponseEnvelope) {
+    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, {
+        type: 'done' | 'error'
+    }>, envelope: WorkerResponseEnvelope) {
         const metrics = await super.mapResponseMetrics(providerEvent, envelope);
         if (providerEvent.type === 'error') {
             return metrics;

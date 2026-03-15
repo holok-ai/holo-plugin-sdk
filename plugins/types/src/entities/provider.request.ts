@@ -12,6 +12,7 @@ export interface ProviderRequestMetadata {
     guard_result?: { passed: boolean; errors?: string[] };
     is_streaming?: boolean;
     is_passthrough?: boolean;
+
     [key: string]: any;
 }
 

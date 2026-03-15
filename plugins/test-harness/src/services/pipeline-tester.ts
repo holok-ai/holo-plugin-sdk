@@ -3,7 +3,7 @@ import type {ProviderEvent} from '@holokai/types/provider';
 import type {WorkerResponseEnvelope} from '@holokai/types/worker';
 import {runPipelineFromFixture} from '@holokai/lib';
 import type {FixtureScenario} from '../fixtures/types.js';
-import {assertEqual, assertArrayEqual, type AssertionError} from '../dsl/assertions.js';
+import {assertArrayEqual, assertEqual, type AssertionError} from '../dsl/assertions.js';
 import type {TestResult} from './wire-tester.js';
 
 export async function testPipeline(plugin: IProviderPlugin, fixture: FixtureScenario): Promise<TestResult> {

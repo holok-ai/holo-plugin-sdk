@@ -70,15 +70,15 @@ Add a provider configuration to your Holo deployment:
 ### Usage in Code
 
 ```typescript
-import { HoloRequest, HoloResponse } from '@holokai/sdk';
+import {HoloRequest, HoloResponse} from '@holokai/sdk';
 
 const request: HoloRequest = {
-  model: 'claude-3-5-sonnet-20241022',
-  messages: [
-    { role: 'user', content: 'Explain quantum computing briefly.' }
-  ],
-  max_tokens: 1000,
-  temperature: 0.7
+    model: 'claude-3-5-sonnet-20241022',
+    messages: [
+        {role: 'user', content: 'Explain quantum computing briefly.'}
+    ],
+    max_tokens: 1000,
+    temperature: 0.7
 };
 
 // Plugin handles translation automatically
@@ -271,10 +271,18 @@ See [SDK Provider Mappings](../../packages/sdk/docs/PROVIDER_MAPPINGS.md#claude-
 
 ```typescript
 // Holo
-{ type: 'text', text: 'Hello' }
+{
+    type: 'text', text
+:
+    'Hello'
+}
 
 // Claude (direct)
-{ type: 'text', text: 'Hello' }
+{
+    type: 'text', text
+:
+    'Hello'
+}
 ```
 
 #### Image Content
@@ -347,25 +355,25 @@ The `ClaudeStreamTranslator` maintains state to:
 ### Streaming Example
 
 ```typescript
-import { HoloStreamChunk } from '@holokai/sdk';
+import {HoloStreamChunk} from '@holokai/sdk';
 
 const stream = await claudeProvider.streamChat(request);
 
 for await (const chunk: HoloStreamChunk of stream) {
-  switch (chunk.delta?.type) {
-    case 'message_start':
-      console.log('Message started:', chunk.id);
-      break;
-    case 'content_delta':
-      process.stdout.write(chunk.delta.delta.content ?? '');
-      break;
-    case 'message_delta':
-      console.log('Usage:', chunk.usage);
-      break;
-    case 'message_stop':
-      console.log('Complete. Reason:', chunk.finish_reason);
-      break;
-  }
+    switch (chunk.delta?.type) {
+        case 'message_start':
+            console.log('Message started:', chunk.id);
+            break;
+        case 'content_delta':
+            process.stdout.write(chunk.delta.delta.content ?? '');
+            break;
+        case 'message_delta':
+            console.log('Usage:', chunk.usage);
+            break;
+        case 'message_stop':
+            console.log('Complete. Reason:', chunk.finish_reason);
+            break;
+    }
 }
 ```
 
@@ -379,15 +387,15 @@ Enable extended thinking for Claude 3.5 Sonnet+ models:
 
 ```typescript
 const request: HoloRequest = {
-  model: 'claude-3-5-sonnet-20241022',
-  messages: [{ role: 'user', content: 'Solve this complex problem...' }],
-  // Provider-specific config (passed through)
-  provider_config: {
-    thinking: {
-      type: 'enabled',
-      budget_tokens: 5000
+    model: 'claude-3-5-sonnet-20241022',
+    messages: [{role: 'user', content: 'Solve this complex problem...'}],
+    // Provider-specific config (passed through)
+    provider_config: {
+        thinking: {
+            type: 'enabled',
+            budget_tokens: 5000
+        }
     }
-  }
 };
 ```
 
@@ -401,11 +409,11 @@ Reduce costs by caching reusable prompts:
 ```typescript
 // Provider-specific caching (requires Claude API beta)
 const cachedMessages = [
-  {
-    role: 'user',
-    content: 'Large document content...',
-    cache_control: { type: 'ephemeral' }  // Cache this message
-  }
+    {
+        role: 'user',
+        content: 'Large document content...',
+        cache_control: {type: 'ephemeral'}  // Cache this message
+    }
 ];
 ```
 
@@ -418,7 +426,9 @@ Access beta features via plugin configuration:
 ```json
 {
   "config": {
-    "betas": ["prompt-caching-2024-07-31"]
+    "betas": [
+      "prompt-caching-2024-07-31"
+    ]
   }
 }
 ```
@@ -433,11 +443,11 @@ This plugin uses strict SDK types exclusively:
 
 ```typescript
 import type {
-  HoloRequest,
-  HoloResponse,
-  HoloMessage,
-  HoloTool,
-  HoloJsonSchema  // ✅ Proper JSON Schema types
+    HoloRequest,
+    HoloResponse,
+    HoloMessage,
+    HoloTool,
+    HoloJsonSchema  // ✅ Proper JSON Schema types
 } from '@holokai/sdk';
 
 // ❌ NO: Record<string, unknown>
@@ -459,10 +469,10 @@ interface HoloTool {
 **After** (Plugin SDK):
 
 ```typescript
-import type { HoloTool, HoloJsonSchema } from '@holokai/sdk';
+import type {HoloTool, HoloJsonSchema} from '@holokai/sdk';
 
 interface HoloTool {
-  parameters?: HoloJsonSchema; // ✅ Strict JSON Schema Draft 7
+    parameters?: HoloJsonSchema; // ✅ Strict JSON Schema Draft 7
 }
 ```
 
@@ -478,15 +488,15 @@ The plugin exposes a JSON Schema for configuration validation:
 
 ```typescript
 {
-  apiKey: string;              // Required
-  baseUrl?: string;            // Optional custom endpoint
-  defaultModel?: string;       // Fallback model
-  allowedModels?: string[];    // Model allowlist
-  timeoutMs?: number;          // Request timeout (default: 60000)
-  maxRetries?: number;         // Retry attempts (default: 2)
-  enableVision?: boolean;      // Vision support (default: true)
-  logRequests?: boolean;       // Observability (default: false)
-  telemetrySampleRate?: number;// Sampling rate (default: 1.0)
+    apiKey: string;              // Required
+    baseUrl ? : string;            // Optional custom endpoint
+    defaultModel ? : string;       // Fallback model
+    allowedModels ? : string[];    // Model allowlist
+    timeoutMs ? : number;          // Request timeout (default: 60000)
+    maxRetries ? : number;         // Retry attempts (default: 2)
+    enableVision ? : boolean;      // Vision support (default: true)
+    logRequests ? : boolean;       // Observability (default: false)
+    telemetrySampleRate ? : number;// Sampling rate (default: 1.0)
 }
 ```
 

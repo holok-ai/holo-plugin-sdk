@@ -2,7 +2,7 @@ import type {IProviderPlugin} from '@holokai/types/plugin';
 import type {IAuditor, ProviderEvent} from '@holokai/types/provider';
 import type {WorkerResponseEnvelope} from '@holokai/types/worker';
 import type {FixtureScenario} from '../fixtures/types.js';
-import {assertEqual, assertPartialMatch, type AssertionError} from '../dsl/assertions.js';
+import {assertEqual, type AssertionError, assertPartialMatch} from '../dsl/assertions.js';
 import type {TestResult} from './wire-tester.js';
 
 export async function testAudit(plugin: IProviderPlugin, fixture: FixtureScenario): Promise<TestResult> {

@@ -1,6 +1,6 @@
 import {loadFixtures} from '../fixtures/fixture-loader.js';
 import {loadPlugin} from '../services/plugin-loader.js';
-import {testWire, type TestResult} from '../services/wire-tester.js';
+import {type TestResult, testWire} from '../services/wire-tester.js';
 import {testAudit} from '../services/audit-tester.js';
 import {testPipeline} from '../services/pipeline-tester.js';
 import {testRoundTrip} from '../services/sdk-roundtrip-tester.js';

@@ -29,11 +29,11 @@ The SDK provides:
 ## Package Exports
 
 ```typescript
-import { BasePlugin } from '@holokai/sdk/plugin';
-import { BaseProvider, BaseAuditor, BaseTranslator, BaseWireAdapter } from '@holokai/sdk/provider';
-import { ClassLogger, pickDefined, stringifyError } from '@holokai/sdk';
-import { HoloRequestDefaults } from '@holokai/sdk/holo';
-import { NotificationServiceToken, NotificationEventFactory } from '@holokai/sdk/notification';
+import {BasePlugin} from '@holokai/sdk/plugin';
+import {BaseProvider, BaseAuditor, BaseTranslator, BaseWireAdapter} from '@holokai/sdk/provider';
+import {ClassLogger, pickDefined, stringifyError} from '@holokai/sdk';
+import {HoloRequestDefaults} from '@holokai/sdk/holo';
+import {NotificationServiceToken, NotificationEventFactory} from '@holokai/sdk/notification';
 ```
 
 ## Building a Provider Plugin
@@ -60,16 +60,16 @@ plugins/holo-provider-{name}/
 
 ```typescript
 // plugin.ts
-import { BasePlugin } from '@holokai/sdk/plugin';
-import type { IProviderPlugin, PluginContext } from '@holokai/types/plugin';
-import type { IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams } from '@holokai/types/provider';
-import type { RouteTree } from '@holokai/types/routing';
-import { RouteHandler } from '@holokai/types/routing';
-import { ProtocolCapability } from '@holokai/types/entities';
-import { manifest } from './manifest';
-import { MyProvider } from './my.provider';
-import { MyWireAdapter } from './my.wire.adapter';
-import { MyTranslator } from './my.translator';
+import {BasePlugin} from '@holokai/sdk/plugin';
+import type {IProviderPlugin, PluginContext} from '@holokai/types/plugin';
+import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from '@holokai/types/provider';
+import type {RouteTree} from '@holokai/types/routing';
+import {RouteHandler} from '@holokai/types/routing';
+import {ProtocolCapability} from '@holokai/types/entities';
+import {manifest} from './manifest';
+import {MyProvider} from './my.provider';
+import {MyWireAdapter} from './my.wire.adapter';
+import {MyTranslator} from './my.translator';
 
 export const MyProtocols = {
     CHAT: 'my.chat',
@@ -91,7 +91,7 @@ export class MyProviderPlugin extends BasePlugin implements IProviderPlugin {
     }
 
     getCapabilities(): ProviderCapabilities {
-        return { streaming: true, tools: true, vision: false, functionCalling: true, maxTokens: 128000 };
+        return {streaming: true, tools: true, vision: false, functionCalling: true, maxTokens: 128000};
     }
 
     getRoutes(): RouteTree {
@@ -100,12 +100,12 @@ export class MyProviderPlugin extends BasePlugin implements IProviderPlugin {
                 chat: {
                     method: 'POST',
                     handler: RouteHandler.REQUEST,
-                    protocol: { name: MyProtocols.CHAT, capability: ProtocolCapability.CHAT }
+                    protocol: {name: MyProtocols.CHAT, capability: ProtocolCapability.CHAT}
                 },
                 models: {
                     method: 'GET',
                     handler: RouteHandler.MODELS,
-                    protocol: { name: MyProtocols.MODELS, capability: ProtocolCapability.MODELS }
+                    protocol: {name: MyProtocols.MODELS, capability: ProtocolCapability.MODELS}
                 }
             }
         };
@@ -125,12 +125,12 @@ export class MyProviderPlugin extends BasePlugin implements IProviderPlugin {
 
 Each route declares a **protocol** (wire format identifier) and **capability** (what kind of request it handles):
 
-| Capability | Description |
-|-----------|-------------|
-| `ProtocolCapability.CHAT` | Conversational LLM requests |
-| `ProtocolCapability.GENERATE` | Text generation (non-chat) |
-| `ProtocolCapability.EMBED` | Embedding generation |
-| `ProtocolCapability.MODELS` | Model listing |
+| Capability                    | Description                 |
+|-------------------------------|-----------------------------|
+| `ProtocolCapability.CHAT`     | Conversational LLM requests |
+| `ProtocolCapability.GENERATE` | Text generation (non-chat)  |
+| `ProtocolCapability.EMBED`    | Embedding generation        |
+| `ProtocolCapability.MODELS`   | Model listing               |
 
 Protocols are registered in the database at startup. Each protocol is tied to a specific plugin version.
 
@@ -139,9 +139,9 @@ Protocols are registered in the database at startup. Each protocol is tied to a 
 The auditor transforms worker requests/responses into `ProviderRequest`/`ProviderResponse` audit records:
 
 ```typescript
-import { BaseAuditor } from '@holokai/sdk/provider';
-import type { HoloWorkerRequest } from '@holokai/types/worker';
-import type { ProviderRequest } from '@holokai/types/entities';
+import {BaseAuditor} from '@holokai/sdk/provider';
+import type {HoloWorkerRequest} from '@holokai/types/worker';
+import type {ProviderRequest} from '@holokai/types/entities';
 
 export class MyAuditor extends BaseAuditor {
     readonly provider = 'my-provider';
@@ -152,26 +152,29 @@ export class MyAuditor extends BaseAuditor {
     }
 
     protected mapProviderPayload(workerRequest: HoloWorkerRequest, req: Omit<ProviderRequest, 'id'>): void {
-        const { temperature, max_tokens } = workerRequest.payload;
-        req.metadata.options = { temperature, max_tokens };
+        const {temperature, max_tokens} = workerRequest.payload;
+        req.metadata.options = {temperature, max_tokens};
     }
 
     protected async createProviderEnvelope(payload: any) {
-        return { access_model: payload.model || 'unknown' };
+        return {access_model: payload.model || 'unknown'};
     }
 }
 ```
 
 Audit records use:
-- **Real columns** for queryable fields: `access_model`, `application_id`, `provider_id`, `protocol_id`, `user_id`, `client_identifier`, `thread_id`, token counts, timing, cost
-- **`metadata` JSONB** for extensible data: `user_prompt`, `system_prompt`, `options`, `raw_request`, `headers`, `response_raw`, `usage_raw`, etc.
+
+- **Real columns** for queryable fields: `access_model`, `application_id`, `provider_id`, `protocol_id`, `user_id`,
+  `client_identifier`, `thread_id`, token counts, timing, cost
+- **`metadata` JSONB** for extensible data: `user_prompt`, `system_prompt`, `options`, `raw_request`, `headers`,
+  `response_raw`, `usage_raw`, etc.
 
 ### Manifest
 
 ```typescript
 // manifest.ts
-import type { PluginManifest } from '@holokai/types/plugin';
-import { PluginType } from '@holokai/types/plugin';
+import type {PluginManifest} from '@holokai/types/plugin';
+import {PluginType} from '@holokai/types/plugin';
 
 export const manifest: PluginManifest = {
     name: '@holokai/holo-provider-my',
@@ -186,18 +189,18 @@ export const manifest: PluginManifest = {
 
 ```typescript
 // index.ts
-import { MyProviderPlugin } from './plugin';
+import {MyProviderPlugin} from './plugin';
 
 export default new MyProviderPlugin();
 ```
 
 ## Reference Implementations
 
-| Plugin | Key Features |
-|--------|-------------|
-| [OpenAI](../holo-provider-openai) | Dual protocols (completions + responses), dual wire adapters, tool calling |
+| Plugin                            | Key Features                                                                   |
+|-----------------------------------|--------------------------------------------------------------------------------|
+| [OpenAI](../holo-provider-openai) | Dual protocols (completions + responses), dual wire adapters, tool calling     |
 | [Claude](../holo-provider-claude) | 6-event streaming lifecycle, content blocks, extended thinking, prompt caching |
-| [Ollama](../holo-provider-ollama) | Chat + generate protocols, local deployment, passthrough default handler |
+| [Ollama](../holo-provider-ollama) | Chat + generate protocols, local deployment, passthrough default handler       |
 
 ## License
 
