@@ -37,11 +37,20 @@ export class GeminiContentTranslator extends BaseTranslator<HoloContent, Part> {
             return {text: source.text};
         }
 
-        const parsed = parseDataUrl(source.url);
-        if (parsed) {
-            return {inlineData: {mimeType: parsed.mimeType, data: parsed.data}};
+        if (source.type === 'image') {
+            if (source.url) {
+                const parsed = parseDataUrl(source.url);
+                if (parsed) {
+                    return {inlineData: {mimeType: parsed.mimeType, data: parsed.data}};
+                }
+                return {fileData: {fileUri: source.url, mimeType: source.mime || 'image/png'}};
+            }
+            if (source.data) {
+                return {inlineData: {mimeType: source.mime || 'image/png', data: source.data}};
+            }
         }
-        return {fileData: {fileUri: source.url, mimeType: source.mime || 'image/png'}};
+
+        return {text: ''};
     }
 
     protected async toHoloImpl(source: Part): Promise<Partial<HoloContent>> {

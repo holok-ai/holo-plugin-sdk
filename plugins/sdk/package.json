@@ -60,6 +60,11 @@
       "import": "./dist/notification/index.js",
       "require": "./dist/notification/index.js"
     },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js",
+      "require": "./dist/client/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [

@@ -1,7 +1,7 @@
 import {container} from 'tsyringe';
 import {
     AccessDB, ApplicationDB, HoloTokenDB, ModelDB, PricingDB,
-    ProviderDB, ProviderResponseCostDB, RequestDB, ResponseDB
+    ProtocolDB, ProviderDB, ProviderResponseCostDB, RequestDB, ResponseDB
 } from '../db';
 import {
     AccessService,
@@ -11,6 +11,7 @@ import {
     ResponseService,
     TokenService
 } from '../services';
+import {HoloRequestService} from '../services/holo.request.service';
 
 container
     .registerSingleton(ResponseService)
@@ -27,4 +28,6 @@ container
     .registerSingleton(ResponseDB)
     .registerSingleton(PricingDB)
     .registerSingleton(ProviderResponseCostDB)
-    .registerSingleton(PricingService);
+    .registerSingleton(PricingService)
+    .registerSingleton(ProtocolDB)
+    .registerSingleton(HoloRequestService);

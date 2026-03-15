@@ -45,7 +45,7 @@ export class OpenAIImageContentTranslator extends BaseTranslator<HoloContentImag
         return {
             type: 'image_url',
             image_url: {
-                url: source.url
+                url: source.url ?? source.data ?? ''
             }
         };
     }

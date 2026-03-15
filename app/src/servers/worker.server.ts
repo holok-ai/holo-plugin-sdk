@@ -11,6 +11,7 @@ import {AIRequestStat, HoloWorkerRequest, IProvider, ProviderEvent} from "@holok
 import type {INotificationService} from "@holokai/types/notification";
 import {ServerType} from "@holokai/types/entities";
 import {runRequestPipeline} from "@holokai/lib";
+import {HoloWireAdapter} from "@holokai/sdk/provider";
 
 @injectable()
 export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
@@ -80,11 +81,13 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         )
                     );
                 } else {
-                    const wire = await plugin.createWireAdapter({
-                        requestId,
-                        isStreaming: workerRequest.isStreaming,
-                        protocol: workerRequest.protocol.name
-                    });
+                    const wire = workerRequest.isHoloNative
+                        ? new HoloWireAdapter(requestId, workerRequest.isStreaming)
+                        : await plugin.createWireAdapter({
+                            requestId,
+                            isStreaming: workerRequest.isStreaming,
+                            protocol: workerRequest.protocol.name
+                        });
 
                     const q = await ai.processWorkerRequest(workerRequest);
                     const result = await runRequestPipeline(q, wire, ai.auditor, envelope);

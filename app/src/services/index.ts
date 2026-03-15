@@ -15,3 +15,4 @@ export * from './evaluators';
 export * from './plugin';
 export {AdminService} from "./admin.service";
 export {PricingService} from "./pricing.service";
+export {HoloRequestService} from "./holo.request.service";

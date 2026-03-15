@@ -8,7 +8,7 @@ export class HoloResponseFactory {
             id,
             model: model || 'unknown',
             created: Date.now(),
-            messages: [{
+            output: [{
                 role: 'assistant',
                 content: error
             }],

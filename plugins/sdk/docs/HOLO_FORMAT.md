@@ -41,13 +41,13 @@ Universal request format supporting:
 
 - **Common fields** (all providers): `model`, `messages`, `temperature`, `top_p`, `stream`, `tools`
 - **Mapped fields** (≥2 providers): `system`, `max_tokens`, `stop_sequences`, `response_format`, etc.
-- **Request types**: `chat` (default) or `generate` (Ollama-specific)
+- **Routing fields**: `provider`, `application`, `thread_id`, `branch`
 
 ### HoloResponse
 
 Universal response format with:
 
-- **Core fields**: `id`, `model`, `messages`, `finish_reason`, `usage`
+- **Core fields**: `id`, `model`, `output`, `finish_reason`, `usage`
 - **Portable content**: Text, images, tool calls, tool results
 - **Usage tracking**: Input/output tokens, cache stats, service tier
 

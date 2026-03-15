@@ -22,8 +22,8 @@ export class ClaudeResponseTranslator extends BaseTranslator<HoloResponse, RawMe
     protected async fromHoloImpl(source: HoloResponse): Promise<Partial<RawMessageStreamEvent | Message>> {
         // For Claude, we primarily work with the full response message format
         // Streaming events are handled separately in streaming contexts
-        const messageResult = source.messages?.length
-            ? await this.responseMessageTranslator.fromHolo(source.messages[0])
+        const messageResult = source.output?.length
+            ? await this.responseMessageTranslator.fromHolo(source.output[0])
             : {
                 role: 'assistant' as const,
                 content: [{type: 'text', text: ''}]
@@ -51,7 +51,7 @@ export class ClaudeResponseTranslator extends BaseTranslator<HoloResponse, RawMe
 
             // Convert Claude response message back to Holo message using message translator
             const holoMessage = await this.responseMessageTranslator.toHolo(responseMessage);
-            const messages = Object.keys(holoMessage).length ? [holoMessage as HoloMessage] : [];
+            const output = Object.keys(holoMessage).length ? [holoMessage as HoloMessage] : [];
 
             // Convert usage back to Holo if present
             const usage = responseMessage.usage
@@ -61,7 +61,7 @@ export class ClaudeResponseTranslator extends BaseTranslator<HoloResponse, RawMe
             return pickDefined({
                 id: responseMessage.id,
                 model: responseMessage.model,
-                messages,
+                output,
                 finish_reason: this.mapFinishReasonToHolo(responseMessage.stop_reason as string),
                 usage
             }) as Partial<HoloResponse>;

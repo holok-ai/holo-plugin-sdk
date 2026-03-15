@@ -22,8 +22,8 @@ export class GeminiResponseTranslator extends BaseTranslator<HoloResponse, Gener
     }
 
     protected async fromHoloImpl(source: HoloResponse): Promise<Partial<GenerateContentResponse>> {
-        const messageResult = source.messages?.length
-            ? await this.responseMessageTranslator.fromHolo(source.messages[0])
+        const messageResult = source.output?.length
+            ? await this.responseMessageTranslator.fromHolo(source.output[0])
             : {role: 'model', parts: [{text: ''}]};
 
         const usageResult = source.usage
@@ -48,7 +48,7 @@ export class GeminiResponseTranslator extends BaseTranslator<HoloResponse, Gener
         const holoMessage = candidate.content
             ? await this.responseMessageTranslator.toHolo(candidate.content)
             : undefined;
-        const messages = holoMessage && Object.keys(holoMessage).length ? [holoMessage as HoloMessage] : [];
+        const output = holoMessage && Object.keys(holoMessage).length ? [holoMessage as HoloMessage] : [];
 
         const usage = source.usageMetadata
             ? await this.usageTranslator.toHolo(source.usageMetadata)
@@ -56,7 +56,7 @@ export class GeminiResponseTranslator extends BaseTranslator<HoloResponse, Gener
 
         return pickDefined({
             model: source.modelVersion,
-            messages,
+            output,
             finish_reason: toHoloFinishReason(candidate.finishReason as string | undefined),
             usage
         }) as Partial<HoloResponse>;

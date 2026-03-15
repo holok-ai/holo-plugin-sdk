@@ -84,6 +84,9 @@
       ],
       "@holokai/lib/pipeline": [
         "./plugins/lib/src/pipeline/index.ts"
+      ],
+      "@holokai/sdk/client": [
+        "./plugins/sdk/src/client/index.ts"
       ]
     }
   }

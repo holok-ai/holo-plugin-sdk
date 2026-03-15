@@ -116,20 +116,20 @@ universal format. Use these tables when implementing translation logic in provid
 
 ### Ollama Generate Mode → Holo
 
-| Ollama Generate Field | Holo Field                           | Transformation                                       | Notes                                    |
-|-----------------------|--------------------------------------|------------------------------------------------------|------------------------------------------|
-| `model`               | `model` + `request_type: 'generate'` | Set request type                                     | ✅ Required                               |
-| `prompt`              | Synthetic `messages` array           | Wrap as `messages: [{role:'user', content: prompt}]` | ✅ Required; cannot coexist with messages |
-| `system`              | `system`                             | Direct                                               | Optional                                 |
-| `template`            | ❌ Drop                               | -                                                    | Prompt template                          |
-| `context`             | ❌ Drop                               | -                                                    | Conversation state                       |
-| `raw`                 | ❌ Drop                               | -                                                    | Bypass templating                        |
-| `images`              | Transform to content                 | Convert to message content                           | Optional                                 |
-| `suffix`              | ❌ Drop                               | -                                                    | Completion suffix                        |
+| Ollama Generate Field | Holo Field                 | Transformation                                       | Notes                                    |
+|-----------------------|----------------------------|------------------------------------------------------|------------------------------------------|
+| `model`               | `model`                    | Direct                                               | ✅ Required                               |
+| `prompt`              | Synthetic `messages` array | Wrap as `messages: [{role:'user', content: prompt}]` | ✅ Required; cannot coexist with messages |
+| `system`              | `system`                   | Direct                                               | Optional                                 |
+| `template`            | ❌ Drop                     | -                                                    | Prompt template                          |
+| `context`             | ❌ Drop                     | -                                                    | Conversation state                       |
+| `raw`                 | ❌ Drop                     | -                                                    | Bypass templating                        |
+| `images`              | Transform to content       | Convert to message content                           | Optional                                 |
+| `suffix`              | ❌ Drop                     | -                                                    | Completion suffix                        |
 
-**Note on generate mode**: In Holo, generate mode is represented as `request_type: 'generate'` with the `prompt` wrapped
-into a synthetic messages array: `messages: [{role:'user', content: prompt}]`. Tools are NOT supported in generate
-mode (chat API only).
+**Note on generate mode**: The Ollama provider dispatches to generate vs chat based on `protocol.name` server-side.
+The `prompt` is wrapped into a synthetic messages array: `messages: [{role:'user', content: prompt}]`. Tools are NOT
+supported in generate mode (chat API only).
 
 ---
 
@@ -144,7 +144,7 @@ mode (chat API only).
 | `model`                             | `model`                         | Direct                          | Always present                          |
 | `role: 'assistant'`                 | `messages[0].role: 'assistant'` | Wrap in array                   | Always 'assistant'                      |
 | **🟡 Structure Transforms**         |                                 |                                 |                                         |
-| `content[]` (blocks)                | `messages[0].content`           | Transform blocks to HoloContent | See Content Mappings                    |
+| `content[]` (blocks)                | `output[0].content`           | Transform blocks to HoloContent | See Content Mappings                    |
 | `stop_reason`                       | `finish_reason`                 | Map reason codes                | See Finish Reason table                 |
 | `usage.input_tokens`                | `usage.input_tokens`            | Direct                          | Optional                                |
 | `usage.output_tokens`               | `usage.output_tokens`           | Direct                          | Optional                                |
@@ -171,7 +171,7 @@ mode (chat API only).
 | `created`                                   | `created`                 | Multiply by 1000                        | OpenAI seconds → Holo ms    |
 | `service_tier`                              | `service_tier`            | Direct                                  | Optional, top-level         |
 | **🟡 Structure Transforms**                 |                           |                                         |                             |
-| `choices[0].message`                        | `messages[0]`             | Extract first choice                    | Canonical Holo response     |
+| `choices[0].message`                        | `output[0]`             | Extract first choice                    | Canonical Holo response     |
 | `choices[0].finish_reason`                  | `finish_reason`           | Direct                                  | See Finish Reason table     |
 | `choices[]`                                 | `choices[]`               | Optional, for OpenAI compatibility only | Not used by core Holo logic |
 | `usage.prompt_tokens`                       | `usage.input_tokens`      | Rename                                  | Optional                    |
@@ -192,8 +192,8 @@ mode (chat API only).
 |-------------------------------|-----------------------------|-------------------------------------------|---------------------------|
 | **🟢 Direct 1:1**             |                             |                                           |                           |
 | `model`                       | `model`                     | Direct                                    | Always present            |
-| `message.role`                | `messages[0].role`          | Wrap in array                             | Always 'assistant'        |
-| `message.content`             | `messages[0].content`       | Wrap in array                             | Text content              |
+| `message.role`                | `output[0].role`          | Wrap in array                             | Always 'assistant'        |
+| `message.content`             | `output[0].content`       | Wrap in array                             | Text content              |
 | **🟡 Structure Transforms**   |                             |                                           |                           |
 | `created_at`                  | `created`                   | Parse ISO8601 to milliseconds since epoch | Optional                  |
 | `done`                        | (not mapped)                | Used only to signal stream completion     | Orchestrator decides done |
@@ -206,7 +206,7 @@ mode (chat API only).
 | `prompt_eval_duration` (ns)   | `usage.timings.prompt_eval` | Direct                                    | Optional                  |
 | `eval_duration` (ns)          | `usage.timings.eval`        | Direct                                    | Optional                  |
 | **🟡 Generate Mode Only**     |                             |                                           |                           |
-| `response`                    | `messages[0].content`       | Direct (text)                             | Generate mode             |
+| `response`                    | `output[0].content`       | Direct (text)                             | Generate mode             |
 | `context`                     | ❌ Drop                      | -                                         | Conversation state        |
 | **🟡 OpenAI Compatibility**   |                             |                                           |                           |
 | Generate                      | `id`                        | Generate UUID                             | Ollama has no ID          |

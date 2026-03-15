@@ -47,7 +47,7 @@ export class OpenAIResponseRequestTranslator extends BaseTranslator<HoloRequest,
                             } else if (c.type === 'image') {
                                 return {
                                     type: 'input_image' as const,
-                                    image_url: c.url,
+                                    image_url: c.url ?? c.data ?? null,
                                     detail: 'auto' as const
                                 };
                             }

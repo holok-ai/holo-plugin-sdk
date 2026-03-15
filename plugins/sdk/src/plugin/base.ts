@@ -1,4 +1,4 @@
-import {PluginManifest, IPlugin, PluginContext, PluginState, PluginType} from "@holokai/types/plugin";
+import {IPlugin, PluginContext, PluginManifest, PluginState, PluginType} from "@holokai/types/plugin";
 import {PluginError, PluginErrorCode} from "./errors";
 import {ClassLogger} from "../core";
 import type {CostResult, PricingSheetModel} from "@holokai/types/entities";

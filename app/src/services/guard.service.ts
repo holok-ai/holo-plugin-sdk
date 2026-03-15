@@ -4,7 +4,7 @@ import {GuardResult, GuardResultSchema} from "../types";
 import {env} from "../env";
 import {ClassLogger, pickDefined} from "@holokai/sdk";
 import {filterJoin, findLast} from "../utils";
-import {HoloContent, HoloContentText, HoloRequest, RequestType} from "@holokai/types/holo";
+import {HoloContent, HoloContentText, HoloRequest} from "@holokai/types/holo";
 import type {HoloWorkerRequest} from "@holokai/types/worker";
 import type {Auth} from "@holokai/types/api";
 import type {Prompt} from "@holokai/types/entities";
@@ -94,7 +94,6 @@ export class GuardService extends ClassLogger {
                         const guardProtocol = await this.providerPluginService.getProtocol(guardProvider.plugin_id, guardPlugin.defaultProtocol);
 
                         const holoRequest: HoloRequest = pickDefined({
-                            request_type: RequestType.GENERATE,
                             model: guard.model,
                             messages: [{
                                 role: "user",
@@ -124,12 +123,12 @@ export class GuardService extends ClassLogger {
                         // TODO: Handle error responses before translating - check if raw.error exists and return early
                         //       to avoid passing error objects to translator which expects proper response structure
                         const holoResponse = await guardPlugin.translator.toHoloResponse(raw);
-                        if (!holoResponse.messages) return {
+                        if (!holoResponse.output) return {
                             passed: false,
-                            errors: ["Guard response is missing messages"]
+                            errors: ["Guard response is missing output"]
                         };
 
-                        const guardResponse = holoResponse.messages[0].content as string;
+                        const guardResponse = holoResponse.output[0].content as string;
                         const result = JSON.parse(guardResponse);
                         const duration = Date.now() - startTime;
                         logger.debug(`Guard check ${index + 1}/${guards.length} completed: id=${guard.id}, passed=${result.passed}, duration=${duration}ms`);

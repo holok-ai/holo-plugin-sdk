@@ -198,7 +198,7 @@ const claudeResponse = {
 const holoResponse: HoloResponse = {
     id: 'msg_123',
     model: 'claude-3-5-sonnet-20241022',
-    messages: [{
+    output: [{
         role: 'assistant',
         content: 'Hello!' // Flatten text blocks
     }],
@@ -238,7 +238,7 @@ import {randomUUID} from 'crypto';
 const holoResponse: HoloResponse = {
     id: ollamaResponse.id ?? randomUUID(), // Generate if missing
     model: ollamaResponse.model,
-    messages: [/* ... */]
+    output: [/* ... */]
 };
 ```
 
@@ -299,7 +299,7 @@ for await (const chunk of stream) {
 const finalResponse: HoloResponse = {
     id: 'msg_123',
     model: 'gpt-4',
-    messages: [{
+    output: [{
         role: 'assistant',
         content: fullContent
     }],
@@ -508,7 +508,7 @@ it('should handle real Claude response', async () => {
     const holo = toHolo(response);
 
     expect(holo.model).toBe('claude-3-5-sonnet-20241022');
-    expect(holo.messages[0].role).toBe('assistant');
+    expect(holo.output[0].role).toBe('assistant');
 });
 ```
 

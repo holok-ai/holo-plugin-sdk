@@ -37,11 +37,21 @@ export class ClaudeContentTranslator extends BaseTranslator<HoloContent, Content
             return {type: 'text', text: source.text};
         }
 
-        const parsed = parseDataUrl(source.url);
-        if (parsed) {
-            return {type: 'image', source: {type: 'base64', data: parsed.data, media_type: parsed.media}};
+        if (source.type === 'image') {
+            if (source.url) {
+                const parsed = parseDataUrl(source.url);
+                if (parsed) {
+                    return {type: 'image', source: {type: 'base64', data: parsed.data, media_type: parsed.media}};
+                }
+                return {type: 'image', source: {type: 'url', url: source.url}};
+            }
+            if (source.data) {
+                const media: ImageMime = (source.mime as ImageMime) || 'image/png';
+                return {type: 'image', source: {type: 'base64', data: source.data, media_type: media}};
+            }
         }
-        return {type: 'image', source: {type: 'url', url: source.url}};
+
+        return {type: 'text', text: ''};
     }
 
     protected async toHoloImpl(source: ContentBlockParam): Promise<Partial<HoloContent>> {

@@ -127,7 +127,9 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
         }) as ProviderResponse;
     }
 
-    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, { type: 'done' | 'error' }>, _envelope: WorkerResponseEnvelope) {
+    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, {
+        type: 'done' | 'error'
+    }>, _envelope: WorkerResponseEnvelope) {
         const metrics = providerEvent.metrics;
 
         if (!metrics) return {};
@@ -152,12 +154,6 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
         }
     }
 
-    private buildTokenBreakdown(metrics: Record<string, any>): Record<string, number> | undefined {
-        if (!metrics.input_tokens && !metrics.output_tokens) return undefined;
-        const base: Record<string, number> = {input: metrics.input_tokens ?? 0, output: metrics.output_tokens ?? 0};
-        return this.extractExtraTokens(metrics, base);
-    }
-
     protected abstract extractExtraTokens(
         metrics: Record<string, any>,
         base: Record<string, number>
@@ -170,4 +166,10 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
     protected abstract createProviderEnvelope(
         payload: any
     ): Promise<ProviderEnvelope>;
+
+    private buildTokenBreakdown(metrics: Record<string, any>): Record<string, number> | undefined {
+        if (!metrics.input_tokens && !metrics.output_tokens) return undefined;
+        const base: Record<string, number> = {input: metrics.input_tokens ?? 0, output: metrics.output_tokens ?? 0};
+        return this.extractExtraTokens(metrics, base);
+    }
 }

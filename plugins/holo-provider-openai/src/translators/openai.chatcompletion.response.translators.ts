@@ -22,8 +22,8 @@ export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, ChatC
     protected async fromHoloImpl(source: HoloResponse): Promise<Partial<ChatCompletion | ChatCompletionChunk>> {
         // Build message (let the message translator decide content null vs empty)
         const message =
-            source.messages?.length
-                ? await this.responseMessageTranslator.fromHolo(source.messages[0])
+            source.output?.length
+                ? await this.responseMessageTranslator.fromHolo(source.output[0])
                 : undefined;
 
         const usage = source.usage
@@ -65,7 +65,7 @@ export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, ChatC
             if (!choice?.message) return {};
 
             const holoMessage = await this.responseMessageTranslator.toHolo(choice.message);
-            const messages = Object.keys(holoMessage).length ? [holoMessage as HoloMessage] : undefined;
+            const output = Object.keys(holoMessage).length ? [holoMessage as HoloMessage] : undefined;
 
             const usage = completion.usage
                 ? await this.usageTranslator.toHolo(completion.usage)
@@ -74,7 +74,7 @@ export class OpenAIResponseTranslator extends BaseTranslator<HoloResponse, ChatC
             return pickDefined({
                 id: completion.id,
                 model: completion.model,
-                messages, // omit if undefined
+                output,
                 finish_reason: this.mapFinishReasonToHolo(choice.finish_reason),
                 created: completion.created ? completion.created * 1000 : Date.now(),
                 usage,    // omit if undefined

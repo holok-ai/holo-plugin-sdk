@@ -11,7 +11,7 @@ import logger from '../utils/logger';
 import {ServerType} from '@holokai/types/entities';
 import {InitService} from '../services';
 import {errorMiddleware, nocorsMiddleware} from '../api/middleware';
-import {createProviderProxyRoutes, createHoloRoutes} from '../api/routes';
+import {createProviderProxyRoutes, createHoloRoutes, createAdminRoutes} from '../api/routes';
 
 @injectable()
 export class ApiServer extends withAdmin(withDB(BaseServer)) {
@@ -50,7 +50,8 @@ export class ApiServer extends withAdmin(withDB(BaseServer)) {
         await this.initService.init(this.id);
 
         this.expressApp.use('/api', await createProviderProxyRoutes());
-        this.expressApp.use('/holo/api', createHoloRoutes());
+        this.expressApp.use('/holo/api/v1', createHoloRoutes());
+        this.expressApp.use('/holo/api/v1', createAdminRoutes());
         await this.startListening();
     }
 

@@ -36,4 +36,5 @@ export interface HoloWorkerRequest {
     passthroughPath?: string;
     clientIdentifier?: string;
     tokenType?: string;
+    isHoloNative?: boolean;
 }

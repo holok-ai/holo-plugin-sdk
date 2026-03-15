@@ -12,6 +12,7 @@ import {createModelRoutes} from "./model.routes";
 import {createResponseRoutes} from "./response.routes";
 import {createRequestRoutes} from "./request.routes";
 import {createAnalyticsRoutes} from "./analytics.routes";
+import {createHoloChatRoutes, createHoloModelRoutes, createHoloApplicationRoutes} from "./holo.chat.routes";
 import {makeAuthMiddleware} from "../middleware";
 import {PluginRouteService} from "../../services/plugin/plugin.route.service";
 
@@ -26,6 +27,20 @@ export async function createProviderProxyRoutes(): Promise<express.Router> {
 }
 
 export function createHoloRoutes(): express.Router {
+    const router = express.Router();
+
+    const authService = container.resolve(AuthService);
+    const auth = makeAuthMiddleware(authService);
+
+    // Holo native SDK endpoints
+    router.use('/chat', auth, createHoloChatRoutes());
+    router.use('/models', auth, createHoloModelRoutes());
+    router.use('/applications', auth, createHoloApplicationRoutes());
+
+    return router;
+}
+
+export function createAdminRoutes(): express.Router {
     const router = express.Router();
 
     const authService = container.resolve(AuthService);
