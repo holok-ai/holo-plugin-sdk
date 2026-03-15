@@ -1,0 +1,13 @@
+import {defineProject} from 'vitest/config';
+import tsconfigPaths from 'vite-tsconfig-paths';
+
+export default defineProject({
+    plugins: [tsconfigPaths({root: '../..'})],
+    test: {
+        name: 'sdk-integration',
+        environment: 'node',
+        include: ['tests/integration/**/*.test.ts'],
+        setupFiles: ['tests/integration/setup.ts'],
+        testTimeout: 30000,
+    },
+});

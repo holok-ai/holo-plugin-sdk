@@ -81,8 +81,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "type-check": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "vitest run",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
@@ -93,6 +92,7 @@
     "tsyringe": "^4.10.0"
   },
   "devDependencies": {
+    "@holokai/test-utils": "*",
     "@types/express": "^5.0.0",
     "typescript": "^5.0.0"
   }

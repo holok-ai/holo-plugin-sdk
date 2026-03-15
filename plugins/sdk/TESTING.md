@@ -1,157 +1,105 @@
-# @holokai/common Package Testing Guide
+# @holokai/sdk Testing Guide
 
-## Overview
+## Test Layers
 
-This guide explains how we verify that the @holokai/common package is properly built, can be published to npm, and can
-be consumed by other packages.
+The SDK has two test layers, each in its own Vitest project:
 
-## Testing Strategy
+| Layer       | Project            | Directory             | Requires              |
+|-------------|--------------------|-----------------------|-----------------------|
+| Unit        | `sdk`              | `tests/unit/`         | Nothing (mock fetch)  |
+| Integration | `sdk-integration`  | `tests/integration/`  | Live Holo gateway     |
 
-### 1. Build Verification
-
-Before publishing, we verify the package builds correctly:
-
-```bash
-cd packages/common
-npm run build
-```
-
-This should:
-
-- Compile TypeScript to JavaScript in `dist/`
-- Generate type declarations (`.d.ts` files)
-- Create sourcemaps for debugging
-
-### 2. Package Verification Script
-
-Run the verification script before publishing:
+## Running Tests
 
 ```bash
-node scripts/verify-package.js
-```
+# SDK unit tests
+npx vitest run --project sdk
 
-This script checks:
-
-- ✅ package.json has required fields (name, version, main, types)
-- ✅ dist folder exists with compiled output
-- ✅ Main entry point (dist/index.js) exists
-- ✅ Type declarations (dist/index.d.ts) exist
-
-### 3. Local Testing with npm link
-
-Test the package locally before publishing:
-
-```bash
-# In packages/common
-npm link
-
-# In a test project or another package
-npm link @holokai/common
-
-# Now you can import it
-import { Plugin, HoloRequest } from '@holokai/common';
-```
-
-### 4. Test Consumer Package
-
-The `packages/test-consumer` package serves as an integration test:
-
-```bash
-cd packages/test-consumer
-npm install
+# All fast tests (SDK unit + provider conformance)
 npm test
+
+# SDK integration tests (skipped without HOLO_URL)
+npm run test:integration
+
+# Or with env vars
+HOLO_URL=https://holo.example.com HOLO_TEST_TOKEN=my-token npx vitest run --project sdk-integration
+
+# Watch mode (unit tests)
+npx vitest --project sdk
+
+# Coverage
+npm run test:coverage
 ```
 
-This verifies:
+## Unit Tests
 
-- Package can be installed as a dependency
-- Types are properly exported and work with TypeScript
-- Runtime exports work correctly
+Unit tests use mock `fetch` via `HoloClientOptions.fetch` — no live server needed.
 
-### 5. npm Pack Testing
+| File                      | What it tests                                                         |
+|---------------------------|-----------------------------------------------------------------------|
+| `builder.test.ts`         | Chaining, `build()` output, defaults, response_format, tool_choice   |
+| `client.test.ts`          | URL normalization, auth headers, `request()`, `streamRequest()`, errors |
+| `chat-namespace.test.ts`  | Proxy methods, `create()`, builder inheritance, system parity         |
+| `sse.test.ts`             | Buffer splitting, multi-line data, malformed blocks, partial buffers  |
+| `merge.test.ts`           | Text accumulation, `toResponse()`, tool call deltas, failed events    |
+| `stream.test.ts`          | Async iteration, double-iterate guard, `.text()`, `.on()`, `.abort()` |
+| `runner.test.ts`          | Tool loop, maxIterations cap, abort, event emission                   |
+| `errors.test.ts`          | HoloApiError, HoloStreamError, HoloTimeoutError properties           |
 
-Test what would be published without actually publishing:
+### Writing Unit Tests
 
-```bash
-cd packages/common
-npm pack --dry-run
+Tests import directly from source (no build needed — Vitest transforms TypeScript):
+
+```typescript
+import {describe, it, expect, vi} from 'vitest';
+import {HoloClient} from '../../src/client/client.js';
+
+describe('HoloClient', () => {
+    it('strips trailing slashes', async () => {
+        const fetchFn = vi.fn().mockResolvedValue(
+            new Response(JSON.stringify({success: true, data: []}), {status: 200}),
+        );
+        const client = new HoloClient({baseUrl: 'https://holo.example.com/', token: 'tok', fetch: fetchFn});
+        await client.models.list();
+        expect(fetchFn.mock.calls[0][0]).toBe('https://holo.example.com/holo/api/v1/models');
+    });
+});
 ```
 
-This shows exactly which files would be included in the npm package.
+For streaming tests, use `createSseMockFetch` from `@holokai/test-utils` or build a `ReadableStream` directly.
 
-### 6. Pre-publish Checklist
+## Integration Tests
 
-Before running `npm publish`:
+Integration tests hit a live Holo gateway. The setup file checks for required env vars and fails
+immediately with a clear error message if they're missing — no silent skips.
 
-- [ ] All tests pass: `npm test`
-- [ ] Package builds: `npm run build`
-- [ ] Verification passes: `node scripts/verify-package.js`
-- [ ] Version bumped in package.json
-- [ ] CHANGELOG updated
-- [ ] Git tag created for version
-- [ ] No sensitive files in package (check .npmignore)
+| File                    | What it tests                                      |
+|-------------------------|----------------------------------------------------|
+| `chat-create.test.ts`   | `client.chat.create()` returns complete response   |
+| `chat-stream.test.ts`   | `client.chat.stream()` text + parity with create   |
+| `tools.test.ts`          | `client.chat.runner()` tool loop end-to-end        |
+| `cancellation.test.ts`  | Abort mid-stream without unhandled errors           |
+| `errors.test.ts`         | 401/404 map to `HoloApiError` with correct status  |
+| `smoke-matrix.test.ts`  | Minimal prompt per provider (openai, claude, gemini, ollama) |
 
-### 7. Continuous Integration
+Integration tests assert only on Holo API and SDK behavior, not provider-native payload structure.
+Provider translation correctness belongs in the conformance tests.
 
-In CI/CD pipeline, run:
+### Env Variables
 
-```bash
-# Install dependencies
-pnpm install
+| Variable            | Required | Description                                |
+|---------------------|----------|--------------------------------------------|
+| `HOLO_URL`  | Yes      | Base URL of the Holo gateway               |
+| `HOLO_TEST_TOKEN`   | Yes      | Bearer token (JWT or HoloToken)            |
 
-# Build all packages
-pnpm build
+## Vitest Configuration
 
-# Run tests
-pnpm test
+The SDK has two Vitest project configs:
 
-# Verify package
-cd packages/common && node scripts/verify-package.js
-```
+- **`vitest.config.ts`** — unit tests (`tests/unit/**/*.test.ts`), project name `sdk`
+- **`vitest.integration.config.ts`** — integration tests (`tests/integration/**/*.test.ts`), project name `sdk-integration`
 
-## Common Issues and Solutions
+Both use `vite-tsconfig-paths` to resolve `@holokai/*` path aliases from the root tsconfig.
 
-### Issue: Types not found after installation
-
-**Solution**: Ensure `types` field in package.json points to the correct .d.ts file
-
-### Issue: Module not found at runtime
-
-**Solution**: Check `main` field points to compiled JS, not TS source
-
-### Issue: Large package size
-
-**Solution**: Review .npmignore, ensure only necessary files are published
-
-### Issue: Peer dependency conflicts
-
-**Solution**: Use `peerDependencies` for shared dependencies like TypeScript
-
-## Testing After Publishing
-
-Once published to npm:
-
-1. Create a fresh test project
-2. Install the package: `npm install @holokai/common`
-3. Test imports work in both JS and TS
-4. Verify IntelliSense/autocomplete works
-5. Check package size with `npm pack @holokai/common`
-
-## Automated Testing Pipeline
-
-Our testing pipeline ensures quality at every stage:
-
-1. **Pre-commit**: ESLint, Prettier, TypeScript checks
-2. **PR checks**: Build verification, tests, package verification
-3. **Pre-publish**: Full verification suite
-4. **Post-publish**: Integration tests in consumer packages
-
-## Version Management
-
-Follow semantic versioning:
-
-- PATCH (0.0.x): Bug fixes, documentation
-- MINOR (0.x.0): New features, backward compatible
-- MAJOR (x.0.0): Breaking changes
-
-Always test with the exact version that will be published!
+The root `npm test` runs all fast projects (including `sdk`) but excludes `sdk-integration`.
+Integration tests run only via `npm run test:integration` or `npx vitest run --project sdk-integration`.

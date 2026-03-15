@@ -188,9 +188,90 @@ Check the plugin's auditor to understand how it maps tokens:
 npm run holo-test -- --fixtures $PWD/plugins/holo-provider-openai/tests/fixtures --verbose
 ```
 
+## Vitest Integration
+
+The test harness is bridged into Vitest via `@holokai/provider-contract-tests`. Each provider plugin has Vitest
+conformance tests that import fixtures and run them through the harness.
+
+### Running via Vitest
+
+```bash
+# All tests (unit + conformance), excludes integration
+npm test
+
+# SDK unit tests only
+npm run test:unit
+
+# Provider conformance tests only
+npm run test:conformance
+
+# Single provider
+npx vitest run --project openai
+
+# Multiple projects
+npx vitest run --project sdk --project openai
+
+# SDK integration tests (requires HOLO_URL)
+npm run test:integration
+
+# Watch mode
+npm run test:watch
+
+# Coverage
+npm run test:coverage
+```
+
+### Project Names
+
+| Project            | Location                          | What it tests                    |
+|--------------------|-----------------------------------|----------------------------------|
+| `sdk`              | `plugins/sdk`                     | SDK client unit tests            |
+| `openai`           | `plugins/holo-provider-openai`    | OpenAI wire/audit/pipeline/roundtrip |
+| `claude`           | `plugins/holo-provider-claude`    | Claude wire/audit/pipeline       |
+| `gemini`           | `plugins/holo-provider-gemini`    | Gemini wire/audit/pipeline       |
+| `ollama`           | `plugins/holo-provider-ollama`    | Ollama wire/audit/pipeline       |
+| `app`              | `app`                             | App unit tests                   |
+| `sdk-integration`  | `plugins/sdk` (separate config)   | SDK client vs live gateway       |
+
+### Writing Vitest Conformance Tests
+
+Each provider plugin has `tests/conformance/` with test files that bridge fixtures into Vitest:
+
+```typescript
+// plugins/holo-provider-openai/tests/conformance/wire.test.ts
+import {describe, it} from 'vitest';
+import {runWireContract} from '@holokai/provider-contract-tests';
+import chatStreaming from '../fixtures/chat-simple.streaming.fixture.js';
+
+describe('openai wire conformance', () => {
+    it(chatStreaming.name, () => runWireContract('openai', chatStreaming));
+});
+```
+
+Available contract runners from `@holokai/provider-contract-tests`:
+
+- `runWireContract(family, fixture)` — tests wire adapter output
+- `runAuditContract(family, fixture)` — tests audit record mapping (skips if no `expectedAudit`)
+- `runPipelineContract(family, fixture)` — tests full pipeline
+- `runRoundTripContract(fixture, adapter)` — tests SDK round-trip (skips if no `sdkRequest`)
+
+### Standalone CLI vs Vitest
+
+Both the standalone CLI and Vitest conformance tests use the same fixtures and the same test-harness service functions.
+Choose whichever fits your workflow:
+
+| Feature                  | `holo-test` CLI                    | Vitest                                 |
+|--------------------------|------------------------------------|----------------------------------------|
+| Dependency on vitest     | No                                 | Yes                                    |
+| Watch mode               | No                                 | `npm run test:watch`                   |
+| Filtering                | `--plugin`, `--tag`, `--wire` etc. | `--project`, `-t` pattern              |
+| CI integration           | Exit code 0/1                      | Native vitest reporter + coverage      |
+| Fixture discovery        | Glob scan of directory             | Explicit imports in test files         |
+| Output                   | Custom colored reporter            | Vitest reporter                        |
+
 ## Fluent DSL
 
-For programmatic use (e.g. in Jest or custom scripts):
+For programmatic use (e.g. in custom scripts):
 
 ```typescript
 import {suite} from '@holokai/test-harness';
@@ -278,32 +359,75 @@ npm run holo-test -- --fixtures $PWD/plugins --roundtrip --verbose
 ## Project Structure
 
 ```
-plugins/test-harness/
+plugins/test-harness/                  # Core test engine (standalone, no vitest dep)
   src/
-    cli.ts                          # Entry point, arg parsing
-    index.ts                        # Public API exports
+    cli.ts                             # Entry point, arg parsing
+    index.ts                           # Public API exports
     runner/
-      test-runner.ts                # Discovers fixtures, runs test categories
-      test-reporter.ts              # Colored console output with diffs
+      test-runner.ts                   # Discovers fixtures, runs test categories
+      test-reporter.ts                 # Colored console output with diffs
     dsl/
-      suite-builder.ts              # Fluent DSL API
-      assertions.ts                 # assertEqual, assertDeepEqual, assertPartialMatch
+      suite-builder.ts                 # Fluent DSL API
+      assertions.ts                    # assertEqual, assertDeepEqual, assertPartialMatch
     fixtures/
-      fixture-loader.ts             # Glob *.fixture.ts, import, filter
-      types.ts                      # FixtureScenario, SdkAdapter interfaces
+      fixture-loader.ts               # Glob *.fixture.ts, import, filter
+      types.ts                         # FixtureScenario, SdkAdapter interfaces
     services/
-      plugin-loader.ts              # Load plugin singletons with mock context
-      wire-tester.ts                # ProviderEvent[] → WireAdapter → assert
-      audit-tester.ts               # ProviderEvent → Auditor → assert
-      pipeline-tester.ts            # Full pipeline via @holokai/lib
-      sdk-roundtrip-tester.ts       # SDK → fixture server → assert
-      http-fixture-server.ts        # Express server serving fixture wire output
-      sse-parser.ts                 # Parse SSE body → frames
-      ndjson-parser.ts              # Parse NDJSON body → objects
+      plugin-loader.ts                 # Load plugin singletons with mock context
+      wire-tester.ts                   # ProviderEvent[] → WireAdapter → assert
+      audit-tester.ts                  # ProviderEvent → Auditor → assert
+      pipeline-tester.ts              # Full pipeline via @holokai/lib
+      sdk-roundtrip-tester.ts          # SDK → fixture server → assert
+      http-fixture-server.ts           # Express server serving fixture wire output
+      sse-parser.ts                    # Parse SSE body → frames
+      ndjson-parser.ts                 # Parse NDJSON body → objects
+
+plugins/provider-contract-tests/       # Vitest adapter layer (bridges harness → vitest)
+  src/
+    vitest-helpers.ts                  # assertTestResult → expect.fail()
+    wire-contract.ts                   # runWireContract(family, fixture)
+    audit-contract.ts                  # runAuditContract(family, fixture)
+    pipeline-contract.ts              # runPipelineContract(family, fixture)
+    roundtrip-contract.ts              # runRoundTripContract(fixture, adapter)
+
+plugins/test-utils/                    # Shared test utilities
+  src/
+    env.ts                             # hasGateway, gatewayUrl(), getTestConfig()
+    mock-fetch.ts                      # createMockFetch(), createSseMockFetch()
+    stream-helpers.ts                  # collectStreamText(), collectStreamEvents()
+    matrix.ts                          # providerMatrix (family/model pairs)
 
 plugins/holo-provider-*/
+  vitest.config.ts                     # Vitest project config (defineProject)
   tests/
+    setup.ts                           # reflect-metadata import
     fixtures/
-      *.fixture.ts                  # Declarative test fixtures
-    sdk-adapter.ts                  # Native SDK adapter (optional, for round-trip)
+      *.fixture.ts                     # Declarative test fixtures
+    conformance/
+      wire.test.ts                     # Wire conformance via Vitest
+      audit.test.ts                    # Audit conformance via Vitest
+      pipeline.test.ts                # Pipeline conformance via Vitest
+      roundtrip.test.ts                # SDK round-trip via Vitest (OpenAI only)
+    sdk-adapter.ts                     # Native SDK adapter (optional, for round-trip)
+
+plugins/sdk/
+  vitest.config.ts                     # Unit test project config
+  vitest.integration.config.ts         # Integration test project config (separate)
+  tests/
+    unit/
+      builder.test.ts                  # HoloRequestBuilder tests
+      client.test.ts                   # HoloClient tests
+      chat-namespace.test.ts           # ChatNamespace proxy method tests
+      sse.test.ts                      # SSE parser tests
+      merge.test.ts                    # HoloStreamAccumulator tests
+      stream.test.ts                   # HoloStream tests
+      runner.test.ts                   # HoloToolRunner tests
+      errors.test.ts                   # Error type tests
+    integration/
+      chat-create.test.ts             # Live gateway: chat.create()
+      chat-stream.test.ts             # Live gateway: chat.stream()
+      tools.test.ts                    # Live gateway: tool runner
+      cancellation.test.ts            # Live gateway: abort mid-stream
+      errors.test.ts                   # Live gateway: error mapping
+      smoke-matrix.test.ts            # Live gateway: all providers
 ```

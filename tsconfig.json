@@ -89,5 +89,13 @@
         "./plugins/sdk/src/client/index.ts"
       ]
     }
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "**/dist/**",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/tests/**"
+  ]
 }
