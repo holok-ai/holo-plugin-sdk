@@ -2,8 +2,8 @@
 
 ## Overview
 
-The HoloKai SDK provides a universal format and plugin architecture for building LLM provider integrations. This
-documentation covers the Holo universal format, provider mappings, and implementation guidance.
+The HoloKai SDK provides a client library for the Holo API and a plugin architecture for building LLM provider
+integrations. This documentation covers both the client SDK and the Holo universal format.
 
 ---
 
@@ -14,17 +14,199 @@ npm install @holokai/sdk
 ```
 
 ```typescript
-import type {HoloRequest, HoloResponse} from '@holokai/sdk';
+import {HoloClient} from '@holokai/sdk';
 
-// Use Holo types in your plugin
-const request: HoloRequest = {
-    model: 'gpt-4',
+const client = new HoloClient({
+    baseUrl: 'https://holo.example.com',
+    token: 'my-token',
+    defaultModel: 'gpt-4o',
+});
+
+// Fluent builder (recommended)
+const response = await client.chat.user('Hello!').send();
+console.log(response.output);
+
+// Params object
+const response2 = await client.chat.create({
+    messages: [{role: 'user', content: 'Hello!'}],
+});
+```
+
+---
+
+## Client SDK
+
+### Construction
+
+```typescript
+import {HoloClient} from '@holokai/sdk';
+
+const client = new HoloClient({
+    baseUrl: 'https://holo.example.com',
+    token: 'my-token',
+    defaultModel: 'gpt-4o',           // optional — used when no model is set per-request
+    defaultApplication: 'my-app',      // optional — used when no application is set per-request
+    fetch: customFetch,                // optional — custom fetch implementation
+});
+```
+
+### Fluent Builder
+
+The builder API lets you construct requests with chained method calls. Start directly from `client.chat`:
+
+```typescript
+// Single user message
+const res = await client.chat.user('Summarize this article').send();
+
+// System + user
+const res = await client.chat
+    .system('You are a helpful assistant.')
+    .user('What is the capital of France?')
+    .send();
+
+// With parameters
+const res = await client.chat
+    .model('claude-sonnet-4-20250514')
+    .user('Write a haiku about TypeScript')
+    .temperature(0.9)
+    .maxTokens(100)
+    .send();
+
+// Multi-turn conversation
+const res = await client.chat
+    .user('Remember: my name is Alice')
+    .assistant('Got it! Your name is Alice.')
+    .user('What is my name?')
+    .send();
+```
+
+You can also use `client.chat.builder()` to get an empty builder, or start with `.model()`, `.system()`,
+`.assistant()`, or `.messages()`.
+
+### Params Object
+
+For programmatic use or when you already have a messages array:
+
+```typescript
+const response = await client.chat.create({
+    model: 'gpt-4o',
     messages: [
-        {role: 'user', content: 'Hello!'}
+        {role: 'system', content: 'You are a helpful assistant.'},
+        {role: 'user', content: 'Hello!'},
     ],
     temperature: 0.7,
-    max_tokens: 1000
-};
+    max_tokens: 1000,
+});
+
+console.log(response.output);
+```
+
+### Streaming
+
+#### Fluent builder
+
+```typescript
+const stream = await client.chat
+    .user('Tell me a long story')
+    .stream();
+
+// Async iteration
+for await (const event of stream) {
+    if (event.delta?.type === 'content_delta') {
+        process.stdout.write(event.delta.delta.content ?? '');
+    }
+}
+
+// Or use convenience methods
+const stream2 = await client.chat.user('Hello').stream();
+stream2.on('text', (text) => process.stdout.write(text));
+stream2.on('end', (response) => console.log('\nDone:', response.usage));
+await stream2.done();
+
+// Collect full text
+const stream3 = await client.chat.user('Summarize this').stream();
+const fullText = await stream3.text();
+```
+
+#### Params object
+
+```typescript
+const stream = await client.chat.stream({
+    messages: [{role: 'user', content: 'Tell me a story'}],
+});
+
+for await (const event of stream) {
+    // ...
+}
+```
+
+### Tool Runner
+
+The tool runner manages agentic loops — it sends a request, executes any tool calls, feeds results back, and repeats
+until the model stops calling tools.
+
+```typescript
+const runner = client.chat.runner({
+    model: 'gpt-4o',
+    messages: [{role: 'user', content: 'What is the weather in SF and NYC?'}],
+    tools: [
+        {
+            type: 'function',
+            function: {
+                name: 'get_weather',
+                description: 'Get current weather for a city',
+                parameters: {
+                    type: 'object',
+                    properties: {
+                        city: {type: 'string'},
+                    },
+                    required: ['city'],
+                },
+            },
+        },
+    ],
+    execute: async (toolCall) => {
+        // Called for each tool invocation
+        return {content: `Sunny, 72°F in ${toolCall.function.arguments.city}`};
+    },
+    maxTurns: 5,
+});
+
+const response = await runner.run();
+```
+
+### Error Handling
+
+```typescript
+import {HoloApiError, HoloStreamError, HoloTimeoutError} from '@holokai/sdk';
+
+try {
+    const res = await client.chat.user('Hello').send();
+} catch (err) {
+    if (err instanceof HoloApiError) {
+        console.error(`API error ${err.status}: ${err.message}`);
+        console.error('Response body:', err.body);
+    }
+}
+```
+
+### Cancellation
+
+```typescript
+const response = await client.chat.create({
+    messages: [{role: 'user', content: 'Hello'}],
+});
+
+// Cancel by request ID
+await client.chat.cancel(response.id);
+```
+
+### Models & Applications
+
+```typescript
+const models = await client.models.list();
+const apps = await client.applications.list();
+const app = await client.applications.get('my-app');
 ```
 
 ---
@@ -45,13 +227,11 @@ const request: HoloRequest = {
     - Content type mappings
     - Tool definition mappings
     - Streaming event mappings
-    - Comprehensive transformation tables
 
 3. **[Capability Analysis](./CAPABILITY_ANALYSIS.md)** - Verification & coverage
     - Complete capability inventory
-    - Gap analysis (none found!)
+    - Gap analysis
     - Type safety analysis
-    - Recommendations
 
 ---
 
@@ -84,19 +264,19 @@ Holo format serves as the central hub, preventing N² translation complexity:
 
 ### Field Categories
 
-#### 🟢 Common (All Providers)
+#### Common (All Providers)
 
 Fields supported by Claude, OpenAI, and Ollama:
 
 - `model`, `messages`, `temperature`, `top_p`, `stream`, `tools`
 
-#### 🟡 Mapped (≥2 Providers)
+#### Mapped (≥2 Providers)
 
 Fields with functional equivalents:
 
 - `system`, `max_tokens`, `stop_sequences`, `response_format`, `tool_choice`, etc.
 
-#### 🔵 Provider-Specific
+#### Provider-Specific
 
 Fields unique to one provider (intentionally excluded from Holo):
 
@@ -138,109 +318,7 @@ Fields unique to one provider (intentionally excluded from Holo):
 
 ---
 
-## Translation Examples
-
-### Example 1: OpenAI → Holo → Claude
-
-```typescript
-// OpenAI Request
-const openaiRequest = {
-    model: 'gpt-4',
-    messages: [
-        {role: 'system', content: 'You are helpful.'},
-        {role: 'user', content: 'Hello!'}
-    ],
-    max_tokens: 1000,
-    temperature: 0.7
-};
-
-// → Holo (extract system message)
-const holoRequest: HoloRequest = {
-    model: 'gpt-4',
-    system: 'You are helpful.', // Extracted from messages
-    messages: [
-        {role: 'user', content: 'Hello!'}
-    ],
-    max_tokens: 1000,
-    temperature: 0.7
-};
-
-// → Claude (system is top-level)
-const claudeRequest = {
-    model: 'claude-3-5-sonnet-20241022',
-    system: 'You are helpful.', // Direct mapping
-    messages: [
-        {role: 'user', content: 'Hello!'}
-    ],
-    max_tokens: 1000,
-    temperature: 0.7
-};
-```
-
-### Example 2: Claude → Holo → Ollama
-
-```typescript
-// Claude Response
-const claudeResponse = {
-    id: 'msg_123',
-    type: 'message',
-    role: 'assistant',
-    content: [{type: 'text', text: 'Hello!'}],
-    model: 'claude-3-5-sonnet-20241022',
-    stop_reason: 'end_turn',
-    usage: {
-        input_tokens: 10,
-        output_tokens: 5
-    }
-};
-
-// → Holo (normalize structure)
-const holoResponse: HoloResponse = {
-    id: 'msg_123',
-    model: 'claude-3-5-sonnet-20241022',
-    output: [{
-        role: 'assistant',
-        content: 'Hello!' // Flatten text blocks
-    }],
-    finish_reason: 'stop', // Map end_turn → stop
-    usage: {
-        input_tokens: 10,
-        output_tokens: 5,
-        total_tokens: 15 // Derived
-    }
-};
-
-// → Ollama (different structure)
-const ollamaResponse = {
-    model: 'llama2',
-    created_at: '2025-12-09T12:00:00Z',
-    message: {
-        role: 'assistant',
-        content: 'Hello!' // Direct text
-    },
-    done: true,
-    prompt_eval_count: 10, // input_tokens
-    eval_count: 5 // output_tokens
-};
-```
-
----
-
 ## Common Patterns
-
-### Handling Missing IDs
-
-Ollama doesn't provide response IDs. Generate them:
-
-```typescript
-import {randomUUID} from 'crypto';
-
-const holoResponse: HoloResponse = {
-    id: ollamaResponse.id ?? randomUUID(), // Generate if missing
-    model: ollamaResponse.model,
-    output: [/* ... */]
-};
-```
 
 ### Tool Call Linking
 
@@ -260,7 +338,7 @@ const toolCall: HoloToolCall = {
 // Tool result references the call
 const toolResult: HoloMessage = {
     role: 'tool',
-    tool_call_id: 'call_abc123', // Links to above
+    tool_call_id: 'call_abc123',
     content: 'Sunny, 72°F'
 };
 ```
@@ -270,42 +348,11 @@ const toolResult: HoloMessage = {
 Always normalize text to objects:
 
 ```typescript
-// Input (may be string or object)
 const input: string | HoloContent[] = 'Hello';
 
-// Normalize to array
 const normalized: HoloContent[] = typeof input === 'string'
     ? [{type: 'text', text: input}]
     : input;
-```
-
-### Streaming Accumulation
-
-Accumulate streaming deltas:
-
-```typescript
-let fullContent = '';
-let usage: HoloUsage | undefined;
-
-for await (const chunk of stream) {
-    if (chunk.delta?.type === 'content_delta') {
-        fullContent += chunk.delta.delta.content ?? '';
-    }
-    if (chunk.usage) {
-        usage = chunk.usage;
-    }
-}
-
-const finalResponse: HoloResponse = {
-    id: 'msg_123',
-    model: 'gpt-4',
-    output: [{
-        role: 'assistant',
-        content: fullContent
-    }],
-    finish_reason: 'stop',
-    usage
-};
 ```
 
 ---
@@ -317,23 +364,19 @@ const finalResponse: HoloResponse = {
 Holo format uses strict TypeScript types:
 
 ```typescript
-// ✅ Properly typed arguments
+// Properly typed arguments
 export interface HoloFunctionArguments {
     [key: string]: string | number | boolean | null
         | HoloFunctionArguments
         | HoloFunctionArguments[];
 }
 
-// ✅ Proper JSON Schema
+// Proper JSON Schema
 export interface HoloJsonSchema {
     type?: 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
     properties?: { [key: string]: HoloJsonSchema };
     // ... full spec
 }
-
-// ❌ Avoid flexible types
-// DON'T: parameters?: Record<string, unknown>
-// DO: parameters?: HoloJsonSchema
 ```
 
 ### Runtime Validation
@@ -353,227 +396,7 @@ const safeRequest: HoloRequest = result.data;
 
 ---
 
-## Best Practices
-
-### 1. Validate at Boundaries
-
-Always validate external data before using as Holo format:
-
-```typescript
-// External API request
-const externalData = await fetchFromAPI();
-
-// Validate before treating as HoloRequest
-const validated = validateHoloRequest(externalData);
-if (!validated.ok) throw new Error('Invalid format');
-
-const holoRequest: HoloRequest = validated.data;
-```
-
-### 2. Preserve IDs
-
-Maintain request/response IDs when present:
-
-```typescript
-// Keep provider IDs when available
-const holoResponse: HoloResponse = {
-    id: providerResponse.id ?? generateId(),
-    // ... rest
-};
-```
-
-### 3. Map Finish Reasons
-
-Use the standard finish reason mappings:
-
-```typescript
-function mapFinishReason(
-    claudeReason: string
-): HoloFinishReason {
-    const mapping: Record<string, HoloFinishReason> = {
-        'end_turn': 'stop',
-        'max_tokens': 'length',
-        'tool_use': 'tool_calls',
-        'refusal': 'content_filter'
-    };
-    return mapping[claudeReason] ?? 'stop';
-}
-```
-
-### 4. Handle Tool Choice Formats
-
-Different providers use different tool choice formats:
-
-```typescript
-// Holo to Claude
-if (holo.tool_choice?.type === 'specific') {
-    claude.tool_choice = {
-        type: 'tool',
-        name: holo.tool_choice.name
-    };
-}
-
-// Holo to OpenAI
-if (holo.tool_choice?.type === 'specific') {
-    openai.tool_choice = {
-        type: 'function',
-        function: {name: holo.tool_choice.name}
-    };
-}
-```
-
-### 5. Gracefully Drop Unsupported Fields
-
-Provider-specific fields should be safely ignored:
-
-```typescript
-// When translating to Holo, drop provider-specific fields
-function toHolo(claudeRequest: ClaudeRequest): HoloRequest {
-    return {
-        model: claudeRequest.model,
-        messages: claudeRequest.messages,
-        // ... map supported fields
-        // ❌ DON'T include: thinking, betas, mcp_servers
-    };
-}
-```
-
----
-
-## Testing
-
-### Unit Tests
-
-Test individual translations:
-
-```typescript
-import {toHolo, fromHolo} from './translator';
-
-describe('Claude → Holo translation', () => {
-    it('should map basic request', () => {
-        const claude = {
-            model: 'claude-3-5-sonnet-20241022',
-            messages: [{role: 'user', content: 'Hi'}],
-            max_tokens: 100
-        };
-
-        const holo = toHolo(claude);
-
-        expect(holo).toEqual({
-            model: 'claude-3-5-sonnet-20241022',
-            messages: [{role: 'user', content: 'Hi'}],
-            max_tokens: 100
-        });
-    });
-});
-```
-
-### Round-Trip Tests
-
-Verify lossless translations:
-
-```typescript
-it('should preserve core fields in round-trip', () => {
-    const original: HoloRequest = {
-        model: 'gpt-4',
-        messages: [{role: 'user', content: 'Test'}],
-        temperature: 0.7,
-        max_tokens: 100
-    };
-
-    const openai = fromHolo(original);
-    const roundTrip = toHolo(openai);
-
-    expect(roundTrip).toEqual(original);
-});
-```
-
-### Integration Tests
-
-Test with real provider SDKs:
-
-```typescript
-import Anthropic from '@anthropic-ai/sdk';
-import {toHolo} from './claude-translator';
-
-it('should handle real Claude response', async () => {
-    const claude = new Anthropic({apiKey: 'test'});
-
-    const response = await claude.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        messages: [{role: 'user', content: 'Hi'}],
-        max_tokens: 10
-    });
-
-    const holo = toHolo(response);
-
-    expect(holo.model).toBe('claude-3-5-sonnet-20241022');
-    expect(holo.output[0].role).toBe('assistant');
-});
-```
-
----
-
-## FAQ
-
-### Q: Why not just use OpenAI's format?
-
-**A**: OpenAI's format doesn't cover Claude-specific features like:
-
-- Cache control
-- Service tiers
-- Tool result error states
-- Content block structure
-
-Holo format is a true superset that handles all portable features.
-
-### Q: How do I handle provider-specific features?
-
-**A**: Use provider-specific plugins that extend beyond Holo:
-
-```typescript
-interface ClaudeExtendedRequest extends HoloRequest {
-    claude_specific?: {
-        thinking?: ClaudeThinkingConfig;
-        betas?: string[];
-    };
-}
-```
-
-### Q: What about streaming?
-
-**A**: Holo provides normalized streaming events. See [Provider Mappings](./PROVIDER_MAPPINGS.md#streaming-mappings) for
-details.
-
-### Q: Can I add custom fields?
-
-**A**: Yes, but keep them separate:
-
-```typescript
-interface MyCustomRequest extends HoloRequest {
-    custom_fields?: {
-        my_feature?: string;
-    };
-}
-```
-
-### Q: How do I migrate from legacy types?
-
-**A**: Import from SDK and update type annotations:
-
-```typescript
-// Before
-import {HoloRequest} from '../types/holo';
-
-// After
-import type {HoloRequest} from '@holokai/sdk';
-```
-
----
-
-## Contributing
-
-### Adding a New Provider
+## Adding a New Provider
 
 1. Study provider's API documentation
 2. Create mapping tables (see [PROVIDER_MAPPINGS.md](./PROVIDER_MAPPINGS.md))
@@ -581,14 +404,6 @@ import type {HoloRequest} from '@holokai/sdk';
 4. Add unit tests for all field mappings
 5. Add integration tests with real SDK
 6. Update documentation
-
-### Reporting Issues
-
-Found a gap in the Holo format? Open an issue with:
-
-- Provider name and feature
-- Example API request/response
-- Why it's portable (≥2 providers)
 
 ---
 
@@ -605,13 +420,3 @@ Found a gap in the Holo format? Open an issue with:
 - [Claude API](https://docs.anthropic.com/claude/reference/messages_post)
 - [OpenAI API](https://platform.openai.com/docs/api-reference/chat)
 - [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
-
-### SDK Reference
-
-- [TypeScript Types](../src/holo/types.ts) - Type definitions
-- [Plugin Guide](../README.md#plugins) - Building plugins
-
----
-
-**Version**: 1.0.0
-**Last Updated**: 2025-12-09

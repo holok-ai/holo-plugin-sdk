@@ -1,5 +1,5 @@
-import type {HoloRequest, HoloResponse} from '@holokai/types/holo';
-import type {HoloApplicationInfo, HoloClientOptions, HoloModelInfo} from './types';
+import type {HoloContent, HoloMessage, HoloRequest, HoloResponse} from '@holokai/types/holo';
+import type {HoloApplicationInfo, HoloChatParams, HoloClientOptions, HoloModelInfo} from './types';
 import {HoloApiError} from './errors';
 import {HoloStream} from './stream';
 import {HoloRequestBuilder} from './builder';
@@ -149,20 +149,8 @@ class ChatNamespace {
     }
 
     /** Send a chat completion request and return the full response. */
-    async create(params: {
-        model?: string;
-        messages: HoloRequest['messages'];
-        temperature?: number;
-        max_tokens?: number;
-        tools?: HoloRequest['tools'];
-        tool_choice?: HoloRequest['tool_choice'];
-        response_format?: HoloRequest['response_format'];
-        provider?: string;
-        application?: string;
-        thread_id?: string;
-        branch?: string;
-    }): Promise<HoloResponse> {
-        const request = this.buildRequest(params, false);
+    async create(params: HoloChatParams): Promise<HoloResponse> {
+        const request = this.paramsToRequest(params, false);
         return this.client.request<HoloResponse>('POST', '/chat', request);
     }
 
@@ -170,21 +158,9 @@ class ChatNamespace {
      * Send a streaming chat completion request.
      * @see {@link HoloStream} for how to consume the returned stream.
      */
-    async stream(params: {
-        model?: string;
-        messages: HoloRequest['messages'];
-        temperature?: number;
-        max_tokens?: number;
-        tools?: HoloRequest['tools'];
-        tool_choice?: HoloRequest['tool_choice'];
-        response_format?: HoloRequest['response_format'];
-        provider?: string;
-        application?: string;
-        thread_id?: string;
-        branch?: string;
-    }): Promise<HoloStream> {
+    async stream(params: HoloChatParams): Promise<HoloStream> {
         const abortController = new AbortController();
-        const request = this.buildRequest(params, true);
+        const request = this.paramsToRequest(params, true);
 
         const {body} = await this.client.streamRequest('/chat', request, abortController.signal);
         const events = parseSSEStream(body, abortController.signal);
@@ -224,22 +200,36 @@ class ChatNamespace {
         );
     }
 
-    private buildRequest(params: {
-        model?: string;
-        messages?: HoloRequest['messages'];
-        temperature?: number;
-        max_tokens?: number;
-        tools?: HoloRequest['tools'];
-        tool_choice?: HoloRequest['tool_choice'];
-        response_format?: HoloRequest['response_format'];
-        provider?: string;
-        application?: string;
-        thread_id?: string;
-        branch?: string;
-    }, stream: boolean): HoloRequest {
+    /** Shortcut: create a builder pre-seeded with a user message. */
+    user(content: string | HoloContent[]): HoloRequestBuilder {
+        return this.builder().user(content);
+    }
+
+    /** Shortcut: create a builder pre-seeded with a system message. */
+    system(content: string): HoloRequestBuilder {
+        return this.builder().system(content);
+    }
+
+    /** Shortcut: create a builder pre-seeded with an assistant message. */
+    assistant(content: string | HoloContent[]): HoloRequestBuilder {
+        return this.builder().assistant(content);
+    }
+
+    /** Shortcut: create a builder with the model already set. */
+    model(name: string): HoloRequestBuilder {
+        return this.builder().model(name);
+    }
+
+    /** Shortcut: create a builder pre-seeded with the given messages. */
+    messages(msgs: HoloMessage[]): HoloRequestBuilder {
+        return this.builder().messages(msgs);
+    }
+
+    private paramsToRequest(params: HoloChatParams, stream: boolean): HoloRequest {
+        const defaults = this.client.getDefaults();
         const request: HoloRequest = {
-            model: params.model ?? this.client.getDefaults().model ?? '',
-            messages: params.messages ?? [],
+            model: params.model ?? defaults.model ?? '',
+            messages: params.messages,
             stream,
         };
         if (params.temperature !== undefined) request.temperature = params.temperature;
@@ -248,7 +238,7 @@ class ChatNamespace {
         if (params.tool_choice) request.tool_choice = params.tool_choice;
         if (params.response_format) request.response_format = params.response_format;
         if (params.provider) request.provider = params.provider;
-        const app = params.application ?? this.client.getDefaults().application;
+        const app = params.application ?? defaults.application;
         if (app) request.application = app;
         if (params.thread_id) request.thread_id = params.thread_id;
         if (params.branch) request.branch = params.branch;

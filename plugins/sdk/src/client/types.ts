@@ -1,4 +1,19 @@
-import type {HoloApplicationInfo, HoloModelInfo,} from '@holokai/types/holo';
+import type {HoloApplicationInfo, HoloMessage, HoloModelInfo, HoloRequest,} from '@holokai/types/holo';
+
+/** Parameters accepted by {@link ChatNamespace.create} and {@link ChatNamespace.stream}. */
+export interface HoloChatParams {
+    model?: string;
+    messages: HoloMessage[];
+    temperature?: number;
+    max_tokens?: number;
+    tools?: HoloRequest['tools'];
+    tool_choice?: HoloRequest['tool_choice'];
+    response_format?: HoloRequest['response_format'];
+    provider?: string;
+    application?: string;
+    thread_id?: string;
+    branch?: string;
+}
 
 /** Configuration options for {@link HoloClient}. */
 export interface HoloClientOptions {
@@ -16,4 +31,4 @@ export interface HoloClientOptions {
     timeout?: number;
 }
 
-export type {HoloModelInfo, HoloApplicationInfo};
+export type {HoloModelInfo, HoloApplicationInfo, HoloRequest};
