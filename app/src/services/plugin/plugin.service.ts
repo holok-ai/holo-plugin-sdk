@@ -242,6 +242,35 @@ export class PluginService extends BaseEntityService<Plugin> implements IPluginR
         logger.info(`Registered default pricing for ${family}: ${sheetMap.size} sheet(s), ${totalModels} model entries`);
     }
 
+    async removePlugin(pluginId: string): Promise<void> {
+        const logger = this.mlog(this.removePlugin);
+
+        const impl = this.pluginImpls.get(pluginId);
+        if (impl) {
+            try {
+                await impl.destroy();
+            } catch (e) {
+                logger.warn(`Error destroying plugin ${pluginId}: ${(e as Error).message}`);
+            }
+            this.pluginImpls.delete(pluginId);
+        }
+
+        for (const [family, versions] of this.versionedPlugins) {
+            for (const [version, plugin] of versions) {
+                if (plugin.id === pluginId) {
+                    versions.delete(version);
+                    if (this.defaultPlugins.get(family)?.id === pluginId) {
+                        this.defaultPlugins.delete(family);
+                    }
+                    break;
+                }
+            }
+        }
+
+        await this.pluginDB.deactivate(pluginId);
+        logger.info(`Removed plugin ${pluginId}`);
+    }
+
     async unregisterPlugin(family: string, version?: string): Promise<void> {
         const familyKey = family.toUpperCase();
 

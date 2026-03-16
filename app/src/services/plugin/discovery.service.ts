@@ -26,7 +26,7 @@ export class PluginDiscoveryService extends ClassLogger {
 
     constructor() {
         super();
-        this.pluginScopePath = path.resolve(env.api.pluginsDir, '@holokai');
+        this.pluginScopePath = path.resolve(env.api.builtinPluginsDir, '@holokai');
     }
 
     async discoverPlugins(): Promise<DiscoveredPlugin[]> {
@@ -80,14 +80,19 @@ export class PluginDiscoveryService extends ClassLogger {
         }
     }
 
+    async discoverSingle(packagePath: string): Promise<DiscoveredPlugin | null> {
+        const packageDir = path.basename(packagePath);
+        return this.parsePackage(packageDir, packagePath);
+    }
+
     async discoverPluginsByType(pluginType: PluginType): Promise<DiscoveredPlugin[]> {
         const allPlugins = await this.discoverPlugins();
         return allPlugins.filter(plugin => plugin.pluginType === pluginType);
     }
 
-    private async parsePackage(packageDir: string): Promise<DiscoveredPlugin | null> {
+    private async parsePackage(packageDir: string, fullPath?: string): Promise<DiscoveredPlugin | null> {
         const logger = this.mlog(this.parsePackage);
-        const packagePath = path.join(this.pluginScopePath, packageDir);
+        const packagePath = fullPath ?? path.join(this.pluginScopePath, packageDir);
 
         try {
             const packageJsonPath = path.join(packagePath, 'package.json');

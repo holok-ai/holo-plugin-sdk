@@ -15,6 +15,8 @@ import {AuthService} from "../auth";
 
 @injectable()
 export class PluginRouteService extends ClassLogger {
+    private apiRouter: Router | null = null;
+
     constructor(
         private authService: AuthService,
         private pluginService: PluginService,
@@ -26,6 +28,7 @@ export class PluginRouteService extends ClassLogger {
     }
 
     async registerRoutes(router: Router): Promise<void> {
+        this.apiRouter = router;
         const logger = this.mlog(this.registerRoutes);
         logger.info('Registering plugin routes...');
         for (const plugin of await this.pluginService.getPlugins()) {
@@ -150,6 +153,14 @@ export class PluginRouteService extends ClassLogger {
                 res.status(500).json({error: 'Failed to process request'});
             }
         };
+    }
+
+    async registerPluginRoutes(plugin: Plugin, pluginImpl: IProviderPlugin): Promise<void> {
+        if (!this.apiRouter) {
+            this.mlog(this.registerPluginRoutes).warn('No API router available for dynamic route registration');
+            return;
+        }
+        await this.registerRoute(plugin, pluginImpl, this.apiRouter);
     }
 
     createNoOpHandler(providerFamily: string) {

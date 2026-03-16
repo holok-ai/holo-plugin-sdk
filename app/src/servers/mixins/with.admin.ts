@@ -6,6 +6,7 @@ import {withQueue} from "./with.queue";
 import {env} from "../../env";
 import {Constructor} from "../../utils";
 import {AdminService} from "../../services";
+import {PluginLifecycleService} from "../../services/plugin/plugin.lifecycle.service";
 import {ServerType} from "@holokai/types/entities";
 
 export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
@@ -18,6 +19,7 @@ export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
         adminCommandQueue: string;
         adminExchange: string;
         readonly adminService: AdminService;
+        readonly pluginLifecycleService: PluginLifecycleService;
 
         constructor(...args: any[]) {
             super(...args);
@@ -26,6 +28,7 @@ export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
             this.adminCommandQueue = env.queue.adminCommandQueue;
             this.adminExchange = env.queue.adminExchange;
             this.adminService = container.resolve(AdminService);
+            this.pluginLifecycleService = container.resolve(PluginLifecycleService);
         }
 
         async onInit(): Promise<void> {
@@ -41,6 +44,17 @@ export function withAdmin<TBase extends Constructor<IAppServer>>(Base: TBase) {
             }, exchange, 'model.#');
 
             await this.queueService.bindQueue(commandQueue, exchange, 'worker.#');
+            await this.queueService.bindQueue(commandQueue, exchange, 'plugin.#');
+
+            this.pluginLifecycleService.setServerId(this.id);
+            this.adminHandlers.set('plugin.enabled', async (_serverId, payload) => {
+                await this.pluginLifecycleService.handleRemoteEnable(payload as any);
+                return {success: true};
+            });
+            this.adminHandlers.set('plugin.disabled', async (_serverId, payload) => {
+                await this.pluginLifecycleService.handleRemoteDisable(payload as any);
+                return {success: true};
+            });
 
             await this.queueService.consume(commandQueue, async (messageId, content, _message) => {
                 const {action, serverId, timestamp, ...payload} = content;

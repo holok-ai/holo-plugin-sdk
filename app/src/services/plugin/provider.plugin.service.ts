@@ -37,6 +37,10 @@ export class ProviderPluginService extends ClassLogger {
     }
 
 
+    removeProtocols(pluginId: string): void {
+        this.pluginProtocols.delete(pluginId);
+    }
+
     async getProtocol(pluginId: string, protocolName: string): Promise<Protocol> {
         return this.pluginProtocols.get(pluginId)?.get(protocolName)!;
     }

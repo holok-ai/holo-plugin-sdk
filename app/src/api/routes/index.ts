@@ -13,6 +13,7 @@ import {createResponseRoutes} from "./response.routes";
 import {createRequestRoutes} from "./request.routes";
 import {createAnalyticsRoutes} from "./analytics.routes";
 import {createHoloChatRoutes, createHoloModelRoutes, createHoloApplicationRoutes} from "./holo.chat.routes";
+import {createPluginRoutes} from "./plugin.routes";
 import {createHoloThreadRoutes} from "./holo.thread.routes";
 import {makeAuthMiddleware} from "../middleware";
 import {PluginRouteService} from "../../services/plugin/plugin.route.service";
@@ -58,5 +59,6 @@ export function createAdminRoutes(): express.Router {
     router.use('/responses', auth, createResponseRoutes());
     router.use('/requests', auth, createRequestRoutes());
     router.use('/analytics', auth, createAnalyticsRoutes());
+    router.use('/plugins', auth, createPluginRoutes());
     return router;
 }

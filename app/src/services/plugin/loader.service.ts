@@ -54,8 +54,8 @@ export class PluginLoaderService extends withClassLogger(EventEmitter) {
                 }).replace(/\\/g, '/');
             }
 
-            // Convert to file:// URL for ESM import
-            const moduleURL = pathToFileURL(modulePath).href;
+            // Convert to file:// URL for ESM import (cache bust for hot-reload support)
+            const moduleURL = pathToFileURL(modulePath).href + '?v=' + Date.now();
             const module = await import(moduleURL);
 
             if (!module.default || typeof module.default !== 'object') {

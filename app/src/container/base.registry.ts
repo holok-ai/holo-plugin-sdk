@@ -14,6 +14,9 @@ import {
 } from '../services';
 import {NotificationServiceToken, NotificationStoreToken} from '@holokai/sdk/notification';
 import {PostgresNotificationStore} from '../db/notification.db';
+import {PluginPackageDB} from '../db/plugin.package.db';
+import {PluginInstallerService} from '../services/plugin/plugin.installer.service';
+import {PluginLifecycleService} from '../services/plugin/plugin.lifecycle.service';
 
 container
     .registerSingleton(AppDB)
@@ -26,4 +29,7 @@ container
     .registerSingleton(PluginLoaderService)
     .registerSingleton(ProviderPluginService)
     .registerSingleton(ProviderImplService)
-    .registerSingleton(ProviderService);
+    .registerSingleton(ProviderService)
+    .registerSingleton(PluginPackageDB)
+    .registerSingleton(PluginInstallerService)
+    .registerSingleton(PluginLifecycleService);

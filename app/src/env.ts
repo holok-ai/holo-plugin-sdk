@@ -29,7 +29,8 @@ export namespace env {
         export const configMode = process.env.API_CONFIG_MODE || 'local';
         export const configFile = process.env.API_CONFIG_FILE || './sample.app.config.json';
         export const configTimeoutMs = parseNumber(process.env.API_CONFIG_TIMEOUT, 60000);
-        export const pluginsDir = process.env.API_PLUGINS_DIR || '../node_modules';
+        export const builtinPluginsDir = process.env.API_PLUGINS_DIR || '../node_modules';
+        export const hotPluginsDir = process.env.HOLO_PLUGINS_DIR || './holo-plugins';
 
         // Notifications (SSE)
         export namespace notifications {

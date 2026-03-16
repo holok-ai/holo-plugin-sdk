@@ -65,6 +65,23 @@ export class ProviderImplService extends ClassLogger {
         return provider;
     }
 
+    removeImplsByPluginId(pluginId: string): number {
+        let removed = 0;
+        for (const [providerId, impl] of this.providerImpls) {
+            if ((impl as any).pluginId === pluginId) {
+                this.providerImpls.delete(providerId);
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    removeImplsByProviderIds(providerIds: string[]): void {
+        for (const id of providerIds) {
+            this.providerImpls.delete(id);
+        }
+    }
+
     private async decryptAndInjectApiKey(
         provider: ProviderWithCredential,
         config: Record<string, any>

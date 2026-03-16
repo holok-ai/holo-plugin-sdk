@@ -84,6 +84,13 @@ export class PluginDB extends ClassLogger {
         );
     }
 
+    async deactivate(pluginId: string): Promise<void> {
+        await this.db.query(
+            `UPDATE plugins SET active = false, updated_at = now() WHERE id = $1`,
+            [pluginId]
+        );
+    }
+
     async getByFamilyAndVersion(family: string, version: string): Promise<Plugin | null> {
         return this.db.queryOne<Plugin>(
             `SELECT *
