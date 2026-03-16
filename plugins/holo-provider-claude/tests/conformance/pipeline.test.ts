@@ -1,5 +1,5 @@
 import {describe, it} from 'vitest';
-import {runPipelineContract} from '@holokai/provider-contract-tests';
+import {runPipelineContract} from '@holokai/test-utils';
 import messagesStreaming from '../fixtures/messages-simple.streaming.fixture.js';
 import messagesNonStreaming from '../fixtures/messages-simple.nonstreaming.fixture.js';
 

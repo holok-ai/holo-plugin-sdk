@@ -1,5 +1,5 @@
 import {describe, it} from 'vitest';
-import {runRoundTripContract} from '@holokai/provider-contract-tests';
+import {runRoundTripContract} from '@holokai/test-utils';
 import adapter from '../sdk-adapter.js';
 import chatStreaming from '../fixtures/chat-simple.streaming.fixture.js';
 import chatNonStreaming from '../fixtures/chat-simple.nonstreaming.fixture.js';

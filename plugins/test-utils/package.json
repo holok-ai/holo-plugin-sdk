@@ -13,5 +13,8 @@
   "dependencies": {
     "@holokai/test-harness": "*",
     "@holokai/types": "*"
+  },
+  "peerDependencies": {
+    "vitest": "^3.0.0"
   }
 }

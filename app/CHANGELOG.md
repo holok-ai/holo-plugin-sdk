@@ -1,5 +1,11 @@
 # holo
 
+## 1.2.3
+
+### Patch Changes
+
+- migrate test infrastructure to Vitest, merge provider-contract-tests into test-utils, add Holo API controller
+
 ## 1.2.2
 
 ### Patch Changes
