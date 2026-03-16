@@ -1,7 +1,7 @@
 import {container} from 'tsyringe';
 import {
     AccessDB, ApplicationDB, HoloTokenDB, ModelDB, PricingDB,
-    ProtocolDB, ProviderDB, ProviderResponseCostDB, RequestDB, ResponseDB
+    ProtocolDB, ProviderDB, ProviderResponseCostDB, RequestDB, ResponseDB, ThreadDB
 } from '../db';
 import {
     AccessService,
@@ -30,4 +30,5 @@ container
     .registerSingleton(ProviderResponseCostDB)
     .registerSingleton(PricingService)
     .registerSingleton(ProtocolDB)
-    .registerSingleton(HoloRequestService);
+    .registerSingleton(HoloRequestService)
+    .registerSingleton(ThreadDB);

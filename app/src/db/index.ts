@@ -13,3 +13,4 @@ export {ProtocolDB} from './protocol.db';
 export {ServerDB} from './server.db';
 export {PricingDB} from './pricing.db';
 export {ProviderResponseCostDB} from './provider.response.cost.db';
+export {ThreadDB} from './thread.db';

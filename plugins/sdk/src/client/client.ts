@@ -1,4 +1,8 @@
 import type {HoloContent, HoloMessage, HoloRequest, HoloResponse} from '@holokai/types/holo';
+import type {
+    HoloThread, HoloThreadCreateParams, HoloThreadUpdateParams, HoloThreadListParams,
+    HoloThreadMessage, HoloThreadMessageListParams, HoloPagedResponse,
+} from '@holokai/types/holo';
 import type {HoloApplicationInfo, HoloChatParams, HoloClientOptions, HoloModelInfo} from './types';
 import {HoloStream} from './stream';
 import {HoloRequestBuilder} from './builder';
@@ -45,6 +49,7 @@ export class HoloClient {
     readonly chat: ChatNamespace;
     readonly models: ModelsNamespace;
     readonly applications: ApplicationsNamespace;
+    readonly threads: ThreadsNamespace;
     private readonly transport: FetchTransport;
     private readonly defaultModel?: string;
     private readonly defaultApplication?: string;
@@ -62,6 +67,7 @@ export class HoloClient {
         this.chat = new ChatNamespace(this);
         this.models = new ModelsNamespace(this);
         this.applications = new ApplicationsNamespace(this);
+        this.threads = new ThreadsNamespace(this);
     }
 
     async request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
@@ -241,4 +247,46 @@ class ApplicationsNamespace {
         const result = await this.client.request<ApiItemResponse<HoloApplicationInfo>>('GET', `/applications/${encodeURIComponent(slug)}`);
         return result.data;
     }
+}
+
+/** Namespace for thread management. */
+class ThreadsNamespace {
+    constructor(private readonly client: HoloClient) {
+    }
+
+    async list(params?: HoloThreadListParams): Promise<HoloPagedResponse<HoloThread>> {
+        const qs = toQueryString(params);
+        return this.client.request<HoloPagedResponse<HoloThread>>('GET', `/threads${qs}`);
+    }
+
+    async get(id: string): Promise<HoloThread> {
+        const result = await this.client.request<ApiItemResponse<HoloThread>>('GET', `/threads/${encodeURIComponent(id)}`);
+        return result.data;
+    }
+
+    async create(params: HoloThreadCreateParams): Promise<HoloThread> {
+        const result = await this.client.request<ApiItemResponse<HoloThread>>('POST', '/threads', params);
+        return result.data;
+    }
+
+    async update(id: string, params: HoloThreadUpdateParams): Promise<HoloThread> {
+        const result = await this.client.request<ApiItemResponse<HoloThread>>('PATCH', `/threads/${encodeURIComponent(id)}`, params);
+        return result.data;
+    }
+
+    async delete(id: string): Promise<void> {
+        await this.client.request('DELETE', `/threads/${encodeURIComponent(id)}`);
+    }
+
+    async messages(id: string, params?: HoloThreadMessageListParams): Promise<HoloPagedResponse<HoloThreadMessage>> {
+        const qs = toQueryString(params);
+        return this.client.request<HoloPagedResponse<HoloThreadMessage>>('GET', `/threads/${encodeURIComponent(id)}/messages${qs}`);
+    }
+}
+
+function toQueryString(params?: Record<string, unknown> | object): string {
+    if (!params) return '';
+    const entries = Object.entries(params).filter(([, v]) => v !== undefined);
+    if (entries.length === 0) return '';
+    return '?' + entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&');
 }

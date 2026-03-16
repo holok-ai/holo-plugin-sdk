@@ -13,6 +13,7 @@ import {createResponseRoutes} from "./response.routes";
 import {createRequestRoutes} from "./request.routes";
 import {createAnalyticsRoutes} from "./analytics.routes";
 import {createHoloChatRoutes, createHoloModelRoutes, createHoloApplicationRoutes} from "./holo.chat.routes";
+import {createHoloThreadRoutes} from "./holo.thread.routes";
 import {makeAuthMiddleware} from "../middleware";
 import {PluginRouteService} from "../../services/plugin/plugin.route.service";
 
@@ -36,6 +37,7 @@ export function createHoloRoutes(): express.Router {
     router.use('/chat', auth, createHoloChatRoutes());
     router.use('/models', auth, createHoloModelRoutes());
     router.use('/applications', auth, createHoloApplicationRoutes());
+    router.use('/threads', auth, createHoloThreadRoutes());
 
     return router;
 }
