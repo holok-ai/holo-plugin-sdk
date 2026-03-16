@@ -15,12 +15,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/holokai/holo-provider-claude.git"
+    "url": "git+https://github.com/holok-ai/holo-provider-claude.git"
   },
   "bugs": {
-    "url": "https://github.com/holokai/holo-provider-claude/issues"
+    "url": "https://github.com/holok-ai/holo-provider-claude/issues"
   },
-  "homepage": "https://github.com/holokai/holo-provider-claude#readme",
+  "homepage": "https://github.com/holok-ai/holo-provider-claude#readme",
   "keywords": [
     "holokai",
     "holo",

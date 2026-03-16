@@ -15,12 +15,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/holokai/holo-provider-gemini.git"
+    "url": "git+https://github.com/holok-ai/holo-provider-gemini.git"
   },
   "bugs": {
-    "url": "https://github.com/holokai/holo-provider-gemini/issues"
+    "url": "https://github.com/holok-ai/holo-provider-gemini/issues"
   },
-  "homepage": "https://github.com/holokai/holo-provider-gemini#readme",
+  "homepage": "https://github.com/holok-ai/holo-provider-gemini#readme",
   "keywords": [
     "holokai",
     "holo",

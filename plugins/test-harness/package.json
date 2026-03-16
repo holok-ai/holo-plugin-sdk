@@ -17,6 +17,14 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/holok-ai/holo-test-harness.git"
+  },
+  "bugs": {
+    "url": "https://github.com/holok-ai/holo-test-harness/issues"
+  },
+  "homepage": "https://github.com/holok-ai/holo-test-harness#readme",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

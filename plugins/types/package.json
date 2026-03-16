@@ -13,6 +13,14 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/holok-ai/holo-types.git"
+  },
+  "bugs": {
+    "url": "https://github.com/holok-ai/holo-types/issues"
+  },
+  "homepage": "https://github.com/holok-ai/holo-types#readme",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
