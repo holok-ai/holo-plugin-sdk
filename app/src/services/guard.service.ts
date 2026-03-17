@@ -14,6 +14,7 @@ import {WorkerRequestFactory} from "./worker.request.factory";
 import {ProviderService} from "./entities";
 import {IProviderPlugin} from "@holokai/types/plugin";
 import {IProvider} from "@holokai/types";
+import {ProtocolCapability} from "@holokai/types/entities";
 
 
 @injectable()
@@ -91,7 +92,8 @@ export class GuardService extends ClassLogger {
                             return {passed: true};
                         }
 
-                        const guardProtocol = await this.providerPluginService.getProtocol(guardProvider.plugin_id, guardPlugin.defaultProtocol);
+                        const guardProtocol = this.providerPluginService.getProtocolByCapability(guardProvider.plugin_id, ProtocolCapability.CHAT)
+                            ?? await this.providerPluginService.getProtocol(guardProvider.plugin_id, guardPlugin.defaultProtocol);
 
                         const holoRequest: HoloRequest = pickDefined({
                             model: guard.model,
@@ -120,15 +122,17 @@ export class GuardService extends ClassLogger {
 
                         const raw = JSON.parse(response as string);
                         logger.debug(`Guard raw response: ${JSON.stringify(raw)}`, {requestId: workerRequest.requestId});
-                        // TODO: Handle error responses before translating - check if raw.error exists and return early
-                        //       to avoid passing error objects to translator which expects proper response structure
                         const holoResponse = await guardPlugin.translator.toHoloResponse(raw);
-                        if (!holoResponse.output) return {
+                        if (!holoResponse.output?.length) return {
                             passed: false,
                             errors: ["Guard response is missing output"]
                         };
 
                         const guardResponse = holoResponse.output[0].content as string;
+                        if (!guardResponse) {
+                            logger.warn(`Guard returned empty content`);
+                            return {passed: true, errors: ['Guard returned empty response']};
+                        }
                         const result = JSON.parse(guardResponse);
                         const duration = Date.now() - startTime;
                         logger.debug(`Guard check ${index + 1}/${guards.length} completed: id=${guard.id}, passed=${result.passed}, duration=${duration}ms`);

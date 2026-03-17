@@ -1,8 +1,17 @@
-import {Response} from 'express';
+import {NextFunction, RequestHandler, Response} from 'express';
 import {ClassLogger} from "@holokai/sdk";
+import {HoloApiRequest} from '../api/types';
 
 export interface ApiResponse<T = any> extends Response {
     json: (body: T) => this;
+}
+
+export function asyncHandler(
+    fn: (req: HoloApiRequest, res: ApiResponse, next: NextFunction) => Promise<void>
+): RequestHandler {
+    return (req, res, next) => {
+        fn(req as HoloApiRequest, res as ApiResponse, next).catch(next);
+    };
 }
 
 export abstract class BaseController extends ClassLogger {

@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
-import {BaseController, ApiResponse} from '../../utils/api';
+import {HoloError} from '@holokai/sdk';
+import {ApiResponse, BaseController} from '../../utils';
 import {HoloApiRequest} from '../types';
 import {PricingService} from '../../services';
 
@@ -11,37 +12,27 @@ export class PricingController extends BaseController {
     }
 
     recalculate = async (req: HoloApiRequest, res: ApiResponse): Promise<void> => {
-        try {
-            const {from, to, provider_id} = req.body;
+        const {from, to, provider_id} = req.body;
 
-            if (!from || !to) {
-                res.status(400).json({success: false, error: {message: 'from and to are required', code: 'VALIDATION_ERROR'}, timestamp: new Date().toISOString()});
-                return;
-            }
+        if (!from || !to) throw HoloError.badRequest('from and to are required');
 
-            const fromDate = new Date(from);
-            const toDate = new Date(to);
+        const fromDate = new Date(from);
+        const toDate = new Date(to);
 
-            if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-                res.status(400).json({success: false, error: {message: 'from and to must be valid dates', code: 'VALIDATION_ERROR'}, timestamp: new Date().toISOString()});
-                return;
-            }
+        if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) throw HoloError.badRequest('from and to must be valid dates');
 
-            const result = await this.pricingService.recalculateCostsForDateRange(fromDate, toDate, provider_id);
+        const result = await this.pricingService.recalculateCostsForDateRange(fromDate, toDate, provider_id);
 
-            res.json({
-                success: true,
-                data: {
-                    row_count: result.rowCount,
-                    total_cost: result.totalCost,
-                    from: fromDate.toISOString(),
-                    to: toDate.toISOString(),
-                    provider_id: provider_id ?? null,
-                },
-                timestamp: new Date().toISOString()
-            });
-        } catch (error) {
-            this.handleError(res, error as Error, 'Failed to recalculate pricing');
-        }
+        res.json({
+            success: true,
+            data: {
+                row_count: result.rowCount,
+                total_cost: result.totalCost,
+                from: fromDate.toISOString(),
+                to: toDate.toISOString(),
+                provider_id: provider_id ?? null,
+            },
+            timestamp: new Date().toISOString()
+        });
     };
 }

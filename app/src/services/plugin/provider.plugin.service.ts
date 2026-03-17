@@ -44,4 +44,13 @@ export class ProviderPluginService extends ClassLogger {
     async getProtocol(pluginId: string, protocolName: string): Promise<Protocol> {
         return this.pluginProtocols.get(pluginId)?.get(protocolName)!;
     }
+
+    getProtocolByCapability(pluginId: string, capability: string): Protocol | undefined {
+        const protocols = this.pluginProtocols.get(pluginId);
+        if (!protocols) return undefined;
+        for (const protocol of protocols.values()) {
+            if (protocol.capability === capability) return protocol;
+        }
+        return undefined;
+    }
 }

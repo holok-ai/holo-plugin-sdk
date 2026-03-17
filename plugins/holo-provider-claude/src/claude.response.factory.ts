@@ -168,6 +168,8 @@ export class ClaudeResponseFactory implements IResponseFactory {
         switch (code) {
             case 'guard_failure':
                 return 'invalid_request_error';
+            default:
+                return 'invalid_request_error';
         }
     }
 

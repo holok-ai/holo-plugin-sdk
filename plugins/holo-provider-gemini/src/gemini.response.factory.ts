@@ -118,6 +118,8 @@ export class GeminiResponseFactory implements IResponseFactory {
         switch (code) {
             case 'guard_failure':
                 return 'INVALID_ARGUMENT';
+            default:
+                return 'INVALID_ARGUMENT';
         }
     }
 

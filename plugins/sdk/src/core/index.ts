@@ -1,3 +1,4 @@
+export * from './errors';
 export * from './logger';
 export * from './async-event-queue';
 export * from './sanitize.object';

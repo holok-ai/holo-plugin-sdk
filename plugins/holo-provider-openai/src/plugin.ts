@@ -41,6 +41,11 @@ export class OpenAIProviderPlugin extends BasePlugin implements IProviderPlugin 
             : new OpenAICompletionsWireAdapter(requestId, isStreaming);
     }
 
+    getProtocolByCapability(capability: ProtocolCapability): string | undefined {
+        const route = this.getRoutes().find(r => r.protocol.capability === capability);
+        return route?.protocol.name;
+    }
+
     getCapabilities(): ProviderCapabilities {
         return {
             streaming: true,

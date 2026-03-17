@@ -3,6 +3,7 @@ import {injectable} from 'tsyringe';
 import {v4 as uuidv4, validate as isUUID} from 'uuid';
 import {ClassLogger, pickDefined} from '@holokai/sdk';
 import {ApplicationDB, ModelDB, ProtocolDB, ProviderDB} from '../db';
+import {ProviderPluginService} from './plugin';
 import type {HoloWorkerRequest} from '@holokai/types/worker';
 import type {HoloRequest} from '@holokai/types/holo';
 import type {Auth} from '@holokai/types/api';
@@ -26,6 +27,7 @@ export class HoloRequestService extends ClassLogger {
         private readonly providerDB: ProviderDB,
         private readonly applicationDB: ApplicationDB,
         private readonly protocolDB: ProtocolDB,
+        private readonly providerPluginService: ProviderPluginService,
     ) {
         super();
     }
@@ -129,6 +131,9 @@ export class HoloRequestService extends ClassLogger {
     }
 
     private async findChatProtocol(pluginId: string): Promise<Protocol> {
+        const cached = this.providerPluginService.getProtocolByCapability(pluginId, ProtocolCapability.CHAT);
+        if (cached) return cached;
+
         const protocols = await this.protocolDB.getByPlugin(pluginId);
         const chatProtocol = protocols.find(p => p.capability === ProtocolCapability.CHAT);
         if (!chatProtocol) {

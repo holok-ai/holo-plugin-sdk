@@ -50,7 +50,9 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         }
 
         const {requestId, protocol, payload, rawRequest} = request;
-        const requestPayload = payload as RequestPayload;
+        const requestPayload = request.isHoloNative
+            ? await this.translator.fromHoloRequest(payload) as RequestPayload
+            : payload as RequestPayload;
 
         const start = Date.now();
         let fullText = "";

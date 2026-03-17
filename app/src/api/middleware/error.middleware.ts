@@ -1,29 +1,30 @@
 import {NextFunction, Request, Response} from "express";
 import logger from "../../utils/logger";
-
-// Error handling middleware
-interface AppError extends Error {
-    status?: number;
-}
+import {HoloError} from '@holokai/sdk';
 
 export const errorMiddleware = async (
-    err: AppError,
+    err: Error,
     req: Request,
     res: Response,
-    _next: NextFunction)
-    : Promise<void> => {
-    logger.error(`Error: ${err.message}`, {
+    _next: NextFunction
+): Promise<void> => {
+    const isHoloError = err instanceof HoloError;
+    const statusCode = isHoloError ? err.statusCode : 500;
+    const code = isHoloError ? err.code : 'internal_error';
+
+    logger.error(`${err.message}`, {
         stack: err.stack,
         url: req.url,
         method: req.method,
-        timestamp: new Date().toISOString()
+        statusCode,
+        code,
     });
 
-    res.status(err.status || 500).json({
+    res.status(statusCode).json({
         success: false,
         error: {
             message: err.message || 'Internal Server Error',
-            code: err.name || 'INTERNAL_ERROR',
+            code,
             ...(process.env.NODE_ENV === 'development' && {stack: err.stack})
         },
         timestamp: new Date().toISOString()

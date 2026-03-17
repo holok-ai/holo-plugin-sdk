@@ -38,6 +38,11 @@ export class ClaudeProviderPlugin extends BasePlugin implements IProviderPlugin 
         return new ClaudeWireAdapter(params.requestId, params.isStreaming);
     }
 
+    getProtocolByCapability(capability: ProtocolCapability): string | undefined {
+        const route = this.getRoutes().find(r => r.protocol.capability === capability);
+        return route?.protocol.name;
+    }
+
     getCapabilities(): ProviderCapabilities {
         return {
             streaming: true,

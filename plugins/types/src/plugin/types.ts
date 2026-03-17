@@ -3,6 +3,7 @@ import type {IProvider, IProviderTranslator, IWireAdapter, ProviderCapabilities,
 import type {RouteDefinition, RouteHandler} from "../routing";
 import type {INotificationService} from "../notification";
 import type {CostResult, PricingSheetModel} from "../entities";
+import type {ProtocolCapability} from "../entities";
 import {Plugin} from "../entities";
 
 export const PluginType = {
@@ -137,4 +138,6 @@ export interface IProviderPlugin<TProvider = IProvider> extends IPlugin {
     getPricingSheets?(): Map<string, PluginPricingSheet>;
 
     calculateCost(tokens: Record<string, number>, pricing: PricingSheetModel): CostResult;
+
+    getProtocolByCapability(capability: ProtocolCapability): string | undefined;
 }

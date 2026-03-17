@@ -1,16 +1,17 @@
 import express from 'express';
 import {container} from 'tsyringe';
 import {ModelCrudController} from '../controllers/model.controller';
+import {asyncHandler} from '../../utils';
 
 export function createModelRoutes(): express.Router {
     const router = express.Router();
     const controller = container.resolve(ModelCrudController);
 
-    router.get('/', controller.list);
-    router.get('/:id', controller.get);
-    router.post('/', controller.create);
-    router.put('/:id', controller.update);
-    router.delete('/:id', controller.remove);
+    router.get('/', asyncHandler(controller.list));
+    router.get('/:id', asyncHandler(controller.get));
+    router.post('/', asyncHandler(controller.create));
+    router.put('/:id', asyncHandler(controller.update));
+    router.delete('/:id', asyncHandler(controller.remove));
 
     return router;
 }
