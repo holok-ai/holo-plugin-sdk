@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {injectable} from 'tsyringe';
 import {v4 as uuidv4, validate as isUUID} from 'uuid';
-import {ClassLogger, pickDefined} from '@holokai/sdk';
+import {ClassLogger, HoloError, pickDefined} from '@holokai/sdk';
 import {ApplicationDB, ModelDB, ProtocolDB, ProviderDB} from '../db';
 import {ProviderPluginService} from './plugin';
 import type {HoloWorkerRequest} from '@holokai/types/worker';
@@ -41,7 +41,7 @@ export class HoloRequestService extends ClassLogger {
             return this.resolveFromModel(auth, request);
         }
 
-        throw new Error('Either model or application must be specified');
+        throw HoloError.badRequest('Either model or application must be specified');
     }
 
     private async resolveFromApplication(auth: Auth, request: HoloRequest): Promise<HoloResolvedTarget> {
@@ -50,7 +50,7 @@ export class HoloRequestService extends ClassLogger {
 
         const application = await this.applicationDB.getBySlug(auth.organizationId, slug);
         if (!application) {
-            throw new Error(`Application not found: ${slug}`);
+            throw HoloError.notFound(`Application '${slug}'`);
         }
 
         const provider = application.provider!;
@@ -69,11 +69,11 @@ export class HoloRequestService extends ClassLogger {
         if (isUUID(modelRef)) {
             const model = await this.modelDB.getById(modelRef);
             if (!model) {
-                throw new Error(`Model not found: ${modelRef}`);
+                throw HoloError.notFound(`Model '${modelRef}'`);
             }
             const provider = await this.providerDB.getById(model.provider_id);
             if (!provider) {
-                throw new Error(`Provider not found for model: ${modelRef}`);
+                throw HoloError.notFound(`Provider for model '${modelRef}'`);
             }
             const protocol = await this.findChatProtocol(provider.plugin_id);
             logger.info(`Resolved model UUID ${modelRef} → provider ${provider.name}`);
@@ -85,7 +85,7 @@ export class HoloRequestService extends ClassLogger {
             const models = await this.modelDB.listByProvider(provider.id);
             const model = models.find(m => m.access_model === modelRef || m.name === modelRef);
             if (!model) {
-                throw new Error(`Model ${modelRef} not found for provider ${provider.name}`);
+                throw HoloError.notFound(`Model '${modelRef}' for provider '${provider.name}'`);
             }
             const protocol = await this.findChatProtocol(provider.plugin_id);
             logger.info(`Resolved model ${modelRef} → provider ${provider.name} (provider-scoped)`);
@@ -95,12 +95,12 @@ export class HoloRequestService extends ClassLogger {
         const models = await this.modelDB.list();
         const model = models.find(m => m.access_model === modelRef || m.name === modelRef);
         if (!model) {
-            throw new Error(`Model not found: ${modelRef}`);
+            throw HoloError.notFound(`Model '${modelRef}'`);
         }
 
         const provider = await this.providerDB.getById(model.provider_id);
         if (!provider) {
-            throw new Error(`Provider not found for model: ${modelRef}`);
+            throw HoloError.notFound(`Provider for model '${modelRef}'`);
         }
 
         if (auth.userId) {
@@ -109,7 +109,7 @@ export class HoloRequestService extends ClassLogger {
                 app.provider_id === provider.id
             );
             if (!hasAccess) {
-                throw new Error(`No access to model: ${modelRef}`);
+                throw HoloError.forbidden(`No access to model: ${modelRef}`);
             }
         }
 
@@ -122,11 +122,11 @@ export class HoloRequestService extends ClassLogger {
     private async resolveProvider(ref: string): Promise<Provider> {
         if (isUUID(ref)) {
             const provider = await this.providerDB.getById(ref);
-            if (!provider) throw new Error(`Provider not found: ${ref}`);
+            if (!provider) throw HoloError.notFound(`Provider '${ref}'`);
             return provider;
         }
         const provider = await this.providerDB.get(ref);
-        if (!provider) throw new Error(`Provider not found: ${ref}`);
+        if (!provider) throw HoloError.notFound(`Provider '${ref}'`);
         return provider;
     }
 
@@ -147,7 +147,7 @@ export class HoloRequestService extends ClassLogger {
         if (models.length > 0) {
             return models[0].access_model || models[0].name;
         }
-        throw new Error(`Application ${application.name} has no models configured`);
+        throw HoloError.badRequest(`Application '${application.name}' has no models configured`);
     }
 
     buildWorkerRequest(

@@ -21,8 +21,8 @@ describe('sdk integration: smoke matrix', () => {
                 expect(res.id).toBeTruthy();
                 expect(res.output).toBeDefined();
             } catch (e) {
-                if (e instanceof HoloApiError && e.status === 400) {
-                    // Provider not configured in this environment — acceptable skip
+                if (e instanceof HoloApiError && (e.status === 400 || e.status === 404)) {
+                    // Provider/model not configured in this environment — acceptable skip
                     return;
                 }
                 throw e;

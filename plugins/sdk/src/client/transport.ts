@@ -124,18 +124,23 @@ class FetchTransport implements HoloTransport {
     private async handleErrorResponse(response: Response): Promise<never> {
         let errorBody: unknown;
         let code: string | undefined;
+        const text = await response.text();
         try {
-            errorBody = await response.json();
-            if (typeof errorBody === 'object' && errorBody !== null && 'code' in errorBody) {
-                code = String((errorBody as Record<string, unknown>).code);
+            errorBody = JSON.parse(text);
+            const body = errorBody as Record<string, unknown>;
+            if (typeof body === 'object' && body !== null) {
+                code = typeof body.code === 'string' ? body.code
+                    : typeof body.error === 'object' && body.error !== null
+                        ? String((body.error as Record<string, unknown>).code ?? '')
+                        : undefined;
             }
         } catch {
-            errorBody = await response.text();
+            errorBody = text;
         }
         throw new HoloApiError(
             `HTTP ${response.status}: ${response.statusText}`,
             response.status,
-            code,
+            code || undefined,
             errorBody,
         );
     }
