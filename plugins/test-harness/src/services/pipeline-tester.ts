@@ -1,9 +1,9 @@
 import type {IProviderPlugin} from '@holokai/types/plugin';
 import type {ProviderEvent} from '@holokai/types/provider';
-import type {WorkerResponseEnvelope} from '@holokai/types/worker';
+import type {HoloWorkerRequest, WorkerResponseEnvelope} from '@holokai/types/worker';
 import {runPipelineFromFixture} from '@holokai/lib';
 import type {FixtureScenario} from '../fixtures/types.js';
-import {assertArrayEqual, assertEqual, type AssertionError} from '../dsl/assertions.js';
+import {assertEqual, type AssertionError} from '../dsl/assertions.js';
 import type {TestResult} from './wire-tester.js';
 import {NotificationEvent} from "@holokai/types";
 
@@ -17,19 +17,6 @@ export async function testPipeline(plugin: IProviderPlugin, fixture: FixtureScen
         protocol: fixture.protocol,
     });
 
-    let auditor;
-    try {
-        const provider = await plugin.createProvider('test-id', 'test', {apiKey: 'test-key'});
-        auditor = provider.auditor;
-    } catch {
-        const mod = await import(`@holokai/holo-provider-${plugin.family}`);
-        const AuditorClass = Object.values(mod).find(
-            (v: any) => typeof v === 'function' && v.prototype?.auditResponse
-        ) as any;
-        if (!AuditorClass) throw new Error(`Cannot resolve auditor for ${plugin.family}`);
-        auditor = new AuditorClass();
-    }
-
     const envelope: WorkerResponseEnvelope = {
         source_id: 'test-source-id',
         request_id: 'test-req',
@@ -37,6 +24,18 @@ export async function testPipeline(plugin: IProviderPlugin, fixture: FixtureScen
         provider: {id: 'test-provider-id', name: 'test'} as any,
         protocol: {id: 'test-protocol-id', name: fixture.protocol, capability: 'chat'} as any,
         access_model: fixture.expectedAudit?.access_model ?? 'unknown',
+    };
+
+    const workerRequest: HoloWorkerRequest = {
+        organizationId: 'test-org',
+        provider: envelope.provider,
+        protocol: envelope.protocol,
+        sourceId: 'test-source-id',
+        requestId: 'test-req',
+        payload: {},
+        timestamp: new Date().toISOString(),
+        isStreaming: fixture.streaming,
+        httpRequestDetails: {path: '/test', method: 'POST'},
     };
 
     const providerEvents: ProviderEvent[] = fixture.providerChunks.map((chunk, i) => {
@@ -60,27 +59,26 @@ export async function testPipeline(plugin: IProviderPlugin, fixture: FixtureScen
         } as ProviderEvent;
     });
 
+    let auditedRecord: HoloWorkerRequest | null = null;
     const publisher = {
         sendResponseChunk: (_s: string, _r: string, _d: any) => Promise.resolve(),
-        sendToAudit: (_a: any) => Promise.resolve()
+        sendToAudit: async (data: HoloWorkerRequest) => {
+            auditedRecord = data;
+        }
     };
 
     const notifier = {
         publish: (_event: NotificationEvent) => Promise.resolve()
     }
 
-    const result = await runPipelineFromFixture(providerEvents, wire, auditor, envelope, publisher, notifier);
+    const result = await runPipelineFromFixture(providerEvents, wire, workerRequest, envelope, publisher, notifier);
 
     const textErr = assertEqual('text', result.text, fixture.expectedText);
     if (textErr) errors.push(textErr);
 
-    const wireBodies = result.wireChunks.map(c => c.body);
-    const wireErrors = assertArrayEqual('wireBody', wireBodies, fixture.expectedWire);
-    errors.push(...wireErrors);
-
-    if (result.auditRecord && fixture.expectedAudit) {
-        const statusErr = assertEqual('audit.status', result.auditRecord.status, fixture.expectedAudit.status);
-        if (statusErr) errors.push(statusErr);
+    if (fixture.expectedAudit && auditedRecord) {
+        const hasEvent = assertEqual('audit.hasProviderEvent', !!(auditedRecord as HoloWorkerRequest).providerEvent, true);
+        if (hasEvent) errors.push(hasEvent);
     }
 
     return {

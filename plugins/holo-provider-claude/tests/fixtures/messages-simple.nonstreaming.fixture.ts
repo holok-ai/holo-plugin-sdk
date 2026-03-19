@@ -1,5 +1,5 @@
 import type {FixtureScenario} from '@holokai/test-harness';
-import {LlmStatus} from '@holokai/types/entities';
+import {ProviderResponseStatus} from '@holokai/types/entities';
 
 const messageResponse = {
     id: 'msg-test-123',
@@ -39,7 +39,7 @@ const fixture: FixtureScenario = {
         access_model: 'claude-sonnet-4-20250514',
         input_tokens: 12,
         output_tokens: 10,
-        status: LlmStatus.SUCCESS,
+        status: ProviderResponseStatus.SUCCESS,
     },
 
     tags: ['messages', 'nonstreaming'],

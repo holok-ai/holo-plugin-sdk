@@ -29,6 +29,14 @@ export async function testAudit(plugin: IProviderPlugin, fixture: FixtureScenari
         message: lastChunk,
         text: fixture.expectedText,
         ts: Date.now(),
+        metrics: {
+            inputTokens: fixture.expectedAudit.input_tokens ?? 0,
+            outputTokens: fixture.expectedAudit.output_tokens ?? 0,
+            totalTokens: (fixture.expectedAudit.input_tokens ?? 0) + (fixture.expectedAudit.output_tokens ?? 0),
+            timeToFirstToken: 0,
+            totalProcessingTime: 0,
+            startTime: Date.now(),
+        },
     } as ProviderEvent;
 
     const envelope: WorkerResponseEnvelope = {

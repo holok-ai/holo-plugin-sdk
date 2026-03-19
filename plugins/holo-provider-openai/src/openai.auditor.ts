@@ -5,7 +5,7 @@ import {HoloWorkerRequest, WorkerResponseEnvelope} from "@holokai/types/worker";
 import {ProviderDoneEvent, ProviderEvent} from "@holokai/types/provider";
 import {FinishReason, ProviderEnvelope, ProviderResponseMetrics, ProviderResponseStatus} from "@holokai/types/entities";
 import {ChatCompletionChunk, ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
-import {ResponseCompletedEvent, ResponseCreateParamsBase} from "openai/resources/responses/responses";
+import {ResponseCreateParamsBase} from "openai/resources/responses/responses";
 import {OpenAIProtocols} from "./plugin";
 
 @injectable()
@@ -100,7 +100,8 @@ export class OpenAIAuditor extends BaseAuditor {
 
     protected async mapProviderResponseMetrics(providerEvent: ProviderDoneEvent, protocolName: string): Promise<Partial<ProviderResponseMetrics>> {
         if (protocolName === OpenAIProtocols.RESPONSES) {
-            const usage = (providerEvent.message as ResponseCompletedEvent).response.usage;
+            const msg = providerEvent.message;
+            const usage = msg?.response?.usage ?? msg?.usage;
             if (!usage) return {};
             const {input_tokens, output_tokens, total_tokens} = usage;
 

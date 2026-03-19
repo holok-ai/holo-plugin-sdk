@@ -1,4 +1,5 @@
 import {Application, Prompt, Protocol, Provider} from "../entities";
+import type {ProviderDoneEvent, ProviderErrorEvent} from "../provider";
 
 export interface GuardResult {
     passed: boolean;
@@ -37,4 +38,6 @@ export interface HoloWorkerRequest {
     clientIdentifier?: string;
     tokenType?: string;
     isHoloNative?: boolean;
+    providerEvent?: ProviderDoneEvent | ProviderErrorEvent;
+    workerId?: string;
 }

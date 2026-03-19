@@ -6,6 +6,7 @@ import {BaseServer} from "./base.server";
 import {withAdmin, withDB, withQueue} from "./mixins";
 import {env} from "../env";
 import {AuditService, PluginService} from "../services";
+import type {HoloWorkerRequest} from "@holokai/types/worker";
 import type {NotificationEvent} from "@holokai/types/notification";
 import {ServerType} from "@holokai/types/entities";
 
@@ -27,13 +28,9 @@ export class AuditServer extends withAdmin(withQueue(withDB(BaseServer))) {
             await this.auditService.logNotification(content);
         })
 
-        await this.queueService.consume(env.queue.auditRequestQueue, async (_id, content) => {
-            await this.auditService.logRequest(content);
+        await this.queueService.consume(env.queue.auditResponseQueue, async (_id, content: HoloWorkerRequest) => {
+            await this.auditService.logAuditRecord(content);
         });
-
-        await this.queueService.consume(env.queue.auditResponseQueue, async (_id, content) => {
-            await this.auditService.logResponse(content);
-        })
     }
 
     async onShutdown(): Promise<void> {

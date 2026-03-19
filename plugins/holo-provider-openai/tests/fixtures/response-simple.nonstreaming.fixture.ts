@@ -1,5 +1,5 @@
 import type {FixtureScenario} from '@holokai/test-harness';
-import {LlmStatus} from '@holokai/types/entities';
+import {ProviderResponseStatus} from '@holokai/types/entities';
 
 const responsePayload = {
     id: 'resp-test-456',
@@ -43,7 +43,7 @@ const fixture: FixtureScenario = {
 
     expectedAudit: {
         access_model: 'gpt-4o',
-        status: LlmStatus.SUCCESS,
+        status: ProviderResponseStatus.SUCCESS,
     },
 
     tags: ['responses', 'nonstreaming'],

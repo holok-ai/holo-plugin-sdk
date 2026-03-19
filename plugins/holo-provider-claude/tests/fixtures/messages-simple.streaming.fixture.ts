@@ -1,5 +1,5 @@
 import type {FixtureScenario} from '@holokai/test-harness';
-import {LlmStatus} from '@holokai/types/entities';
+import {ProviderResponseStatus} from '@holokai/types/entities';
 
 const chunk1 = {
     type: 'content_block_start',
@@ -49,7 +49,7 @@ const fixture: FixtureScenario = {
 
     expectedAudit: {
         access_model: 'claude-sonnet-4-20250514',
-        status: LlmStatus.SUCCESS,
+        status: ProviderResponseStatus.SUCCESS,
     },
 
     tags: ['messages', 'streaming'],

@@ -8,7 +8,6 @@ export {RedisService} from './redis.service';
 export {RequestService} from './request.service';
 export {ResponseService} from './response.service';
 export {WorkerRequestFactory} from './worker.request.factory';
-export {WorkerResponseFactory} from './worker.response.factory';
 export * from './auth';
 export * from './entities';
 export * from './evaluators';

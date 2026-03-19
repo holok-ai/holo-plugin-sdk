@@ -7,7 +7,6 @@
 
 import {OpenAIProviderPlugin} from './plugin.js';
 
-export * from './services';
 export * from './translators';
 export * from './manifest';
 

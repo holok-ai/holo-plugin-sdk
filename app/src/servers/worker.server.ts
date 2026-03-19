@@ -77,7 +77,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         logger.debug(`Guard failed response: ${JSON.stringify(wireChunk)}`);
                         await this.responseService.sendResponseChunk(sourceId, requestId, wireChunk);
                     }
-                    await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt));
+                    await this.responseService.sendToAudit({...workerRequest, providerEvent: evt, workerId: this.id});
                     await this.notificationService.publish(
                         NotificationEventFactory.fromProviderEvent(envelope, evt),
                     );
@@ -91,14 +91,12 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         });
 
                     const q = await ai.processWorkerRequest(workerRequest);
-                    await runRequestPipeline(q, wire, ai.auditor, envelope, this.responseService, this.notificationService);
+                    await runRequestPipeline(q, wire, workerRequest, envelope, this.responseService, this.notificationService);
                 }
             } catch (error) {
                 logger.error(`Error handling request (${requestId}): ${(error as Error).message}`);
                 logger.error(JSON.stringify(workerRequest, null, 2));
                 try {
-                    const ai: IProvider = await this.providerPluginService.getProviderImplById(workerRequest.provider.id);
-                    const envelope = await ai.auditor.createWorkerResponseEnvelope(workerRequest, this.id);
                     const errorMessage = (error as Error).message;
                     const errorEvent = {
                         type: 'error',
@@ -116,8 +114,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                             totalTokens: 0
                         },
                     } as ProviderErrorEvent;
-                    const auditRecord = await ai.auditResponse(envelope, errorEvent);
-                    await this.responseService.sendToAudit(requestId, auditRecord);
+                    await this.responseService.sendToAudit({...workerRequest, providerEvent: errorEvent, workerId: this.id});
                 } catch (auditError) {
                     logger.error(`Failed to create error audit record: ${(auditError as Error).message}`);
                 }

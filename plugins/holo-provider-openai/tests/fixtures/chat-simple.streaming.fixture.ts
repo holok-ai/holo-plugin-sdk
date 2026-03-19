@@ -1,5 +1,5 @@
 import type {FixtureScenario} from '@holokai/test-harness';
-import {LlmStatus} from '@holokai/types/entities';
+import {ProviderResponseStatus} from '@holokai/types/entities';
 import sdkAdapter from '../sdk-adapter.js';
 
 const chunk1 = {
@@ -75,7 +75,7 @@ const fixture: FixtureScenario = {
         access_model: 'gpt-4o',
         input_tokens: 10,
         output_tokens: 6,
-        status: LlmStatus.SUCCESS,
+        status: ProviderResponseStatus.SUCCESS,
     },
 
     sdkAdapter,

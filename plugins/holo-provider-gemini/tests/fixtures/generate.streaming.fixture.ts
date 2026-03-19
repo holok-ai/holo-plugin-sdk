@@ -1,5 +1,5 @@
 import type {FixtureScenario} from '@holokai/test-harness';
-import {LlmStatus} from '@holokai/types/entities';
+import {ProviderResponseStatus} from '@holokai/types/entities';
 
 const chunk1 = {
     candidates: [
@@ -69,7 +69,7 @@ const fixture: FixtureScenario = {
         access_model: 'gemini-2.5-flash',
         input_tokens: 8,
         output_tokens: 6,
-        status: LlmStatus.SUCCESS,
+        status: ProviderResponseStatus.SUCCESS,
     },
 
     tags: ['generate', 'streaming'],

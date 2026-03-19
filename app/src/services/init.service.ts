@@ -48,7 +48,6 @@ export class InitService {
 
     async _setupRequestQueues() {
         await this.queueService.assertQueue(env.queue.requestQueue, {durable: true}, env.queue.requestExchange);
-        await this.queueService.assertQueue(env.queue.auditRequestQueue, {durable: true}, env.queue.requestExchange);
     }
 
     async _setupResponseQueues() {

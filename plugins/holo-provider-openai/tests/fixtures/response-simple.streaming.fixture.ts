@@ -1,5 +1,5 @@
 import type {FixtureScenario} from '@holokai/test-harness';
-import {LlmStatus} from '@holokai/types/entities';
+import {ProviderResponseStatus} from '@holokai/types/entities';
 
 const streamEvent1 = {
     type: 'response.output_item.added',
@@ -69,7 +69,7 @@ const fixture: FixtureScenario = {
         access_model: 'gpt-4o',
         input_tokens: 15,
         output_tokens: 4,
-        status: LlmStatus.SUCCESS,
+        status: ProviderResponseStatus.SUCCESS,
     },
 
     tags: ['responses', 'streaming'],
