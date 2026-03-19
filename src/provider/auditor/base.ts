@@ -162,7 +162,7 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
             user_id: workerRequest.userId,
             thread_id: workerRequest.threadId,
             created_at: new Date(workerRequest.timestamp).toISOString(),
-            request_raw: JSON.stringify(workerRequest.payload) as unknown,
+            request_raw: workerRequest.payload,
             access_model,
             system_prompt,
             last_user_prompt,
