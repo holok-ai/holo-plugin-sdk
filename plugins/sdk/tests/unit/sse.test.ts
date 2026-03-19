@@ -1,4 +1,4 @@
-import {describe, it, expect} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import {parseSSEStream} from '../../src/client/sse.js';
 import type {HoloStreamEvent} from '@holokai/types/holo';
 

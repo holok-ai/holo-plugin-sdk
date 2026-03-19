@@ -10,7 +10,7 @@ export function gatewayUrl(): string {
     return url;
 }
 
-export function getTestConfig(): {gatewayUrl: string; token: string} {
+export function getTestConfig(): { gatewayUrl: string; token: string } {
     return {
         gatewayUrl: gatewayUrl(),
         token: process.env['HOLO_TEST_TOKEN'] ?? '',

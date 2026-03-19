@@ -1,4 +1,4 @@
-import {describe, it, expect, vi} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 import {HoloClient} from '../../src/client/client.js';
 import type {HoloResponse} from '@holokai/types/holo';
 

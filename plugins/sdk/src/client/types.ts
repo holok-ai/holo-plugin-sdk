@@ -1,4 +1,10 @@
-import type {HoloApplicationInfo, HoloMessage, HoloModelInfo, HoloRequest, HoloRequestMetadata,} from '@holokai/types/holo';
+import type {
+    HoloApplicationInfo,
+    HoloMessage,
+    HoloModelInfo,
+    HoloRequest,
+    HoloRequestMetadata,
+} from '@holokai/types/holo';
 
 /** Parameters accepted by {@link ChatNamespace.create} and {@link ChatNamespace.stream}. */
 export interface HoloChatParams {

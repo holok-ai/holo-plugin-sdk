@@ -1,5 +1,5 @@
-import {testRoundTrip} from '@holokai/test-harness';
 import type {FixtureScenario, SdkAdapter} from '@holokai/test-harness';
+import {testRoundTrip} from '@holokai/test-harness';
 import {assertTestResult} from './vitest-helpers.js';
 
 export async function runRoundTripContract(fixture: FixtureScenario, adapter: SdkAdapter): Promise<void> {

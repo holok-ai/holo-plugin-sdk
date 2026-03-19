@@ -25,6 +25,7 @@ interface TransportStreamResult {
 // and wrap FetchTransport, forming a composable pipeline.
 interface HoloTransport {
     request<T>(options: TransportRequestOptions): Promise<T>;
+
     streamRequest(options: TransportStreamOptions): Promise<TransportStreamResult>;
 }
 
@@ -33,7 +34,7 @@ function getUserAgent(): string {
     try {
         const {createRequire} = require('module');
         const require_ = createRequire(import.meta.url);
-        const pkg = require_('../../../package.json') as {version?: string};
+        const pkg = require_('../../../package.json') as { version?: string };
         if (pkg.version) return `${base}/${pkg.version}`;
     } catch {
         // Bundler or browser — silently degrade

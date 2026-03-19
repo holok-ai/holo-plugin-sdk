@@ -6,5 +6,5 @@
 
 - migrate test infrastructure to Vitest, merge provider-contract-tests into test-utils, add Holo API controller
 - Updated dependencies
-  - @holokai/types@1.3.0
-  - @holokai/sdk@1.3.0
+    - @holokai/types@1.3.0
+    - @holokai/sdk@1.3.0

@@ -4,10 +4,10 @@
 
 The SDK has two test layers, each in its own Vitest project:
 
-| Layer       | Project            | Directory             | Requires              |
-|-------------|--------------------|-----------------------|-----------------------|
-| Unit        | `sdk`              | `tests/unit/`         | Nothing (mock fetch)  |
-| Integration | `sdk-integration`  | `tests/integration/`  | Live Holo gateway     |
+| Layer       | Project           | Directory            | Requires             |
+|-------------|-------------------|----------------------|----------------------|
+| Unit        | `sdk`             | `tests/unit/`        | Nothing (mock fetch) |
+| Integration | `sdk-integration` | `tests/integration/` | Live Holo gateway    |
 
 ## Running Tests
 
@@ -35,16 +35,16 @@ npm run test:coverage
 
 Unit tests use mock `fetch` via `HoloClientOptions.fetch` — no live server needed.
 
-| File                      | What it tests                                                         |
-|---------------------------|-----------------------------------------------------------------------|
-| `builder.test.ts`         | Chaining, `build()` output, defaults, response_format, tool_choice   |
-| `client.test.ts`          | URL normalization, auth headers, `request()`, `streamRequest()`, errors |
-| `chat-namespace.test.ts`  | Proxy methods, `create()`, builder inheritance, system parity         |
-| `sse.test.ts`             | Buffer splitting, multi-line data, malformed blocks, partial buffers  |
-| `merge.test.ts`           | Text accumulation, `toResponse()`, tool call deltas, failed events    |
-| `stream.test.ts`          | Async iteration, double-iterate guard, `.text()`, `.on()`, `.abort()` |
-| `runner.test.ts`          | Tool loop, maxIterations cap, abort, event emission                   |
-| `errors.test.ts`          | HoloApiError, HoloStreamError, HoloTimeoutError properties           |
+| File                     | What it tests                                                           |
+|--------------------------|-------------------------------------------------------------------------|
+| `builder.test.ts`        | Chaining, `build()` output, defaults, response_format, tool_choice      |
+| `client.test.ts`         | URL normalization, auth headers, `request()`, `streamRequest()`, errors |
+| `chat-namespace.test.ts` | Proxy methods, `create()`, builder inheritance, system parity           |
+| `sse.test.ts`            | Buffer splitting, multi-line data, malformed blocks, partial buffers    |
+| `merge.test.ts`          | Text accumulation, `toResponse()`, tool call deltas, failed events      |
+| `stream.test.ts`         | Async iteration, double-iterate guard, `.text()`, `.on()`, `.abort()`   |
+| `runner.test.ts`         | Tool loop, maxIterations cap, abort, event emission                     |
+| `errors.test.ts`         | HoloApiError, HoloStreamError, HoloTimeoutError properties              |
 
 ### Writing Unit Tests
 
@@ -73,31 +73,32 @@ For streaming tests, use `createSseMockFetch` from `@holokai/test-utils` or buil
 Integration tests hit a live Holo gateway. The setup file checks for required env vars and fails
 immediately with a clear error message if they're missing — no silent skips.
 
-| File                    | What it tests                                      |
-|-------------------------|----------------------------------------------------|
-| `chat-create.test.ts`   | `client.chat.create()` returns complete response   |
-| `chat-stream.test.ts`   | `client.chat.stream()` text + parity with create   |
-| `tools.test.ts`          | `client.chat.runner()` tool loop end-to-end        |
-| `cancellation.test.ts`  | Abort mid-stream without unhandled errors           |
-| `errors.test.ts`         | 401/404 map to `HoloApiError` with correct status  |
-| `smoke-matrix.test.ts`  | Minimal prompt per provider (openai, claude, gemini, ollama) |
+| File                   | What it tests                                                |
+|------------------------|--------------------------------------------------------------|
+| `chat-create.test.ts`  | `client.chat.create()` returns complete response             |
+| `chat-stream.test.ts`  | `client.chat.stream()` text + parity with create             |
+| `tools.test.ts`        | `client.chat.runner()` tool loop end-to-end                  |
+| `cancellation.test.ts` | Abort mid-stream without unhandled errors                    |
+| `errors.test.ts`       | 401/404 map to `HoloApiError` with correct status            |
+| `smoke-matrix.test.ts` | Minimal prompt per provider (openai, claude, gemini, ollama) |
 
 Integration tests assert only on Holo API and SDK behavior, not provider-native payload structure.
 Provider translation correctness belongs in the conformance tests.
 
 ### Env Variables
 
-| Variable            | Required | Description                                |
-|---------------------|----------|--------------------------------------------|
-| `HOLO_URL`  | Yes      | Base URL of the Holo gateway               |
-| `HOLO_TEST_TOKEN`   | Yes      | Bearer token (JWT or HoloToken)            |
+| Variable          | Required | Description                     |
+|-------------------|----------|---------------------------------|
+| `HOLO_URL`        | Yes      | Base URL of the Holo gateway    |
+| `HOLO_TEST_TOKEN` | Yes      | Bearer token (JWT or HoloToken) |
 
 ## Vitest Configuration
 
 The SDK has two Vitest project configs:
 
 - **`vitest.config.ts`** — unit tests (`tests/unit/**/*.test.ts`), project name `sdk`
-- **`vitest.integration.config.ts`** — integration tests (`tests/integration/**/*.test.ts`), project name `sdk-integration`
+- **`vitest.integration.config.ts`** — integration tests (`tests/integration/**/*.test.ts`), project name
+  `sdk-integration`
 
 Both use `vite-tsconfig-paths` to resolve `@holokai/*` path aliases from the root tsconfig.
 

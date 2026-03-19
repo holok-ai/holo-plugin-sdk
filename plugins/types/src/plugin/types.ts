@@ -2,8 +2,7 @@ import type {HoloLogger} from "../logger";
 import type {IProvider, IProviderTranslator, IWireAdapter, ProviderCapabilities, WireAdapterParams} from "../provider";
 import type {RouteDefinition, RouteHandler} from "../routing";
 import type {INotificationService} from "../notification";
-import type {CostResult, PricingSheetModel} from "../entities";
-import type {ProtocolCapability} from "../entities";
+import type {CostResult, PricingSheetModel, ProtocolCapability} from "../entities";
 import {Plugin} from "../entities";
 
 export const PluginType = {

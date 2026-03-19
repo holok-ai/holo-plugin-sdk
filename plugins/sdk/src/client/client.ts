@@ -1,7 +1,15 @@
-import type {HoloContent, HoloMessage, HoloRequest, HoloResponse} from '@holokai/types/holo';
 import type {
-    HoloThread, HoloThreadCreateParams, HoloThreadUpdateParams, HoloThreadListParams,
-    HoloThreadMessage, HoloThreadMessageListParams, HoloPagedResponse,
+    HoloContent,
+    HoloMessage,
+    HoloPagedResponse,
+    HoloRequest,
+    HoloResponse,
+    HoloThread,
+    HoloThreadCreateParams,
+    HoloThreadListParams,
+    HoloThreadMessage,
+    HoloThreadMessageListParams,
+    HoloThreadUpdateParams
 } from '@holokai/types/holo';
 import type {HoloApplicationInfo, HoloChatParams, HoloClientOptions, HoloModelInfo} from './types';
 import {HoloStream} from './stream';

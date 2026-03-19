@@ -1,11 +1,11 @@
-import {describe, it, expect, vi} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 import {HoloRequestBuilder} from '../../src/client/builder.js';
 import type {HoloRequest, HoloResponse} from '@holokai/types/holo';
 
 const noopSend = vi.fn<(r: HoloRequest) => Promise<HoloResponse>>();
 const noopStream = vi.fn();
 
-function builder(defaults?: {model?: string; application?: string}) {
+function builder(defaults?: { model?: string; application?: string }) {
     return new HoloRequestBuilder(noopSend, noopStream as any, defaults);
 }
 
@@ -141,7 +141,13 @@ describe('HoloRequestBuilder', () => {
 
     describe('send()', () => {
         it('calls sendFn with built request', async () => {
-            const mockResponse = {model: 'gpt-4o', output: [], created: 1, finish_reason: null, usage: {}} as HoloResponse;
+            const mockResponse = {
+                model: 'gpt-4o',
+                output: [],
+                created: 1,
+                finish_reason: null,
+                usage: {}
+            } as HoloResponse;
             const sendFn = vi.fn().mockResolvedValue(mockResponse);
             const b = new HoloRequestBuilder(sendFn, noopStream as any, {model: 'gpt-4o'});
             const result = await b.user('hello').send();

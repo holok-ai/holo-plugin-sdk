@@ -1,4 +1,4 @@
-import {describe, it, expect} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import {HoloClient} from '../../src/client/client.js';
 import {getTestConfig} from '@holokai/test-utils';
 

@@ -1,6 +1,6 @@
-import {describe, it, expect} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import {HoloStreamAccumulator} from '../../src/client/merge.js';
-import type {HoloContentToolCall, HoloContentReasoning, HoloContentText, HoloContent} from '@holokai/types/holo';
+import type {HoloContent, HoloContentReasoning, HoloContentText, HoloContentToolCall} from '@holokai/types/holo';
 
 describe('HoloStreamAccumulator', () => {
     it('accumulates text deltas', () => {
@@ -12,7 +12,10 @@ describe('HoloStreamAccumulator', () => {
 
     it('toResponse() produces valid HoloResponse with text shorthand', () => {
         const acc = new HoloStreamAccumulator();
-        acc.push({type: 'response.created', response: {id: 'r1', model: 'gpt-4o', created: 100, output: [], finish_reason: null, usage: {}}});
+        acc.push({
+            type: 'response.created',
+            response: {id: 'r1', model: 'gpt-4o', created: 100, output: [], finish_reason: null, usage: {}}
+        });
         acc.push({type: 'response.output_text.delta', delta: 'Hi'});
         acc.push({type: 'response.usage', usage: {input_tokens: 5, output_tokens: 1}});
         acc.push({type: 'response.completed', finish_reason: 'stop'});
@@ -28,7 +31,14 @@ describe('HoloStreamAccumulator', () => {
 
     it('handles response.completed with full response (no-op accumulation)', () => {
         const acc = new HoloStreamAccumulator();
-        const fullResponse = {id: 'r1', model: 'gpt-4o', output: [], created: 100, finish_reason: null as null, usage: {}};
+        const fullResponse = {
+            id: 'r1',
+            model: 'gpt-4o',
+            output: [],
+            created: 100,
+            finish_reason: null as null,
+            usage: {}
+        };
         acc.push({type: 'response.completed', response: fullResponse});
         const res = acc.toResponse();
         expect(res.model).toBe('');

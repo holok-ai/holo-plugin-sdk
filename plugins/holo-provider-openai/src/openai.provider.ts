@@ -42,6 +42,39 @@ export class OpenAIProvider extends BaseProvider<OpenAI, EmbeddingCreateParams |
         }
     }
 
+    sanitizePayload(payload: any): void {
+        const logger = this.mlog(this.sanitizePayload);
+        // Transform deprecated max_tokens to max_completion_tokens
+        if (payload.max_tokens !== undefined) {
+            payload.max_completion_tokens = payload.max_tokens;
+            delete payload.max_tokens;
+        }
+
+        // Transform deprecated user to safety_identifier
+        if (payload.user !== undefined) {
+            payload.safety_identifier = payload.user;
+            delete payload.user;
+        }
+
+        // Handle restricted models that don't support temperature/sampling parameters
+        // - o1/o3 series (o1-preview, o1-mini, o1, o3, etc.)
+        // - gpt-5 and above (gpt-5, gpt-6, etc.)
+        const model = payload.model?.toLowerCase() || '';
+        const isO1OrO3Model = model.startsWith('o1') || model.startsWith('o3');
+        const isGpt5Plus = /^gpt-([5-9]|\d{2,})/.test(model);
+        const isRestrictedModel = isO1OrO3Model || isGpt5Plus;
+
+        if (isRestrictedModel) {
+            // Remove unsupported parameters for restricted models
+            delete payload.temperature;
+            delete payload.top_p;
+            delete payload.frequency_penalty;
+            delete payload.presence_penalty;
+
+            logger.debug(`Removed unsupported parameters for restricted model: ${payload.model}`);
+        }
+    }
+
     protected createAuditor(): IAuditor {
         return new OpenAIAuditor();
     }
@@ -168,38 +201,5 @@ export class OpenAIProvider extends BaseProvider<OpenAI, EmbeddingCreateParams |
                 return finalChunk;
             }
         };
-    }
-
-    sanitizePayload(payload: any): void {
-        const logger = this.mlog(this.sanitizePayload);
-        // Transform deprecated max_tokens to max_completion_tokens
-        if (payload.max_tokens !== undefined) {
-            payload.max_completion_tokens = payload.max_tokens;
-            delete payload.max_tokens;
-        }
-
-        // Transform deprecated user to safety_identifier
-        if (payload.user !== undefined) {
-            payload.safety_identifier = payload.user;
-            delete payload.user;
-        }
-
-        // Handle restricted models that don't support temperature/sampling parameters
-        // - o1/o3 series (o1-preview, o1-mini, o1, o3, etc.)
-        // - gpt-5 and above (gpt-5, gpt-6, etc.)
-        const model = payload.model?.toLowerCase() || '';
-        const isO1OrO3Model = model.startsWith('o1') || model.startsWith('o3');
-        const isGpt5Plus = /^gpt-([5-9]|\d{2,})/.test(model);
-        const isRestrictedModel = isO1OrO3Model || isGpt5Plus;
-
-        if (isRestrictedModel) {
-            // Remove unsupported parameters for restricted models
-            delete payload.temperature;
-            delete payload.top_p;
-            delete payload.frequency_penalty;
-            delete payload.presence_penalty;
-
-            logger.debug(`Removed unsupported parameters for restricted model: ${payload.model}`);
-        }
     }
 }

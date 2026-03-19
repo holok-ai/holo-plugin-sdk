@@ -1,9 +1,4 @@
-import type {
-    HoloInvalidToolCall,
-    HoloMessage,
-    HoloResponse,
-    HoloToolCall,
-} from '@holokai/types/holo';
+import type {HoloInvalidToolCall, HoloMessage, HoloResponse, HoloToolCall,} from '@holokai/types/holo';
 import {isReasoningContent, isTextContent, isToolCallContent} from '../holo/content';
 
 /** Extract concatenated text from a single message. Returns `''` if content is not text-based. */

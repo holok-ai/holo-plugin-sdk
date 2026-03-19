@@ -223,15 +223,15 @@ npm run test:coverage
 
 ### Project Names
 
-| Project            | Location                          | What it tests                    |
-|--------------------|-----------------------------------|----------------------------------|
-| `sdk`              | `plugins/sdk`                     | SDK client unit tests            |
-| `openai`           | `plugins/holo-provider-openai`    | OpenAI wire/audit/pipeline/roundtrip |
-| `claude`           | `plugins/holo-provider-claude`    | Claude wire/audit/pipeline       |
-| `gemini`           | `plugins/holo-provider-gemini`    | Gemini wire/audit/pipeline       |
-| `ollama`           | `plugins/holo-provider-ollama`    | Ollama wire/audit/pipeline       |
-| `app`              | `app`                             | App unit tests                   |
-| `sdk-integration`  | `plugins/sdk` (separate config)   | SDK client vs live gateway       |
+| Project           | Location                        | What it tests                        |
+|-------------------|---------------------------------|--------------------------------------|
+| `sdk`             | `plugins/sdk`                   | SDK client unit tests                |
+| `openai`          | `plugins/holo-provider-openai`  | OpenAI wire/audit/pipeline/roundtrip |
+| `claude`          | `plugins/holo-provider-claude`  | Claude wire/audit/pipeline           |
+| `gemini`          | `plugins/holo-provider-gemini`  | Gemini wire/audit/pipeline           |
+| `ollama`          | `plugins/holo-provider-ollama`  | Ollama wire/audit/pipeline           |
+| `app`             | `app`                           | App unit tests                       |
+| `sdk-integration` | `plugins/sdk` (separate config) | SDK client vs live gateway           |
 
 ### Writing Vitest Conformance Tests
 
@@ -260,14 +260,14 @@ Available contract runners from `@holokai/provider-contract-tests`:
 Both the standalone CLI and Vitest conformance tests use the same fixtures and the same test-harness service functions.
 Choose whichever fits your workflow:
 
-| Feature                  | `holo-test` CLI                    | Vitest                                 |
-|--------------------------|------------------------------------|----------------------------------------|
-| Dependency on vitest     | No                                 | Yes                                    |
-| Watch mode               | No                                 | `npm run test:watch`                   |
-| Filtering                | `--plugin`, `--tag`, `--wire` etc. | `--project`, `-t` pattern              |
-| CI integration           | Exit code 0/1                      | Native vitest reporter + coverage      |
-| Fixture discovery        | Glob scan of directory             | Explicit imports in test files         |
-| Output                   | Custom colored reporter            | Vitest reporter                        |
+| Feature              | `holo-test` CLI                    | Vitest                            |
+|----------------------|------------------------------------|-----------------------------------|
+| Dependency on vitest | No                                 | Yes                               |
+| Watch mode           | No                                 | `npm run test:watch`              |
+| Filtering            | `--plugin`, `--tag`, `--wire` etc. | `--project`, `-t` pattern         |
+| CI integration       | Exit code 0/1                      | Native vitest reporter + coverage |
+| Fixture discovery    | Glob scan of directory             | Explicit imports in test files    |
+| Output               | Custom colored reporter            | Vitest reporter                   |
 
 ## Fluent DSL
 

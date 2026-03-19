@@ -1,5 +1,5 @@
-import {loadPlugin, testAudit} from '@holokai/test-harness';
 import type {FixtureScenario} from '@holokai/test-harness';
+import {loadPlugin, testAudit} from '@holokai/test-harness';
 import {assertTestResult} from './vitest-helpers.js';
 
 export async function runAuditContract(family: string, fixture: FixtureScenario): Promise<void> {

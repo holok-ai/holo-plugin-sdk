@@ -1,4 +1,4 @@
-import {describe, it, expect} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import {HoloStream} from '../../src/client/stream.js';
 import {HoloStreamError} from '../../src/client/errors.js';
 import type {HoloStreamEvent} from '@holokai/types/holo';
@@ -10,15 +10,24 @@ function makeEvents(events: HoloStreamEvent[]) {
             if (i >= events.length) return {done: true as const, value: undefined};
             return {done: false as const, value: events[i++]!};
         },
-        async return() { return {done: true as const, value: undefined}; },
-        async throw(e: unknown) { throw e; },
-        [Symbol.asyncIterator]() { return this; },
+        async return() {
+            return {done: true as const, value: undefined};
+        },
+        async throw(e: unknown) {
+            throw e;
+        },
+        [Symbol.asyncIterator]() {
+            return this;
+        },
     } as AsyncGenerator<HoloStreamEvent>;
 }
 
 function sampleEvents(): HoloStreamEvent[] {
     return [
-        {type: 'response.created', response: {id: 'r1', model: 'gpt-4o', output: [], created: 1, finish_reason: null, usage: {}}},
+        {
+            type: 'response.created',
+            response: {id: 'r1', model: 'gpt-4o', output: [], created: 1, finish_reason: null, usage: {}}
+        },
         {type: 'response.output_text.delta', delta: 'Hello'},
         {type: 'response.output_text.delta', delta: ' world'},
         {type: 'response.completed', finish_reason: 'stop'},
@@ -40,7 +49,8 @@ describe('HoloStream', () => {
     describe('double-iterate guard', () => {
         it('throws on second iteration', async () => {
             const stream = new HoloStream(makeEvents(sampleEvents()), new AbortController());
-            for await (const _e of stream) { /* consume */ }
+            for await (const _e of stream) { /* consume */
+            }
             expect(() => stream[Symbol.asyncIterator]()).toThrow('HoloStream can only be iterated once');
         });
     });
@@ -54,7 +64,10 @@ describe('HoloStream', () => {
 
         it('returns empty string for no text events', async () => {
             const events: HoloStreamEvent[] = [
-                {type: 'response.created', response: {id: 'r1', model: 'm', output: [], created: 1, finish_reason: null, usage: {}}},
+                {
+                    type: 'response.created',
+                    response: {id: 'r1', model: 'm', output: [], created: 1, finish_reason: null, usage: {}}
+                },
                 {type: 'response.completed', finish_reason: 'stop'},
             ];
             const stream = new HoloStream(makeEvents(events), new AbortController());
@@ -77,7 +90,14 @@ describe('HoloStream', () => {
                 {
                     type: 'response.completed',
                     finish_reason: 'stop',
-                    response: {id: 'r1', model: 'gpt-4o', output: [{role: 'assistant', content: 'Hello'}], created: 1, finish_reason: 'stop', usage: {}},
+                    response: {
+                        id: 'r1',
+                        model: 'gpt-4o',
+                        output: [{role: 'assistant', content: 'Hello'}],
+                        created: 1,
+                        finish_reason: 'stop',
+                        usage: {}
+                    },
                 },
             ];
             const stream = new HoloStream(makeEvents(evts), new AbortController());
@@ -119,7 +139,8 @@ describe('HoloStream', () => {
             const stream = new HoloStream(makeEvents(events), new AbortController());
             stream.on('response.failed', (e) => errors.push(e));
             // for-await iteration doesn't throw on failed
-            for await (const _e of stream) { /* consume */ }
+            for await (const _e of stream) { /* consume */
+            }
             expect(errors).toHaveLength(1);
             expect(errors[0]!.message).toBe('boom');
         });

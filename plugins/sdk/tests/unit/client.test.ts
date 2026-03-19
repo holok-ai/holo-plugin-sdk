@@ -1,4 +1,4 @@
-import {describe, it, expect, vi} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 import {HoloClient} from '../../src/client/client.js';
 import {HoloApiError, HoloTimeoutError} from '../../src/client/errors.js';
 
@@ -105,7 +105,11 @@ describe('HoloClient', () => {
 
     describe('streamRequest()', () => {
         it('returns body stream on success with Accept and User-Agent headers', async () => {
-            const stream = new ReadableStream({start(c) { c.close(); }});
+            const stream = new ReadableStream({
+                start(c) {
+                    c.close();
+                }
+            });
             const fetchFn = vi.fn().mockResolvedValue(new Response(stream, {status: 200}));
             const client = new HoloClient({baseUrl: 'http://localhost', token: 'tok', fetch: fetchFn});
 

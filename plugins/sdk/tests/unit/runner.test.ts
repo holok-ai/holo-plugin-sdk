@@ -1,6 +1,6 @@
-import {describe, it, expect, vi} from 'vitest';
-import {HoloToolRunner} from '../../src/client/runner.js';
+import {describe, expect, it, vi} from 'vitest';
 import type {HoloToolRunnerOptions} from '../../src/client/runner.js';
+import {HoloToolRunner} from '../../src/client/runner.js';
 import {HoloStream} from '../../src/client/stream.js';
 import type {HoloResponse, HoloStreamEvent} from '@holokai/types/holo';
 
@@ -11,15 +11,24 @@ function makeEvents(events: HoloStreamEvent[]) {
             if (i >= events.length) return {done: true as const, value: undefined};
             return {done: false as const, value: events[i++]!};
         },
-        async return() { return {done: true as const, value: undefined}; },
-        async throw(e: unknown) { throw e; },
-        [Symbol.asyncIterator]() { return this; },
+        async return() {
+            return {done: true as const, value: undefined};
+        },
+        async throw(e: unknown) {
+            throw e;
+        },
+        [Symbol.asyncIterator]() {
+            return this;
+        },
     } as AsyncGenerator<HoloStreamEvent>;
 }
 
 function makeStreamFromResponse(response: HoloResponse): HoloStream {
     const events: HoloStreamEvent[] = [
-        {type: 'response.created', response: {id: 'r1', model: response.model, output: [], created: 1, finish_reason: null, usage: {}}},
+        {
+            type: 'response.created',
+            response: {id: 'r1', model: response.model, output: [], created: 1, finish_reason: null, usage: {}}
+        },
     ];
 
     for (const msg of response.output ?? []) {
@@ -185,12 +194,20 @@ describe('HoloToolRunner', () => {
         const slowEvents = {
             async next(): Promise<IteratorResult<HoloStreamEvent>> {
                 // Block until abort triggers
-                await new Promise<void>((r) => { resolveStream = r; });
+                await new Promise<void>((r) => {
+                    resolveStream = r;
+                });
                 return {done: true as const, value: undefined};
             },
-            async return() { return {done: true as const, value: undefined}; },
-            async throw(e: unknown) { throw e; },
-            [Symbol.asyncIterator]() { return this; },
+            async return() {
+                return {done: true as const, value: undefined};
+            },
+            async throw(e: unknown) {
+                throw e;
+            },
+            [Symbol.asyncIterator]() {
+                return this;
+            },
         } as AsyncGenerator<HoloStreamEvent>;
 
         const streamFn = vi.fn().mockImplementation(() => {
@@ -212,7 +229,10 @@ describe('HoloToolRunner', () => {
         await new Promise((r) => setTimeout(r, 10));
         runner.abort();
         resolveStream?.();
-        try { await promise; } catch { /* expected */ }
+        try {
+            await promise;
+        } catch { /* expected */
+        }
         expect(capturedStream).toBeDefined();
         expect(capturedStream!.abort).toHaveBeenCalled();
     });

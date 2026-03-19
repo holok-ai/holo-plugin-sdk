@@ -8,10 +8,19 @@
     "declarationMap": true,
     "sourceMap": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["**/*.test.ts", "**/*.spec.ts"],
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
   "references": [
-    {"path": "../types"},
-    {"path": "../test-harness"}
+    {
+      "path": "../types"
+    },
+    {
+      "path": "../test-harness"
+    }
   ]
 }
