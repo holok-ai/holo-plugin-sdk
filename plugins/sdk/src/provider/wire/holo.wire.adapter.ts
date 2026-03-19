@@ -1,6 +1,8 @@
 import type {ProviderEvent, WireChunk} from '@holokai/types/provider';
 import type {HoloStreamEvent} from '@holokai/types/holo';
 import {BaseWireAdapter} from './base';
+import {HoloResponse} from "@holokai/types";
+import {pickDefined} from "../../core";
 
 export class HoloWireAdapter extends BaseWireAdapter {
     private textAccumulator = '';
@@ -80,8 +82,10 @@ export class HoloWireAdapter extends BaseWireAdapter {
         const completedEvent: HoloStreamEvent = {
             type: 'response.completed',
             response,
-            usage: response.usage,
-            finish_reason: response.finish_reason,
+            ...pickDefined({
+                usage: response.usage,
+                finish_reason: response.finish_reason
+            })
         };
         return [await this.chunkify(ev, async () => this.formatWire(completedEvent), true, {fullText: ev.text})];
     }
@@ -97,7 +101,7 @@ export class HoloWireAdapter extends BaseWireAdapter {
         return [await this.chunkify(ev, async () => this.formatWire(errorEvent), true)];
     }
 
-    private buildFinalResponse(ev: Extract<ProviderEvent, { type: 'done' }>) {
+    private buildFinalResponse(ev: Extract<ProviderEvent, { type: 'done' }>): HoloResponse {
         const output = [];
 
         if (this.textAccumulator || ev.text) {
@@ -110,7 +114,13 @@ export class HoloWireAdapter extends BaseWireAdapter {
             output,
             created: Date.now(),
             finish_reason: mapFinishReason(ev),
-            usage: ev.metrics ?? {},
+            usage: pickDefined({
+                input_tokens: ev.metrics.inputTokens,
+                output_tokens: ev.metrics.outputTokens,
+                total_tokens: ev.metrics.totalTokens,
+                time_to_first_token: ev.metrics.timeToFirstToken,
+                total_processing_time: ev.metrics.totalProcessingTime
+            })
         };
     }
 }

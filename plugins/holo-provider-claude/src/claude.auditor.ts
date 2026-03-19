@@ -1,12 +1,12 @@
 import {injectable} from 'tsyringe';
-import {BaseAuditor} from "@holokai/sdk/provider";
-import {pickDefined} from "@holokai/sdk";
-import type {ProviderEnvelope, ProviderEvent} from "@holokai/types/provider";
+import {BaseAuditor, extractPromptByRole} from "@holokai/sdk/provider";
+import {extractTextContent, extractTopLevelPrompt, pickDefined} from "@holokai/sdk";
+import type {ProviderDoneEvent, ProviderEvent} from "@holokai/types/provider";
 import type {HoloWorkerRequest, WorkerResponseEnvelope} from "@holokai/types/worker";
-import type {ProviderRequest} from "@holokai/types/entities";
-import {LlmStatus} from "@holokai/types/entities";
+import type {ProviderEnvelope, ProviderResponseMetrics} from "@holokai/types/entities";
+import {FinishReason, ProviderResponseStatus} from "@holokai/types/entities";
 import {MessageCreateParamsBase} from "@anthropic-ai/sdk/resources/messages";
-import {MessageStreamParams} from "@anthropic-ai/sdk/resources/messages/messages";
+import {Message, MessageStreamParams, MessageTokensCount} from "@anthropic-ai/sdk/resources/messages/messages";
 import {BetaMessageStreamParams} from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import {ClaudeProtocols} from "./plugin";
 
@@ -14,121 +14,97 @@ import {ClaudeProtocols} from "./plugin";
 export class ClaudeAuditor extends BaseAuditor {
     readonly provider = 'claude';
 
-    protected toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<ProviderRequest, 'id'>): void {
+    protected async extractRequestOptions(workerRequest: HoloWorkerRequest): Promise<Record<string, any>> {
         const payload = workerRequest.payload as MessageStreamParams | BetaMessageStreamParams;
 
-        llmRequest.access_model = payload.model;
+        const {
+            max_tokens,
+            metadata,
+            stop_sequences,
+            stream,
+            temperature,
+            top_k,
+            top_p,
+        } = payload;
 
-        const userPrompt = this.extractUserPromptFromMessages(payload.messages);
-        if (userPrompt !== undefined) {
-            llmRequest.metadata.user_prompt = userPrompt;
-        }
-
-        if (payload.system !== undefined) {
-            llmRequest.metadata.system_prompt = typeof payload.system === 'string'
-                ? payload.system
-                : JSON.stringify(payload.system);
-        }
+        return {
+            ...pickDefined({
+                max_tokens,
+                stop_sequences,
+                stream,
+                temperature,
+                top_k,
+                top_p,
+            }),
+            ...(metadata ?? {}),
+        };
     }
 
-    protected mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<ProviderRequest, 'id'>): void {
-        const payload = workerRequest.payload as MessageStreamParams | BetaMessageStreamParams;
-        const options: Record<string, any> = {};
-
-        if (payload.max_tokens !== undefined) options.max_tokens = payload.max_tokens;
-        if (payload.temperature !== undefined) options.temperature = payload.temperature;
-        if (payload.top_p !== undefined) options.top_p = payload.top_p;
-        if (payload.top_k !== undefined) options.top_k = payload.top_k;
-        if (payload.stop_sequences !== undefined) options.stop_sequences = payload.stop_sequences;
-        if (payload.stream !== undefined) options.stream = payload.stream;
-        if (payload.metadata !== undefined) Object.assign(options, payload.metadata);
-
-        if (Object.keys(options).length > 0) {
-            llmRequest.metadata.options = options;
-        }
-    }
-
-    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, {
-        type: 'done' | 'error'
-    }>, envelope: WorkerResponseEnvelope) {
-        const metrics = await super.mapResponseMetrics(providerEvent, envelope);
-
-        if (providerEvent.type === 'error') {
-            return metrics;
-        }
-
-        switch (envelope.protocol.name) {
+    protected async mapProviderResponseMetrics(providerEvent: ProviderDoneEvent, protocolName: string) {
+        let message = providerEvent.message as MessageTokensCount | Message;
+        switch (protocolName) {
             case ClaudeProtocols.COUNT_TOKENS:
                 return pickDefined({
-                    ...metrics,
-                    usage_raw: providerEvent.message,
-                    input_tokens: providerEvent.message?.input_tokens,
-                });
+                    input_tokens: (message as MessageTokensCount).input_tokens,
+                }) as Partial<ProviderResponseMetrics>;
             default: {
-                const usage = providerEvent.message?.usage;
-                if (!usage) return metrics;
+                const usage = (message as Message).usage;
+                const {input_tokens, output_tokens} = usage;
 
                 return pickDefined({
-                    ...metrics,
-                    usage_raw: usage,
-                    input_tokens: usage.input_tokens,
-                    output_tokens: usage.output_tokens
-                });
+                    input_tokens,
+                    output_tokens,
+                    total_tokens: input_tokens + output_tokens,
+                    usage_raw: usage
+                }) as Partial<ProviderResponseMetrics>;
             }
         }
     }
 
-    protected async mapResponseStatus(providerEvent: ProviderEvent, envelope: WorkerResponseEnvelope): Promise<LlmStatus> {
+    protected async mapResponseStatus(providerEvent: ProviderEvent, envelope: WorkerResponseEnvelope): Promise<ProviderResponseStatus> {
         if (providerEvent.type === 'done') {
             const stop_reason = providerEvent.message?.stop_reason;
-            if (stop_reason === 'max_tokens') return LlmStatus.PARTIAL;
+            if (stop_reason === 'max_tokens') return ProviderResponseStatus.PARTIAL;
         }
         return super.mapResponseStatus(providerEvent, envelope);
     }
 
-    protected async createProviderEnvelope(
-        payload: MessageCreateParamsBase
-    ): Promise<ProviderEnvelope> {
-        const logger = this.mlog(this.createProviderEnvelope);
-        if (!payload.model) {
-            logger.error(`Missing model: ${JSON.stringify(payload)}`);
+    protected async extractFinishReason(providerEvent: ProviderEvent, _envelope: WorkerResponseEnvelope): Promise<FinishReason | undefined> {
+        if (providerEvent.type === 'error') return FinishReason.ERROR;
+        if (providerEvent.type !== 'done') return undefined;
+
+        const stopReason = providerEvent.message?.stop_reason;
+        switch (stopReason) {
+            case 'end_turn':
+                return FinishReason.STOP;
+            case 'tool_use':
+                return FinishReason.TOOL_CALLS;
+            case 'max_tokens':
+                return FinishReason.LENGTH;
+            case 'stop_sequence':
+                return FinishReason.STOP;
+            default:
+                return FinishReason.STOP;
         }
+    }
+
+    protected async createProviderEnvelope(
+        workerRequest: HoloWorkerRequest
+    ): Promise<ProviderEnvelope> {
+        const payload = workerRequest.payload as MessageCreateParamsBase;
+
+        const last_user_prompt = extractPromptByRole(
+            payload.messages,
+            "user",
+            "last",
+            (msg) => extractTextContent(msg.content),
+        );
+        const system_prompt = workerRequest.systemPrompt?.system_prompt ?? extractTopLevelPrompt(payload.system);
 
         return pickDefined({
+            last_user_prompt,
             access_model: payload.model,
-            system_prompt: payload.system ?
-                (Array.isArray(payload.system) ? JSON.stringify(payload.system) : payload.system) : undefined
+            system_prompt,
         }) as ProviderEnvelope;
     }
-
-    protected extractExtraTokens(metrics: Record<string, any>, base: Record<string, number>): Record<string, number> {
-        const usage = metrics.usage_raw;
-        if (!usage) return base;
-        return pickDefined({
-            ...base,
-            cache_read: usage.cache_read_input_tokens,
-            cache_write: usage.cache_creation_input_tokens,
-        });
-    }
-
-    private extractUserPromptFromMessages(messages?: any[]): string | undefined {
-        if (!messages || !Array.isArray(messages)) return undefined;
-
-        const userMessages = messages.filter(msg => msg.role === 'user');
-        if (userMessages.length === 0) return undefined;
-
-        // Return the last user message content
-        const lastUserMessage = userMessages[userMessages.length - 1];
-        if (typeof lastUserMessage.content === 'string') {
-            return lastUserMessage.content;
-        } else if (Array.isArray(lastUserMessage.content)) {
-            // Handle content blocks - extract text content
-            const textBlocks = lastUserMessage.content.filter((block: any) => block.type === 'text');
-            return textBlocks.length > 0 ? textBlocks[0].text : undefined;
-        }
-
-        return undefined;
-    }
-
-
 }

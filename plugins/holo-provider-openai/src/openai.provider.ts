@@ -17,7 +17,7 @@ import {OpenAIProtocols} from "./plugin";
 /**
  * OpenAI provider for connecting to OpenAI API
  */
-export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBase | ChatCompletionCreateParamsBase> {
+export class OpenAIProvider extends BaseProvider<OpenAI, EmbeddingCreateParams | ResponseCreateParamsBase | ChatCompletionCreateParamsBase> {
 
     async getModels(allowedModels: string[] | true): Promise<{ object: string, data: Model[] }> {
         const response = await this.client.models.list() as ModelsPage;
@@ -32,13 +32,13 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         };
     }
 
-    async getModelNameFromRequest(payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<string | undefined> {
+    async getModelNameFromRequest(payload: EmbeddingCreateParams | ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<string | undefined> {
         return payload.model;
     }
 
     async runEmbed(payload: EmbeddingCreateParams) {
         return {
-            final: async () => this.client.embeddings.create(payload)
+            start: async () => this.client.embeddings.create(payload)
         }
     }
 
@@ -68,19 +68,19 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         return this.responseFactory.createError(error.message, error.code ? error.code : undefined);
     }
 
-    protected async handleRequest(
-        payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase | EmbeddingCreateParams,
+    protected async createRequestRunner(
+        params: ResponseCreateParamsBase | ChatCompletionCreateParamsBase | EmbeddingCreateParams,
         ctx: ProviderContext
     ): Promise<RunHandle<any>> {
-        this.sanitizePayload(payload);
+        this.sanitizePayload(params);
 
         switch (ctx.protocol.name) {
             case OpenAIProtocols.RESPONSES:
-                return this.runResponses(payload as ResponseCreateParamsBase, ctx);
+                return this.runResponses(params as ResponseCreateParamsBase, ctx);
             case OpenAIProtocols.EMBED:
-                return this.runEmbed(payload as EmbeddingCreateParams);
+                return this.runEmbed(params as EmbeddingCreateParams);
             default:
-                return this.runChatCompletions(payload as ChatCompletionCreateParamsBase, ctx);
+                return this.runChatCompletions(params as ChatCompletionCreateParamsBase, ctx);
         }
     }
 
@@ -91,14 +91,16 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
     ): Promise<RunHandle<any>> {
         if (!req.stream) {
             return {
-                final: async () => {
-                    return this.client.responses.create({...req, stream: false});
+                start: async () => {
+                    const response = await this.client.responses.create({...req, stream: false});
+                    ctx.emitTextDelta(response.output_text);
+                    return response;
                 },
             };
         }
 
         return {
-            final: async () => {
+            start: async () => {
                 const stream = await this.client.responses.create({
                     ...req,
                     stream: true
@@ -135,8 +137,10 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
     ) {
         if (!req.stream) {
             return {
-                final: async () => {
-                    return this.client.chat.completions.create({...req, stream: false});
+                start: async () => {
+                    const response = await this.client.chat.completions.create({...req, stream: false});
+                    ctx.emitTextDelta(response.choices[0].message.content);
+                    return response;
                 },
             };
         }
@@ -145,7 +149,7 @@ export class OpenAIProvider extends BaseProvider<OpenAI, ResponseCreateParamsBas
         const includesUsage = streamingReq.stream_options?.include_usage === true
 
         return {
-            final: async () => {
+            start: async () => {
                 const stream = await this.client.chat.completions.create(streamingReq);
 
                 let finalChunk;

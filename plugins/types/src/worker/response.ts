@@ -1,3 +1,5 @@
+import {ProviderEventMetrics} from "../provider";
+
 export interface HoloWorkerResponse {
     organizationId?: string;
     sourceId: string;
@@ -8,10 +10,5 @@ export interface HoloWorkerResponse {
     fullResponse?: string;
     workerId: string;
     timestamp?: number;
-    metrics?: {
-        inputTokens: number;
-        outputTokens: number;
-        timeToFirstToken: number;
-        totalProcessingTime: number;
-    };
+    metrics?: ProviderEventMetrics;
 }

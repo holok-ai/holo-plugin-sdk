@@ -32,11 +32,12 @@ export async function testAudit(plugin: IProviderPlugin, fixture: FixtureScenari
     } as ProviderEvent;
 
     const envelope: WorkerResponseEnvelope = {
+        source_id: 'test-source-id',
         request_id: 'test-req',
         organization_id: 'test-org',
         provider: {id: 'test-provider-id', name: 'test'} as any,
         protocol: {id: 'test-protocol-id', name: fixture.protocol, capability: 'chat'} as any,
-        access_model: fixture.expectedAudit.access_model,
+        access_model: fixture.expectedAudit.access_model
     };
 
     const responseRecord = await auditor.auditResponse(envelope, doneEvent);

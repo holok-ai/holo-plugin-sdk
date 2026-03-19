@@ -1,227 +1,252 @@
 import {injectable} from 'tsyringe';
-import {pickDefined} from "@holokai/sdk";
+import {countTokens, extractPromptByRole, extractTextContent, normalizeText, pickDefined} from "@holokai/sdk";
 import {BaseAuditor} from "@holokai/sdk/provider";
 import {HoloWorkerRequest, WorkerResponseEnvelope} from "@holokai/types/worker";
-import {ProviderEnvelope, ProviderEvent} from "@holokai/types/provider";
-import {LlmStatus, ProviderRequest} from "@holokai/types/entities";
-import {ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
-import {ResponseCreateParamsBase, ResponseUsage} from "openai/resources/responses/responses";
-import {CompletionUsage} from "openai/resources/completions";
+import {ProviderDoneEvent, ProviderEvent} from "@holokai/types/provider";
+import {FinishReason, ProviderEnvelope, ProviderResponseMetrics, ProviderResponseStatus} from "@holokai/types/entities";
+import {ChatCompletionChunk, ChatCompletionCreateParamsBase} from "openai/resources/chat/completions";
+import {ResponseCompletedEvent, ResponseCreateParamsBase} from "openai/resources/responses/responses";
 import {OpenAIProtocols} from "./plugin";
 
 @injectable()
 export class OpenAIAuditor extends BaseAuditor {
     readonly provider = 'openai';
 
-    protected toHoloRequest(workerRequest: HoloWorkerRequest, llmRequest: Omit<ProviderRequest, 'id'>): void {
-        if (workerRequest.protocol.name === OpenAIProtocols.RESPONSES) {
-            const payload = workerRequest.payload as ResponseCreateParamsBase;
-
-            if (payload.model) {
-                llmRequest.access_model = payload.model as string;
-            }
-
-            const userPrompt = this.extractUserPromptFromInput(payload.input);
-            if (userPrompt !== undefined) {
-                llmRequest.metadata.user_prompt = userPrompt;
-            }
-
-            const systemPrompt = this.extractSystemPromptFromInput(payload.input);
-            if (systemPrompt !== undefined) {
-                llmRequest.metadata.system_prompt = systemPrompt;
-            }
-        } else {
-            const payload = workerRequest.payload as ChatCompletionCreateParamsBase;
-
-            llmRequest.access_model = payload.model;
-
-            const userPrompt = this.extractUserPromptFromMessages(payload.messages);
-            if (userPrompt !== undefined) {
-                llmRequest.metadata.user_prompt = userPrompt;
-            }
-
-            const systemPrompt = this.extractSystemPromptFromMessages(payload.messages);
-            if (systemPrompt !== undefined) {
-                llmRequest.metadata.system_prompt = systemPrompt;
-            }
-        }
-    }
-
-    protected mapProviderPayload(workerRequest: HoloWorkerRequest, llmRequest: Omit<ProviderRequest, 'id'>): void {
-        const options: Record<string, any> = {};
+    protected async extractRequestOptions(workerRequest: HoloWorkerRequest): Promise<Record<string, any>> {
+        let options: Record<string, any>;
 
         if (workerRequest.protocol.name === OpenAIProtocols.RESPONSES) {
             const payload = workerRequest.payload as ResponseCreateParamsBase;
-            if (payload.max_output_tokens !== undefined) options.max_output_tokens = payload.max_output_tokens;
-            if (payload.temperature !== undefined) options.temperature = payload.temperature;
-            if (payload.top_p !== undefined) options.top_p = payload.top_p;
-            if (payload.stream !== undefined) options.stream = payload.stream;
-            if (payload.tools !== undefined) options.tools = payload.tools;
-            if (payload.tool_choice !== undefined) options.tool_choice = payload.tool_choice;
+
+            const {
+                max_output_tokens,
+                metadata,
+                prompt_cache_key,
+                prompt_cache_retention,
+                safety_identifier,
+                stream,
+                stream_options,
+                temperature,
+                tool_choice,
+                tools,
+                top_p
+            } = payload;
+
+            options = pickDefined({
+                max_output_tokens,
+                metadata,
+                prompt_cache_key,
+                prompt_cache_retention,
+                safety_identifier,
+                stream,
+                stream_options,
+                temperature,
+                tool_choice,
+                tools,
+                top_p
+            });
         } else {
             const payload = workerRequest.payload as ChatCompletionCreateParamsBase;
-            if (payload.max_completion_tokens !== undefined) options.max_completion_tokens = payload.max_completion_tokens;
-            if (payload.max_tokens !== undefined) options.max_tokens = payload.max_tokens;
-            if (payload.temperature !== undefined) options.temperature = payload.temperature;
-            if (payload.top_p !== undefined) options.top_p = payload.top_p;
-            if (payload.frequency_penalty !== undefined) options.frequency_penalty = payload.frequency_penalty;
-            if (payload.presence_penalty !== undefined) options.presence_penalty = payload.presence_penalty;
-            if (payload.stop !== undefined) options.stop = payload.stop;
-            if (payload.stream !== undefined) options.stream = payload.stream;
-            if (payload.tools !== undefined) options.tools = payload.tools;
-            if (payload.tool_choice !== undefined) options.tool_choice = payload.tool_choice;
-            if (payload.response_format !== undefined) options.response_format = payload.response_format;
-            if (payload.seed !== undefined) options.seed = payload.seed;
-            if (payload.safety_identifier !== undefined) options.safety_identifier = payload.safety_identifier;
-            if (payload.user !== undefined) options.user = payload.user;
+
+            const {
+                frequency_penalty,
+                logit_bias,
+                logprobs,
+                max_completion_tokens,
+                max_tokens,
+                n,
+                parallel_tool_calls,
+                presence_penalty,
+                response_format,
+                safety_identifier,
+                seed,
+                stop,
+                stream,
+                stream_options,
+                temperature,
+                tool_choice,
+                tools,
+                top_logprobs,
+                top_p,
+                user,
+            } = payload;
+
+            options = pickDefined({
+                frequency_penalty,
+                logit_bias,
+                logprobs,
+                max_completion_tokens,
+                max_tokens,
+                n,
+                parallel_tool_calls,
+                presence_penalty,
+                response_format,
+                safety_identifier,
+                seed,
+                stop,
+                stream,
+                stream_options,
+                temperature,
+                tool_choice,
+                tools,
+                top_logprobs,
+                top_p,
+                user,
+            });
         }
 
-        if (Object.keys(options).length > 0) {
-            llmRequest.metadata.options = options;
-        }
+        return options;
     }
 
-    protected async mapResponseMetrics(providerEvent: Extract<ProviderEvent, {
-        type: 'done' | 'error'
-    }>, envelope: WorkerResponseEnvelope) {
-        const metrics = await super.mapResponseMetrics(providerEvent, envelope);
-        if (providerEvent.type === 'error') {
-            return metrics;
+    protected async mapProviderResponseMetrics(providerEvent: ProviderDoneEvent, protocolName: string): Promise<Partial<ProviderResponseMetrics>> {
+        if (protocolName === OpenAIProtocols.RESPONSES) {
+            const usage = (providerEvent.message as ResponseCompletedEvent).response.usage;
+            if (!usage) return {};
+            const {input_tokens, output_tokens, total_tokens} = usage;
+
+            if (!usage) return {};
+            return pickDefined({
+                input_tokens,
+                output_tokens,
+                total_tokens,
+                usage_raw: usage
+            }) as Partial<ProviderResponseMetrics>;
+        } else if (protocolName === OpenAIProtocols.CHAT_COMPLETIONS) {
+            const payload = providerEvent.message as ChatCompletionChunk;
+            const usage = payload.usage;
+            if (!usage) return {};
+
+            return pickDefined({
+                input_tokens: usage.prompt_tokens,
+                output_tokens: usage.completion_tokens,
+                total_tokens: usage.total_tokens,
+                usage_raw: usage
+            }) as Partial<ProviderResponseMetrics>;
         }
-
-        const payload = providerEvent.message;
-        let usage: ResponseUsage | CompletionUsage = payload.response ? payload.response.usage : payload.usage;
-
-        if (!usage) {
-            return metrics;
-        }
-
-        let input_tokens;
-        let output_tokens;
-        if (payload.response) {
-            usage = usage as ResponseUsage;
-            input_tokens = usage.input_tokens;
-            output_tokens = usage.output_tokens;
-        } else {
-            usage = usage as CompletionUsage;
-            input_tokens = usage.prompt_tokens;
-            output_tokens = usage.completion_tokens;
-        }
-
-        return pickDefined({
-            ...metrics,
-            usage_raw: usage,
-            input_tokens,
-            output_tokens
-        });
+        return {};
     }
 
-    protected async mapResponseStatus(providerEvent: ProviderEvent, envelope: WorkerResponseEnvelope): Promise<LlmStatus> {
-        if (providerEvent.type === 'done') {
+    protected async mapResponseStatus(providerEvent: ProviderEvent, envelope: WorkerResponseEnvelope): Promise<ProviderResponseStatus> {
+        if (providerEvent.type === 'done'
+        ) {
             const payload = providerEvent.message;
             const choice = payload.choices?.[0];
             if (choice?.finish_reason) {
                 if (choice.finish_reason === 'length') {
-                    return LlmStatus.PARTIAL;
+                    return ProviderResponseStatus.PARTIAL;
                 } else if (choice.finish_reason === 'content_filter') {
-                    return LlmStatus.ERROR;
+                    return ProviderResponseStatus.ERROR;
                 }
             }
         }
         return super.mapResponseStatus(providerEvent, envelope);
     }
 
-    protected async createProviderEnvelope(payload: ResponseCreateParamsBase | ChatCompletionCreateParamsBase): Promise<ProviderEnvelope> {
+    protected async extractFinishReason(providerEvent: ProviderEvent, _envelope: WorkerResponseEnvelope): Promise<FinishReason | undefined> {
+        if (providerEvent.type === 'error'
+        )
+            return FinishReason.ERROR;
+        if (providerEvent.type !== 'done') return undefined;
+
+        const message = providerEvent.message;
+
+        if (message?.response) {
+            const status = message.response.status;
+            if (status === 'failed') return FinishReason.ERROR;
+            if (status === 'incomplete') return FinishReason.LENGTH;
+            const hasToolCalls = message.response.output?.some((item: any) => item.type === 'function_call');
+            return hasToolCalls ? FinishReason.TOOL_CALLS : FinishReason.STOP;
+        }
+
+        const finishReason = message?.choices?.[0]?.finish_reason;
+        switch (finishReason) {
+            case 'tool_calls':
+                return FinishReason.TOOL_CALLS;
+            case 'length':
+                return FinishReason.LENGTH;
+            case 'content_filter':
+                return FinishReason.CONTENT_FILTER;
+            default:
+                return FinishReason.STOP;
+        }
+    }
+
+    protected estimateInputTokens(envelope: WorkerResponseEnvelope):
+        number | undefined {
+        const payload = envelope.payload as ResponseCreateParamsBase | ChatCompletionCreateParamsBase | undefined;
+        if (!payload) return undefined;
+        try {
+            if ('input' in payload && payload.input) {
+                return countTokens(typeof payload.input === 'string' ? payload.input : JSON.stringify(payload.input));
+            }
+            if ('messages' in payload && payload.messages) {
+                return countTokens(JSON.stringify(payload.messages));
+            }
+        } catch { /* fallthrough */
+        }
+        return undefined;
+    }
+
+    protected async createProviderEnvelope(workerRequest: HoloWorkerRequest): Promise<ProviderEnvelope> {
+        let last_user_prompt
+            :
+            string | null = null;
+        let system_prompt: string | null = null;
+        let access_model: string | undefined;
+
+        if (workerRequest.protocol.name === OpenAIProtocols.RESPONSES) {
+            const payload = workerRequest.payload as ResponseCreateParamsBase;
+            access_model = payload.model;
+
+            const input = payload.input;
+
+            last_user_prompt =
+                typeof input === 'string'
+                    ? normalizeText(input)
+                    : extractPromptByRole(
+                        input as any[] | undefined,
+                        'user',
+                        'last',
+                        (msg) => extractTextContent(msg.content),
+                    );
+
+            system_prompt =
+                workerRequest.systemPrompt?.system_prompt ??
+                (typeof payload.instructions === 'string'
+                    ? normalizeText(payload.instructions)
+                    : extractPromptByRole(
+                        input as any[] | undefined,
+                        'system',
+                        'first',
+                        (msg) => extractTextContent(msg.content),
+                    ));
+        } else {
+            const payload = workerRequest.payload as ChatCompletionCreateParamsBase;
+            access_model = payload.model;
+
+            const messages = payload.messages;
+
+            last_user_prompt = extractPromptByRole(
+                messages as any[] | undefined,
+                'user',
+                'last',
+                (msg) => extractTextContent(msg.content),
+            );
+
+            system_prompt =
+                workerRequest.systemPrompt?.system_prompt ??
+                extractPromptByRole(
+                    messages as any[] | undefined,
+                    'system',
+                    'first',
+                    (msg) => extractTextContent(msg.content),
+                );
+        }
+
         return pickDefined({
-            access_model: payload.model
-        }) as ProviderEnvelope
-    }
-
-    protected extractExtraTokens(metrics: Record<string, any>, base: Record<string, number>): Record<string, number> {
-        const usage = metrics.usage_raw;
-        if (!usage) return base;
-        return pickDefined({
-            ...base,
-            cache_read: usage.prompt_tokens_details?.cached_tokens ?? usage.cached_tokens,
-        });
-    }
-
-    private extractUserPromptFromInput(input: ResponseCreateParamsBase['input']): string | undefined {
-        if (!input) return undefined;
-
-        // Simple string input — the whole thing is the user prompt
-        if (typeof input === 'string') {
-            return input;
-        }
-
-        if (!Array.isArray(input)) return undefined;
-
-        // Walk in reverse to find the last user-role entry
-        for (let i = input.length - 1; i >= 0; i--) {
-            const entry = input[i];
-            if (!entry || typeof entry !== 'object') continue;
-            if (!('role' in entry) || (entry as any).role !== 'user') continue;
-
-            const content = (entry as any).content;
-            if (typeof content === 'string') {
-                return content;
-            }
-
-            if (Array.isArray(content)) {
-                // Responses API uses type:'input_text'; also accept type:'text' for safety
-                const textParts = content
-                    .filter((c: any) => (c.type === 'input_text' || c.type === 'text') && typeof c.text === 'string')
-                    .map((c: any) => c.text as string);
-                if (textParts.length > 0) {
-                    return textParts.join('\n');
-                }
-            }
-        }
-
-        return undefined;
-    }
-
-    private extractSystemPromptFromInput(input: ResponseCreateParamsBase['input']): string | undefined {
-        if (!input || !Array.isArray(input)) return undefined;
-
-        for (const entry of input) {
-            if (!entry || typeof entry !== 'object') continue;
-            if (!('role' in entry) || (entry as any).role !== 'system') continue;
-
-            const content = (entry as any).content;
-            if (typeof content === 'string') {
-                return content;
-            }
-        }
-
-        return undefined;
-    }
-
-    private extractUserPromptFromMessages(messages?: any[]): string | undefined {
-        if (!messages || !Array.isArray(messages)) return undefined;
-
-        const userMessages = messages.filter(msg => msg.role === 'user');
-        if (userMessages.length === 0) return undefined;
-
-        // Return the last user message content
-        const lastUserMessage = userMessages[userMessages.length - 1];
-        if (typeof lastUserMessage.content === 'string') {
-            return lastUserMessage.content;
-        } else if (Array.isArray(lastUserMessage.content)) {
-            // Handle content array - extract text content
-            const textParts = lastUserMessage.content
-                .filter((part: any) => part.type === 'text')
-                .map((part: any) => part.text);
-            return textParts.length > 0 ? textParts.join('\n') : undefined;
-        }
-
-        return undefined;
-    }
-
-    private extractSystemPromptFromMessages(messages?: any[]): string | undefined {
-        if (!messages || !Array.isArray(messages)) return undefined;
-
-        const systemMessage = messages.find(msg => msg.role === 'system');
-        return systemMessage && typeof systemMessage.content === 'string' ? systemMessage.content : undefined;
+            last_user_prompt,
+            system_prompt,
+            access_model,
+        }) as ProviderEnvelope;
     }
 }

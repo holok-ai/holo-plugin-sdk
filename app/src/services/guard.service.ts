@@ -114,8 +114,8 @@ export class GuardService extends ClassLogger {
                             this.serverId,
                             auth,
                             undefined,
-                            workerRequest.thread_id,
-                            workerRequest.branch_id
+                            workerRequest.threadId,
+                            workerRequest.branchId
                         );
                         logger.info(JSON.stringify(guardRequest));
                         const response = await this.responseService.requestOnce<string>(guardRequest);

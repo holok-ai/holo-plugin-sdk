@@ -5,5 +5,5 @@ export interface PipelineResult {
     wireChunks: WireChunk[];
     auditRecord: ProviderResponse | null;
     events: ProviderEvent[];
-    text: string;
+    text: string | undefined;
 }

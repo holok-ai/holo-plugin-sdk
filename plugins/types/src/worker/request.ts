@@ -5,11 +5,11 @@ export interface GuardResult {
     errors?: string[];
 }
 
-export interface RawRequest {
+export interface HttpRequestDetails {
     path: string;
     method: string;
-    headers: Record<string, any>;
-    query: Record<string, any>;
+    headers?: Record<string, any>;
+    query?: Record<string, any>;
 }
 
 export interface HoloWorkerRequest {
@@ -20,8 +20,8 @@ export interface HoloWorkerRequest {
     sourceId: string;
     appSlug?: string;
     userId?: string;
-    thread_id?: string;
-    branch_id?: string;
+    threadId?: string;
+    branchId?: string;
     requestId: string;
     payload: any;
     timestamp: string;
@@ -31,7 +31,7 @@ export interface HoloWorkerRequest {
     guards?: Prompt[];
     guardResult?: GuardResult;
     errors?: string[];
-    rawRequest: RawRequest;
+    httpRequestDetails: HttpRequestDetails;
     isPassthrough?: boolean;
     passthroughPath?: string;
     clientIdentifier?: string;

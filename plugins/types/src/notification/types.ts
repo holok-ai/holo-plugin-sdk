@@ -1,15 +1,19 @@
 export type NotificationSeverity = "info" | "warn" | "error";
 
-export type NotificationEventType =
-    | "request_started"
-    | "guard_started"
-    | "guard_passed"
-    | "guard_failed"
-    | "status"
-    | "provider_request_started"
-    | "provider_response_completed"
-    | "response_completed"
-    | "provider_error";
+
+export const NotificationEventType = {
+    REQUEST_STARTED: 'request_started',
+    GUARD_STARTED: 'guard_started',
+    GUARD_PASSED: 'guard_passed',
+    GUARD_FAILED: 'guard_failed',
+    STATUS: 'status',
+    PROVIDER_REQUEST_STARTED: 'provider_request_started',
+    PROVIDER_RESPONSE_COMPLETED: 'provider_response_completed',
+    RESPONSE_COMPLETED: 'response_completed',
+    PROVIDER_ERROR: 'provider_error',
+} as const;
+
+export type NotificationEventType = typeof NotificationEventType[keyof typeof NotificationEventType];
 
 export interface NotificationEvent {
     id: string;

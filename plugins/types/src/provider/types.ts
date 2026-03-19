@@ -3,44 +3,80 @@ import type {HoloWorkerRequest, WorkerResponseEnvelope} from "../worker";
 import type {Protocol, ProtocolCapability, ProviderRequest, ProviderResponse} from "../entities";
 import {IProviderPlugin} from "../plugin";
 
-export type ProviderEvent =
-    | { type: "stream_event"; requestId: string; seq: number; event: any; ts: number; }
-    | { type: "text_delta"; requestId: string; seq: number; text: string; ts: number; }
-    | {
-    type: "done";
+export const ProviderEventType = {
+    STREAM_EVENT: 'stream_event',
+    TEXT_DELTA: 'text_delta',
+    DONE: 'done',
+    ERROR: 'error'
+} as const;
+
+export type ProviderEventType = typeof ProviderEventType[keyof typeof ProviderEventType];
+
+export interface ProviderEventMetrics {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    timeToFirstToken: number;
+    totalProcessingTime: number;
+    startTime: number;
+    firstTime?: number;
+    endTime?: number;
+}
+
+export type ProviderErrorEvent = {
+    type: typeof ProviderEventType.ERROR;
+    requestId: string;
+    seq: number;
+    error: any;
+    text?: string;
+    acc?: string;
+    status?: number;
+    headers?: Record<string, string>;
+    metrics: ProviderEventMetrics;
+    ts: number;
+};
+
+export type ProviderStreamEvent = {
+    type: typeof ProviderEventType.STREAM_EVENT;
+    requestId: string;
+    seq: number;
+    event: any;
+    ts: number;
+};
+export type ProviderDeltaEvent = {
+    type: typeof ProviderEventType.TEXT_DELTA;
+    requestId: string;
+    seq: number;
+    text: string;
+    ts: number;
+};
+
+export type ProviderDoneEvent = {
+    type: typeof ProviderEventType.DONE;
     requestId: string;
     seq: number;
     message: any;
     text: string;
-    metrics?: any;
-    ts: number;
-}
-    | {
-    type: "error";
-    requestId: string;
-    seq: number;
-    error: any;
-    status?: number;
-    headers?: Record<string, string>;
-    metrics?: any;
+    metrics: ProviderEventMetrics;
     ts: number;
 };
 
-export interface ProviderEnvelope {
-    access_model: string;
-    system_prompt?: string;
-}
+export type ProviderEvent =
+    | ProviderStreamEvent
+    | ProviderDeltaEvent
+    | ProviderDoneEvent
+    | ProviderErrorEvent;
 
 export interface ProviderContext {
     protocol: Protocol;
     headers?: Record<string, string | string[]>;
     query?: Record<string, string>;
     emitStreamEvent: (event: any) => void;
-    emitTextDelta: (text: string) => void;
+    emitTextDelta: (text?: string | null) => void;
 }
 
 export interface RunHandle<Final> {
-    final: () => Promise<Final>;
+    start: () => Promise<Final>;
     cancel?: () => void;
 }
 
@@ -164,6 +200,6 @@ export interface IProvider {
 }
 
 export interface ProviderRunner<Final = any> {
-    final: () => Promise<Final>;
+    start: () => Promise<Final>;
     cancel?: () => void;
 }

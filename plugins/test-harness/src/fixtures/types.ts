@@ -1,4 +1,4 @@
-import type {LlmStatus} from '@holokai/types/entities';
+import type {ProviderResponseStatus} from '@holokai/types/entities';
 
 export interface FixtureScenario {
     name: string;
@@ -17,7 +17,7 @@ export interface FixtureScenario {
         access_model: string;
         input_tokens?: number;
         output_tokens?: number;
-        status: LlmStatus;
+        status: ProviderResponseStatus;
         metadata?: Record<string, any>;
     };
 

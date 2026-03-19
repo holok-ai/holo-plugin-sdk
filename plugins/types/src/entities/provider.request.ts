@@ -1,8 +1,11 @@
-export interface ProviderRequestMetadata {
-    user_prompt?: string;
+export interface ProviderEnvelope {
+    access_model: string;
+    last_user_prompt?: string;
     system_prompt?: string;
+}
+
+export interface ProviderRequestMetadata {
     options?: Record<string, any>;
-    raw_request?: Record<string, any>;
     headers?: Record<string, any>;
     query_params?: Record<string, any>;
     branch_id?: string;
@@ -27,8 +30,12 @@ export interface ProviderRequest {
     user_id?: string;
     client_identifier?: string;
     access_model: string;
+    has_tools?: boolean;
     thread_id?: string;
-    timestamp: string;
+    created_at: string;
+    request_raw?: Record<string, any>;
+    system_prompt?: string;
+    last_user_prompt?: string;
     metadata: ProviderRequestMetadata;
 }
 

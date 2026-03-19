@@ -3,7 +3,7 @@ import {v4 as uuidv4} from "uuid";
 import logger from "../utils/logger";
 import {pickDefined} from "@holokai/sdk";
 import type {Auth} from "@holokai/types/api";
-import type {HoloWorkerRequest} from "@holokai/types/worker";
+import type {HoloWorkerRequest, HttpRequestDetails} from "@holokai/types/worker";
 import {Application, Protocol, Provider} from "@holokai/types/entities";
 
 export class WorkerRequestFactory {
@@ -29,7 +29,7 @@ export class WorkerRequestFactory {
             payload,
             sourceId,
             auth,
-            {path, method, headers: headers || {}, query: query || {}},
+            pickDefined({path, method, headers, query}) as HttpRequestDetails,
             thread_id,
             branch_id,
             application
@@ -49,7 +49,7 @@ export class WorkerRequestFactory {
         payload: any,
         sourceId: string,
         auth?: Auth,
-        rawRequest?: { path: string; method: string; headers: Record<string, any>; query: Record<string, any> },
+        httpRequestDetails?: HttpRequestDetails,
         thread_id?: string,
         branch_id?: string,
         application?: Application
@@ -82,9 +82,9 @@ export class WorkerRequestFactory {
             payload,
             isStreaming: payload.stream === true,
             timestamp: new Date().toISOString(),
-            rawRequest: rawRequest || {path: '', method: 'POST', headers: {}, query: {}},
-            thread_id,
-            branch_id,
+            httpRequestDetails,
+            threadId: thread_id,
+            branchId: branch_id,
             ...sanitizedAuth
         }) as HoloWorkerRequest;
     }

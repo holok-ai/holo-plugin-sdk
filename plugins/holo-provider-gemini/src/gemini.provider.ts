@@ -1,6 +1,6 @@
 import {BaseProvider} from '@holokai/sdk/provider';
 import type {IAuditor, IProviderTranslator, IResponseFactory, ProviderContext} from '@holokai/types/provider';
-import {GoogleGenAI} from '@google/genai';
+import {EmbedContentParameters, GenerateContentParameters, GoogleGenAI} from '@google/genai';
 import {GeminiAuditor} from './gemini.auditor.js';
 import {GeminiTranslator} from './gemini.translator.js';
 import {GeminiErrorResponse, GeminiErrorStatus, GeminiResponseFactory} from './gemini.response.factory.js';
@@ -23,7 +23,7 @@ export class GeminiProvider extends BaseProvider<GoogleGenAI, any> {
         );
     }
 
-    async getModelNameFromRequest(payload: any): Promise<string> {
+    async getModelNameFromRequest(payload: EmbedContentParameters | GenerateContentParameters): Promise<string> {
         return payload.model;
     }
 
@@ -43,29 +43,22 @@ export class GeminiProvider extends BaseProvider<GoogleGenAI, any> {
         return GeminiResponseFactory.instance();
     }
 
-    protected async handleRequest(payload: any, ctx: ProviderContext) {
+    protected async createRequestRunner(payload: EmbedContentParameters | GenerateContentParameters, ctx: ProviderContext) {
         switch (ctx.protocol.name) {
             case GeminiProtocols.EMBED_CONTENT: {
                 return {
-                    final: () => this.client.models.embedContent({
-                        model: payload.model,
-                        contents: payload.contents
-                    })
+                    start: () => this.client.models.embedContent(payload as EmbedContentParameters),
                 };
             }
             case GeminiProtocols.STREAM_GENERATE_CONTENT:
             default: {
-                const {model, contents, config} = payload;
-                const isStreaming = ctx.query?.alt === 'sse' || payload.stream === true;
+                const isStreaming = ctx.query?.alt === 'sse';
 
                 if (isStreaming) {
                     return {
-                        final: async () => {
-                            const stream = await this.client.models.generateContentStream({
-                                model,
-                                contents,
-                                config
-                            });
+                        start: async () => {
+                            const stream =
+                                await this.client.models.generateContentStream(payload as GenerateContentParameters);
 
                             let finalResponse: any;
                             for await (const chunk of stream) {
@@ -87,11 +80,16 @@ export class GeminiProvider extends BaseProvider<GoogleGenAI, any> {
                 }
 
                 return {
-                    final: () => this.client.models.generateContent({
-                        model,
-                        contents,
-                        config
-                    })
+                    start: async () => {
+                        const result = await this.client.models.generateContent(payload as GenerateContentParameters)
+                        const text =
+                            result.candidates?.[0]?.content?.parts
+                                ?.map((part: any) => part?.text)
+                                .filter((text: string | undefined): text is string => !!text)
+                                .join("\n");
+                        ctx.emitTextDelta(text);
+                        return result;
+                    },
                 };
             }
         }

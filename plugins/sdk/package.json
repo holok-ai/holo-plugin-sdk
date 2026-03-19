@@ -85,7 +85,8 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "@holokai/types": "^1.3.0"
+    "@holokai/types": "^1.3.0",
+    "tiktoken": "^1.0.0"
   },
   "peerDependencies": {
     "express": "^4.21.0",

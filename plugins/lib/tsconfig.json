@@ -30,6 +30,9 @@
       ],
       "@holokai/sdk/core": [
         "../sdk/src/core/index.ts"
+      ],
+      "@holokai/sdk/notification": [
+        "../sdk/src/notification/index.ts"
       ]
     }
   },

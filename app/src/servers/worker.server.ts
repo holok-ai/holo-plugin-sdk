@@ -7,7 +7,7 @@ import {BaseServer} from "./base.server";
 import {env} from "../env";
 import {PluginService, ProviderImplService, ResponseService} from "../services";
 import {NotificationEventFactory, NotificationServiceToken} from "@holokai/sdk/notification";
-import {AIRequestStat, HoloWorkerRequest, IProvider, ProviderEvent} from "@holokai/types";
+import {AIRequestStat, HoloWorkerRequest, IProvider, ProviderErrorEvent} from "@holokai/types";
 import type {INotificationService} from "@holokai/types/notification";
 import {ServerType} from "@holokai/types/entities";
 import {runRequestPipeline} from "@holokai/lib";
@@ -37,15 +37,14 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
         await this.queueService.consume(requestQueue, async (requestId, workerRequest: HoloWorkerRequest) => {
             this.stats.totalRequests++;
             logger.info(`Worker ${this.id} handling request: ${requestId} provider: ${workerRequest.provider.name} from server ${workerRequest.sourceId} and queue ${requestQueue}...`);
+            const ai: IProvider = await this.providerPluginService.getProviderImplById(workerRequest.provider.id);
+            const plugin = ai.plugin;
+            logger.info(`resolved ai provider: ${ai.name}`);
+
+            const {sourceId, guardResult} = workerRequest;
+            const envelope = await ai.auditor.createWorkerResponseEnvelope(workerRequest, this.id);
+
             try {
-                const ai: IProvider = await this.providerPluginService.getProviderImplById(workerRequest.provider.id);
-                const plugin = ai.plugin;
-                logger.info(`resolved ai provider: ${ai.name}`);
-
-                const {sourceId, guardResult} = workerRequest;
-
-                const envelope = await ai.auditor.createWorkerResponseEnvelope(workerRequest, this.id);
-
                 if (guardResult && !guardResult.passed) {
                     logger.info('Guards failed. Sending back guard errors.');
 
@@ -63,8 +62,16 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         seq: 0,
                         ts: Date.now(),
                         status: 400,
-                        error: ai.responseFactory.createError(errorMessage,)
-                    } as ProviderEvent;
+                        metrics: {
+                            inputTokens: 0,
+                            outputTokens: 0,
+                            timeToFirstToken: 0,
+                            totalProcessingTime: 0,
+                            totalTokens: 0
+                        },
+                        text: errorMessage,
+                        error: ai.responseFactory.createError(errorMessage)
+                    } as ProviderErrorEvent;
 
                     for (const wireChunk of await wire.fromProviderEvent(evt)) {
                         logger.debug(`Guard failed response: ${JSON.stringify(wireChunk)}`);
@@ -72,13 +79,7 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                     }
                     await this.responseService.sendToAudit(requestId, await ai.auditResponse(envelope, evt));
                     await this.notificationService.publish(
-                        NotificationEventFactory.fromRequest(
-                            'response_completed',
-                            workerRequest,
-                            'Response completed',
-                            {status: 'error', eventType: evt.type},
-                            "error"
-                        )
+                        NotificationEventFactory.fromProviderEvent(envelope, evt),
                     );
                 } else {
                     const wire = workerRequest.isHoloNative
@@ -90,45 +91,36 @@ export class WorkerServer extends withAdmin((withDB(withStats(BaseServer)))) {
                         });
 
                     const q = await ai.processWorkerRequest(workerRequest);
-                    const result = await runRequestPipeline(q, wire, ai.auditor, envelope);
-
-                    for (const chunk of result.wireChunks) {
-                        await this.responseService.sendResponseChunk(sourceId, requestId, chunk);
-                    }
-
-                    if (result.auditRecord) {
-                        await this.responseService.sendToAudit(requestId, result.auditRecord);
-                    }
-
-                    const terminalEvent = result.events.find(e => e.type === 'done' || e.type === 'error');
-                    if (terminalEvent) {
-                        if (terminalEvent.type === 'error') {
-                            logger.error(`Error response: ${JSON.stringify(terminalEvent.error)}`, {requestId});
-                            await this.notificationService.publish(
-                                NotificationEventFactory.fromRequest(
-                                    'response_completed',
-                                    workerRequest,
-                                    'Response completed',
-                                    {status: 'error', eventType: terminalEvent.type, error: terminalEvent.error},
-                                    "error"
-                                )
-                            );
-                        } else {
-                            logger.debug(`Final response: ${JSON.stringify(terminalEvent.message)}`, {requestId});
-                            await this.notificationService.publish(
-                                NotificationEventFactory.fromRequest(
-                                    'response_completed',
-                                    workerRequest,
-                                    'Response completed',
-                                    {status: 'success', eventType: terminalEvent.type}
-                                )
-                            );
-                        }
-                    }
+                    await runRequestPipeline(q, wire, ai.auditor, envelope, this.responseService, this.notificationService);
                 }
             } catch (error) {
                 logger.error(`Error handling request (${requestId}): ${(error as Error).message}`);
                 logger.error(JSON.stringify(workerRequest, null, 2));
+                try {
+                    const ai: IProvider = await this.providerPluginService.getProviderImplById(workerRequest.provider.id);
+                    const envelope = await ai.auditor.createWorkerResponseEnvelope(workerRequest, this.id);
+                    const errorMessage = (error as Error).message;
+                    const errorEvent = {
+                        type: 'error',
+                        requestId,
+                        seq: 0,
+                        ts: Date.now(),
+                        status: 500,
+                        error: ai.responseFactory.createError(errorMessage),
+                        text: errorMessage,
+                        metrics: {
+                            inputTokens: 0,
+                            outputTokens: 0,
+                            timeToFirstToken: 0,
+                            totalProcessingTime: 0,
+                            totalTokens: 0
+                        },
+                    } as ProviderErrorEvent;
+                    const auditRecord = await ai.auditResponse(envelope, errorEvent);
+                    await this.responseService.sendToAudit(requestId, auditRecord);
+                } catch (auditError) {
+                    logger.error(`Failed to create error audit record: ${(auditError as Error).message}`);
+                }
                 await this.onError(error as Error);
             }
         });

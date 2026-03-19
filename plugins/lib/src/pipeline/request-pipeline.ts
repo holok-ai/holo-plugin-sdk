@@ -1,27 +1,36 @@
-import type {IAuditor, IWireAdapter, ProviderEvent} from '@holokai/types/provider';
+import {IAuditor, IWireAdapter, ProviderEvent, ProviderEventType} from '@holokai/types/provider';
 import type {WorkerResponseEnvelope} from '@holokai/types/worker';
-import type {PipelineResult} from './types.js';
+import {NotificationEvent, ProviderResponse} from "@holokai/types";
+import {NotificationEventFactory} from "@holokai/sdk/notification";
+import {PipelineResult} from "./types";
 
 export async function runRequestPipeline(
     events: AsyncIterable<ProviderEvent>,
     wireAdapter: IWireAdapter,
     auditor: IAuditor,
-    envelope: WorkerResponseEnvelope
+    envelope: WorkerResponseEnvelope,
+    publisher: {
+        sendResponseChunk(sourceId: string, requestId: string, data: object): Promise<void>,
+        sendToAudit(requestId: string, data: ProviderResponse): Promise<void>
+    },
+    notifier: {
+        publish(event: NotificationEvent): Promise<void>
+    },
 ): Promise<PipelineResult> {
     const result: PipelineResult = {wireChunks: [], auditRecord: null, events: [], text: ''};
-
     for await (const evt of events) {
-        result.events.push(evt);
+        if (evt.type === ProviderEventType.TEXT_DELTA) result.text += evt.text;
         for (const chunk of await wireAdapter.fromProviderEvent(evt)) {
-            result.wireChunks.push(chunk);
+            await publisher.sendResponseChunk(envelope.source_id, envelope.request_id, chunk);
         }
-        if (evt.type === 'done' || evt.type === 'error') {
-            if (evt.type === 'done') result.text = evt.text;
-            result.auditRecord = await auditor.auditResponse(envelope, evt);
+        if (evt.type === ProviderEventType.DONE || evt.type === ProviderEventType.ERROR) {
+            result.text = evt.type === ProviderEventType.DONE ? evt.text : evt.acc;
+            const auditRecord = await auditor.auditResponse(envelope, evt);
+            await publisher.sendToAudit(envelope.request_id, auditRecord);
+            await notifier.publish(NotificationEventFactory.fromProviderEvent(envelope, evt));
             break;
         }
     }
-
     return result;
 }
 
@@ -29,13 +38,22 @@ export async function runPipelineFromFixture(
     providerEvents: ProviderEvent[],
     wireAdapter: IWireAdapter,
     auditor: IAuditor,
-    envelope: WorkerResponseEnvelope
+    envelope: WorkerResponseEnvelope,
+    publisher: {
+        sendResponseChunk(sourceId: string, requestId: string, data: object): Promise<void>,
+        sendToAudit(requestId: string, data: ProviderResponse): Promise<void>
+    },
+    notifier: {
+        publish(event: NotificationEvent): Promise<void>
+    },
 ): Promise<PipelineResult> {
     return runRequestPipeline(
         asyncIterableFrom(providerEvents),
         wireAdapter,
         auditor,
-        envelope
+        envelope,
+        publisher,
+        notifier
     );
 }
 

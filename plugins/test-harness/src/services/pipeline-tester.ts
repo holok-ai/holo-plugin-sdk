@@ -5,6 +5,7 @@ import {runPipelineFromFixture} from '@holokai/lib';
 import type {FixtureScenario} from '../fixtures/types.js';
 import {assertArrayEqual, assertEqual, type AssertionError} from '../dsl/assertions.js';
 import type {TestResult} from './wire-tester.js';
+import {NotificationEvent} from "@holokai/types";
 
 export async function testPipeline(plugin: IProviderPlugin, fixture: FixtureScenario): Promise<TestResult> {
     const start = performance.now();
@@ -30,6 +31,7 @@ export async function testPipeline(plugin: IProviderPlugin, fixture: FixtureScen
     }
 
     const envelope: WorkerResponseEnvelope = {
+        source_id: 'test-source-id',
         request_id: 'test-req',
         organization_id: 'test-org',
         provider: {id: 'test-provider-id', name: 'test'} as any,
@@ -58,7 +60,16 @@ export async function testPipeline(plugin: IProviderPlugin, fixture: FixtureScen
         } as ProviderEvent;
     });
 
-    const result = await runPipelineFromFixture(providerEvents, wire, auditor, envelope);
+    const publisher = {
+        sendResponseChunk: (_s: string, _r: string, _d: any) => Promise.resolve(),
+        sendToAudit: (_a: any) => Promise.resolve()
+    };
+
+    const notifier = {
+        publish: (_event: NotificationEvent) => Promise.resolve()
+    }
+
+    const result = await runPipelineFromFixture(providerEvents, wire, auditor, envelope, publisher, notifier);
 
     const textErr = assertEqual('text', result.text, fixture.expectedText);
     if (textErr) errors.push(textErr);

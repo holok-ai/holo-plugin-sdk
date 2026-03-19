@@ -1,9 +1,16 @@
-import type {IAuditor, IProvider, IProviderTranslator, IResponseFactory, ProviderRunner} from "@holokai/types/provider";
+import type {
+    IAuditor,
+    IProvider,
+    IProviderTranslator,
+    IResponseFactory,
+    ProviderEventMetrics,
+    ProviderRunner
+} from "@holokai/types/provider";
 import {ModelInfo, ProviderContext, ProviderEvent} from "@holokai/types/provider";
-import {HoloWorkerRequest, WorkerRequestEnvelope} from "@holokai/types/worker";
+import {HoloWorkerRequest} from "@holokai/types/worker";
 import {ProviderRequest, ProviderResponse} from "@holokai/types/entities";
-import {AsyncEventQueue, ClassLogger, filterForwardableHeaders, pickDefined, pickHeadersByPrefix} from "../core";
-import {IProviderPlugin} from "@holokai/types";
+import {AsyncEventQueue, ClassLogger, countTokens, pickDefined} from "../core";
+import {IProviderPlugin, WorkerResponseEnvelope} from "@holokai/types";
 
 export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, Final = any> extends ClassLogger implements IProvider {
     public readonly auditor: IAuditor;
@@ -33,7 +40,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
     }
 
     async auditResponse(
-        workerEnvelope: WorkerRequestEnvelope,
+        workerEnvelope: WorkerResponseEnvelope,
         providerEvent: ProviderEvent
     ): Promise<ProviderResponse> {
         return this.auditor.auditResponse(workerEnvelope, providerEvent);
@@ -45,22 +52,19 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
     ): Promise<AsyncEventQueue<ProviderEvent>> {
         const q = new AsyncEventQueue<ProviderEvent>();
 
-        if (request.isPassthrough) {
-            return this.handlePassthrough(request, q);
-        }
-
-        const {requestId, protocol, payload, rawRequest} = request;
+        const {requestId, protocol, payload, httpRequestDetails} = request;
         const requestPayload = request.isHoloNative
             ? await this.translator.fromHoloRequest(payload) as RequestPayload
             : payload as RequestPayload;
 
-        const start = Date.now();
         let fullText = "";
 
-        const metrics = {
+        const metrics: ProviderEventMetrics = {
+            startTime: Date.now(),
             timeToFirstToken: 0,
             inputTokens: 0,
             outputTokens: 0,
+            totalTokens: 0,
             totalProcessingTime: 0,
         };
 
@@ -68,23 +72,37 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
 
         const ctx = pickDefined({
             protocol,
-            headers: rawRequest.headers,
-            query: rawRequest.query,
+            headers: httpRequestDetails?.headers,
+            query: httpRequestDetails?.query,
             emitStreamEvent: (event: any) =>
                 push({type: "stream_event", event} as ProviderEvent),
-            emitTextDelta: (text: string) => {
-                if (!metrics.timeToFirstToken) metrics.timeToFirstToken = Date.now() - start;
-                fullText += text;
-                push({type: "text_delta", text} as ProviderEvent);
+            emitTextDelta: (text?: string | null) => {
+                if (metrics.timeToFirstToken === 0) {
+                    metrics.firstTime = Date.now();
+                    metrics.timeToFirstToken = metrics.firstTime - metrics.startTime;
+                }
+                if (text != null) {
+                    fullText += text;
+                    push({type: "text_delta", text} as ProviderEvent);
+                }
             },
         }) as ProviderContext;
 
-        let run: ProviderRunner<Final>;
+        let runner: ProviderRunner<Final>;
 
         try {
-            run = await this.handleRequest(requestPayload, ctx);
+            runner = await this.createRequestRunner(requestPayload, ctx);
         } catch (e: any) {
-            push({type: "error", error: await this.handleError(e)} as ProviderEvent);
+            metrics.endTime = Date.now();
+            metrics.totalProcessingTime = metrics.endTime - metrics.startTime;
+            metrics.outputTokens = countTokens(fullText);
+            push({
+                type: "error",
+                error: await this.handleError(e),
+                text: (e as Error).message,
+                metrics,
+                acc: fullText
+            } as ProviderEvent);
             q.end();
             return q;
         }
@@ -92,17 +110,31 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         // IMPORTANT: do not await here — return q immediately for streaming
         void (async () => {
             try {
-                const final = await run.final();
-                metrics.totalProcessingTime = Date.now() - start;
+                const final = await runner.start();
+                if (metrics.timeToFirstToken === 0) {
+                    metrics.firstTime = Date.now();
+                    metrics.timeToFirstToken = metrics.firstTime - metrics.startTime;
+                }
+                metrics.endTime = Date.now();
+                metrics.totalProcessingTime = metrics.endTime - metrics.startTime;
+                metrics.outputTokens = countTokens(fullText);
 
                 push({
                     type: "done",
                     message: final,
-                    text: fullText.length ? fullText : JSON.stringify(final),
+                    text: fullText,
                     metrics
                 } as ProviderEvent);
             } catch (e: any) {
-                push({type: "error", error: await this.handleError(e)} as ProviderEvent);
+                metrics.endTime = Date.now();
+                metrics.totalProcessingTime = metrics.endTime - metrics.startTime;
+                metrics.outputTokens = countTokens(fullText);
+                push({
+                    type: "error",
+                    error: await this.handleError(e),
+                    text: (e as Error).message,
+                    metrics
+                } as ProviderEvent);
             } finally {
                 q.end();
             }
@@ -123,113 +155,15 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
 
     protected abstract handleError(error: any): Promise<any>;
 
-    protected abstract handleRequest(
+    protected abstract createRequestRunner(
         payload: RequestPayload,
         ctx: ProviderContext
     ): Promise<ProviderRunner<Final>>;
-
-    protected getHeaders(request: HoloWorkerRequest, config: any): Record<string, string> {
-        const headers: Record<string, string> = {
-            ...filterForwardableHeaders(request.rawRequest.headers),
-            ...pickHeadersByPrefix(request.rawRequest.headers, [this.name.toLowerCase() + '-']),
-        };
-
-        if (config.apiKey) {
-            headers['authorization'] = `Bearer ${config.apiKey}`;
-        }
-
-        return headers;
-    }
 
     private createEventPusher(q: AsyncEventQueue<ProviderEvent>, requestId: string) {
         let seq = 0;
         return (ev: Omit<ProviderEvent, "requestId" | "seq" | "ts">) => {
             q.push({...ev, requestId, seq: seq++, ts: Date.now()} as ProviderEvent);
         };
-    }
-
-    private async handlePassthrough(
-        request: HoloWorkerRequest,
-        q: AsyncEventQueue<ProviderEvent>
-    ): Promise<AsyncEventQueue<ProviderEvent>> {
-        const {requestId, passthroughPath, rawRequest, payload} = request;
-        const start = Date.now();
-        const push = this.createEventPusher(q, requestId);
-
-        void (async () => {
-            try {
-                const config = this._config;
-
-                if (!config?.baseUrl) {
-                    push({
-                        type: "error",
-                        error: {message: 'Provider config missing baseUrl'},
-                        status: 500
-                    } as ProviderEvent);
-                    q.end();
-                    return;
-                }
-
-                const queryString = new URLSearchParams(rawRequest.query as any).toString();
-                const targetUrl = `${config.baseUrl}${passthroughPath}${queryString ? '?' + queryString : ''}`;
-
-                const fetchResponse = await fetch(targetUrl, {
-                    method: rawRequest.method,
-                    headers: this.getHeaders(request, config),
-                    body: JSON.stringify(payload),
-                    signal: AbortSignal.timeout(config.timeout || 120000)
-                });
-
-                const contentType = fetchResponse.headers.get('content-type') || '';
-                const isStreaming = contentType.includes('text/event-stream') || contentType.includes('stream');
-
-                if (isStreaming && fetchResponse.body) {
-                    const reader = fetchResponse.body.getReader();
-                    const decoder = new TextDecoder();
-
-                    while (true) {
-                        const {done, value} = await reader.read();
-                        if (done) break;
-                        push({
-                            type: "stream_event",
-                            event: {raw: decoder.decode(value, {stream: true})}
-                        } as ProviderEvent);
-                    }
-                } else {
-                    const responseText = await fetchResponse.text();
-                    push({
-                        type: "done",
-                        message: JSON.parse(responseText),
-                        text: responseText,
-                        metrics: {
-                            timeToFirstToken: 0,
-                            inputTokens: 0,
-                            outputTokens: 0,
-                            totalProcessingTime: Date.now() - start
-                        }
-                    } as ProviderEvent);
-                    q.end();
-                    return;
-                }
-
-                push({
-                    type: "done",
-                    message: {status: 'completed'},
-                    text: '',
-                    metrics: {
-                        timeToFirstToken: 0,
-                        inputTokens: 0,
-                        outputTokens: 0,
-                        totalProcessingTime: Date.now() - start
-                    }
-                } as ProviderEvent);
-            } catch (error) {
-                push({type: "error", error: {message: (error as Error).message}, status: 500} as ProviderEvent);
-            } finally {
-                q.end();
-            }
-        })();
-
-        return q;
     }
 }
