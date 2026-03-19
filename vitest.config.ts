@@ -1,15 +1,11 @@
-import {defineConfig} from 'vitest/config';
+import {defineProject} from 'vitest/config';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
-export default defineConfig({
+export default defineProject({
+    plugins: [tsconfigPaths({root: '../..'})],
     test: {
-        projects: [
-            'plugins/sdk',
-            'plugins/sdk/vitest.integration.config.ts',
-            'plugins/holo-provider-openai',
-            'plugins/holo-provider-claude',
-            'plugins/holo-provider-gemini',
-            'plugins/holo-provider-ollama',
-            'app',
-        ],
+        name: 'sdk',
+        environment: 'node',
+        include: ['tests/unit/**/*.test.ts'],
     },
 });

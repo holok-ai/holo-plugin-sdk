@@ -1,101 +1,65 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "lib": [
-      "ESNext",
-      "ESNext.Intl"
-    ],
     "composite": true,
-    "strict": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "resolveJsonModule": true,
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true,
-    "skipDefaultLibCheck": true,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "exactOptionalPropertyTypes": true,
+    "lib": [
+      "ESNext",
+      "ESNext.Intl",
+      "DOM"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@holokai/sdk": [
-        "./plugins/sdk/src/index.ts"
-      ],
-      "@holokai/sdk/core": [
-        "./plugins/sdk/src/core/index.ts"
-      ],
-      "@holokai/sdk/plugin": [
-        "./plugins/sdk/src/plugin/index.ts"
-      ],
-      "@holokai/sdk/provider": [
-        "./plugins/sdk/src/provider/index.ts"
-      ],
-      "@holokai/sdk/holo": [
-        "./plugins/sdk/src/holo/index.ts"
-      ],
-      "@holokai/sdk/notification": [
-        "./plugins/sdk/src/notification/index.ts"
-      ],
       "@holokai/types": [
-        "./plugins/types/src/index.ts"
+        "../types/src/index.ts"
       ],
       "@holokai/types/holo": [
-        "./plugins/types/src/holo/index.ts"
+        "../types/src/holo/index.ts"
       ],
       "@holokai/types/entities": [
-        "./plugins/types/src/entities/index.ts"
+        "../types/src/entities/index.ts"
       ],
       "@holokai/types/config": [
-        "./plugins/types/src/config/index.ts"
+        "../types/src/config/index.ts"
       ],
       "@holokai/types/worker": [
-        "./plugins/types/src/worker/index.ts"
+        "../types/src/worker/index.ts"
       ],
       "@holokai/types/notification": [
-        "./plugins/types/src/notification/index.ts"
+        "../types/src/notification/index.ts"
       ],
       "@holokai/types/routing": [
-        "./plugins/types/src/routing/index.ts"
+        "../types/src/routing/index.ts"
       ],
       "@holokai/types/api": [
-        "./plugins/types/src/api/index.ts"
+        "../types/src/api/index.ts"
       ],
       "@holokai/types/provider": [
-        "./plugins/types/src/provider/index.ts"
+        "../types/src/provider/index.ts"
       ],
       "@holokai/types/logger": [
-        "./plugins/types/src/logger/index.ts"
+        "../types/src/logger/index.ts"
       ],
       "@holokai/types/plugin": [
-        "./plugins/types/src/plugin/index.ts"
-      ],
-      "@holokai/lib": [
-        "./plugins/lib/src/index.ts"
-      ],
-      "@holokai/lib/pipeline": [
-        "./plugins/lib/src/pipeline/index.ts"
-      ],
-      "@holokai/sdk/client": [
-        "./plugins/sdk/src/client/index.ts"
+        "../types/src/plugin/index.ts"
       ]
     }
   },
+  "include": [
+    "src/**/*"
+  ],
   "exclude": [
-    "node_modules",
-    "**/dist/**",
-    "**/__tests__/**",
     "**/*.test.ts",
     "**/*.spec.ts",
-    "**/tests/**"
+    "tests/**/*"
+  ],
+  "references": [
+    {
+      "path": "../types"
+    }
   ]
 }
