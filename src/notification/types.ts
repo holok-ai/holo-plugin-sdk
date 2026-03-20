@@ -1,10 +1,10 @@
-import type {NotificationEvent, NotificationSeverity} from '@holokai/types/notification';
-import {NotificationEventType} from "@holokai/types/notification";
-import type {Auth} from '@holokai/types/api';
-import type {HoloWorkerRequest} from '@holokai/types/worker';
+import type {NotificationEvent, NotificationSeverity} from '@holokai/holo-types/notification';
+import {NotificationEventType} from "@holokai/holo-types/notification";
+import type {Auth} from '@holokai/holo-types/api';
+import type {HoloWorkerRequest} from '@holokai/holo-types/worker';
 import {pickDefined} from "../core";
 import {v4 as uuidv4} from "uuid";
-import {ProviderEvent, ProviderEventType, WorkerResponseEnvelope} from "@holokai/types";
+import {ProviderDoneEvent, ProviderErrorEvent, ProviderEventType, WorkerResponseEnvelope} from "@holokai/holo-types";
 
 export class NotificationEventFactory {
     static fromAuthAndRequest(type: NotificationEventType, auth: Auth, request: HoloWorkerRequest, message: string, payload?: any, severity: NotificationSeverity = "info"): NotificationEvent {
@@ -45,9 +45,7 @@ export class NotificationEventFactory {
         }) as NotificationEvent;
     }
 
-    static fromProviderEvent(envelope: WorkerResponseEnvelope, event: Extract<ProviderEvent, {
-        type: typeof ProviderEventType.DONE | typeof ProviderEventType.ERROR
-    }>): NotificationEvent {
+    static fromProviderEvent(envelope: WorkerResponseEnvelope, event: ProviderDoneEvent | ProviderErrorEvent): NotificationEvent {
 
         return pickDefined({
             type: NotificationEventType.RESPONSE_COMPLETED,

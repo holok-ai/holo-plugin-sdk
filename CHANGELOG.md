@@ -1,4 +1,4 @@
-# @holokai/sdk
+# @holokai/holo-sdk
 
 ## 1.3.1
 
@@ -19,7 +19,7 @@
   - Slim `PipelineResult` to `{ text: string }`
 
 - Updated dependencies [d813d15]
-  - @holokai/types@1.3.1
+  - @holokai/holo-types@1.3.1
 
 ## 1.3.0
 
@@ -30,7 +30,7 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @holokai/types@1.3.0
+  - @holokai/holo-types@1.3.0
 
 ## 1.2.2
 
@@ -48,13 +48,13 @@
     into final() instead of starting floating IIFEs
 
 - Updated dependencies
-  - @holokai/types@1.2.2
+  - @holokai/holo-types@1.2.2
 
 ## 1.2.1
 
 ### Patch Changes
 
-- @holokai/types@1.2.1
+- @holokai/holo-types@1.2.1
 
 ## 1.2.0
 
@@ -71,7 +71,7 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @holokai/types@1.2.0
+  - @holokai/holo-types@1.2.0
 
 ## 1.1.0
 
@@ -88,17 +88,17 @@
 
 - fd64cb1: Moved app to separate workspace so that we can track with changeset.
 - Updated dependencies
-  - @holokai/types@1.1.0
+  - @holokai/holo-types@1.1.0
 
 ## 1.0.0
 
 ### Minor Changes
 
-- Broke up SDK to have dependency-less @holokai/types. Reorganized types and interfaces. Fixed up some types vs
+- Broke up SDK to have dependency-less @holokai/holo-types. Reorganized types and interfaces. Fixed up some types vs
   interfaces. Prefixed true interfaces that are used to describe classes vs TypeScript interfaces used to just describe
   an object.
 
 ### Patch Changes
 
 - Updated dependencies
-  - @holokai/types@1.0.0
+  - @holokai/holo-types@1.0.0

@@ -81,7 +81,7 @@ All Holo types are:
 Plugins interact with Holo format through the SDK:
 
 ```typescript
-import type {HoloRequest, HoloResponse} from '@holokai/sdk';
+import type {HoloRequest, HoloResponse} from '@holokai/holo-sdk';
 
 // Translate provider format to Holo
 function toHolo(providerRequest: MyProviderRequest): HoloRequest {

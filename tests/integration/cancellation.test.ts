@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {HoloClient} from '../../src/client/client.js';
-import {getTestConfig} from '@holokai/test-utils';
+import {getTestConfig} from '@holokai/test-sdk';
 
 describe('sdk integration: cancellation', () => {
     function client() {

@@ -1,7 +1,7 @@
-import type {ProviderEvent, WireChunk} from '@holokai/types/provider';
-import type {HoloStreamEvent} from '@holokai/types/holo';
+import type {ProviderEvent, WireChunk} from '@holokai/holo-types/provider';
+import type {HoloStreamEvent} from '@holokai/holo-types/holo';
 import {BaseWireAdapter} from './base';
-import {HoloResponse} from "@holokai/types";
+import {HoloResponse} from "@holokai/holo-types";
 import {pickDefined} from "../../core";
 
 export class HoloWireAdapter extends BaseWireAdapter {

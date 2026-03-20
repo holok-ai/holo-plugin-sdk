@@ -1,4 +1,4 @@
-import type {PluginPricingModel, PluginPricingSheet, PricingDataset, PricingModelId} from '@holokai/types/plugin';
+import type {PluginPricingModel, PluginPricingSheet, PricingDataset, PricingModelId} from '@holokai/holo-types/plugin';
 
 interface ModelCosts {
     input_cost: number;

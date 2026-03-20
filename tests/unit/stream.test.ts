@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {HoloStream} from '../../src/client/stream.js';
 import {HoloStreamError} from '../../src/client/errors.js';
-import type {HoloStreamEvent} from '@holokai/types/holo';
+import type {HoloStreamEvent} from '@holokai/holo-types/holo';
 
 function makeEvents(events: HoloStreamEvent[]) {
     let i = 0;

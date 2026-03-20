@@ -10,7 +10,7 @@ import type {
     HoloThreadMessage,
     HoloThreadMessageListParams,
     HoloThreadUpdateParams
-} from '@holokai/types/holo';
+} from '@holokai/holo-types/holo';
 import type {HoloApplicationInfo, HoloChatParams, HoloClientOptions, HoloModelInfo} from './types';
 import {HoloStream} from './stream';
 import {HoloRequestBuilder} from './builder';
@@ -24,7 +24,7 @@ import {FetchTransport} from './transport';
  *
  * @example
  * ```ts
- * import { HoloClient } from '@holokai/sdk';
+ * import { HoloClient } from '@holokai/holo-sdk';
  *
  * const client = new HoloClient({
  *   baseUrl: 'https://holo.example.com',

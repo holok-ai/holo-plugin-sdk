@@ -12,4 +12,4 @@ export type {HoloToolRunnerOptions, HoloToolCallInfo, HoloToolResult} from './ru
 export type {
     HoloThread, HoloThreadCreateParams, HoloThreadUpdateParams, HoloThreadListParams,
     HoloThreadMessage, HoloThreadMessageListParams, HoloPagedResponse,
-} from '@holokai/types/holo';
+} from '@holokai/holo-types/holo';

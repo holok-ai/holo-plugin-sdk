@@ -5,12 +5,12 @@ import type {
     IResponseFactory,
     ProviderEventMetrics,
     ProviderRunner
-} from "@holokai/types/provider";
-import {ModelInfo, ProviderContext, ProviderEvent} from "@holokai/types/provider";
-import {HoloWorkerRequest} from "@holokai/types/worker";
-import {ProviderRequest, ProviderResponse} from "@holokai/types/entities";
+} from "@holokai/holo-types/provider";
+import {ModelInfo, ProviderContext, ProviderEvent} from "@holokai/holo-types/provider";
+import {HoloWorkerRequest} from "@holokai/holo-types/worker";
+import {ProviderRequest, ProviderResponse} from "@holokai/holo-types/entities";
 import {AsyncEventQueue, ClassLogger, countTokens, pickDefined} from "../core";
-import {IProviderPlugin, WorkerResponseEnvelope} from "@holokai/types";
+import {IProviderPlugin, WorkerResponseEnvelope} from "@holokai/holo-types";
 
 export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, Final = any> extends ClassLogger implements IProvider {
     public readonly auditor: IAuditor;

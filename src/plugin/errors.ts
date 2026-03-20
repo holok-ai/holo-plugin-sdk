@@ -1,4 +1,4 @@
-import {PluginErrorCode} from "@holokai/types/plugin";
+import {PluginErrorCode} from "@holokai/holo-types/plugin";
 
 export {PluginErrorCode};
 

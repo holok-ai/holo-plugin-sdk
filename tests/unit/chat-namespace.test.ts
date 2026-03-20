@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from 'vitest';
 import {HoloClient} from '../../src/client/client.js';
-import type {HoloResponse} from '@holokai/types/holo';
+import type {HoloResponse} from '@holokai/holo-types/holo';
 
 const mockResponse: HoloResponse = {
     model: 'gpt-4o',

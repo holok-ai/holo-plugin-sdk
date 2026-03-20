@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document verifies that the Holo universal format in `@holokai/sdk` can adequately represent all portable features
+This document verifies that the Holo universal format in `@holokai/holo-sdk` can adequately represent all portable features
 from Claude, OpenAI, and Ollama providers.
 
 **Status**: ✅ **VERIFIED** - Holo format supports all portable capabilities
@@ -308,7 +308,7 @@ populate.
 
 ### SDK Types (Strict Mode)
 
-**Location**: `packages/sdk/src/holo/types.ts`
+**Location**: `packages/holo-sdk/src/holo/types.ts`
 
 ```typescript
 // ✅ SDK uses proper typed interfaces
@@ -400,7 +400,7 @@ The following are intentionally **NOT** in Holo format because they're provider-
 
 ### 1. ✅ Use SDK Types in Providers
 
-**Action**: Migrate `src/providers/holo/types/*` to use `@holokai/sdk` types directly.
+**Action**: Migrate `src/providers/holo/types/*` to use `@holokai/holo-sdk` types directly.
 
 **Benefits**:
 
@@ -416,7 +416,7 @@ The following are intentionally **NOT** in Holo format because they're provider-
 import {HoloTool} from '../types/requests';
 
 // After
-import type {HoloTool} from '@holokai/sdk';
+import type {HoloTool} from '@holokai/holo-sdk';
 ```
 
 ### 2. ✅ Tighten Timestamp Type
@@ -484,7 +484,7 @@ Holo layer** and only reintroduced when translating back to the **same provider*
 
 ### ✅ VERIFIED: Holo Format is Complete
 
-The Holo universal format in `@holokai/sdk` successfully:
+The Holo universal format in `@holokai/holo-sdk` successfully:
 
 1. ✅ **Represents all portable capabilities** from all 3 providers (Claude, OpenAI, Ollama)
 2. ✅ **Provides strict type safety** with proper TypeScript interfaces (SDK)

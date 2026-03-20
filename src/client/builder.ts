@@ -8,7 +8,7 @@ import type {
     HoloResponseFormat,
     HoloTool,
     HoloToolChoice,
-} from '@holokai/types/holo';
+} from '@holokai/holo-types/holo';
 import type {HoloStream} from './stream';
 
 export type SendFn = (request: HoloRequest) => Promise<HoloResponse>;

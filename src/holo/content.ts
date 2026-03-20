@@ -7,7 +7,7 @@ import type {
     HoloContentText,
     HoloContentToolCall,
     HoloContentToolResult,
-} from '@holokai/types/holo';
+} from '@holokai/holo-types/holo';
 
 export function isTextContent(p: HoloContent): p is HoloContentText {
     return p.type === "text";

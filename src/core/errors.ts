@@ -1,4 +1,4 @@
-import {HoloErrorCode} from '@holokai/types/holo';
+import {HoloErrorCode} from '@holokai/holo-types/holo';
 
 export class HoloError extends Error {
     constructor(

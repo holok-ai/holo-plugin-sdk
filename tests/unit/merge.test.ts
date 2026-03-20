@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {HoloStreamAccumulator} from '../../src/client/merge.js';
-import type {HoloContent, HoloContentReasoning, HoloContentText, HoloContentToolCall} from '@holokai/types/holo';
+import type {HoloContent, HoloContentReasoning, HoloContentText, HoloContentToolCall} from '@holokai/holo-types/holo';
 
 describe('HoloStreamAccumulator', () => {
     it('accumulates text deltas', () => {

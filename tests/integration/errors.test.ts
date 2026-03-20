@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {HoloClient} from '../../src/client/client.js';
 import {HoloApiError} from '../../src/client/errors.js';
-import {getTestConfig} from '@holokai/test-utils';
+import {getTestConfig} from '@holokai/test-sdk';
 
 describe('sdk integration: errors', () => {
     it('rejects bad token with 4xx', async () => {

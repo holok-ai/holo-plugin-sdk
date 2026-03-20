@@ -1,4 +1,4 @@
-import {HoloRequest} from "@holokai/types/holo";
+import {HoloRequest} from "@holokai/holo-types/holo";
 
 export const HoloRequestDefaults: Partial<HoloRequest> = {
     stream: false,

@@ -1,17 +1,17 @@
-# @holokai/sdk
+# @holokai/holo-sdk
 
 SDK for Holo plugin development. Provides base classes, utilities, and types for building provider plugins.
 
 ## Installation
 
 ```bash
-npm install @holokai/sdk
+npm install @holokai/holo-sdk
 ```
 
 Plugins also need the types package:
 
 ```bash
-npm install @holokai/types
+npm install @holokai/holo-types
 ```
 
 ## Overview
@@ -29,11 +29,11 @@ The SDK provides:
 ## Package Exports
 
 ```typescript
-import {BasePlugin} from '@holokai/sdk/plugin';
-import {BaseProvider, BaseAuditor, BaseTranslator, BaseWireAdapter} from '@holokai/sdk/provider';
-import {ClassLogger, pickDefined, stringifyError} from '@holokai/sdk';
-import {HoloRequestDefaults} from '@holokai/sdk/holo';
-import {NotificationServiceToken, NotificationEventFactory} from '@holokai/sdk/notification';
+import {BasePlugin} from '@holokai/holo-sdk/plugin';
+import {BaseProvider, BaseAuditor, BaseTranslator, BaseWireAdapter} from '@holokai/holo-sdk/provider';
+import {ClassLogger, pickDefined, stringifyError} from '@holokai/holo-sdk';
+import {HoloRequestDefaults} from '@holokai/holo-sdk/holo';
+import {NotificationServiceToken, NotificationEventFactory} from '@holokai/holo-sdk/notification';
 ```
 
 ## Building a Provider Plugin
@@ -60,12 +60,12 @@ plugins/holo-provider-{name}/
 
 ```typescript
 // plugin.ts
-import {BasePlugin} from '@holokai/sdk/plugin';
-import type {IProviderPlugin, PluginContext} from '@holokai/types/plugin';
-import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from '@holokai/types/provider';
-import type {RouteTree} from '@holokai/types/routing';
-import {RouteHandler} from '@holokai/types/routing';
-import {ProtocolCapability} from '@holokai/types/entities';
+import {BasePlugin} from '@holokai/holo-sdk/plugin';
+import type {IProviderPlugin, PluginContext} from '@holokai/holo-types/plugin';
+import type {IProvider, IWireAdapter, ProviderCapabilities, WireAdapterParams} from '@holokai/holo-types/provider';
+import type {RouteTree} from '@holokai/holo-types/routing';
+import {RouteHandler} from '@holokai/holo-types/routing';
+import {ProtocolCapability} from '@holokai/holo-types/entities';
 import {manifest} from './manifest';
 import {MyProvider} from './my.provider';
 import {MyWireAdapter} from './my.wire.adapter';
@@ -139,9 +139,9 @@ Protocols are registered in the database at startup. Each protocol is tied to a 
 The auditor transforms worker requests/responses into `ProviderRequest`/`ProviderResponse` audit records:
 
 ```typescript
-import {BaseAuditor} from '@holokai/sdk/provider';
-import type {HoloWorkerRequest} from '@holokai/types/worker';
-import type {ProviderRequest} from '@holokai/types/entities';
+import {BaseAuditor} from '@holokai/holo-sdk/provider';
+import type {HoloWorkerRequest} from '@holokai/holo-types/worker';
+import type {ProviderRequest} from '@holokai/holo-types/entities';
 
 export class MyAuditor extends BaseAuditor {
     readonly provider = 'my-provider';
@@ -173,8 +173,8 @@ Audit records use:
 
 ```typescript
 // manifest.ts
-import type {PluginManifest} from '@holokai/types/plugin';
-import {PluginType} from '@holokai/types/plugin';
+import type {PluginManifest} from '@holokai/holo-types/plugin';
+import {PluginType} from '@holokai/holo-types/plugin';
 
 export const manifest: PluginManifest = {
     name: '@holokai/holo-provider-my',

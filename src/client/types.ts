@@ -4,7 +4,7 @@ import type {
     HoloModelInfo,
     HoloRequest,
     HoloRequestMetadata,
-} from '@holokai/types/holo';
+} from '@holokai/holo-types/holo';
 
 /** Parameters accepted by {@link ChatNamespace.create} and {@link ChatNamespace.stream}. */
 export interface HoloChatParams {

@@ -1,4 +1,4 @@
-import type {TranslateOptions} from "@holokai/types/provider";
+import type {TranslateOptions} from "@holokai/holo-types/provider";
 import {ClassLogger} from "../../core";
 
 

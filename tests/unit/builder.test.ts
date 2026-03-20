@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from 'vitest';
 import {HoloRequestBuilder} from '../../src/client/builder.js';
-import type {HoloRequest, HoloResponse} from '@holokai/types/holo';
+import type {HoloRequest, HoloResponse} from '@holokai/holo-types/holo';
 
 const noopSend = vi.fn<(r: HoloRequest) => Promise<HoloResponse>>();
 const noopStream = vi.fn();

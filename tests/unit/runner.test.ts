@@ -2,7 +2,7 @@ import {describe, expect, it, vi} from 'vitest';
 import type {HoloToolRunnerOptions} from '../../src/client/runner.js';
 import {HoloToolRunner} from '../../src/client/runner.js';
 import {HoloStream} from '../../src/client/stream.js';
-import type {HoloResponse, HoloStreamEvent} from '@holokai/types/holo';
+import type {HoloResponse, HoloStreamEvent} from '@holokai/holo-types/holo';
 
 function makeEvents(events: HoloStreamEvent[]) {
     let i = 0;

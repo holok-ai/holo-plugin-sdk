@@ -1,4 +1,4 @@
-import type {HoloStreamEvent} from '@holokai/types/holo';
+import type {HoloStreamEvent} from '@holokai/holo-types/holo';
 
 export async function* parseSSEStream(
     body: ReadableStream<Uint8Array>,

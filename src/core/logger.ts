@@ -1,4 +1,4 @@
-import type {HoloLogger, HoloLogLevel} from '@holokai/types/logger';
+import type {HoloLogger, HoloLogLevel} from '@holokai/holo-types/logger';
 import {container, InjectionToken} from "tsyringe";
 import {Transform} from "node:stream";
 

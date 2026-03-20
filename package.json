@@ -1,5 +1,5 @@
 {
-  "name": "@holokai/sdk",
+  "name": "@holokai/holo-sdk",
   "version": "1.3.1",
   "type": "module",
   "description": "Common SDK for Holo plugin system - contracts, types, and validators",
@@ -15,12 +15,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/holok-ai/holo-plugin-sdk.git"
+    "url": "git+https://github.com/holok-ai/holo-sdk.git"
   },
   "bugs": {
-    "url": "https://github.com/holok-ai/holo-plugin-sdk/issues"
+    "url": "https://github.com/holok-ai/holo-sdk/issues"
   },
-  "homepage": "https://github.com/holok-ai/holo-plugin-sdk#readme",
+  "homepage": "https://github.com/holok-ai/holo-sdk#readme",
   "keywords": [
     "holokai",
     "holo",
@@ -85,15 +85,16 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "@holokai/types": "^1.3.1",
-    "tiktoken": "^1.0.0"
+    "@holokai/holo-types": "^1.3.1",
+    "tiktoken": "^1.0.0",
+    "uuid": "^11.1.0"
   },
   "peerDependencies": {
     "express": "^4.21.0",
     "tsyringe": "^4.10.0"
   },
   "devDependencies": {
-    "@holokai/test-utils": "*",
+    "@holokai/test-sdk": "*",
     "@types/express": "^5.0.0",
     "typescript": "^5.0.0"
   }

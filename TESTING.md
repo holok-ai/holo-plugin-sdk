@@ -1,4 +1,4 @@
-# @holokai/sdk Testing Guide
+# @holokai/holo-sdk Testing Guide
 
 ## Test Layers
 
@@ -66,7 +66,7 @@ describe('HoloClient', () => {
 });
 ```
 
-For streaming tests, use `createSseMockFetch` from `@holokai/test-utils` or build a `ReadableStream` directly.
+For streaming tests, use `createSseMockFetch` from `@holokai/test-sdk` or build a `ReadableStream` directly.
 
 ## Integration Tests
 

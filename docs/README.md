@@ -1,4 +1,4 @@
-# @holokai/sdk Documentation
+# @holokai/holo-sdk Documentation
 
 ## Overview
 
@@ -10,11 +10,11 @@ integrations. This documentation covers both the client SDK and the Holo univers
 ## Quick Start
 
 ```bash
-npm install @holokai/sdk
+npm install @holokai/holo-sdk
 ```
 
 ```typescript
-import {HoloClient} from '@holokai/sdk';
+import {HoloClient} from '@holokai/holo-sdk';
 
 const client = new HoloClient({
     baseUrl: 'https://holo.example.com',
@@ -39,7 +39,7 @@ const response2 = await client.chat.create({
 ### Construction
 
 ```typescript
-import {HoloClient} from '@holokai/sdk';
+import {HoloClient} from '@holokai/holo-sdk';
 
 const client = new HoloClient({
     baseUrl: 'https://holo.example.com',
@@ -178,7 +178,7 @@ const response = await runner.run();
 ### Error Handling
 
 ```typescript
-import {HoloApiError, HoloStreamError, HoloTimeoutError} from '@holokai/sdk';
+import {HoloApiError, HoloStreamError, HoloTimeoutError} from '@holokai/holo-sdk';
 
 try {
     const res = await client.chat.user('Hello').send();
@@ -384,7 +384,7 @@ export interface HoloJsonSchema {
 Use ArkType validators at boundaries:
 
 ```typescript
-import {validateHoloRequest} from '@holokai/sdk/validators';
+import {validateHoloRequest} from '@holokai/holo-sdk/validators';
 
 const result = validateHoloRequest(untrustedInput);
 if (result.problems) {

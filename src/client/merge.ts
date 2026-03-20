@@ -10,7 +10,7 @@ import type {
     HoloStreamEvent,
     HoloToolCall,
     HoloUsage,
-} from '@holokai/types/holo';
+} from '@holokai/holo-types/holo';
 
 /**
  * Accumulates {@link HoloStreamEvent} deltas into a complete {@link HoloResponse}.

@@ -1,4 +1,4 @@
-import type {HoloContent, HoloMessage, HoloResponse, HoloTool, HoloToolChoice,} from '@holokai/types/holo';
+import type {HoloContent, HoloMessage, HoloResponse, HoloTool, HoloToolChoice,} from '@holokai/holo-types/holo';
 import type {HoloStream} from './stream';
 import type {HoloChatParams} from './types';
 import {HoloOutput} from './output';

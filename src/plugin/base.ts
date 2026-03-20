@@ -1,7 +1,7 @@
-import {IPlugin, PluginContext, PluginManifest, PluginState, PluginType} from "@holokai/types/plugin";
+import {IPlugin, PluginContext, PluginManifest, PluginState, PluginType} from "@holokai/holo-types/plugin";
 import {PluginError, PluginErrorCode} from "./errors";
 import {ClassLogger} from "../core";
-import type {CostResult, PricingSheetModel} from "@holokai/types/entities";
+import type {CostResult, PricingSheetModel} from "@holokai/holo-types/entities";
 
 
 export abstract class BasePlugin extends ClassLogger implements IPlugin {

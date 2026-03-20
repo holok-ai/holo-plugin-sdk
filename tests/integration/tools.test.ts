@@ -1,8 +1,8 @@
 import {describe, expect, it} from 'vitest';
 import {HoloClient} from '../../src/client/client.js';
 import {HoloApiError} from '../../src/client/errors.js';
-import {getTestConfig} from '@holokai/test-utils';
-import type {HoloTool} from '@holokai/types/holo';
+import {getTestConfig} from '@holokai/test-sdk';
+import type {HoloTool} from '@holokai/holo-types/holo';
 
 const weatherTool: HoloTool = {
     name: 'get_weather',

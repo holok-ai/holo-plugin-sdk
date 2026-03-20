@@ -1,4 +1,4 @@
-import type {HoloResponse, HoloStreamEvent} from '@holokai/types/holo';
+import type {HoloResponse, HoloStreamEvent} from '@holokai/holo-types/holo';
 import {HoloStreamAccumulator} from './merge';
 import {HoloStreamError} from './errors';
 

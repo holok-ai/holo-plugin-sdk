@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {parseSSEStream} from '../../src/client/sse.js';
-import type {HoloStreamEvent} from '@holokai/types/holo';
+import type {HoloStreamEvent} from '@holokai/holo-types/holo';
 
 function toStream(text: string): ReadableStream<Uint8Array> {
     const encoder = new TextEncoder();

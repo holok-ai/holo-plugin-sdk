@@ -9,16 +9,16 @@ import {
     ProviderResponseStatus,
     WorkerRequestEnvelope,
     WorkerResponseEnvelope
-} from "@holokai/types";
+} from "@holokai/holo-types";
 import {ClassLogger, pickDefined} from "../../core";
-import type {IAuditor} from "@holokai/types/provider";
-import {ProviderEvent} from "@holokai/types/provider";
+import type {IAuditor} from "@holokai/holo-types/provider";
+import {ProviderEvent} from "@holokai/holo-types/provider";
 import type {
     FinishReason,
     ProviderRequestMetadata,
     ProviderResponseMetadata,
     ProviderResponseMetrics
-} from "@holokai/types/entities";
+} from "@holokai/holo-types/entities";
 
 // prompt-extraction.ts
 

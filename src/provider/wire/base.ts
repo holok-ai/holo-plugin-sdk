@@ -1,5 +1,5 @@
 import {ClassLogger, pickDefined, stringifyAny} from '../../core';
-import type {IWireAdapter, ProviderEvent, WireChunk} from '@holokai/types/provider';
+import type {IWireAdapter, ProviderEvent, WireChunk} from '@holokai/holo-types/provider';
 
 export abstract class BaseWireAdapter extends ClassLogger implements IWireAdapter {
     wireSeq = 0;
