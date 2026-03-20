@@ -1,0 +1,65 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "lib": [
+      "ESNext",
+      "ESNext.Intl",
+      "DOM"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@holokai/types": [
+        "../types/src/index.ts"
+      ],
+      "@holokai/types/holo": [
+        "../types/src/holo/index.ts"
+      ],
+      "@holokai/types/entities": [
+        "../types/src/entities/index.ts"
+      ],
+      "@holokai/types/config": [
+        "../types/src/config/index.ts"
+      ],
+      "@holokai/types/worker": [
+        "../types/src/worker/index.ts"
+      ],
+      "@holokai/types/notification": [
+        "../types/src/notification/index.ts"
+      ],
+      "@holokai/types/routing": [
+        "../types/src/routing/index.ts"
+      ],
+      "@holokai/types/api": [
+        "../types/src/api/index.ts"
+      ],
+      "@holokai/types/provider": [
+        "../types/src/provider/index.ts"
+      ],
+      "@holokai/types/logger": [
+        "../types/src/logger/index.ts"
+      ],
+      "@holokai/types/plugin": [
+        "../types/src/plugin/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "tests/**/*"
+  ],
+  "references": [
+    {
+      "path": "../types"
+    }
+  ]
+}
