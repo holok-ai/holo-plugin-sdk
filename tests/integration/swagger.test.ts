@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {gatewayUrl} from '@holokai/test-sdk';
+import {gatewayUrl} from '@holokai/holo-test';
 
 describe('sdk integration: swagger', () => {
     const base = gatewayUrl();

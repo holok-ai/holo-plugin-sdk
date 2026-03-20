@@ -1,11 +1,12 @@
 import type {HoloWorkerRequest, WorkerResponseEnvelope, HttpRequestDetails} from '@holokai/holo-types/worker';
-import type {Protocol, Provider, Application} from '@holokai/holo-types/entities';
+import type {Provider, Application} from '@holokai/holo-types/entities';
+import type {ProviderProtocol} from '@holokai/holo-types/provider';
 import {pickDefined} from '../core';
 import {v4 as uuidv4} from 'uuid';
 
 export interface WorkerRequestParams {
     provider: Provider;
-    protocol: Protocol;
+    protocol: ProviderProtocol;
     payload: any;
     sourceId: string;
     isStreaming: boolean;

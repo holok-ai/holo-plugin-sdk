@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {HoloClient} from '../../src/client/client.js';
 import {HoloApiError} from '../../src/client/errors.js';
-import {getTestConfig, providerMatrix} from '@holokai/test-sdk';
+import {getTestConfig, providerMatrix} from '@holokai/holo-test';
 
 describe('sdk integration: smoke matrix', () => {
     function client() {

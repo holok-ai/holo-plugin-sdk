@@ -94,7 +94,7 @@
     "tsyringe": "^4.10.0"
   },
   "devDependencies": {
-    "@holokai/test-sdk": "*",
+    "@holokai/holo-test": "*",
     "@types/express": "^5.0.0",
     "typescript": "^5.0.0"
   }

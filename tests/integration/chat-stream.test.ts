@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {HoloClient} from '../../src/client/client.js';
-import {getTestConfig} from '@holokai/test-sdk';
+import {getTestConfig} from '@holokai/holo-test';
 
 describe('sdk integration: chat.stream', () => {
     function client() {

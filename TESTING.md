@@ -66,7 +66,7 @@ describe('HoloClient', () => {
 });
 ```
 
-For streaming tests, use `createSseMockFetch` from `@holokai/test-sdk` or build a `ReadableStream` directly.
+For streaming tests, use `createSseMockFetch` from `@holokai/holo-test` or build a `ReadableStream` directly.
 
 ## Integration Tests
 
