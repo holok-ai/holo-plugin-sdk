@@ -1,5 +1,13 @@
 # @holokai/holo-sdk
 
+## 1.3.2
+
+### Patch Changes
+
+- a0062e7: Restructure packages: rename @holokai/sdk → @holokai/holo-sdk, @holokai/types → @holokai/holo-types. Delete packages/lib (event processor moved to holo-sdk). Merge test-harness + test-utils into test-sdk. Add moku-sdk and moku-types packages. Update all imports across app and plugins.
+- Updated dependencies [a0062e7]
+  - @holokai/holo-types@1.3.2
+
 ## 1.3.1
 
 ### Patch Changes
