@@ -1,5 +1,16 @@
 # @holokai/holo-sdk
 
+## 1.5.0
+
+### Minor Changes
+
+- Add multi-capability SDK support: generate, embed, and metrics namespaces on HoloClient, generalized protocol resolution, auditor mapFinishReason/mapUsage with per-plugin overrides, and new holo-types for embed/generate/metrics/models.
+
+### Patch Changes
+
+- Updated dependencies
+  - @holokai/holo-types@1.5.0
+
 ## 1.4.0
 
 ### Minor Changes

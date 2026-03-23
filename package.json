@@ -1,6 +1,6 @@
 {
   "name": "@holokai/holo-sdk",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "type": "module",
   "description": "Common SDK for Holo plugin system - contracts, types, and validators",
   "author": "Holokai",
@@ -85,7 +85,7 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "@holokai/holo-types": "^1.4.0",
+    "@holokai/holo-types": "^1.5.0",
     "tiktoken": "^1.0.0",
     "uuid": "^11.1.0"
   },
