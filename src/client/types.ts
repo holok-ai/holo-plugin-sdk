@@ -1,7 +1,13 @@
 import type {
     HoloApplicationInfo,
+    HoloCountTokensParams,
+    HoloCountTokensResponse,
+    HoloEmbedParams,
+    HoloEmbedResponse,
+    HoloGenerateParams,
     HoloMessage,
     HoloModelInfo,
+    HoloModelListParams,
     HoloRequest,
     HoloRequestMetadata,
 } from '@holokai/holo-types/holo';
@@ -27,6 +33,7 @@ export interface HoloChatParams {
     application?: string;
     thread_id?: string;
     branch?: string;
+    protocol?: string;
 }
 
 /** Configuration options for {@link HoloClient}. */
@@ -45,4 +52,8 @@ export interface HoloClientOptions {
     timeout?: number;
 }
 
-export type {HoloModelInfo, HoloApplicationInfo, HoloRequest};
+export type {
+    HoloModelInfo, HoloApplicationInfo, HoloRequest,
+    HoloGenerateParams, HoloEmbedParams, HoloEmbedResponse,
+    HoloCountTokensParams, HoloCountTokensResponse, HoloModelListParams,
+};

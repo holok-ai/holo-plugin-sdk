@@ -103,8 +103,10 @@ export class HoloStream implements AsyncIterable<HoloStreamEvent> {
     async finalResponse(): Promise<HoloResponse> {
         await this.consume();
         if (this.failedError) throw this.failedError;
-        if (this.completedResponse) return this.completedResponse;
-        return this.accumulator.toResponse();
+        if (this.completedResponse?.output?.length) return this.completedResponse;
+        const accumulated = this.accumulator.toResponse();
+        if (accumulated.output.length) return accumulated;
+        return this.completedResponse ?? accumulated;
     }
 
     /** Cancel the in-flight stream. */

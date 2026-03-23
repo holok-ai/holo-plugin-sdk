@@ -1,26 +1,7 @@
 import {describe, expect, it} from 'vitest';
-import {HoloStream} from '../../src/client/stream.js';
-import {HoloStreamError} from '../../src/client/errors.js';
+import {HoloStream, HoloStreamError} from '../../src/client';
 import type {HoloStreamEvent} from '@holokai/holo-types/holo';
-
-function makeEvents(events: HoloStreamEvent[]) {
-    let i = 0;
-    return {
-        async next() {
-            if (i >= events.length) return {done: true as const, value: undefined};
-            return {done: false as const, value: events[i++]!};
-        },
-        async return() {
-            return {done: true as const, value: undefined};
-        },
-        async throw(e: unknown) {
-            throw e;
-        },
-        [Symbol.asyncIterator]() {
-            return this;
-        },
-    } as AsyncGenerator<HoloStreamEvent>;
-}
+import {makeEvents} from './helpers';
 
 function sampleEvents(): HoloStreamEvent[] {
     return [

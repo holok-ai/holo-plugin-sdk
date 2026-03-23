@@ -11,7 +11,8 @@ export interface LoadPluginOptions {
 }
 
 export function createMockPluginContext(): PluginContext {
-    const noop = () => {};
+    const noop = () => {
+    };
     const noopLogger = {
         level: 'silent',
         info: noop,

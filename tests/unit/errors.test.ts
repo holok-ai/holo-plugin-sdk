@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {HoloApiError, HoloStreamError, HoloTimeoutError} from '../../src/client/errors.js';
+import {HoloApiError, HoloStreamError, HoloTimeoutError} from '../../src/client';
 
 describe('HoloApiError', () => {
     it('sets name, message, and status', () => {

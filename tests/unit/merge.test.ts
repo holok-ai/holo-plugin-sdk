@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {HoloStreamAccumulator} from '../../src/client/merge.js';
+import {HoloStreamAccumulator} from '../../src/client';
 import type {HoloContent, HoloContentReasoning, HoloContentText, HoloContentToolCall} from '@holokai/holo-types/holo';
 
 describe('HoloStreamAccumulator', () => {

@@ -1,19 +1,20 @@
 import 'reflect-metadata';
-import {describe, it, expect, beforeAll, afterEach} from 'vitest';
+import {afterEach, beforeAll, describe, expect, it} from 'vitest';
 import {container} from 'tsyringe';
 import type {HoloLogger} from '@holokai/holo-types/logger';
 import {
+    clearPluginCache,
     discoverPlugins,
-    loadPlugin,
-    loadAllPlugins,
-    loadPluginFromPackage,
     familyFromPackage,
     getLoadedPlugins,
-    clearPluginCache,
-} from '../../src/plugin/loader';
+    loadAllPlugins,
+    loadPlugin,
+    loadPluginFromPackage,
+} from '../../src';
 
 beforeAll(() => {
-    const noop = () => {};
+    const noop = () => {
+    };
     const noopLogger = {
         level: 'silent', info: noop, warn: noop, error: noop,
         debug: noop, verbose: noop, child: () => noopLogger,

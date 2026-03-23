@@ -1,5 +1,6 @@
 import type {ProviderEvent, WireChunk} from '@holokai/holo-types/provider';
-import type {HoloStreamEvent} from '@holokai/holo-types/holo';
+import type {HoloStreamEvent, HoloUsage} from '@holokai/holo-types/holo';
+import type {ProtocolCapability} from '@holokai/holo-types/entities';
 import {BaseWireAdapter} from './base';
 import {HoloResponse} from "@holokai/holo-types";
 import {pickDefined} from "../../core";
@@ -9,6 +10,14 @@ export class HoloWireAdapter extends BaseWireAdapter {
     private toolCalls: Map<number, { id?: string; name: string; arguments: string }> = new Map();
     private responseId?: string;
     private model?: string;
+    private firstEvent = true;
+    private readonly capability: ProtocolCapability | undefined;
+
+    constructor(requestId: string, isStreaming: boolean, initialModel?: string, capability?: ProtocolCapability) {
+        super(requestId, isStreaming);
+        if (initialModel) this.model = initialModel;
+        this.capability = capability;
+    }
 
     formatWire(data: string | HoloStreamEvent): string {
         if (typeof data === 'string') {
@@ -58,27 +67,58 @@ export class HoloWireAdapter extends BaseWireAdapter {
 
     protected async fromNonStreaming(ev: ProviderEvent): Promise<WireChunk[]> {
         if (ev.type === 'done') {
-            const response = this.buildFinalResponse(ev);
+            if (this.capability === 'embed' || this.capability === 'metrics') {
+                return [await this.chunkify(ev, async () => JSON.stringify(ev.message), true)];
+            }
+            const response = ev.holoResponse ?? this.buildFinalResponse(ev);
             return [await this.chunkify(ev, async () => JSON.stringify(response), true)];
         }
         if (ev.type === 'error') {
+            const status = ev.status ?? 500;
+            const errorBody = typeof ev.error === 'string'
+                ? {message: ev.error}
+                : (ev.error ?? {message: ev.text ?? 'Unknown error'});
             const errorEvent: HoloStreamEvent = {
                 type: 'response.failed',
-                error: {message: String(ev.error), code: String(ev.status ?? 500)},
+                error: {message: errorBody.message ?? ev.text ?? String(ev.error), code: String(status)},
             };
-            const opts: { status: number; headers?: Record<string, string> } = {status: ev.status ?? 400};
+            const opts: { status: number; headers?: Record<string, string> } = {status};
             if (ev.headers) opts.headers = ev.headers;
             return [await this.chunkify(ev, async () => JSON.stringify(errorEvent), true, opts)];
         }
         return [];
     }
 
-    protected async onStreamEvent(_ev: Extract<ProviderEvent, { type: 'stream_event' }>): Promise<WireChunk[]> {
-        return [];
+    protected async fromStreaming(ev: ProviderEvent): Promise<WireChunk[]> {
+        const chunks: WireChunk[] = [];
+
+        if (this.firstEvent) {
+            this.firstEvent = false;
+            const createdEvent = this.emitCreated(this.requestId, this.model ?? '');
+            chunks.push(await this.chunkify(ev, async () => this.formatWire(createdEvent)));
+        }
+
+        switch (ev.type) {
+            case 'text_delta': {
+                const deltaEvent = this.emitTextDelta(0, ev.text);
+                chunks.push(await this.chunkify(ev, async () => this.formatWire(deltaEvent)));
+                return chunks;
+            }
+            case 'stream_event':
+                return chunks;
+            case 'done':
+                chunks.push(...await this.onDoneStreaming(ev));
+                return chunks;
+            case 'error':
+                chunks.push(...await this.onErrorStreaming(ev));
+                return chunks;
+            default:
+                return chunks;
+        }
     }
 
     protected async onDoneStreaming(ev: Extract<ProviderEvent, { type: 'done' }>): Promise<WireChunk[]> {
-        const response = this.buildFinalResponse(ev);
+        const response = ev.holoResponse ?? this.buildFinalResponse(ev);
         const completedEvent: HoloStreamEvent = {
             type: 'response.completed',
             response,
@@ -94,9 +134,13 @@ export class HoloWireAdapter extends BaseWireAdapter {
         if (this.wireSeq === 0) {
             return this.fromNonStreaming(ev);
         }
+        const status = ev.status ?? 500;
+        const errorBody = typeof ev.error === 'string'
+            ? {message: ev.error}
+            : (ev.error ?? {message: ev.text ?? 'Unknown error'});
         const errorEvent: HoloStreamEvent = {
             type: 'response.failed',
-            error: {message: String(ev.error), code: String(ev.status ?? 500)},
+            error: {message: errorBody.message ?? ev.text ?? String(ev.error), code: String(status)},
         };
         return [await this.chunkify(ev, async () => this.formatWire(errorEvent), true)];
     }
@@ -108,19 +152,19 @@ export class HoloWireAdapter extends BaseWireAdapter {
             output.push({role: 'assistant' as const, content: ev.text || this.textAccumulator});
         }
 
+        const usage: HoloUsage = {};
+        if (ev.metrics.inputTokens) usage.input_tokens = ev.metrics.inputTokens;
+        if (ev.metrics.outputTokens) usage.output_tokens = ev.metrics.outputTokens;
+        const total = ev.metrics.inputTokens + ev.metrics.outputTokens;
+        if (total) usage.total_tokens = total;
+
         return {
             id: this.responseId ?? ev.requestId,
             model: this.model ?? '',
             output,
             created: Date.now(),
             finish_reason: mapFinishReason(ev),
-            usage: pickDefined({
-                input_tokens: ev.metrics.inputTokens,
-                output_tokens: ev.metrics.outputTokens,
-                total_tokens: ev.metrics.totalTokens,
-                time_to_first_token: ev.metrics.timeToFirstToken,
-                total_processing_time: ev.metrics.totalProcessingTime
-            })
+            usage,
         };
     }
 }

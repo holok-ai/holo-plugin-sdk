@@ -7,7 +7,11 @@ export {HoloApiError, HoloStreamError, HoloTimeoutError} from './errors';
 export {
     HoloOutput, getMessageText, getMessageReasoning, getMessageToolCalls, getMessageInvalidToolCalls
 } from './output';
-export type {HoloClientOptions, HoloChatParams, HoloModelInfo, HoloApplicationInfo} from './types';
+export type {
+    HoloClientOptions, HoloChatParams, HoloModelInfo, HoloApplicationInfo,
+    HoloGenerateParams, HoloEmbedParams, HoloEmbedResponse,
+    HoloCountTokensParams, HoloCountTokensResponse, HoloModelListParams,
+} from './types';
 export type {HoloToolRunnerOptions, HoloToolCallInfo, HoloToolResult} from './runner';
 export type {
     HoloThread, HoloThreadCreateParams, HoloThreadUpdateParams, HoloThreadListParams,

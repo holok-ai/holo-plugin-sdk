@@ -1,5 +1,5 @@
 import type {HoloInvalidToolCall, HoloMessage, HoloResponse, HoloToolCall,} from '@holokai/holo-types/holo';
-import {isReasoningContent, isTextContent, isToolCallContent} from '../holo/content';
+import {isReasoningContent, isTextContent, isToolCallContent} from '../holo';
 
 /** Extract concatenated text from a single message. Returns `''` if content is not text-based. */
 export function getMessageText(message: HoloMessage): string {

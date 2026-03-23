@@ -1,5 +1,5 @@
-import type {HoloWorkerRequest, WorkerResponseEnvelope, HttpRequestDetails} from '@holokai/holo-types/worker';
-import type {Provider, Application} from '@holokai/holo-types/entities';
+import type {HoloWorkerRequest, HttpRequestDetails, WorkerResponseEnvelope} from '@holokai/holo-types/worker';
+import type {Application, Provider} from '@holokai/holo-types/entities';
 import type {ProviderProtocol} from '@holokai/holo-types/provider';
 import {pickDefined} from '../core';
 import {v4 as uuidv4} from 'uuid';

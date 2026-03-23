@@ -1,6 +1,12 @@
 import type {
     HoloContent,
+    HoloCountTokensParams,
+    HoloCountTokensResponse,
+    HoloEmbedParams,
+    HoloEmbedResponse,
+    HoloGenerateParams,
     HoloMessage,
+    HoloModelListParams,
     HoloPagedResponse,
     HoloRequest,
     HoloResponse,
@@ -55,6 +61,9 @@ import {FetchTransport} from './transport';
  */
 export class HoloClient {
     readonly chat: ChatNamespace;
+    readonly generate: GenerateNamespace;
+    readonly embed: EmbedNamespace;
+    readonly metrics: MetricsNamespace;
     readonly models: ModelsNamespace;
     readonly applications: ApplicationsNamespace;
     readonly threads: ThreadsNamespace;
@@ -73,6 +82,9 @@ export class HoloClient {
         if (options.defaultApplication) this.defaultApplication = options.defaultApplication;
 
         this.chat = new ChatNamespace(this);
+        this.generate = new GenerateNamespace(this);
+        this.embed = new EmbedNamespace(this);
+        this.metrics = new MetricsNamespace(this);
         this.models = new ModelsNamespace(this);
         this.applications = new ApplicationsNamespace(this);
         this.threads = new ThreadsNamespace(this);
@@ -213,6 +225,7 @@ class ChatNamespace {
         if (app) request.application = app;
         if (params.thread_id) request.thread_id = params.thread_id;
         if (params.branch) request.branch = params.branch;
+        if (params.protocol) request.protocol = params.protocol;
         return request;
     }
 }
@@ -227,14 +240,52 @@ interface ApiItemResponse<T> {
     data: T;
 }
 
+/** Namespace for prompt-in, text-out generation (e.g. ollama.generate). */
+class GenerateNamespace {
+    constructor(private readonly client: HoloClient) {
+    }
+
+    async create(params: HoloGenerateParams): Promise<HoloResponse> {
+        return this.client.request<HoloResponse>('POST', '/generate', {...params, stream: false});
+    }
+
+    async stream(params: HoloGenerateParams): Promise<HoloStream> {
+        const abortController = new AbortController();
+        const body = {...params, stream: true};
+        const {body: responseBody} = await this.client.streamRequest('/generate', body, abortController.signal);
+        const events = parseSSEStream(responseBody, abortController.signal);
+        return new HoloStream(events, abortController);
+    }
+}
+
+/** Namespace for embedding requests. */
+class EmbedNamespace {
+    constructor(private readonly client: HoloClient) {
+    }
+
+    async create(params: HoloEmbedParams): Promise<HoloEmbedResponse> {
+        return this.client.request<HoloEmbedResponse>('POST', '/embed', params);
+    }
+}
+
+/** Namespace for metrics operations (e.g. token counting). */
+class MetricsNamespace {
+    constructor(private readonly client: HoloClient) {
+    }
+
+    async countTokens(params: HoloCountTokensParams): Promise<HoloCountTokensResponse> {
+        return this.client.request<HoloCountTokensResponse>('POST', '/metrics/count-tokens', params);
+    }
+}
+
 /** Namespace for listing available models. */
 class ModelsNamespace {
     constructor(private readonly client: HoloClient) {
     }
 
-    /** List all models available to the authenticated user. */
-    async list(): Promise<HoloModelInfo[]> {
-        const result = await this.client.request<ApiListResponse<HoloModelInfo>>('GET', '/models');
+    async list(params?: HoloModelListParams): Promise<HoloModelInfo[]> {
+        const qs = toQueryString(params);
+        const result = await this.client.request<ApiListResponse<HoloModelInfo>>('GET', `/models${qs}`);
         return result.data;
     }
 }

@@ -5,7 +5,7 @@ import {
     getMessageText,
     getMessageToolCalls,
     HoloOutput,
-} from '../../src/client/output.js';
+} from '../../src/client';
 import type {HoloMessage, HoloResponse} from '@holokai/holo-types/holo';
 
 describe('getMessageText', () => {

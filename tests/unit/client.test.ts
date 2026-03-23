@@ -1,6 +1,5 @@
 import {describe, expect, it, vi} from 'vitest';
-import {HoloClient} from '../../src/client/client.js';
-import {HoloApiError, HoloTimeoutError} from '../../src/client/errors.js';
+import {HoloApiError, HoloClient, HoloTimeoutError} from '../../src/client';
 
 function mockFetchOk(body: unknown) {
     return vi.fn().mockResolvedValue(new Response(JSON.stringify(body), {

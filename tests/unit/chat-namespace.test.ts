@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from 'vitest';
-import {HoloClient} from '../../src/client/client.js';
+import {HoloClient} from '../../src/client';
 import type {HoloResponse} from '@holokai/holo-types/holo';
 
 const mockResponse: HoloResponse = {

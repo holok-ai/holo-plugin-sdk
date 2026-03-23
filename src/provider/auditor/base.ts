@@ -10,6 +10,7 @@ import {
     WorkerRequestEnvelope,
     WorkerResponseEnvelope
 } from "@holokai/holo-types";
+import type {HoloFinishReason, HoloUsage} from "@holokai/holo-types/holo";
 import {ClassLogger, pickDefined} from "../../core";
 import type {IAuditor} from "@holokai/holo-types/provider";
 import {ProviderEvent} from "@holokai/holo-types/provider";
@@ -72,32 +73,6 @@ export function extractTextContent(content: unknown): string | null {
 }
 
 /**
- * Extract text from Gemini-style `parts`.
- * Supports:
- * - string
- * - array of parts with { text: string }
- */
-export function extractTextParts(parts: unknown): string | null {
-    if (typeof parts === "string") {
-        return normalizeText(parts);
-    }
-
-    if (!Array.isArray(parts)) return null;
-
-    const text = parts
-        .flatMap((part: any) => {
-            if (!part || typeof part !== "object") return [];
-            if (typeof part.text === "string") return [part.text];
-            return [];
-        })
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .join("\n");
-
-    return normalizeText(text);
-}
-
-/**
  * Find the first/last message with the given role and extract text from it.
  */
 export function extractPromptByRole<T extends RoleLike>(
@@ -143,6 +118,37 @@ export function extractTopLevelPrompt(value: unknown): string | null {
 
 export abstract class BaseAuditor extends ClassLogger implements IAuditor {
     abstract readonly provider: string;
+
+    mapFinishReason(nativeResponse: any, _protocolName?: string): HoloFinishReason {
+        if (!nativeResponse) return 'stop';
+        const reason = nativeResponse.stop_reason ?? nativeResponse.finish_reason ?? nativeResponse.choices?.[0]?.finish_reason;
+        switch (reason) {
+            case 'end_turn':
+            case 'stop':
+                return 'stop';
+            case 'max_tokens':
+            case 'length':
+                return 'length';
+            case 'tool_use':
+            case 'tool_calls':
+                return 'tool_calls';
+            case 'content_filter':
+                return 'content_filter';
+            default:
+                return 'stop';
+        }
+    }
+
+    mapUsage(nativeResponse: any, _protocolName?: string): HoloUsage {
+        if (!nativeResponse) return {};
+        const usage = nativeResponse.usage;
+        if (!usage) return {};
+        return pickDefined({
+            input_tokens: usage.input_tokens ?? usage.prompt_tokens,
+            output_tokens: usage.output_tokens ?? usage.completion_tokens,
+            total_tokens: usage.total_tokens ?? (((usage.input_tokens ?? usage.prompt_tokens ?? 0) + (usage.output_tokens ?? usage.completion_tokens ?? 0)) || undefined),
+        });
+    }
 
     async createWorkerRequestEnvelope(workerRequest: HoloWorkerRequest): Promise<WorkerRequestEnvelope> {
         const logger = this.mlog(this.createWorkerRequestEnvelope);
