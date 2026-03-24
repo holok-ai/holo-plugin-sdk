@@ -5,11 +5,7 @@
  * If any SDK type drifts from the OpenAPI spec, the compiler will error here.
  */
 
-import type {paths, components} from '../../holo-types/src/generated/holo-api';
-import type {HoloRequest} from '@holokai/holo-types/holo';
-import type {HoloResponse} from '@holokai/holo-types/holo';
-import type {HoloModelInfo} from '@holokai/holo-types/holo';
-import type {HoloApplicationInfo} from '@holokai/holo-types/holo';
+import type {components, paths} from '../../holo-types/src/generated/holo-api';
 import type {HoloErrorCode} from '@holokai/holo-types/holo';
 
 // ─── Helper types ──────────────────────────────────────────────────────────

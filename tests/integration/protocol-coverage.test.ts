@@ -15,8 +15,17 @@ interface FamilyProtocols {
     metrics: string[];
 }
 
-const noop = () => {};
-const noopLogger = {level: 'silent', info: noop, warn: noop, error: noop, debug: noop, verbose: noop, child: () => noopLogger} as unknown as HoloLogger;
+const noop = () => {
+};
+const noopLogger = {
+    level: 'silent',
+    info: noop,
+    warn: noop,
+    error: noop,
+    debug: noop,
+    verbose: noop,
+    child: () => noopLogger
+} as unknown as HoloLogger;
 container.register('LoggerFactory', {useValue: () => noopLogger});
 
 const plugins = await loadAllPlugins();

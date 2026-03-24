@@ -1,4 +1,5 @@
 import type {
+    DiscoveredModel,
     IAuditor,
     IProvider,
     IProviderTranslator,
@@ -34,6 +35,8 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
     }
 
     abstract getModels(allowedModels: string[] | true): Promise<any>;
+
+    abstract discoverModels(): Promise<DiscoveredModel[]>;
 
     async auditRequest(workerRequest: HoloWorkerRequest): Promise<ProviderRequest> {
         return this.auditor.auditRequest(workerRequest);
@@ -140,7 +143,8 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
                                 .map((m: any) => typeof m.content === 'string' ? m.content : '')
                                 .join('');
                             if (extractedText) fullText = extractedText;
-                        } catch { /* best-effort fallback */ }
+                        } catch { /* best-effort fallback */
+                        }
                     }
 
                     const holoResponse: HoloResponse | undefined = request.isHoloNative ? {

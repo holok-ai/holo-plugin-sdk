@@ -2,7 +2,8 @@
 
 ## Executive Summary
 
-This document verifies that the Holo universal format in `@holokai/holo-sdk` can adequately represent all portable features
+This document verifies that the Holo universal format in `@holokai/holo-sdk` can adequately represent all portable
+features
 from Claude, OpenAI, and Ollama providers.
 
 **Status**: ✅ **VERIFIED** - Holo format supports all portable capabilities
