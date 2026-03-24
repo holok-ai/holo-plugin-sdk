@@ -1,35 +1,10 @@
 # @holokai/holo-sdk
 
-## 1.6.0
-
-### Minor Changes
-
-- Add multi-source ETL pipeline with model dictionary matching, stub removal, and canonicalization. New entity types for model dictionary, aliases, and match results. New normalize/matching utilities in SDK. Remove stub behavior from model dictionary. Add LiteLLM and models.dev sources with per-field precedence canonicalization.
-
-### Patch Changes
-
-- Updated dependencies
-  - @holokai/holo-types@1.6.0
-
-## 1.5.0
-
-### Minor Changes
-
-- Add multi-capability SDK support: generate, embed, and metrics namespaces on HoloClient, generalized protocol
-  resolution, auditor mapFinishReason/mapUsage with per-plugin overrides, and new holo-types for
-  embed/generate/metrics/models.
-
-### Patch Changes
-
-- Updated dependencies
-  - @holokai/holo-types@1.5.0
-
 ## 1.4.0
 
 ### Minor Changes
 
-- Rename test-sdk to holo-test, move plugin loader to holo-sdk, add ProviderProtocol and StreamEventSequence types, add
-  streamEventSequence to all plugin CHAT routes, add live integration test infrastructure.
+- Rename test-sdk to holo-test, move plugin loader to holo-sdk, add ProviderProtocol and StreamEventSequence types, add streamEventSequence to all plugin CHAT routes, add live integration test infrastructure.
 
 ### Patch Changes
 
@@ -40,9 +15,7 @@
 
 ### Patch Changes
 
-- a0062e7: Restructure packages: rename @holokai/sdk → @holokai/holo-sdk, @holokai/types → @holokai/holo-types. Delete
-  packages/lib (event processor moved to holo-sdk). Merge test-harness + test-utils into test-sdk. Add moku-sdk and
-  moku-types packages. Update all imports across app and plugins.
+- a0062e7: Restructure packages: rename @holokai/sdk → @holokai/holo-sdk, @holokai/types → @holokai/holo-types. Delete packages/lib (event processor moved to holo-sdk). Merge test-harness + test-utils into test-sdk. Add moku-sdk and moku-types packages. Update all imports across app and plugins.
 - Updated dependencies [a0062e7]
   - @holokai/holo-types@1.3.2
 
@@ -52,8 +25,7 @@
 
 - ff7aa9e: Fix double-encoding of JSONB fields in audit records
   - Remove JSON.stringify from request_raw in BaseAuditor (was pre-stringifying before DB layer stringified again)
-  - Remove redundant JSON.stringify calls in request.db and response.db for metadata, request_raw, response_raw,
-    usage_raw (pg driver auto-serializes objects for jsonb columns)
+  - Remove redundant JSON.stringify calls in request.db and response.db for metadata, request_raw, response_raw, usage_raw (pg driver auto-serializes objects for jsonb columns)
 
 - d813d15: Unify audit pipeline: HoloWorkerRequest as single audit record
   - Extract `WorkerEnvelopeBase` shared interface from request/response envelopes
@@ -62,8 +34,7 @@
   - Audit service reconstructs both request and response DB records from a single `logAuditRecord()` call
   - Consolidate to single audit queue consumer (remove separate request/response queues)
   - Delete dead code: `HoloWorkerResponse`, `WorkerResponseFactory`, legacy OpenAI chatcompletions service
-  - Fix test fixtures: replace removed `LlmStatus` with `ProviderResponseStatus`, add missing metrics to audit-tester,
-    fix OpenAI Responses API auditor for non-streaming message shape
+  - Fix test fixtures: replace removed `LlmStatus` with `ProviderResponseStatus`, add missing metrics to audit-tester, fix OpenAI Responses API auditor for non-streaming message shape
   - Slim `PipelineResult` to `{ text: string }`
 
 - Updated dependencies [d813d15]
