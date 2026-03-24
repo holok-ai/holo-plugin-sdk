@@ -1,6 +1,6 @@
 # @holokai/holo-sdk
 
-SDK for Holo plugin development. Provides base classes, utilities, and types for building provider plugins.
+SDK for the Holo platform. Provides base classes for building provider plugins and a client SDK for consuming the Holo API.
 
 ## Installation
 
@@ -29,12 +29,26 @@ The SDK provides:
 ## Package Exports
 
 ```typescript
+// Plugin development
 import {BasePlugin} from '@holokai/holo-sdk/plugin';
 import {BaseProvider, BaseAuditor, BaseTranslator, BaseWireAdapter} from '@holokai/holo-sdk/provider';
 import {ClassLogger, pickDefined, stringifyError} from '@holokai/holo-sdk';
 import {HoloRequestDefaults} from '@holokai/holo-sdk/holo';
 import {NotificationServiceToken, NotificationEventFactory} from '@holokai/holo-sdk/notification';
+
+// Client SDK
+import {HoloClient, HoloRequestBuilder, HoloStream, HoloToolRunner} from '@holokai/holo-sdk/client';
 ```
+
+| Subpath | Description |
+|---------|-------------|
+| `@holokai/holo-sdk` | Core utilities: `pickDefined`, `ClassLogger`, `AsyncEventQueue`, logging |
+| `@holokai/holo-sdk/plugin` | `BasePlugin`, plugin loader, discovery |
+| `@holokai/holo-sdk/provider` | `BaseProvider`, `BaseAuditor`, `BaseTranslator`, `BaseWireAdapter`, event processor |
+| `@holokai/holo-sdk/holo` | Holo format helpers, content type guards, request factories |
+| `@holokai/holo-sdk/core` | Low-level utilities |
+| `@holokai/holo-sdk/notification` | Notification service, event factory |
+| `@holokai/holo-sdk/client` | `HoloClient`, `HoloRequestBuilder`, streaming, tool runner |
 
 ## Building a Provider Plugin
 
@@ -194,6 +208,48 @@ import {MyProviderPlugin} from './plugin';
 export default new MyProviderPlugin();
 ```
 
+## Client SDK
+
+The `@holokai/holo-sdk/client` subpath provides a typed client for consuming the Holo API:
+
+```typescript
+import {HoloClient} from '@holokai/holo-sdk/client';
+
+const client = new HoloClient({baseUrl: 'http://localhost:3000', token: 'your-token'});
+
+// Simple chat
+const response = await client.chat.send({
+    model: 'gpt-4o',
+    messages: [{role: 'user', content: 'Hello'}],
+});
+
+// Fluent builder
+const response = await client.chat.builder()
+    .model('gpt-4o')
+    .system('You are helpful.')
+    .user('Hello')
+    .temperature(0.7)
+    .send();
+
+// Streaming
+const stream = await client.chat.builder()
+    .model('gpt-4o')
+    .user('Write a poem')
+    .stream();
+
+for await (const event of stream) {
+    process.stdout.write(event.text ?? '');
+}
+
+// Tool calling
+import {HoloToolRunner} from '@holokai/holo-sdk/client';
+
+const runner = new HoloToolRunner(client, tools, handlers);
+const result = await runner.run({model: 'gpt-4o', messages});
+```
+
+See [docs/README.md](docs/README.md) for the full client SDK reference.
+
 ## Reference Implementations
 
 | Plugin                            | Key Features                                                                   |
@@ -201,6 +257,7 @@ export default new MyProviderPlugin();
 | [OpenAI](../holo-provider-openai) | Dual protocols (completions + responses), dual wire adapters, tool calling     |
 | [Claude](../holo-provider-claude) | 6-event streaming lifecycle, content blocks, extended thinking, prompt caching |
 | [Ollama](../holo-provider-ollama) | Chat + generate protocols, local deployment, passthrough default handler       |
+| [Gemini](../holo-provider-gemini) | Dual protocols (generate + stream), embedding, vision, 1M token context        |
 
 ## License
 

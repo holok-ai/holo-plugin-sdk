@@ -55,6 +55,11 @@
       "import": "./dist/core/index.js",
       "require": "./dist/core/index.js"
     },
+    "./matching": {
+      "types": "./dist/matching/index.d.ts",
+      "import": "./dist/matching/index.js",
+      "require": "./dist/matching/index.js"
+    },
     "./notification": {
       "types": "./dist/notification/index.d.ts",
       "import": "./dist/notification/index.js",
