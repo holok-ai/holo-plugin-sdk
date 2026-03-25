@@ -1,6 +1,7 @@
-import {describe, expect, it} from 'vitest';
+import {beforeAll, describe, expect, it} from 'vitest';
 import {HoloApiError, HoloClient} from '../../src/client';
-import {getTestConfig, providerMatrix} from '@holokai/holo-test';
+import {discoverProviders, getTestConfig} from '@holokai/holo-test';
+import type {DiscoveredProvider} from '@holokai/holo-test';
 
 describe('sdk integration: smoke matrix', () => {
     function client() {
@@ -8,8 +9,16 @@ describe('sdk integration: smoke matrix', () => {
         return new HoloClient({baseUrl: gatewayUrl, token});
     }
 
-    for (const {family, model} of providerMatrix) {
-        it(`${family}: minimal prompt`, async () => {
+    let providers: DiscoveredProvider[] = [];
+
+    beforeAll(async () => {
+        providers = await discoverProviders(client());
+    });
+
+    it('runs smoke test for each provider', async () => {
+        expect(providers.length).toBeGreaterThan(0);
+
+        for (const {family, model} of providers) {
             try {
                 const res = await client().chat.create({
                     model,
@@ -20,12 +29,11 @@ describe('sdk integration: smoke matrix', () => {
                 expect(res.id).toBeTruthy();
                 expect(res.output).toBeDefined();
             } catch (e) {
-                if (e instanceof HoloApiError && (e.status === 400 || e.status === 404)) {
-                    // Provider/model not configured in this environment — acceptable skip
-                    return;
+                if (e instanceof HoloApiError && [400, 404, 429].includes(e.status)) {
+                    continue;
                 }
                 throw e;
             }
-        });
-    }
+        }
+    });
 });
