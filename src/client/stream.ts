@@ -103,8 +103,15 @@ export class HoloStream implements AsyncIterable<HoloStreamEvent> {
     async finalResponse(): Promise<HoloResponse> {
         await this.consume();
         if (this.failedError) throw this.failedError;
-        if (this.completedResponse?.output?.length) return this.completedResponse;
         const accumulated = this.accumulator.toResponse();
+        // If the server says tool_calls but the completedResponse is missing them, use accumulator
+        if (this.completedResponse?.finish_reason === 'tool_calls') {
+            const hasToolCalls = this.completedResponse.output?.some(
+                (m) => m.tool_calls?.length || (Array.isArray(m.content) && m.content.some((b: any) => b.type === 'tool_call'))
+            );
+            if (!hasToolCalls && accumulated.output?.length) return accumulated;
+        }
+        if (this.completedResponse?.output?.length) return this.completedResponse;
         if (accumulated.output.length) return accumulated;
         return this.completedResponse ?? accumulated;
     }

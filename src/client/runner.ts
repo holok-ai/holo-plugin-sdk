@@ -141,7 +141,10 @@ export class HoloToolRunner {
 
             this.emit('iteration', {index: i, response});
 
-            if (response.finish_reason !== 'tool_calls') {
+            const hasToolCallsInOutput = response.output?.some(
+                (m) => m.tool_calls?.length || (Array.isArray(m.content) && m.content.some((b) => b.type === 'tool_call'))
+            );
+            if (response.finish_reason !== 'tool_calls' && !hasToolCallsInOutput) {
                 return response;
             }
 
