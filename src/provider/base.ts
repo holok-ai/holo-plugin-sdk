@@ -95,6 +95,8 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
                     push({type: "text_delta", text} as ProviderEvent);
                 }
             },
+            emitToolCallDelta: (index: number, delta: { id?: string; name?: string; arguments_delta?: string }) =>
+                push({type: "tool_call_delta", index, delta} as ProviderEvent),
         }) as ProviderContext;
 
         let runner: ProviderRunner<Final>;
@@ -147,7 +149,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
                         }
                     }
 
-                    const holoResponse: HoloResponse | undefined = request.isHoloNative ? {
+                    const holoResponse: HoloResponse | undefined = (request.isHoloNative && !request.isStreaming) ? {
                         id: requestId,
                         model: await this.getModelNameFromRequest(requestPayload) ?? '',
                         output: fullText ? [{role: 'assistant', content: fullText}] : [],

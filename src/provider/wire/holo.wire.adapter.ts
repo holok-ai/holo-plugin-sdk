@@ -1,4 +1,4 @@
-import type {ProviderEvent, WireChunk} from '@holokai/holo-types/provider';
+import type {ProviderEvent, ProviderToolCallDeltaEvent, WireChunk} from '@holokai/holo-types/provider';
 import type {HoloContent, HoloMessage, HoloStreamEvent, HoloToolCall, HoloUsage} from '@holokai/holo-types/holo';
 import type {ProtocolCapability} from '@holokai/holo-types/entities';
 import {BaseWireAdapter} from './base';
@@ -104,18 +104,14 @@ export class HoloWireAdapter extends BaseWireAdapter {
                 chunks.push(await this.chunkify(ev, async () => this.formatWire(deltaEvent)));
                 return chunks;
             }
-            case 'stream_event': {
-                const rawEvent = ev.event as Record<string, unknown> | undefined;
-                this.log.debug(`[HoloWireAdapter] stream_event type=${rawEvent?.['type']}`);
-                const toolChunks = this.toolCallChunksFromStreamEvent(ev.event);
-                if (toolChunks.length > 0) {
-                    this.log.debug(`[HoloWireAdapter] emitting ${toolChunks.length} tool_call_delta(s)`);
-                }
-                for (const holoEvent of toolChunks) {
-                    chunks.push(await this.chunkify(ev, async () => this.formatWire(holoEvent)));
-                }
+            case 'tool_call_delta': {
+                const tcEv = ev as ProviderToolCallDeltaEvent;
+                const holoEvent = this.emitToolCallDelta(tcEv.index, tcEv.delta);
+                chunks.push(await this.chunkify(ev, async () => this.formatWire(holoEvent)));
                 return chunks;
             }
+            case 'stream_event':
+                return chunks;
             case 'done':
                 this.log.debug(`[HoloWireAdapter] done — finish_reason=${JSON.stringify((ev.message as Record<string, unknown>)?.['stop_reason'] ?? (ev.message as Record<string, unknown>)?.['finish_reason'])}, toolCalls=${this.toolCalls.size}`);
                 chunks.push(...await this.onDoneStreaming(ev));
@@ -154,87 +150,6 @@ export class HoloWireAdapter extends BaseWireAdapter {
             error: {message: errorBody.message ?? ev.text ?? String(ev.error), code: String(status)},
         };
         return [await this.chunkify(ev, async () => this.formatWire(errorEvent), true)];
-    }
-
-    // TODO: This method contains provider-specific parsing (Claude content_block_start/delta,
-    // OpenAI choices[0].delta.tool_calls, Ollama message.tool_calls). Providers should normalize
-    // tool calls into a common ProviderEvent format (e.g. a 'tool_call_delta' event type) in their
-    // stream translators so the wire adapter only deals with Holo-normalized types.
-    private toolCallChunksFromStreamEvent(event: Record<string, unknown>): HoloStreamEvent[] {
-        if (!event || typeof event !== 'object') return [];
-
-        // --- Claude format: content_block_start / content_block_delta ---
-        if (event['type'] === 'content_block_start') {
-            const cb = event['content_block'] as Record<string, unknown> | undefined;
-            if (cb?.['type'] === 'tool_use') {
-                const index = typeof event['index'] === 'number' ? event['index'] : 0;
-                const delta: { id?: string; name?: string } = {};
-                if (typeof cb['id'] === 'string') delta.id = cb['id'];
-                if (typeof cb['name'] === 'string') delta.name = cb['name'];
-                return [this.emitToolCallDelta(index, delta)];
-            }
-        }
-
-        if (event['type'] === 'content_block_delta') {
-            const delta = event['delta'] as Record<string, unknown> | undefined;
-            if (delta?.['type'] === 'input_json_delta') {
-                const index = typeof event['index'] === 'number' ? event['index'] : 0;
-                const partial = typeof delta['partial_json'] === 'string' ? delta['partial_json'] : '';
-                return [this.emitToolCallDelta(index, {arguments_delta: partial})];
-            }
-        }
-
-        // --- OpenAI chat completions format: choices[0].delta.tool_calls ---
-        const choices = event['choices'] as Array<Record<string, unknown>> | undefined;
-        if (Array.isArray(choices) && choices.length > 0) {
-            const delta = choices[0]['delta'] as Record<string, unknown> | undefined;
-            const toolCalls = delta?.['tool_calls'] as Array<Record<string, unknown>> | undefined;
-            if (Array.isArray(toolCalls) && toolCalls.length > 0) {
-                const results: HoloStreamEvent[] = [];
-                for (const tc of toolCalls) {
-                    const index = typeof tc['index'] === 'number' ? tc['index'] : 0;
-                    const id = typeof tc['id'] === 'string' ? tc['id'] : undefined;
-                    const fn = tc['function'] as Record<string, unknown> | undefined;
-                    const name = typeof fn?.['name'] === 'string' ? fn['name'] : undefined;
-                    const argsDelta = typeof fn?.['arguments'] === 'string' ? fn['arguments'] : undefined;
-
-                    const d: Record<string, string> = {};
-                    if (id) { d.id = id; }
-                    if (name) { d.name = name; }
-                    if (d.id || d.name) {
-                        results.push(this.emitToolCallDelta(index, d));
-                    }
-                    if (argsDelta) {
-                        results.push(this.emitToolCallDelta(index, {arguments_delta: argsDelta}));
-                    }
-                }
-                return results;
-            }
-        }
-
-        // --- Ollama format: message.tool_calls array ---
-        const msg = event['message'] as Record<string, unknown> | undefined;
-        if (msg) {
-            const toolCalls = msg['tool_calls'] as Array<Record<string, unknown>> | undefined;
-            if (Array.isArray(toolCalls) && toolCalls.length > 0) {
-                const results: HoloStreamEvent[] = [];
-                for (let i = 0; i < toolCalls.length; i++) {
-                    const tc = toolCalls[i];
-                    const fn = tc['function'] as Record<string, unknown> | undefined;
-                    if (!fn) continue;
-                    const name = typeof fn['name'] === 'string' ? fn['name'] : '';
-                    const args = fn['arguments'] ?? {};
-                    const argsStr = typeof args === 'string' ? args : JSON.stringify(args);
-                    // Emit start (name) + full arguments in one shot since ollama sends complete tool calls
-                    const baseIndex = this.toolCalls.size + i;
-                    results.push(this.emitToolCallDelta(baseIndex, {name}));
-                    results.push(this.emitToolCallDelta(baseIndex, {arguments_delta: argsStr}));
-                }
-                return results;
-            }
-        }
-
-        return [];
     }
 
     private buildFinalResponse(ev: Extract<ProviderEvent, { type: 'done' }>): HoloResponse {
