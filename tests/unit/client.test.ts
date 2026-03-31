@@ -68,7 +68,7 @@ describe('HoloClient', () => {
             await client.request('GET', '/models');
 
             const [, init] = fetchFn.mock.calls[0]!;
-            expect(init.headers['User-Agent']).toMatch(/^holo-sdk-js/);
+            expect(init.headers['User-Agent']).toMatch(/^holo-sdk-js\/\d+\.\d+\.\d+/);
         });
 
         it('sends POST with JSON body and Content-Type', async () => {
@@ -117,7 +117,7 @@ describe('HoloClient', () => {
 
             const [, init] = fetchFn.mock.calls[0]!;
             expect(init.headers['Accept']).toBe('text/event-stream');
-            expect(init.headers['User-Agent']).toMatch(/^holo-sdk-js/);
+            expect(init.headers['User-Agent']).toMatch(/^holo-sdk-js\/\d+\.\d+\.\d+/);
         });
 
         it('throws HoloApiError on error response', async () => {

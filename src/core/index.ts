@@ -10,3 +10,4 @@ export * from './headers';
 export * from './binary';
 export * from './time-utils';
 export * from './tokenizer';
+export * from './version';

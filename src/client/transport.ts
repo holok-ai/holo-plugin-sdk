@@ -1,3 +1,4 @@
+import {VERSION} from '../core/version';
 import {HoloApiError, HoloTimeoutError} from './errors';
 
 interface TransportRequestOptions {
@@ -30,16 +31,7 @@ interface HoloTransport {
 }
 
 function getUserAgent(): string {
-    const base = 'holo-sdk-js';
-    try {
-        const {createRequire} = require('module');
-        const require_ = createRequire(import.meta.url);
-        const pkg = require_('../../../package.json') as { version?: string };
-        if (pkg.version) return `${base}/${pkg.version}`;
-    } catch {
-        // Bundler or browser — silently degrade
-    }
-    return base;
+    return `holo-sdk-js/${VERSION}`;
 }
 
 class FetchTransport implements HoloTransport {
