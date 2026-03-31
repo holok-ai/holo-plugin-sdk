@@ -28,6 +28,7 @@ describe('sdk integration: smoke matrix', () => {
 
                 expect(res.id).toBeTruthy();
                 expect(res.output).toBeDefined();
+                expect(res.usage?.output_tokens).toBeGreaterThan(0);
             } catch (e) {
                 if (e instanceof HoloApiError && [400, 404, 429].includes(e.status)) {
                     continue;

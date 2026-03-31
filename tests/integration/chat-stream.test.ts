@@ -18,6 +18,9 @@ describe('sdk integration: chat.stream', () => {
         const res = await stream.finalResponse();
         expect(res.id).toBeTruthy();
         expect(res.finish_reason).toBeTruthy();
+        expect(res.usage).toBeDefined();
+        expect(res.usage?.input_tokens).toBeGreaterThan(0);
+        expect(res.usage?.output_tokens).toBeGreaterThan(0);
     });
 
     it('create and stream both return output', async () => {

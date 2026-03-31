@@ -11,8 +11,8 @@ import {
     WorkerResponseEnvelope
 } from "@holokai/holo-types";
 import type {HoloFinishReason, HoloUsage} from "@holokai/holo-types/holo";
-import {ClassLogger, pickDefined} from "../../core";
-import type {IAuditor} from "@holokai/holo-types/provider";
+import {ClassLogger, countTokens, pickDefined} from "../../core";
+import type {IAuditor, TokenCountOptions} from "@holokai/holo-types/provider";
 import {ProviderEvent} from "@holokai/holo-types/provider";
 import type {
     FinishReason,
@@ -137,6 +137,10 @@ export abstract class BaseAuditor extends ClassLogger implements IAuditor {
             default:
                 return 'stop';
         }
+    }
+
+    countTokens(text: string, _opts?: TokenCountOptions): number {
+        return countTokens(text);
     }
 
     mapUsage(nativeResponse: any, _protocolName?: string): HoloUsage {

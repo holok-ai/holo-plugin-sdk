@@ -19,5 +19,8 @@ describe('sdk integration: chat.create', () => {
         expect(res.output).toBeDefined();
         expect(res.output.length).toBeGreaterThan(0);
         expect(res.finish_reason).toBe('stop');
+        expect(res.usage).toBeDefined();
+        expect(res.usage?.input_tokens).toBeGreaterThan(0);
+        expect(res.usage?.output_tokens).toBeGreaterThan(0);
     });
 });
