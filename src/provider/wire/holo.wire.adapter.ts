@@ -163,7 +163,10 @@ export class HoloWireAdapter extends BaseWireAdapter {
             if (text) contentBlocks.push({type: 'text', text});
             for (const [, tc] of sortedCalls) {
                 let args: Record<string, unknown> = {};
-                try { if (tc.arguments) args = JSON.parse(tc.arguments); } catch { /* ignore */ }
+                try {
+                    if (tc.arguments) args = JSON.parse(tc.arguments);
+                } catch { /* ignore */
+                }
                 const block: HoloContent = tc.id
                     ? {type: 'tool_call', id: tc.id, name: tc.name, arguments: args}
                     : {type: 'tool_call', name: tc.name, arguments: args};
@@ -171,7 +174,10 @@ export class HoloWireAdapter extends BaseWireAdapter {
             }
             const toolCallProjections: HoloToolCall[] = sortedCalls.map(([, tc]) => {
                 let args: Record<string, unknown> = {};
-                try { if (tc.arguments) args = JSON.parse(tc.arguments); } catch { /* ignore */ }
+                try {
+                    if (tc.arguments) args = JSON.parse(tc.arguments);
+                } catch { /* ignore */
+                }
                 const call: HoloToolCall = {type: 'function', function: {name: tc.name, arguments: args}};
                 if (tc.id) call.id = tc.id;
                 return call;

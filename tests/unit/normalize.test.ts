@@ -1,5 +1,11 @@
 import {describe, expect, it} from 'vitest';
-import {normalizeModelName, stripDate, stripProviderRevision, stripQuantization, stripChannel} from '../../src/matching/normalize';
+import {
+    normalizeModelName,
+    stripChannel,
+    stripDate,
+    stripProviderRevision,
+    stripQuantization
+} from '../../src/matching/normalize';
 
 describe('normalizeModelName', () => {
     describe('basic normalization', () => {

@@ -7,11 +7,10 @@ import type {
     ProviderEventMetrics,
     ProviderRunner
 } from "@holokai/holo-types/provider";
-import {ModelInfo, ProviderContext, ProviderEvent} from "@holokai/holo-types/provider";
+import {ModelInfo, ProviderContext, ProviderEvent, TokenCountType} from "@holokai/holo-types/provider";
 import {HoloWorkerRequest} from "@holokai/holo-types/worker";
 import {ProtocolCapability, ProviderRequest, ProviderResponse} from "@holokai/holo-types/entities";
 import {AsyncEventQueue, ClassLogger, pickDefined} from "../core";
-import {TokenCountType} from "@holokai/holo-types/provider";
 import {HoloResponse, IProviderPlugin, WorkerResponseEnvelope} from "@holokai/holo-types";
 
 export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, Final = any> extends ClassLogger implements IProvider {
@@ -107,7 +106,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
         } catch (e: any) {
             metrics.endTime = Date.now();
             metrics.totalProcessingTime = metrics.endTime - metrics.startTime;
-            metrics.outputTokens = this.auditor.countTokens(fullText, { type: TokenCountType.OUTPUT });
+            metrics.outputTokens = this.auditor.countTokens(fullText, {type: TokenCountType.OUTPUT});
             const handledError = await this.handleError(e);
             push({
                 type: "error",
@@ -136,7 +135,10 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
                 const providerUsage = this.auditor.mapUsage(final, protocol?.name);
                 const model = await this.getModelNameFromRequest(requestPayload);
                 metrics.inputTokens = providerUsage.input_tokens ?? metrics.inputTokens;
-                metrics.outputTokens = providerUsage.output_tokens ?? this.auditor.countTokens(fullText, { type: TokenCountType.OUTPUT, model });
+                metrics.outputTokens = providerUsage.output_tokens ?? this.auditor.countTokens(fullText, {
+                    type: TokenCountType.OUTPUT,
+                    model
+                });
                 metrics.totalTokens = providerUsage.total_tokens ?? (metrics.inputTokens + metrics.outputTokens);
 
                 if (request.isHoloNative && protocol?.capability === ProtocolCapability.EMBED && this.translator.toHoloEmbedResponse) {
@@ -175,7 +177,7 @@ export abstract class BaseProvider<ProviderClient = any, RequestPayload = any, F
             } catch (e: any) {
                 metrics.endTime = Date.now();
                 metrics.totalProcessingTime = metrics.endTime - metrics.startTime;
-                metrics.outputTokens = this.auditor.countTokens(fullText, { type: TokenCountType.OUTPUT });
+                metrics.outputTokens = this.auditor.countTokens(fullText, {type: TokenCountType.OUTPUT});
                 const handledError = await this.handleError(e);
                 push({
                     type: "error",

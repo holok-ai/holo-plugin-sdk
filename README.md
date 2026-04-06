@@ -1,6 +1,7 @@
 # @holokai/holo-sdk
 
-SDK for the Holo platform. Provides base classes for building provider plugins and a client SDK for consuming the Holo API.
+SDK for the Holo platform. Provides base classes for building provider plugins and a client SDK for consuming the Holo
+API.
 
 ## Installation
 
@@ -40,15 +41,15 @@ import {NotificationServiceToken, NotificationEventFactory} from '@holokai/holo-
 import {HoloClient, HoloRequestBuilder, HoloStream, HoloToolRunner} from '@holokai/holo-sdk/client';
 ```
 
-| Subpath | Description |
-|---------|-------------|
-| `@holokai/holo-sdk` | Core utilities: `pickDefined`, `ClassLogger`, `AsyncEventQueue`, logging |
-| `@holokai/holo-sdk/plugin` | `BasePlugin`, plugin loader, discovery |
-| `@holokai/holo-sdk/provider` | `BaseProvider`, `BaseAuditor`, `BaseTranslator`, `BaseWireAdapter`, event processor |
-| `@holokai/holo-sdk/holo` | Holo format helpers, content type guards, request factories |
-| `@holokai/holo-sdk/core` | Low-level utilities |
-| `@holokai/holo-sdk/notification` | Notification service, event factory |
-| `@holokai/holo-sdk/client` | `HoloClient`, `HoloRequestBuilder`, streaming, tool runner |
+| Subpath                          | Description                                                                         |
+|----------------------------------|-------------------------------------------------------------------------------------|
+| `@holokai/holo-sdk`              | Core utilities: `pickDefined`, `ClassLogger`, `AsyncEventQueue`, logging            |
+| `@holokai/holo-sdk/plugin`       | `BasePlugin`, plugin loader, discovery                                              |
+| `@holokai/holo-sdk/provider`     | `BaseProvider`, `BaseAuditor`, `BaseTranslator`, `BaseWireAdapter`, event processor |
+| `@holokai/holo-sdk/holo`         | Holo format helpers, content type guards, request factories                         |
+| `@holokai/holo-sdk/core`         | Low-level utilities                                                                 |
+| `@holokai/holo-sdk/notification` | Notification service, event factory                                                 |
+| `@holokai/holo-sdk/client`       | `HoloClient`, `HoloRequestBuilder`, streaming, tool runner                          |
 
 ## Building a Provider Plugin
 
