@@ -8,6 +8,7 @@ export default defineProject({
         environment: 'node',
         include: ['tests/integration/**/*.test.ts'],
         setupFiles: ['tests/integration/setup.ts'],
+        globalSetup: ['../../app/tests/integration/global-setup.ts'],
         testTimeout: 30000,
     },
 });
