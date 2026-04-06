@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import path from 'path';
 import {afterEach, beforeAll, describe, expect, it} from 'vitest';
 import {container} from 'tsyringe';
 import type {HoloLogger} from '@holokai/holo-types/logger';
@@ -39,7 +40,7 @@ describe('familyFromPackage', () => {
 
 describe('discoverPlugins', () => {
     it('discovers provider plugins in node_modules', async () => {
-        const packages = await discoverPlugins();
+        const packages = await discoverPlugins(path.resolve(__dirname, '../../../../node_modules'));
         expect(packages.length).toBeGreaterThanOrEqual(1);
         for (const pkg of packages) {
             expect(pkg).toMatch(/^@holokai\/holo-provider-.+/);
@@ -47,7 +48,7 @@ describe('discoverPlugins', () => {
     });
 
     it('discovers plugins from an explicit node_modules path', async () => {
-        const packages = await discoverPlugins('node_modules');
+        const packages = await discoverPlugins(path.resolve(__dirname, '../../../../node_modules'));
         expect(packages.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -85,8 +86,10 @@ describe('loadPluginFromPackage', () => {
 });
 
 describe('loadAllPlugins', () => {
+    const rootNodeModules = path.resolve(__dirname, '../../../../node_modules');
+
     it('discovers and loads all provider plugins', async () => {
-        const plugins = await loadAllPlugins();
+        const plugins = await loadAllPlugins(rootNodeModules);
         expect(plugins.size).toBeGreaterThanOrEqual(1);
         for (const [family, plugin] of plugins) {
             expect(plugin.family).toBe(family);
@@ -95,7 +98,7 @@ describe('loadAllPlugins', () => {
     });
 
     it('populates the plugin cache', async () => {
-        await loadAllPlugins();
+        await loadAllPlugins(rootNodeModules);
         const cached = getLoadedPlugins();
         expect(cached.size).toBeGreaterThanOrEqual(1);
     });
