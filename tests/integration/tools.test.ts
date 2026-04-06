@@ -35,7 +35,7 @@ describe('sdk integration: tools', () => {
             const res = await runner.finalResponse();
             expect(['stop', 'tool_calls']).toContain(res.finish_reason);
         } catch (e) {
-            if (e instanceof HoloApiError && (e.status === 400 || e.status === 404)) {
+            if (e instanceof HoloApiError && [400, 404, 429].includes(e.status)) {
                 // Tools/model not supported in this environment
                 return;
             }

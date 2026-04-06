@@ -15,6 +15,16 @@ if (!process.env['HOLO_URL']) {
     );
 }
 
+import {HoloApiError} from '../../src/client';
+
+export function skipOnRateLimit(e: unknown): void {
+    if (e instanceof HoloApiError && [429].includes(e.status)) {
+        console.log(`  SKIPPED (rate limited): ${e.status}`);
+        return;
+    }
+    throw e;
+}
+
 if (!process.env['HOLO_TEST_TOKEN']) {
     throw new Error(
         'HOLO_TEST_TOKEN is not set. SDK integration tests require an auth token.\n' +

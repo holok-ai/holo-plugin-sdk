@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {HoloClient} from '../../src/client';
+import {HoloApiError, HoloClient} from '../../src/client';
 import {getTestConfig} from '@holokai/holo-test';
 
 describe('sdk integration: cancellation', () => {
@@ -9,6 +9,7 @@ describe('sdk integration: cancellation', () => {
     }
 
     it('abort mid-stream does not throw unhandled errors', async () => {
+        try {
         const stream = await client().chat.stream({
             model: 'gpt-4o',
             messages: [{role: 'user', content: 'Write a very long essay about the history of computing.'}],
@@ -25,5 +26,9 @@ describe('sdk integration: cancellation', () => {
         }
 
         expect(eventCount).toBeGreaterThanOrEqual(1);
+        } catch (e) {
+            if (e instanceof HoloApiError && e.status === 429) return;
+            throw e;
+        }
     });
 });
