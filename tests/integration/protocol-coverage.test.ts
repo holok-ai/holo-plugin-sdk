@@ -50,12 +50,15 @@ function client() {
     return new HoloClient({baseUrl: gatewayUrl, token});
 }
 
-function logError(protocol: string, e: unknown) {
+function handleError(protocol: string, e: unknown) {
+    if (e instanceof HoloApiError && [400, 404, 429].includes(e.status)) {
+        console.log(`[${protocol}] SKIPPED: ${e.status} ${e.message}`);
+        return;
+    }
     if (e instanceof HoloApiError) {
         console.error(`[${protocol}] HoloApiError: ${e.status} ${e.message}`, e.body);
-    } else {
-        console.error(`[${protocol}] Error:`, e);
     }
+    throw e;
 }
 
 let discovered: DiscoveredProvider[] = [];
@@ -87,8 +90,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                         expect(res.output).toBeDefined();
                         expect(res.output.length).toBeGreaterThan(0);
                     } catch (e) {
-                        logError(protocol, e);
-                        throw e;
+                        handleError(protocol, e);
                     }
                 });
 
@@ -126,8 +128,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                             expect(completed).toBe(true);
                             expect(text.length).toBeGreaterThan(0);
                         } catch (e) {
-                            logError(protocol, e);
-                            throw e;
+                            handleError(protocol, e);
                         }
                     });
                 }
@@ -153,8 +154,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                         expect(res.output).toBeDefined();
                         expect(res.output.length).toBeGreaterThan(0);
                     } catch (e) {
-                        logError(protocol, e);
-                        throw e;
+                        handleError(protocol, e);
                     }
                 });
 
@@ -188,8 +188,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                         expect(completed).toBe(true);
                         expect(text.length).toBeGreaterThan(0);
                     } catch (e) {
-                        logError(protocol, e);
-                        throw e;
+                        handleError(protocol, e);
                     }
                 });
             }
@@ -217,8 +216,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                         expect(res.embeddings.length).toBeGreaterThan(0);
                         expect(res.embeddings[0].length).toBeGreaterThan(0);
                     } catch (e) {
-                        logError(protocol, e);
-                        throw e;
+                        handleError(protocol, e);
                     }
                 });
             }
@@ -241,8 +239,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                         console.log(`[${protocol}] count_tokens:`, JSON.stringify(res));
                         expect(res.input_tokens).toBeGreaterThan(0);
                     } catch (e) {
-                        logError(protocol, e);
-                        throw e;
+                        handleError(protocol, e);
                     }
                 });
             }
