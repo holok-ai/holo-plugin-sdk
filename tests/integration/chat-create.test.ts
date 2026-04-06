@@ -1,17 +1,14 @@
-import {describe, expect, it} from 'vitest';
-import {HoloApiError, HoloClient} from '../../src/client';
-import {getTestConfig} from '@holokai/holo-test';
+import {beforeAll, describe, expect, it} from 'vitest';
+import {client, getModel, skipOnRateLimit} from './test-providers';
 
 describe('sdk integration: chat.create', () => {
-    function client() {
-        const {gatewayUrl, token} = getTestConfig();
-        return new HoloClient({baseUrl: gatewayUrl, token});
-    }
+    let model: string;
+    beforeAll(async () => { model = await getModel(); });
 
     it('returns a complete response', async () => {
         try {
             const res = await client().chat.create({
-                model: 'gpt-4o',
+                model,
                 messages: [{role: 'user', content: 'Say hello in exactly one word.'}],
                 max_tokens: 10,
             });
@@ -22,8 +19,7 @@ describe('sdk integration: chat.create', () => {
             expect(res.finish_reason).toBe('stop');
             expect(res.usage).toBeDefined();
         } catch (e) {
-            if (e instanceof HoloApiError && e.status === 429) return;
-            throw e;
+            skipOnRateLimit(e);
         }
     });
 });

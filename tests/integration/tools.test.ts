@@ -1,6 +1,5 @@
-import {describe, expect, it} from 'vitest';
-import {HoloApiError, HoloClient} from '../../src/client';
-import {getTestConfig} from '@holokai/holo-test';
+import {beforeAll, describe, expect, it} from 'vitest';
+import {client, getModel, skipOnRateLimit} from './test-providers';
 import type {HoloTool} from '@holokai/holo-types/holo';
 
 const weatherTool: HoloTool = {
@@ -14,15 +13,13 @@ const weatherTool: HoloTool = {
 };
 
 describe('sdk integration: tools', () => {
-    function client() {
-        const {gatewayUrl, token} = getTestConfig();
-        return new HoloClient({baseUrl: gatewayUrl, token});
-    }
+    let model: string;
+    beforeAll(async () => { model = await getModel(); });
 
     it('runner executes tool loop', async () => {
         try {
             const runner = client().chat.runner({
-                model: 'gpt-4o',
+                model,
                 messages: [{role: 'user', content: 'What is the weather in San Francisco?'}],
                 tools: [weatherTool],
                 toolHandler: async (call) => ({
@@ -35,11 +32,7 @@ describe('sdk integration: tools', () => {
             const res = await runner.finalResponse();
             expect(['stop', 'tool_calls']).toContain(res.finish_reason);
         } catch (e) {
-            if (e instanceof HoloApiError && [400, 404, 429].includes(e.status)) {
-                // Tools/model not supported in this environment
-                return;
-            }
-            throw e;
+            skipOnRateLimit(e);
         }
     });
 });
