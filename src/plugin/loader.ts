@@ -82,3 +82,16 @@ export function getLoadedPlugins(): Map<string, IProviderPlugin> {
 export function clearPluginCache(): void {
     pluginCache.clear();
 }
+
+export async function discoverDatastorePlugins(nodeModulesDir?: string): Promise<string[]> {
+    const scopePath = path.resolve(nodeModulesDir ?? 'node_modules', '@holokai');
+
+    try {
+        const entries = await fs.readdir(scopePath, {withFileTypes: true});
+        return entries
+            .filter(d => (d.isDirectory() || d.isSymbolicLink()) && d.name.startsWith('holo-datastore-'))
+            .map(d => `@holokai/${d.name}`);
+    } catch {
+        return [];
+    }
+}
