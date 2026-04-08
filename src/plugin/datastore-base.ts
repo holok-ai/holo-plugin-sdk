@@ -1,9 +1,9 @@
 import {BasePlugin} from './base';
 import type {
-    IDatastorePlugin,
-    IDatastoreInstance,
-    DatastoreConfigField,
     AuditFieldMapping,
+    DatastoreConfigField,
+    IDatastoreInstance,
+    IDatastorePlugin,
     PluginContext,
 } from '@holokai/holo-types/plugin';
 import type {PricingSheetModel} from '@holokai/holo-types/entities';
