@@ -61,10 +61,14 @@ class FetchTransport implements HoloTransport {
             'User-Agent': this.userAgent,
             ...options.headers,
         };
-        if (options.body) headers['Content-Type'] = 'application/json';
+        const isBinary = options.body instanceof ArrayBuffer
+            || options.body instanceof Uint8Array
+            || (typeof Buffer !== 'undefined' && Buffer.isBuffer(options.body));
+        if (options.body && !isBinary) headers['Content-Type'] = 'application/json';
+        if (isBinary) headers['Content-Type'] = 'application/gzip';
 
         const init: RequestInit = {method: options.method, headers};
-        if (options.body) init.body = JSON.stringify(options.body);
+        if (options.body) init.body = isBinary ? options.body as BodyInit : JSON.stringify(options.body);
 
         const effectiveSignal = this.applyTimeout(options.signal);
         if (effectiveSignal) init.signal = effectiveSignal;
