@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import {appendFileSync, mkdirSync} from 'fs';
+import {resolve} from 'path';
 import {beforeAll, describe, expect, it} from 'vitest';
 import {container} from 'tsyringe';
 import type {HoloLogger} from '@holokai/holo-types/logger';
@@ -7,6 +9,15 @@ import {loadAllPlugins} from '@holokai/holo-sdk/plugin';
 import {HoloApiError, HoloClient} from '../../src/client';
 import type {DiscoveredProvider} from '@holokai/holo-test';
 import {discoverProviders, getTestConfig} from '@holokai/holo-test';
+
+const logDir = process.env.LOG_DIR || resolve(import.meta.dirname, '../../../../logs');
+mkdirSync(logDir, {recursive: true});
+const logFile = resolve(logDir, 'test-output.log');
+
+function log(...args: any[]) {
+    const line = args.map(a => typeof a === 'string' ? a : JSON.stringify(a, null, 2)).join(' ');
+    appendFileSync(logFile, `${new Date().toISOString()} ${line}\n`);
+}
 
 interface FamilyProtocols {
     chat: string[];
@@ -43,7 +54,7 @@ for (const [family, plugin] of plugins) {
     familyProtocols.set(family, fp);
 }
 
-console.log('Discovered protocols:', Object.fromEntries(familyProtocols));
+log('Discovered protocols:', Object.fromEntries(familyProtocols));
 
 function client() {
     const {gatewayUrl, token} = getTestConfig();
@@ -52,11 +63,11 @@ function client() {
 
 function handleError(protocol: string, e: unknown) {
     if (e instanceof HoloApiError && [400, 404, 429].includes(e.status)) {
-        console.log(`[${protocol}] SKIPPED: ${e.status} ${e.message}`);
+        log(`[${protocol}] SKIPPED: ${e.status} ${e.message}`);
         return;
     }
     if (e instanceof HoloApiError) {
-        console.error(`[${protocol}] HoloApiError: ${e.status} ${e.message}`, e.body);
+        log(`[${protocol}] HoloApiError: ${e.status} ${e.message}`, e.body);
     }
     throw e;
 }
@@ -65,7 +76,7 @@ let discovered: DiscoveredProvider[] = [];
 
 beforeAll(async () => {
     discovered = await discoverProviders(client());
-    console.log(`Discovered providers: ${discovered.map(d => `${d.family}(${d.model}) [${d.models.length} models]`).join(', ')}`);
+    log(`Discovered providers: ${discovered.map(d => `${d.family}(${d.model}) [${d.models.length} models]`).join(', ')}`);
 });
 
 describe('protocol coverage', {timeout: 120_000}, () => {
@@ -76,7 +87,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
             for (const protocol of protocols.chat) {
                 it(`${protocol} — non-streaming`, async () => {
                     const provider = getProvider();
-                    if (!provider) return console.log(`  SKIPPED: ${family} not available`);
+                    if (!provider) return log(`  SKIPPED: ${family} not available`);
 
                     try {
                         const res = await client().chat.create({
@@ -86,7 +97,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                             protocol,
                         });
 
-                        console.log(`[${protocol}] non-streaming:`, JSON.stringify(res, null, 2));
+                        log(`[${protocol}] non-streaming:`, JSON.stringify(res, null, 2));
                         expect(res.output).toBeDefined();
                         expect(res.output.length).toBeGreaterThan(0);
                     } catch (e) {
@@ -103,7 +114,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                 for (const {label, prompt, max_tokens} of streamLengths) {
                     it(`${protocol} — streaming (${label})`, async () => {
                         const provider = getProvider();
-                        if (!provider) return console.log(`  SKIPPED: ${family} not available`);
+                        if (!provider) return log(`  SKIPPED: ${family} not available`);
 
                         try {
                             const stream = await client().chat.stream({
@@ -124,7 +135,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                                 }
                             }
 
-                            console.log(`[${protocol}] streaming (${label}): "${text.slice(0, 80)}..." (${text.length} chars)`);
+                            log(`[${protocol}] streaming (${label}): "${text.slice(0, 80)}..." (${text.length} chars)`);
                             expect(completed).toBe(true);
                             expect(text.length).toBeGreaterThan(0);
                         } catch (e) {
@@ -137,7 +148,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
             for (const protocol of protocols.generate) {
                 it(`${protocol} — non-streaming`, async () => {
                     const provider = getProvider();
-                    if (!provider) return console.log(`  SKIPPED: ${family} not available`);
+                    if (!provider) return log(`  SKIPPED: ${family} not available`);
 
                     const genModel = provider.models.find(m => m.capabilities.includes('generate'));
                     const model = genModel?.id ?? provider.model;
@@ -150,7 +161,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                             protocol,
                         });
 
-                        console.log(`[${protocol}] generate (model=${model}):`, JSON.stringify(res, null, 2));
+                        log(`[${protocol}] generate (model=${model}):`, JSON.stringify(res, null, 2));
                         expect(res.output).toBeDefined();
                         expect(res.output.length).toBeGreaterThan(0);
                     } catch (e) {
@@ -160,7 +171,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
 
                 it(`${protocol} — streaming`, async () => {
                     const provider = getProvider();
-                    if (!provider) return console.log(`  SKIPPED: ${family} not available`);
+                    if (!provider) return log(`  SKIPPED: ${family} not available`);
 
                     const genModel = provider.models.find(m => m.capabilities.includes('generate'));
                     const model = genModel?.id ?? provider.model;
@@ -184,7 +195,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                             }
                         }
 
-                        console.log(`[${protocol}] generate streaming text: "${text}"`);
+                        log(`[${protocol}] generate streaming text: "${text}"`);
                         expect(completed).toBe(true);
                         expect(text.length).toBeGreaterThan(0);
                     } catch (e) {
@@ -196,12 +207,12 @@ describe('protocol coverage', {timeout: 120_000}, () => {
             for (const protocol of protocols.embed) {
                 it(`${protocol}`, async () => {
                     const provider = getProvider();
-                    if (!provider) return console.log(`  SKIPPED: ${family} not available`);
+                    if (!provider) return log(`  SKIPPED: ${family} not available`);
 
                     const embedModel = provider.models.find(m =>
                         m.capabilities.includes('embed') && /embed/i.test(m.id)
                     );
-                    if (!embedModel) return console.log(`  SKIPPED: no embed model for ${family}`);
+                    if (!embedModel) return log(`  SKIPPED: no embed model for ${family}`);
 
                     try {
                         const res = await client().embed.create({
@@ -211,7 +222,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                             provider: family,
                         });
 
-                        console.log(`[${protocol}] embed response (model=${embedModel.id}):`, JSON.stringify(res, null, 2).slice(0, 200));
+                        log(`[${protocol}] embed response (model=${embedModel.id}):`, JSON.stringify(res, null, 2).slice(0, 200));
                         expect(res.embeddings).toBeDefined();
                         expect(res.embeddings.length).toBeGreaterThan(0);
                         expect(res.embeddings[0].length).toBeGreaterThan(0);
@@ -224,7 +235,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
             for (const protocol of protocols.metrics) {
                 it(`${protocol}`, async () => {
                     const provider = getProvider();
-                    if (!provider) return console.log(`  SKIPPED: ${family} not available`);
+                    if (!provider) return log(`  SKIPPED: ${family} not available`);
 
                     const metricsModel = provider.models.find(m => m.capabilities.includes('metrics'));
                     const model = metricsModel?.id ?? provider.model;
@@ -236,7 +247,7 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                             protocol,
                         });
 
-                        console.log(`[${protocol}] count_tokens:`, JSON.stringify(res));
+                        log(`[${protocol}] count_tokens:`, JSON.stringify(res));
                         expect(res.input_tokens).toBeGreaterThan(0);
                     } catch (e) {
                         handleError(protocol, e);
