@@ -11,6 +11,7 @@ import type {
     HoloResponse,
 } from '@holokai/holo-types/holo';
 import type {HoloApplicationInfo, HoloChatParams, HoloClientOptions, HoloModelInfo} from './types';
+import type {Provider, Model, HoloToken, Datastore} from '@holokai/holo-types/entities';
 import {HoloStream} from './stream';
 import {HoloRequestBuilder} from './builder';
 import type {HoloToolRunnerOptions} from './runner';
@@ -59,6 +60,7 @@ export class HoloClient {
     readonly metrics: MetricsNamespace;
     readonly models: ModelsNamespace;
     readonly applications: ApplicationsNamespace;
+    readonly admin: AdminNamespace;
     private readonly transport: FetchTransport;
     private readonly defaultModel?: string;
     private readonly defaultApplication?: string;
@@ -79,6 +81,7 @@ export class HoloClient {
         this.metrics = new MetricsNamespace(this);
         this.models = new ModelsNamespace(this);
         this.applications = new ApplicationsNamespace(this);
+        this.admin = new AdminNamespace(this);
     }
 
     async request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
@@ -299,6 +302,251 @@ class ApplicationsNamespace {
     }
 }
 
+
+class AdminPluginsNamespace {
+    constructor(private readonly client: HoloClient) {}
+
+    async list(): Promise<any> {
+        return this.client.request('GET', '/plugins');
+    }
+
+    async status(family: string): Promise<any> {
+        return this.client.request('GET', `/plugins/${encodeURIComponent(family)}/status`);
+    }
+
+    async upload(tarball: Buffer): Promise<any> {
+        return this.client.request('POST', '/plugins/upload', tarball);
+    }
+
+    async install(packageName: string, version?: string): Promise<any> {
+        return this.client.request('POST', '/plugins/install', {packageName, version});
+    }
+
+    async enable(family: string): Promise<any> {
+        return this.client.request('POST', `/plugins/${encodeURIComponent(family)}/enable`);
+    }
+
+    async disable(family: string): Promise<any> {
+        return this.client.request('POST', `/plugins/${encodeURIComponent(family)}/disable`);
+    }
+
+    async reload(family: string): Promise<any> {
+        return this.client.request('POST', `/plugins/${encodeURIComponent(family)}/reload`);
+    }
+
+    async uninstall(packageName: string, force?: boolean): Promise<any> {
+        return this.client.request('POST', '/plugins/uninstall', {packageName, force});
+    }
+
+    async serverPlugins(serverName: string): Promise<any> {
+        return this.client.request('GET', `/plugins/server/${encodeURIComponent(serverName)}`);
+    }
+}
+
+class AdminDatastoresNamespace {
+    constructor(private readonly client: HoloClient) {}
+
+    async list(): Promise<ApiListResponse<Datastore>> {
+        return this.client.request('GET', '/datastores');
+    }
+
+    async get(id: string): Promise<ApiItemResponse<Datastore>> {
+        return this.client.request('GET', `/datastores/${encodeURIComponent(id)}`);
+    }
+
+    async create(params: {name: string; plugin_id: string; connection_config?: Record<string, any>; mapping?: Record<string, any>; enabled?: boolean}): Promise<ApiItemResponse<Datastore>> {
+        return this.client.request('POST', '/datastores', params);
+    }
+
+    async update(id: string, params: Record<string, any>): Promise<ApiItemResponse<Datastore>> {
+        return this.client.request('PUT', `/datastores/${encodeURIComponent(id)}`, params);
+    }
+
+    async remove(id: string): Promise<any> {
+        return this.client.request('DELETE', `/datastores/${encodeURIComponent(id)}`);
+    }
+
+    async testConnection(id: string): Promise<any> {
+        return this.client.request('POST', `/datastores/${encodeURIComponent(id)}/test`);
+    }
+
+    async testConfig(params: {plugin_id: string; connection_config: Record<string, any>}): Promise<any> {
+        return this.client.request('POST', '/datastores/test', params);
+    }
+}
+
+class AdminProvidersNamespace {
+    constructor(private readonly client: HoloClient) {}
+
+    async list(params?: {org_id?: string; enabled?: boolean; search?: string; page?: number; limit?: number; sort_by?: string; sort_dir?: string}): Promise<any> {
+        return this.client.request('GET', `/providers${toQueryString(params)}`);
+    }
+
+    async get(id: string): Promise<ApiItemResponse<Provider>> {
+        return this.client.request('GET', `/providers/${encodeURIComponent(id)}`);
+    }
+
+    async create(params: Record<string, any>): Promise<ApiItemResponse<Provider>> {
+        return this.client.request('POST', '/providers', params);
+    }
+
+    async update(id: string, params: Record<string, any>): Promise<ApiItemResponse<Provider>> {
+        return this.client.request('PUT', `/providers/${encodeURIComponent(id)}`, params);
+    }
+
+    async remove(id: string): Promise<any> {
+        return this.client.request('DELETE', `/providers/${encodeURIComponent(id)}`);
+    }
+
+    async upgradePlugin(id: string, pluginId: string): Promise<any> {
+        return this.client.request('POST', `/providers/${encodeURIComponent(id)}/upgrade-plugin`, {plugin_id: pluginId});
+    }
+}
+
+class AdminModelsNamespace {
+    constructor(private readonly client: HoloClient) {}
+
+    async list(params?: {org_id?: string; provider_id?: string; search?: string; page?: number; limit?: number; sort_by?: string; sort_dir?: string}): Promise<any> {
+        return this.client.request('GET', `/models${toQueryString(params)}`);
+    }
+
+    async get(id: string): Promise<ApiItemResponse<Model>> {
+        return this.client.request('GET', `/models/${encodeURIComponent(id)}`);
+    }
+
+    async create(params: Record<string, any>): Promise<ApiItemResponse<Model>> {
+        return this.client.request('POST', '/models', params);
+    }
+
+    async update(id: string, params: Record<string, any>): Promise<ApiItemResponse<Model>> {
+        return this.client.request('PUT', `/models/${encodeURIComponent(id)}`, params);
+    }
+
+    async remove(id: string): Promise<any> {
+        return this.client.request('DELETE', `/models/${encodeURIComponent(id)}`);
+    }
+
+    async sync(): Promise<any> {
+        return this.client.request('POST', '/models/sync');
+    }
+
+    async syncDictionary(): Promise<any> {
+        return this.client.request('POST', '/models/sync/dictionary');
+    }
+
+    async syncProvider(providerId: string): Promise<any> {
+        return this.client.request('POST', `/models/sync/providers/${encodeURIComponent(providerId)}`);
+    }
+}
+
+class AdminTokensNamespace {
+    constructor(private readonly client: HoloClient) {}
+
+    async list(params?: {user_id?: string; application_id?: string}): Promise<ApiListResponse<HoloToken>> {
+        return this.client.request('GET', `/tokens${toQueryString(params)}`);
+    }
+
+    async get(id: string): Promise<ApiItemResponse<HoloToken>> {
+        return this.client.request('GET', `/tokens/${encodeURIComponent(id)}`);
+    }
+
+    async create(params: {name: string; user_id?: string; application_id?: string; expires_at?: string}): Promise<any> {
+        return this.client.request('POST', '/tokens', params);
+    }
+
+    async remove(id: string): Promise<any> {
+        return this.client.request('DELETE', `/tokens/${encodeURIComponent(id)}`);
+    }
+}
+
+class AdminPricingNamespace {
+    constructor(private readonly client: HoloClient) {}
+
+    async recalculate(params: {from: string; to: string; provider_id?: string}): Promise<any> {
+        return this.client.request('POST', '/pricing/recalculate', params);
+    }
+}
+
+class AdminCacheNamespace {
+    constructor(private readonly client: HoloClient) {}
+
+    async invalidateProvider(params?: Record<string, any>): Promise<any> {
+        return this.client.request('POST', '/cache/invalidate/provider', params);
+    }
+
+    async invalidateApplication(params?: Record<string, any>): Promise<any> {
+        return this.client.request('POST', '/cache/invalidate/application', params);
+    }
+
+    async invalidateAccess(params?: Record<string, any>): Promise<any> {
+        return this.client.request('POST', '/cache/invalidate/access', params);
+    }
+
+    async invalidateAuth(params?: Record<string, any>): Promise<any> {
+        return this.client.request('POST', '/cache/invalidate/auth', params);
+    }
+
+    async invalidateOrg(params: {org_id: string}): Promise<any> {
+        return this.client.request('POST', '/cache/invalidate/org', params);
+    }
+
+    async invalidateUser(params?: Record<string, any>): Promise<any> {
+        return this.client.request('POST', '/cache/invalidate/user', params);
+    }
+}
+
+class AdminRequestsNamespace {
+    constructor(private readonly client: HoloClient) {}
+
+    async list(params?: Record<string, any>): Promise<any> {
+        return this.client.request('GET', `/requests${toQueryString(params)}`);
+    }
+
+    async get(id: string): Promise<any> {
+        return this.client.request('GET', `/requests/${encodeURIComponent(id)}`);
+    }
+}
+
+class AdminResponsesNamespace {
+    constructor(private readonly client: HoloClient) {}
+
+    async list(params?: Record<string, any>): Promise<any> {
+        return this.client.request('GET', `/responses${toQueryString(params)}`);
+    }
+
+    async get(id: string): Promise<any> {
+        return this.client.request('GET', `/responses/${encodeURIComponent(id)}`);
+    }
+
+    async filters(orgId?: string): Promise<any> {
+        const qs = orgId ? toQueryString({org_id: orgId}) : '';
+        return this.client.request('GET', `/responses/filters${qs}`);
+    }
+}
+
+class AdminNamespace {
+    readonly plugins: AdminPluginsNamespace;
+    readonly datastores: AdminDatastoresNamespace;
+    readonly providers: AdminProvidersNamespace;
+    readonly models: AdminModelsNamespace;
+    readonly tokens: AdminTokensNamespace;
+    readonly pricing: AdminPricingNamespace;
+    readonly cache: AdminCacheNamespace;
+    readonly requests: AdminRequestsNamespace;
+    readonly responses: AdminResponsesNamespace;
+
+    constructor(client: HoloClient) {
+        this.plugins = new AdminPluginsNamespace(client);
+        this.datastores = new AdminDatastoresNamespace(client);
+        this.providers = new AdminProvidersNamespace(client);
+        this.models = new AdminModelsNamespace(client);
+        this.tokens = new AdminTokensNamespace(client);
+        this.pricing = new AdminPricingNamespace(client);
+        this.cache = new AdminCacheNamespace(client);
+        this.requests = new AdminRequestsNamespace(client);
+        this.responses = new AdminResponsesNamespace(client);
+    }
+}
 
 function toQueryString(params?: Record<string, unknown> | object): string {
     if (!params) return '';
