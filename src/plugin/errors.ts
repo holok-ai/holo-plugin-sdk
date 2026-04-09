@@ -1,6 +1,4 @@
-import {PluginErrorCode} from "@holokai/holo-types/plugin";
-
-export {PluginErrorCode};
+export {PluginErrorCode} from '@holokai/holo-types/plugin';
 
 export class PluginError extends Error {
     constructor(
