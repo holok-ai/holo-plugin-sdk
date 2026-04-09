@@ -11,7 +11,7 @@ import type {
     HoloResponse,
 } from '@holokai/holo-types/holo';
 import type {HoloApplicationInfo, HoloChatParams, HoloClientOptions, HoloModelInfo} from './types';
-import type {Provider, Model, HoloToken, Datastore} from '@holokai/holo-types/entities';
+import type {Datastore, HoloToken, Model, Provider} from '@holokai/holo-types/entities';
 import {HoloStream} from './stream';
 import {HoloRequestBuilder} from './builder';
 import type {HoloToolRunnerOptions} from './runner';
@@ -304,7 +304,8 @@ class ApplicationsNamespace {
 
 
 class AdminPluginsNamespace {
-    constructor(private readonly client: HoloClient) {}
+    constructor(private readonly client: HoloClient) {
+    }
 
     async list(): Promise<any> {
         return this.client.request('GET', '/plugins');
@@ -344,7 +345,8 @@ class AdminPluginsNamespace {
 }
 
 class AdminDatastoresNamespace {
-    constructor(private readonly client: HoloClient) {}
+    constructor(private readonly client: HoloClient) {
+    }
 
     async list(): Promise<ApiListResponse<Datastore>> {
         return this.client.request('GET', '/datastores');
@@ -354,7 +356,13 @@ class AdminDatastoresNamespace {
         return this.client.request('GET', `/datastores/${encodeURIComponent(id)}`);
     }
 
-    async create(params: {name: string; plugin_id: string; connection_config?: Record<string, any>; mapping?: Record<string, any>; enabled?: boolean}): Promise<ApiItemResponse<Datastore>> {
+    async create(params: {
+        name: string;
+        plugin_id: string;
+        connection_config?: Record<string, any>;
+        mapping?: Record<string, any>;
+        enabled?: boolean
+    }): Promise<ApiItemResponse<Datastore>> {
         return this.client.request('POST', '/datastores', params);
     }
 
@@ -370,15 +378,24 @@ class AdminDatastoresNamespace {
         return this.client.request('POST', `/datastores/${encodeURIComponent(id)}/test`);
     }
 
-    async testConfig(params: {plugin_id: string; connection_config: Record<string, any>}): Promise<any> {
+    async testConfig(params: { plugin_id: string; connection_config: Record<string, any> }): Promise<any> {
         return this.client.request('POST', '/datastores/test', params);
     }
 }
 
 class AdminProvidersNamespace {
-    constructor(private readonly client: HoloClient) {}
+    constructor(private readonly client: HoloClient) {
+    }
 
-    async list(params?: {org_id?: string; enabled?: boolean; search?: string; page?: number; limit?: number; sort_by?: string; sort_dir?: string}): Promise<any> {
+    async list(params?: {
+        org_id?: string;
+        enabled?: boolean;
+        search?: string;
+        page?: number;
+        limit?: number;
+        sort_by?: string;
+        sort_dir?: string
+    }): Promise<any> {
         return this.client.request('GET', `/providers${toQueryString(params)}`);
     }
 
@@ -404,9 +421,18 @@ class AdminProvidersNamespace {
 }
 
 class AdminModelsNamespace {
-    constructor(private readonly client: HoloClient) {}
+    constructor(private readonly client: HoloClient) {
+    }
 
-    async list(params?: {org_id?: string; provider_id?: string; search?: string; page?: number; limit?: number; sort_by?: string; sort_dir?: string}): Promise<any> {
+    async list(params?: {
+        org_id?: string;
+        provider_id?: string;
+        search?: string;
+        page?: number;
+        limit?: number;
+        sort_by?: string;
+        sort_dir?: string
+    }): Promise<any> {
         return this.client.request('GET', `/models${toQueryString(params)}`);
     }
 
@@ -440,9 +466,10 @@ class AdminModelsNamespace {
 }
 
 class AdminTokensNamespace {
-    constructor(private readonly client: HoloClient) {}
+    constructor(private readonly client: HoloClient) {
+    }
 
-    async list(params?: {user_id?: string; application_id?: string}): Promise<ApiListResponse<HoloToken>> {
+    async list(params?: { user_id?: string; application_id?: string }): Promise<ApiListResponse<HoloToken>> {
         return this.client.request('GET', `/tokens${toQueryString(params)}`);
     }
 
@@ -450,7 +477,12 @@ class AdminTokensNamespace {
         return this.client.request('GET', `/tokens/${encodeURIComponent(id)}`);
     }
 
-    async create(params: {name: string; user_id?: string; application_id?: string; expires_at?: string}): Promise<any> {
+    async create(params: {
+        name: string;
+        user_id?: string;
+        application_id?: string;
+        expires_at?: string
+    }): Promise<any> {
         return this.client.request('POST', '/tokens', params);
     }
 
@@ -460,15 +492,17 @@ class AdminTokensNamespace {
 }
 
 class AdminPricingNamespace {
-    constructor(private readonly client: HoloClient) {}
+    constructor(private readonly client: HoloClient) {
+    }
 
-    async recalculate(params: {from: string; to: string; provider_id?: string}): Promise<any> {
+    async recalculate(params: { from: string; to: string; provider_id?: string }): Promise<any> {
         return this.client.request('POST', '/pricing/recalculate', params);
     }
 }
 
 class AdminCacheNamespace {
-    constructor(private readonly client: HoloClient) {}
+    constructor(private readonly client: HoloClient) {
+    }
 
     async invalidateProvider(params?: Record<string, any>): Promise<any> {
         return this.client.request('POST', '/cache/invalidate/provider', params);
@@ -486,7 +520,7 @@ class AdminCacheNamespace {
         return this.client.request('POST', '/cache/invalidate/auth', params);
     }
 
-    async invalidateOrg(params: {org_id: string}): Promise<any> {
+    async invalidateOrg(params: { org_id: string }): Promise<any> {
         return this.client.request('POST', '/cache/invalidate/org', params);
     }
 
@@ -496,7 +530,8 @@ class AdminCacheNamespace {
 }
 
 class AdminRequestsNamespace {
-    constructor(private readonly client: HoloClient) {}
+    constructor(private readonly client: HoloClient) {
+    }
 
     async list(params?: Record<string, any>): Promise<any> {
         return this.client.request('GET', `/requests${toQueryString(params)}`);
@@ -508,7 +543,8 @@ class AdminRequestsNamespace {
 }
 
 class AdminResponsesNamespace {
-    constructor(private readonly client: HoloClient) {}
+    constructor(private readonly client: HoloClient) {
+    }
 
     async list(params?: Record<string, any>): Promise<any> {
         return this.client.request('GET', `/responses${toQueryString(params)}`);
