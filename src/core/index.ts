@@ -3,6 +3,7 @@ export * from './logger';
 export * from './async-event-queue';
 export * from './sanitize.object';
 export * from './pick-defined';
+export * from './set-by-path';
 export * from './stringify-any';
 export * from './stable-id';
 export * from './safe-parse';

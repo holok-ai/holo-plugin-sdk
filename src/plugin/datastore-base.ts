@@ -1,16 +1,8 @@
 import {BasePlugin} from './base';
-import type {
-    AuditFieldMapping,
-    DatastoreConfigField,
-    IDatastoreInstance,
-    IDatastorePlugin,
-    PluginContext,
-} from '@holokai/holo-types/plugin';
+import type {AuditFieldMapping, IDatastoreInstance, IDatastorePlugin, PluginContext,} from '@holokai/holo-types/plugin';
 import type {PricingSheetModel} from '@holokai/holo-types/entities';
 
 export abstract class BaseDatastorePlugin extends BasePlugin implements IDatastorePlugin {
-
-    abstract getConfigSchema(): DatastoreConfigField[];
 
     abstract getDefaultMapping(): AuditFieldMapping;
 
