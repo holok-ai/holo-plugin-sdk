@@ -418,6 +418,14 @@ class AdminProvidersNamespace {
     async upgradePlugin(id: string, pluginId: string): Promise<any> {
         return this.client.request('POST', `/providers/${encodeURIComponent(id)}/upgrade-plugin`, {plugin_id: pluginId});
     }
+
+    async testConnection(id: string): Promise<any> {
+        return this.client.request('POST', `/providers/${encodeURIComponent(id)}/test`);
+    }
+
+    async testConfig(params: { plugin_id: string; connection_config: Record<string, any> }): Promise<any> {
+        return this.client.request('POST', '/providers/test', params);
+    }
 }
 
 class AdminModelsNamespace {
