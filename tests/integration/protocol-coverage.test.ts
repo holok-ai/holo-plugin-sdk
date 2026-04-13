@@ -75,7 +75,7 @@ function handleError(protocol: string, e: unknown) {
 let discovered: DiscoveredProvider[] = [];
 
 beforeAll(async () => {
-    discovered = await discoverProviders(client());
+    discovered = await discoverProviders(client(), plugins);
     log(`Discovered providers: ${discovered.map(d => `${d.family}(${d.model}) [${d.models.length} models]`).join(', ')}`);
 });
 
@@ -209,9 +209,10 @@ describe('protocol coverage', {timeout: 120_000}, () => {
                     const provider = getProvider();
                     if (!provider) return log(`  SKIPPED: ${family} not available`);
 
-                    const embedModel = provider.models.find(m =>
-                        m.capabilities.includes('embed') && /embed/i.test(m.id)
-                    );
+                    const testEmbed = plugins.get(family)?.getTestModels?.()?.embed;
+                    const embedModel = testEmbed
+                        ? provider.models.find(m => m.id === testEmbed)
+                        : provider.models.find(m => m.capabilities.includes('embed') && /embed/i.test(m.id));
                     if (!embedModel) return log(`  SKIPPED: no embed model for ${family}`);
 
                     try {
