@@ -516,6 +516,10 @@ class AdminCacheNamespace {
         return this.client.request('POST', '/cache/invalidate/provider', params);
     }
 
+    async invalidateDatastore(params?: Record<string, any>): Promise<any> {
+        return this.client.request('POST', '/cache/invalidate/datastore', params);
+    }
+
     async invalidateApplication(params?: Record<string, any>): Promise<any> {
         return this.client.request('POST', '/cache/invalidate/application', params);
     }
