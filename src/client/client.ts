@@ -359,6 +359,7 @@ class AdminDatastoresNamespace {
     async create(params: {
         name: string;
         plugin_id: string;
+        api_credential_id?: string;
         connection_config?: Record<string, any>;
         mapping?: Record<string, any>;
         enabled?: boolean
